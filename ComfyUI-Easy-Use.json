@@ -1,0 +1,47 @@
+{
+  "easy setNode": {
+    "title": "设置点"
+  },
+  "easy getNode": {
+    "title": "获取点"
+  },
+  "easy a1111Loader": {
+    "title": "简易加载器（A1111）"
+  },
+  "easy comfyLoader": {
+    "title": "简易加载器（comfy）"
+  },
+  "easy controlnetLoader": {
+    "title": "简易Controlnet"
+  },
+  "easy globalSeed": {
+    "title": "全局Seed"
+  },
+  "easy preSampling": {
+    "title": "预采样参数（基础）"
+  },
+  "easy preSamplingSdTurbo": {
+    "title": "预采样参数（SdTurbo）"
+  },
+  "easy preSamplingDynamicCFG": {
+    "title": "预采样参数（动态CFG）"
+  },
+  "easy kSampler": {
+    "title": "简易K采样器"
+  },
+  "easy kSamplerTiled": {
+    "title": "简易采样器（分块解码）"
+  },
+  "easy kSamplerSDTurbo": {
+    "title": "简易采样器（SDTurbo）"
+  },
+  "easy imageInsetCrop": {
+    "title": "图像裁切"
+  },
+  "easy imageSize": {
+    "title": "图像尺寸"
+  },
+  "easy imageSizeByLongerSide": {
+    "title": "图像尺寸（长边）"
+  }
+}
