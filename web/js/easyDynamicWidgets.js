@@ -305,14 +305,14 @@ app.registerExtension({
 		}
 	},
 	async beforeRegisterNodeDef(nodeType, nodeData, app) {
-		if (["easy kSampler","easy kSamplerTiled","easy kSamplerSDTurbo"].includes(nodeData.name)) {
+		if (["easy showSpentTime"].includes(nodeData.name)) {
 			function populate(arr_text) {
 				var text = '';
 				for (let i = 0; i < arr_text.length; i++){
 					text += arr_text[i];
 				}
 				if (this.widgets) {
-					const pos = this.widgets.findIndex((w) => w.name === "text");
+					const pos = this.widgets.findIndex((w) => w.name === "spent_time");
 					if (pos !== -1 && this.widgets[pos]) {
 						const w = this.widgets[pos]
 						w.value = text;

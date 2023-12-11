@@ -17,6 +17,10 @@ In order to make it easier to use the ComfyUI, I have made some optimizations an
 
 EasyUse is simplified on the basis of [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes), and it is recommended to use it with the original [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes) package.
 
+### Updated
+
+- **[Updated 12/11/2023]** Added the `showSpentTime` node to display the time spent on image diffusion and the time spent on VAE decoding images
+
 ### Major optimizations
 
 - The **preSampling** node has been added to separate the sampling parameter configuration from the real-time preview image at the time of sampling。

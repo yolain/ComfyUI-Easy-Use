@@ -246,7 +246,6 @@ class easyLoader:
 
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
-        print(config_name)
         if config_name not in [None, "Default"]:
             config_path = folder_paths.get_full_path("configs", config_name)
             loaded_ckpt = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=True,
@@ -466,12 +465,11 @@ class easySampler:
             return value
         return default
 
-    def get_output(self, pipe: dict, spent_time: str) -> Tuple:
+    def get_output(self, pipe: dict,) -> Tuple:
         """Return a tuple of various elements fetched from the input pipe dictionary."""
         return (
             pipe,
             pipe.get("images"),
-            spent_time
         )
 
     def get_output_sdxl(self, sdxl_pipe: dict) -> Tuple:
@@ -1539,7 +1537,7 @@ class samplerSimple:
 
             # 推理总耗时（包含解码）
             end_decode_time = int(time.time() * 1000)
-            text = 'Diffusion:' + str((end_time-start_time)/1000)+'s, VAEDecode:' + str((end_decode_time-end_time)/1000)+'s'
+            spent_time = '推理:' + str((end_time-start_time)/1000)+'秒, 解码:' + str((end_decode_time-end_time)/1000)+'秒'
 
             results = easy_save.images(samp_images, save_prefix, image_output)
             sampler.update_value_by_id("results", my_unique_id, results)
@@ -1558,7 +1556,10 @@ class samplerSimple:
                 "images": samp_images,
                 "seed": samp_seed,
 
-                "loader_settings": pipe["loader_settings"],
+                "loader_settings": {
+                    **pipe["loader_settings"],
+                    "spent_time": spent_time
+                }
             }
 
             sampler.update_value_by_id("pipe_line", my_unique_id, new_pipe)
@@ -1566,14 +1567,14 @@ class samplerSimple:
             del pipe
 
             if image_output in ("Hide", "Hide/Save"):
-                return {"ui": {"text": text},
-                    "result": sampler.get_output(new_pipe, text)}
+                return {"ui": {},
+                    "result": sampler.get_output(new_pipe, )}
 
             if image_output in ("Sender", "Sender/Save"):
                 PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
-            return {"ui": {"text": text, "images": results},
-                    "result": sampler.get_output(new_pipe, text)}
+            return {"ui": {"images": results},
+                    "result": sampler.get_output(new_pipe, )}
 
         preview_latent = True
         if image_output in ("Hide", "Hide/Save"):
@@ -1692,8 +1693,8 @@ class samplerSDTurbo:
 
         # 推理总耗时（包含解码）
         end_decode_time = int(time.time() * 1000)
-        spent_time = 'Diffusion:' + str((end_time - start_time) / 1000) + 's, Decode:' + str(
-            (end_decode_time - end_time) / 1000) + 's'
+        spent_time = '推理:' + str((end_time - start_time) / 1000) + '秒, 解码:' + str(
+            (end_decode_time - end_time) / 1000) + '秒'
 
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
@@ -1712,7 +1713,10 @@ class samplerSDTurbo:
             "images": samp_images,
             "seed": samp_seed,
 
-            "loader_settings": pipe["loader_settings"],
+            "loader_settings": {
+                **pipe["loader_settings"],
+                "spent_time": spent_time
+            }
         }
 
         sampler.update_value_by_id("pipe_line", my_unique_id, new_pipe)
@@ -1721,44 +1725,46 @@ class samplerSDTurbo:
 
         if image_output in ("Hide", "Hide/Save"):
             return {"ui": {},
-                    "result": sampler.get_output(new_pipe, spent_time)}
+                    "result": sampler.get_output(new_pipe, )}
 
         if image_output in ("Sender", "Sender/Save"):
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
 
         return {"ui": {"images": results},
-                "result": sampler.get_output(new_pipe, spent_time)}
+                "result": sampler.get_output(new_pipe, )}
 
 # showSpentTime
-# class showSpentTime:
-#     @classmethod
-#     def INPUT_TYPES(s):
-#         return {
-#             "required": {
-#                 "spent_time": ("STRING", {"forceInput": True}),
-#             },
-#             "hidden": {
-#                 "unique_id": "UNIQUE_ID",
-#                 "extra_pnginfo": "EXTRA_PNGINFO",
-#             },
-#         }
-#
-#     INPUT_IS_LIST = True
-#     FUNCTION = "notify"
-#     OUTPUT_NODE = True
-#     RETURN_TYPES = ()
-#     RETURN_NAMES = ()
-#
-#     CATEGORY = "utils"
-#
-#     def notify(self, spent_time, unique_id=None, extra_pnginfo=None):
-#         if unique_id and extra_pnginfo and "workflow" in extra_pnginfo[0]:
-#             workflow = extra_pnginfo[0]["workflow"]
-#             node = next((x for x in workflow["nodes"] if str(x["id"]) == unique_id[0]), None)
-#             if node:
-#                 node["widgets_values"] = [spent_time]
-#         return {"ui": {"text": spent_time}, "result": {}}
+class showSpentTime:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "spent_time": ("INFO", {"default": '推理完成后将显示推理时间', "forceInput": False}),
+            },
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+
+    FUNCTION = "notify"
+    OUTPUT_NODE = True
+    RETURN_TYPES = ()
+    RETURN_NAMES = ()
+
+    CATEGORY = "EasyUse/Util"
+
+    def notify(self, pipe, spent_time=None, unique_id=None, extra_pnginfo=None):
+        if unique_id and extra_pnginfo and "workflow" in extra_pnginfo:
+            workflow = extra_pnginfo["workflow"]
+            node = next((x for x in workflow["nodes"] if str(x["id"]) == unique_id), None)
+            if node:
+                spent_time = pipe['loader_settings']['spent_time'] if 'spent_time' in pipe['loader_settings'] else ''
+                node["widgets_values"] = [spent_time]
+
+        return {"ui": {"text": spent_time}, "result": {}}
 
 NODE_CLASS_MAPPINGS = {
     "easy a1111Loader": a1111Loader,
@@ -1772,8 +1778,8 @@ NODE_CLASS_MAPPINGS = {
     "easy kSampler": samplerSimple,
     "easy kSamplerTiled": samplerSimpleTiled,
     "easy kSamplerSDTurbo": samplerSDTurbo,
+    "easy showSpentTime": showSpentTime,
     "dynamicThresholdingFull": dynamicThresholdingFull
-    # "showSpentTime": showSpentTime
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "easy a1111Loader": "EasyLoader (A1111)",
@@ -1787,6 +1793,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy kSampler": "EasyKSampler",
     "easy kSamplerTiled": "EasyKSampler (Tiled Decode)",
     "easy kSamplerSDTurbo": "EasyKSampler (SDTurbo)",
+    "easy showSpentTime": "ShowSpentTime",
     "dynamicThresholdingFull": "DynamicThresholdingFull"
-    # "easy showSpentTime": "ShowSpentTime"
 }

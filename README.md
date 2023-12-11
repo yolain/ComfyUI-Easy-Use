@@ -13,10 +13,13 @@
 
 ## 流程对比
 
-
 <img src="./docs/workflow_node_compare.png">
 
 EasyUse在[tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes)的基础上做了简化，建议搭配原版的[tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes)节点包进行使用。
+
+### 更新
+
+- **[2023-12-11]** 新增 `showSpentTime` 节点用于展示图片推理花费时间与VAE解码花费时间。
 
 ### 主要的优化
 
