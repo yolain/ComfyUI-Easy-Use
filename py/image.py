@@ -114,8 +114,10 @@ class imageSize:
   def image_width_height(self, image):
     image = tensor2pil(image)
     if image.size:
-      return (image.size[0], image.size[1])
-    return (0, 0)
+      result = (image.size[0], image.size[1])
+    else:
+      result = (0, 0)
+    return {"ui": {"text": "Width: "+str(result[0])+" , Height: "+str(result[1])}, "result": result}
 
 # 图像尺寸
 class imageSizeByLongerSide:
@@ -140,10 +142,12 @@ class imageSizeByLongerSide:
     image = tensor2pil(image)
     if image.size:
       if image.size[0] > image.size[1]:
-        return (image.size[0],)
+         result = (image.size[0],)
       else:
-        return (image.size[1],)
-    return (0,)
+         result = (image.size[1],)
+    else:
+      result = (0,)
+    return {"ui": {"text": str(result[0])}, "result": result}
 
 NODE_CLASS_MAPPINGS = {
   "easy imageInsetCrop": imageInsetCrop,

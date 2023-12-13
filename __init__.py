@@ -8,6 +8,7 @@ node_list = [
     "server",
     "easyNodes",
     "image",
+    "lllite"
 ]
 
 NODE_CLASS_MAPPINGS = {}

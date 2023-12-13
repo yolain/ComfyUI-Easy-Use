@@ -19,7 +19,15 @@ EasyUse is simplified on the basis of [tinyterraNodes](https://github.com/TinyTe
 
 ### Updated
 
-- **[Updated 12/11/2023]** Added the `showSpentTime` node to display the time spent on image diffusion and the time spent on VAE decoding images
+**[Updated at 12/13/2023]**
+
+-  Added the `easy LLLiteLoader` node, if you have pre-installed the kohya-ss/ControlNet-LLLite-ComfyUI package, please move the model files in the models to `ComfyUI\models\controlnet\` (i.e. in the default controlnet path of comfy, please do not change the file name of the model, otherwise it will not be read).
+-  Modify `easy controlnetLoader` to the bottom of the loader category.
+-  Added size display for `easy imageSize` and `easy imageSizeByLongerSize` outputs.
+
+**[Updated at 12/11/2023]**
+
+-  Added the `showSpentTime` node to display the time spent on image diffusion and the time spent on VAE decoding images
 
 ### Major optimizations
 
@@ -34,6 +42,7 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 |:---------------------------|:----------------------------------------------------------------------------|:----------------------------------|
 | easy SetNode               | [diffus3/ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.SetNode                   |
 | easy GetNode               | [diffus3/ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.GetNode                   |
+| easy LLLiteLoader          | [kohya-ss/ControlNet-LLLite-ComfyUI](https://github.com/kohya-ss/ControlNet-LLLite-ComfyUI) | LLLiteLoader            |
 | easy GlobalSeed            | [ltdrdata/ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) | Global Seed (Inspire)             | 
 | easy PreSamplingDynamicCFG | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull           | 
 | DynamicThresholdingFull    | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull           | 

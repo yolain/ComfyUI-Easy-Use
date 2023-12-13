@@ -42,7 +42,7 @@ app.registerExtension({
                     link_info,
                     output
 				) {
-					console.log("onConnectionsChange");
+					// console.log("onConnectionsChange");
 					//On Disconnect
 					if (slotType == 1 && !isChangeConnect) {
 						this.inputs[slot].type = '*';
@@ -90,7 +90,7 @@ app.registerExtension({
 				}
 
 				this.clone = function () {
-					console.log("CLONE");
+					// console.log("CLONE");
 					const cloned = SetNode.prototype.clone.apply(this);
 					//cloned.inputs = [];
 					cloned.inputs[0].name = '*';
@@ -106,8 +106,8 @@ app.registerExtension({
 
 
 				this.update = function() {
-					console.log("SetNode.update()");
-					console.log(this.widgets[0].value);
+					// console.log("SetNode.update()");
+					// console.log(this.widgets[0].value);
 					if (node.graph) {
 						this.findGetters(node.graph).forEach((getter) => {
 							getter.setType(this.inputs[0].type);
@@ -146,9 +146,9 @@ app.registerExtension({
 			}
 
 			onRemoved() {
-				console.log("onRemove");
-				console.log(this);
-				console.log(this.flags);
+				// console.log("onRemove");
+				// console.log(this);
+				// console.log(this.flags);
 				const allGetters = this.graph._nodes.filter((otherNode) => otherNode.type == "easy getNode");
 				allGetters.forEach((otherNode) => {
 					if (otherNode.setComboValues) {
@@ -221,8 +221,8 @@ app.registerExtension({
 
 				
 				this.setName = function(name) {
-					console.log("renaming getter: ");
-					console.log(node.widgets[0].value + " -> " + name);
+					// console.log("renaming getter: ");
+					// console.log(node.widgets[0].value + " -> " + name);
 					node.widgets[0].value = name;
 					node.onRename();
 					node.serialize();
@@ -230,7 +230,7 @@ app.registerExtension({
 				
 
 				this.onRename = function() {
-					console.log("onRename");
+					// console.log("onRename");
 
 					const setter = this.findSetter(node.graph);
 					if (setter) {
@@ -248,13 +248,13 @@ app.registerExtension({
 				};
 
 				this.validateLinks = function() {
-					console.log("validating links");
+					// console.log("validating links");
 					if (this.outputs[0].type != '*' && this.outputs[0].links) {
-						console.log("in");
+						// console.log("in");
 						this.outputs[0].links.forEach((linkId) => {
 							const link = node.graph.links[linkId];
 							if (link && link.type != this.outputs[0].type && link.type != '*') {
-								console.log("removing link");
+								// console.log("removing link");
 								node.graph.removeLink(linkId)
 							}
 						})
@@ -286,10 +286,10 @@ app.registerExtension({
 
 
 			getInputLink(slot) {
-                console.log("get.getInputLink(): " + slot);
+                // console.log("get.getInputLink(): " + slot);
 				const setter = this.findSetter(this.graph);
-                console.log("setter:");
-                console.log(setter);
+                // console.log("setter:");
+                // console.log(setter);
 
 				
 				// const setters = app.graph._nodes.filter((otherNode) => {
@@ -311,16 +311,16 @@ app.registerExtension({
 
 				if (setter) {
 					const slot_info = setter.inputs[slot];
-                    console.log("slot info");
-                    console.log(slot_info);
-                    console.log(this.graph.links);
+                    // console.log("slot info");
+                    // console.log(slot_info);
+                    // console.log(this.graph.links);
                     const link = this.graph.links[ slot_info.link ];
-                    console.log("link:");
-                    console.log(link);
+                    // console.log("link:");
+                    // console.log(link);
                     return link;
 				} else {
-                    console.log(this.widgets[0]);
-                    console.log(this.widgets[0].value);
+                    // console.log(this.widgets[0]);
+                    // console.log(this.widgets[0].value);
 					throw new Error("No setter found for " + this.widgets[0].value + "(" + this.type + ")");
 				}
 

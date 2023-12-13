@@ -973,7 +973,7 @@ class controlnetSimple:
     OUTPUT_NODE = True
 
     FUNCTION = "controlnetApply"
-    CATEGORY = "EasyUse/PreSampling"
+    CATEGORY = "EasyUse/Loader"
 
     def controlnetApply(self, pipe, control_net_name, image, positive=None, negative=None, strength=1):
         controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)

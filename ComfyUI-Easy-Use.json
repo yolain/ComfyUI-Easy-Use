@@ -14,11 +14,17 @@
   "easy controlnetLoader": {
     "title": "简易Controlnet"
   },
+  "easy LLLite": {
+    "title": "简易LLLite"
+  },
   "easy globalSeed": {
     "title": "全局Seed"
   },
   "easy preSampling": {
     "title": "预采样参数（基础）"
+  },
+  "easy preSamplingAdvanced": {
+    "title": "预采样参数（高级）"
   },
   "easy preSamplingSdTurbo": {
     "title": "预采样参数（SdTurbo）"

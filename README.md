@@ -8,7 +8,7 @@
 
 为了更加方便简单地使用ComfyUI，我对一部分常用的节点做了一些优化与整合。
 
-[![Bilibili Badge](https://img.shields.io/badge/使用说明视频-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white&link=https://www.bilibili.com/video/BV1vQ4y1G7z7)](https://www.bilibili.com/video/BV1vQ4y1G7z7/)
+[![Bilibili Badge](https://img.shields.io/badge/视频介绍-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white&link=https://www.bilibili.com/video/BV1vQ4y1G7z7)](https://www.bilibili.com/video/BV1vQ4y1G7z7/)
 </div>
 
 ## 流程对比
@@ -19,7 +19,15 @@ EasyUse 在 [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes
 
 ### 更新
 
-- **[2023-12-11]** 新增 `showSpentTime` 节点用于展示图片推理花费时间与VAE解码花费时间。
+**2023-12-13**
+
+-  新增 `easy LLLiteLoader` 节点，如果您预先安装过 kohya-ss/ControlNet-LLLite-ComfyUI 包，请将 models 里的模型文件移动至 ComfyUI\models\controlnet\ (即comfy默认的controlnet路径里，请勿修改模型的文件名，不然会读取不到)。
+-  修改 `easy controlnetLoader` 到 loader 分类底下。
+-  新增 `easy imageSize` 和 `easy imageSizeByLongerSize` 输出的尺寸显示。
+
+**2023-12-11**
+
+-  新增 `easy showSpentTime` 节点用于展示图片推理花费时间与VAE解码花费时间。
 
 ### 主要的优化
 
@@ -30,14 +38,15 @@ EasyUse 在 [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes
 
 声明: 非常尊重这些原作者们的付出，开源不易，我仅仅只是做了一些整合与优化。
 
-| 节点名                        | 相关的库                                                                        | 库相关的节点                |
-|:---------------------------|:----------------------------------------------------------------------------|:----------------------|
-| easy SetNode               | [diffus3/ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.SetNode       |
-| easy GetNode               | [diffus3/ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.GetNode       |
-| easy GlobalSeed            | [ltdrdata/ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) | Global Seed (Inspire) | 
+| 节点名                        | 相关的库                                                                        | 库相关的节点                  |
+|:---------------------------|:----------------------------------------------------------------------------|:------------------------|
+| easy SetNode               | [diffus3/ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.SetNode         |
+| easy GetNode               | [diffus3/ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.GetNode         |
+| easy LLLiteLoader          | [kohya-ss/ControlNet-LLLite-ComfyUI](https://github.com/kohya-ss/ControlNet-LLLite-ComfyUI) | LLLiteLoader            |
+| easy GlobalSeed            | [ltdrdata/ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) | Global Seed (Inspire)   | 
 | easy PreSamplingDynamicCFG | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull | 
 | DynamicThresholdingFull    | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull | 
-| easy ImageInsetCrop        | [rgthree/rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | ImageInsetCrop | 
+| easy ImageInsetCrop        | [rgthree/rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | ImageInsetCrop          | 
 
 ## 示例
 
