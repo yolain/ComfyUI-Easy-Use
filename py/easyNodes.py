@@ -1537,7 +1537,7 @@ class samplerSimple:
 
             # 推理总耗时（包含解码）
             end_decode_time = int(time.time() * 1000)
-            spent_time = '推理:' + str((end_time-start_time)/1000)+'秒, 解码:' + str((end_decode_time-end_time)/1000)+'秒'
+            spent_time = '扩散:' + str((end_time-start_time)/1000)+'秒, 解码:' + str((end_decode_time-end_time)/1000)+'秒'
 
             results = easy_save.images(samp_images, save_prefix, image_output)
             sampler.update_value_by_id("results", my_unique_id, results)
@@ -1693,7 +1693,7 @@ class samplerSDTurbo:
 
         # 推理总耗时（包含解码）
         end_decode_time = int(time.time() * 1000)
-        spent_time = '推理:' + str((end_time - start_time) / 1000) + '秒, 解码:' + str(
+        spent_time = '扩散:' + str((end_time - start_time) / 1000) + '秒, 解码:' + str(
             (end_decode_time - end_time) / 1000) + '秒'
 
         # Clean loaded_objects

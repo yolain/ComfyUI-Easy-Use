@@ -26,6 +26,20 @@ EasyUse is simplified on the basis of [tinyterraNodes](https://github.com/TinyTe
 - The **preSampling** node has been added to separate the sampling parameter configuration from the real-time preview image at the time of sampling。
 - Adjust the default generation timing of the seed, change **Control After Generate** to **Control Before Generate**.
 
+### The relevant node package involved
+
+Disclaimer: Opened source was not easy. I have a lot of respect for the contributions of these original authors. I just did some integration and optimization.
+
+| Nodes Name                 | Related libraries                                                                        | Library-related node              |
+|:---------------------------|:----------------------------------------------------------------------------|:----------------------------------|
+| easy SetNode               | [diffus3/ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.SetNode                   |
+| easy GetNode               | [diffus3/ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.GetNode                   |
+| easy GlobalSeed            | [ltdrdata/ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) | Global Seed (Inspire)             | 
+| easy PreSamplingDynamicCFG | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull           | 
+| DynamicThresholdingFull    | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull           | 
+| easy ImageInsetCrop        | [rgthree/rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | ImageInsetCrop                    | 
+
+
 ## Workflow Examples
 
 ### Text to image
