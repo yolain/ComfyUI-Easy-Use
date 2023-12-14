@@ -119,7 +119,38 @@ class imageSize:
       result = (0, 0)
     return {"ui": {"text": "Width: "+str(result[0])+" , Height: "+str(result[1])}, "result": result}
 
-# 图像尺寸
+# 图像尺寸（最长边）
+class imageSizeBySide:
+  def __init__(self):
+    pass
+
+  @classmethod
+  def INPUT_TYPES(cls):
+    return {
+      "required": {
+        "image": ("IMAGE",),
+        "side": (["Longest", "Shortest"],)
+      }
+    }
+
+  RETURN_TYPES = ("INT",)
+  RETURN_NAMES = ("resolution",)
+  FUNCTION = "image_side"
+
+  CATEGORY = "EasyUse/Image"
+
+  def image_side(self, image, side):
+    image = tensor2pil(image)
+    if image.size:
+      if side == "Longest":
+         result = (image.size[0],) if image.size[0] > image.size[1] else (image.size[1],)
+      elif side == 'Shortest':
+         result = (image.size[0],) if image.size[0] < image.size[1] else (image.size[1],)
+    else:
+      result = (0,)
+    return {"ui": {"text": str(result[0])}, "result": result}
+
+# 图像尺寸（最长边）
 class imageSizeByLongerSide:
   def __init__(self):
     pass
@@ -152,11 +183,13 @@ class imageSizeByLongerSide:
 NODE_CLASS_MAPPINGS = {
   "easy imageInsetCrop": imageInsetCrop,
   "easy imageSize": imageSize,
+  "easy imageSizeBySide": imageSizeBySide,
   "easy imageSizeByLongerSide": imageSizeByLongerSide
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageInsetCrop": "ImageInsetCrop",
   "easy imageSize": "ImageSize",
+  "easy imageSizeBySide": "ImageSize (Side)",
   "easy imageSizeByLongerSide": "ImageSize (LongerSide)"
 }

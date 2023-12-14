@@ -14,6 +14,9 @@
   "easy controlnetLoader": {
     "title": "简易Controlnet"
   },
+  "easy controlnetLoaderADV": {
+    "title": "简易Controlnet（高级）"
+  },
   "easy LLLite": {
     "title": "简易LLLite"
   },

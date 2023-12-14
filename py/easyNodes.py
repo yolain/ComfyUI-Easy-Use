@@ -28,7 +28,7 @@ from comfy_extras.chainner_models import model_loading
 from typing import Dict, List, Optional, Tuple, Union, Any
 from .adv_encode import advanced_encode, advanced_encode_XL
 
-from nodes import MAX_RESOLUTION, VAEEncode, VAEEncodeTiled, VAEDecode, VAEDecodeTiled
+from nodes import MAX_RESOLUTION, RepeatLatentBatch
 from .config import BASE_RESOLUTIONS
 
 from server import PromptServer
@@ -781,6 +781,7 @@ class a1111Loader:
 
             "positive": ("STRING", {"default": "Positive", "multiline": True}),
             "negative": ("STRING", {"default": "Negative", "multiline": True}),
+            "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
             "optional": {"optional_lora_stack": ("LORA_STACK",)},
             "hidden": {"prompt": "PROMPT", "positive_weight_interpretation": "A1111", "negative_weight_interpretation": "A1111"}, "my_unique_id": "UNIQUE_ID"}
@@ -794,7 +795,7 @@ class a1111Loader:
     def adv_pipeloader(self, ckpt_name, vae_name, clip_skip,
                        lora_name, lora_model_strength, lora_clip_strength,
                        resolution, empty_latent_width, empty_latent_height,
-                       positive, negative, optional_lora_stack=None, prompt=None,
+                       positive, negative, batch_size, optional_lora_stack=None, prompt=None,
                        positive_weight_interpretation='A1111', negative_weight_interpretation='A1111',
                        my_unique_id=None
                        ):
@@ -813,7 +814,7 @@ class a1111Loader:
                 raise ValueError("Invalid base_resolution format.")
 
         # Create Empty Latent
-        latent = torch.zeros([1, 4, empty_latent_height // 8, empty_latent_width // 8]).cpu()
+        latent = torch.zeros([batch_size, 4, empty_latent_height // 8, empty_latent_width // 8]).cpu()
         samples = {"samples": latent}
 
         # Clean models from loaded_objects
@@ -894,7 +895,7 @@ class a1111Loader:
                                     "negative_balance": None,
                                     "empty_latent_width": empty_latent_width,
                                     "empty_latent_height": empty_latent_height,
-                                    "batch_size": 1,
+                                    "batch_size": batch_size,
                                     "seed": 0,
                                     "empty_samples": samples, }
                 }
@@ -921,6 +922,8 @@ class comfyLoader:
 
             "positive": ("STRING", {"default": "Positive", "multiline": True}),
             "negative": ("STRING", {"default": "Negative", "multiline": True}),
+
+            "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
             "optional": {"optional_lora_stack": ("LORA_STACK",)},
             "hidden": {"prompt": "PROMPT", "positive_weight_interpretation": "comfy", "negative_weight_interpretation": "comfy"}, "my_unique_id": "UNIQUE_ID"}
@@ -934,7 +937,7 @@ class comfyLoader:
     def adv_pipeloader(self, ckpt_name, vae_name, clip_skip,
                        lora_name, lora_model_strength, lora_clip_strength,
                        resolution, empty_latent_width, empty_latent_height,
-                       positive, negative, optional_lora_stack=None, prompt=None,
+                       positive, negative, batch_size, optional_lora_stack=None, prompt=None,
                        positive_weight_interpretation='comfy', negative_weight_interpretation='comfy',
                        my_unique_id=None
                        ):
@@ -943,7 +946,7 @@ class comfyLoader:
             ckpt_name, vae_name, clip_skip,
             lora_name, lora_model_strength, lora_clip_strength,
             resolution, empty_latent_width, empty_latent_height,
-            positive, negative, optional_lora_stack, prompt,
+            positive, negative, batch_size, optional_lora_stack, prompt,
             positive_weight_interpretation, negative_weight_interpretation,
             my_unique_id
         )
@@ -958,12 +961,11 @@ class controlnetSimple:
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
-                "control_net_name": (folder_paths.get_filename_list("controlnet"),),
                 "image": ("IMAGE",),
+                "control_net_name": (folder_paths.get_filename_list("controlnet"),),
             },
             "optional": {
-                "positive": ("CONDITIONING",),
-                "negative": ("CONDITIONING",),
+                "control_net": ("CONTROL_NET",),
                 "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01})
             }
         }
@@ -975,16 +977,17 @@ class controlnetSimple:
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loader"
 
-    def controlnetApply(self, pipe, control_net_name, image, positive=None, negative=None, strength=1):
-        controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
-        control_net = comfy.controlnet.load_controlnet(controlnet_path)
+    def controlnetApply(self, pipe, image, control_net_name, control_net=None,strength=1):
+        if control_net is None:
+            controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
+            control_net = comfy.controlnet.load_controlnet(controlnet_path)
         control_hint = image.movedim(-1, 1)
 
-        _positive = pipe["positive"] if positive is None else positive
-        _negative = pipe["negative"] if negative is None else negative
+        positive = pipe["positive"]
+        negative = pipe["negative"]
 
         if strength != 0:
-            if _negative is None:
+            if negative is None:
                 p = []
                 for t in positive:
                     n = [t[0], t[1].copy()]
@@ -994,11 +997,11 @@ class controlnetSimple:
                     n[1]['control'] = c_net
                     n[1]['control_apply_to_uncond'] = True
                     p.append(n)
-                _positive = p
+                positive = p
             else:
                 cnets = {}
                 out = []
-                for conditioning in [_positive, _negative]:
+                for conditioning in [positive, negative]:
                     c = []
                     for t in conditioning:
                         d = t[1].copy()
@@ -1016,12 +1019,94 @@ class controlnetSimple:
                         n = [t[0], d]
                         c.append(n)
                     out.append(c)
-                _positive = out[0]
-                _negative = out[1]
+                positive = out[0]
+                negative = out[1]
 
-        # 拼接条件
-        positive = _positive if positive is None else _positive + pipe['positive']
-        negative = _negative if negative is None else _negative + pipe['negative']
+        new_pipe = {
+            "model": pipe['model'],
+            "positive": positive,
+            "negative": negative,
+            "vae": pipe['vae'],
+            "clip": pipe['clip'],
+
+            "samples": pipe["samples"],
+            "images": pipe["images"],
+            "seed": 0,
+
+            "loader_settings": pipe["loader_settings"]
+        }
+
+        return (new_pipe,)
+
+# controlnetADV
+class controlnetAdvanced:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "image": ("IMAGE",),
+                "control_net_name": (folder_paths.get_filename_list("controlnet"),),
+            },
+            "optional": {
+                "control_net": ("CONTROL_NET",),
+                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                "start_percent": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_percent": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001})
+            }
+        }
+
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
+    OUTPUT_NODE = True
+
+    FUNCTION = "controlnetApply"
+    CATEGORY = "EasyUse/Loader"
+
+    def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1):
+        if control_net is None:
+            controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
+            control_net = comfy.controlnet.load_controlnet(controlnet_path)
+        control_hint = image.movedim(-1, 1)
+
+        positive = pipe["positive"]
+        negative = pipe["negative"]
+
+        if strength != 0:
+            if negative is None:
+                p = []
+                for t in positive:
+                    n = [t[0], t[1].copy()]
+                    c_net = control_net.copy().set_cond_hint(control_hint, strength)
+                    if 'control' in t[1]:
+                        c_net.set_previous_controlnet(t[1]['control'])
+                    n[1]['control'] = c_net
+                    n[1]['control_apply_to_uncond'] = True
+                    p.append(n)
+                positive = p
+            else:
+                cnets = {}
+                out = []
+                for conditioning in [positive, negative]:
+                    c = []
+                    for t in conditioning:
+                        d = t[1].copy()
+
+                        prev_cnet = d.get('control', None)
+                        if prev_cnet in cnets:
+                            c_net = cnets[prev_cnet]
+                        else:
+                            c_net = control_net.copy().set_cond_hint(control_hint, strength, (start_percent, end_percent))
+                            c_net.set_previous_controlnet(prev_cnet)
+                            cnets[prev_cnet] = c_net
+
+                        d['control'] = c_net
+                        d['control_apply_to_uncond'] = False
+                        n = [t[0], d]
+                        c.append(n)
+                    out.append(c)
+                positive = out[0]
+                negative = out[1]
 
         new_pipe = {
             "model": pipe['model'],
@@ -1095,6 +1180,9 @@ class samplerSettings:
                      "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
                      "control_before_generate": (["fixed", "increment", "decrement", "randomize"], {"default": "randomize"}),
                      },
+                "optional": {
+                    "image_to_latent": ("IMAGE",),
+                },
                 "hidden":
                     {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
                 }
@@ -1106,7 +1194,7 @@ class samplerSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, steps, cfg, sampler_name, scheduler, denoise, seed_num, control_before_generate, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, steps, cfg, sampler_name, scheduler, denoise, seed_num, control_before_generate, image_to_latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
         # seed生成
         seed_num = control_seed(control_before_generate, seed_num)
@@ -1117,6 +1205,17 @@ class samplerSettings:
                 length = len(node["widgets_values"])
                 node["widgets_values"][length-2] = seed_num
 
+        vae = pipe["vae"]
+        # 图生图转换
+        if image_to_latent is not None:
+            batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+            samples = {"samples": vae.encode(image_to_latent)}
+            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+            images = image_to_latent
+        else:
+            samples = pipe["samples"]
+            images = pipe["images"]
+        print(samples)
         new_pipe = {
             "model": pipe['model'],
             "positive": pipe['positive'],
@@ -1124,8 +1223,8 @@ class samplerSettings:
             "vae": pipe['vae'],
             "clip": pipe['clip'],
 
-            "samples": pipe["samples"],
-            "images": pipe["images"],
+            "samples": samples,
+            "images": images,
             "seed": seed_num,
 
             "loader_settings": {
@@ -1163,6 +1262,9 @@ class samplerSettingsAdvanced:
                      "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
                      "control_before_generate": (["fixed", "increment", "decrement", "randomize"], {"default": "randomize"}),
                      },
+                "optional": {
+                    "image_to_latent": ("Image",)
+                },
                 "hidden":
                     {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
                 }
@@ -1174,7 +1276,7 @@ class samplerSettingsAdvanced:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, steps, cfg, sampler_name, scheduler, start_at_step, end_at_step, add_noise, seed_num, control_before_generate, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, steps, cfg, sampler_name, scheduler, start_at_step, end_at_step, add_noise, seed_num, control_before_generate, image_to_latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
         # seed生成
         seed_num = control_seed(control_before_generate, seed_num)
@@ -1185,6 +1287,17 @@ class samplerSettingsAdvanced:
                 length = len(node["widgets_values"])
                 node["widgets_values"][length-2] = seed_num
 
+        # 图生图转换
+        vae = pipe["vae"]
+        if image_to_latent is not None:
+            batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+            samples = {"samples": vae.encode(image_to_latent)}
+            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+            images = image_to_latent
+        else:
+            samples = pipe["samples"]
+            images = pipe["images"]
+
         new_pipe = {
             "model": pipe['model'],
             "positive": pipe['positive'],
@@ -1192,8 +1305,8 @@ class samplerSettingsAdvanced:
             "vae": pipe['vae'],
             "clip": pipe['clip'],
 
-            "samples": pipe["samples"],
-            "images": pipe["images"],
+            "samples": samples,
+            "images": images,
             "seed": seed_num,
 
             "loader_settings": {
@@ -1516,9 +1629,6 @@ class samplerSimple:
         if add_noise == "disable":
             disable_noise = True
 
-        def vae_decode_latent(vae, samples, tile_size):
-            return VAEDecodeTiled().decode(vae, samples, tile_size)[0] if tile_size is not None else VAEDecode().decode(vae, samples)[0]
-
         def process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
                                  samp_negative,
                                  steps, start_step, last_step, cfg, sampler_name, scheduler, denoise,
@@ -1533,7 +1643,13 @@ class samplerSimple:
             # 推理结束时间
             end_time = int(time.time() * 1000)
             # 解码图片
-            samp_images = vae_decode_latent(samp_vae, samp_samples, tile_size)
+            latent = samp_samples["samples"]
+
+            # 解码图片
+            if tile_size is not None:
+                samp_images = samp_vae.decode_tiled(latent, tile_x=tile_size // 8, tile_y=tile_size // 8, )
+            else:
+                samp_images = samp_vae.decode(latent).cpu()
 
             # 推理总耗时（包含解码）
             end_decode_time = int(time.time() * 1000)
@@ -1686,8 +1802,8 @@ class samplerSDTurbo:
         latent = samp_samples['samples']
 
         # 解码图片
-        if tile_size:
-            samp_images = (samp_vae.decode_tiled(latent, tile_x=tile_size // 8, tile_y=tile_size // 8, ),)
+        if tile_size is not None:
+            samp_images = samp_vae.decode_tiled(latent, tile_x=tile_size // 8, tile_y=tile_size // 8, )
         else:
             samp_images = samp_vae.decode(latent).cpu()
 
@@ -1770,6 +1886,7 @@ NODE_CLASS_MAPPINGS = {
     "easy a1111Loader": a1111Loader,
     "easy comfyLoader": comfyLoader,
     "easy controlnetLoader": controlnetSimple,
+    "easy controlnetLoaderADV": controlnetAdvanced,
     "easy globalSeed": globalSeed,
     "easy preSampling": samplerSettings,
     "easy preSamplingAdvanced": samplerSettingsAdvanced,
@@ -1785,6 +1902,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy a1111Loader": "EasyLoader (A1111)",
     "easy comfyLoader": "EasyLoader (comfy)",
     "easy controlnetLoader": "EasyControlnet",
+    "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
     "easy globalSeed": "GlobalSeed",
     "easy preSampling": "PreSampling",
     "easy preSamplingAdvanced": "PreSampling (Advanced)",

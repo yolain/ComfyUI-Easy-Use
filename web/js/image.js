@@ -5,7 +5,7 @@ app.registerExtension({
     name: "comfy.easyUse.imageWidgets",
 
     nodeCreated(node) {
-        if (["easy imageSize","easy imageSizeByLongerSide"].includes(node.comfyClass)) {
+        if (["easy imageSize","easy imageSizeBySide","easy imageSizeByLongerSide"].includes(node.comfyClass)) {
 
 			const inputEl = document.createElement("textarea");
 			inputEl.className = "comfy-multiline-input";
@@ -29,7 +29,7 @@ app.registerExtension({
     },
 
     beforeRegisterNodeDef(nodeType, nodeData, app) {
-        if (["easy imageSize","easy imageSizeByLongerSide"].includes(nodeData.name)) {
+        if (["easy imageSize","easy imageSizeBySide","easy imageSizeByLongerSide"].includes(nodeData.name)) {
 			function populate(arr_text) {
 				var text = '';
 				for (let i = 0; i < arr_text.length; i++){

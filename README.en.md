@@ -19,15 +19,26 @@ EasyUse is simplified on the basis of [tinyterraNodes](https://github.com/TinyTe
 
 ### Updated
 
-**[Updated at 12/13/2023]**
+**2023-12-14**
+
+- `easy a1111Loader` and `easy comfyLoader` added `batch_size` of required input parameters 
+- Added the `easy controlnetLoaderADV` node
+- `easy controlnetLoaderADV` and `easy controlnetLoader` added `control_net ` of optional input parameters
+- `easy preSampling` and `easy preSamplingAdvanced` added 'image_to_latent' optional input parameters
+- Added the `easy imageSizeBySide` node, which can be output as a long side or a short side
+
+<details>
+<summary><b>Updated at 12/13/2023</b></summary>
 
 -  Added the `easy LLLiteLoader` node, if you have pre-installed the kohya-ss/ControlNet-LLLite-ComfyUI package, please move the model files in the models to `ComfyUI\models\controlnet\` (i.e. in the default controlnet path of comfy, please do not change the file name of the model, otherwise it will not be read).
 -  Modify `easy controlnetLoader` to the bottom of the loader category.
 -  Added size display for `easy imageSize` and `easy imageSizeByLongerSize` outputs.
+</details>
 
-**[Updated at 12/11/2023]**
-
+<details>
+<summary><b>Updated at 12/11/2023</b></summary>
 -  Added the `showSpentTime` node to display the time spent on image diffusion and the time spent on VAE decoding images
+</details>
 
 ### Major optimizations
 
