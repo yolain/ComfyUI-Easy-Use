@@ -113,14 +113,14 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 
 ## Credits
 
-[ComfyUI] (https://github.com/comfyanonymous/ComfyUI) - Powerful and modular Stable Diffusion GUI
+[ComfyUI](https://github.com/comfyanonymous/ComfyUI) - Powerful and modular Stable Diffusion GUI
 
-[ComfyUI-ComfyUI-Manager] (https://github.com/ltdrdata/ComfyUI-Manager) - ComfyUI Manager
+[ComfyUI-ComfyUI-Manager](https://github.com/ltdrdata/ComfyUI-Manager) - ComfyUI Manager
 
-[tinyterraNodes] (https://github.com/TinyTerra/ComfyUI_tinyterraNodes) - Pipe nodes (node bundles) allow users to reduce unnecessary connections
+[tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes) - Pipe nodes (node bundles) allow users to reduce unnecessary connections
 
-[ComfyUI-extensions] (https://github.com/diffus3/ComfyUI-extensions) - Diffus3 gets and sets points that allow the user to detach the composition of the workflow 
+[ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) - Diffus3 gets and sets points that allow the user to detach the composition of the workflow 
 
-[ComfyUI-Impact-Pack] (https://github.com/ltdrdata/ComfyUI-Impact-Pack) - General modpack 1
+[ComfyUI-Impact-Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack) - General modpack 1
 
-[ComfyUI-Inspire-Pack] (https://github.com/ltdrdata/ComfyUI-Inspire-Pack) - General Modpack 2
+[ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) - General Modpack 2
