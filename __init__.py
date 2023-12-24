@@ -38,6 +38,8 @@ from .py.wildcards import read_wildcard_dict
 wildcards_path = os.path.join(os.path.dirname(__file__), "wildcards")
 if os.path.exists(wildcards_path):
     read_wildcard_dict(wildcards_path)
+else:
+    os.mkdir(wildcards_path)
 
 WEB_DIRECTORY = "./web"
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]
