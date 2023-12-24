@@ -96,6 +96,10 @@ def prompt_seed_update(json_data):
             if k not in seed_widget_map:
                 continue
 
+            if 'seed_num' in v['inputs']:
+                if isinstance(v['inputs']['seed_num'], int):
+                    v['inputs']['seed'] = seed_generator.next()
+
             if 'seed' in v['inputs']:
                 if isinstance(v['inputs']['seed'], int):
                     v['inputs']['seed'] = seed_generator.next()
@@ -133,6 +137,8 @@ def workflow_seed_update(json_data):
 
                 if 'noise_seed' in prompt[node_id]['inputs']:
                     seed = prompt[node_id]['inputs']['noise_seed']
+                elif 'seed_num' in prompt[node_id]['inputs']:
+                    seed = prompt[node_id]['inputs']['seed_num']
                 else:
                     seed = prompt[node_id]['inputs']['seed']
 

@@ -1,4 +1,5 @@
-import { app } from "../../../scripts/app.js";
+import { app } from "../../../../scripts/app.js";
+import { api } from "../../../../scripts/api.js";
 
 let origProps = {};
 
@@ -35,106 +36,6 @@ function widgetLogic(node, widget) {
 		} else {
 			toggleWidget(node, findWidgetByName(node, 'lora_model_strength'), true)
 			toggleWidget(node, findWidgetByName(node, 'lora_clip_strength'), true)
-		}
-	}
-	if (widget.name === 'lora1_name') {
-		if (widget.value === "None") {
-			toggleWidget(node, findWidgetByName(node, 'lora1_model_strength'))
-			toggleWidget(node, findWidgetByName(node, 'lora1_clip_strength'))
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'lora1_model_strength'), true)
-			toggleWidget(node, findWidgetByName(node, 'lora1_clip_strength'), true)
-		}
-	}
-	if (widget.name === 'lora2_name') {
-		if (widget.value === "None") {
-			toggleWidget(node, findWidgetByName(node, 'lora2_model_strength'))
-			toggleWidget(node, findWidgetByName(node, 'lora2_clip_strength'))
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'lora2_model_strength'), true)
-			toggleWidget(node, findWidgetByName(node, 'lora2_clip_strength'), true)
-		}
-	}
-	if (widget.name === 'lora3_name') {
-		if (widget.value === "None") {
-			toggleWidget(node, findWidgetByName(node, 'lora3_model_strength'))
-			toggleWidget(node, findWidgetByName(node, 'lora3_clip_strength'))
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'lora3_model_strength'), true)
-			toggleWidget(node, findWidgetByName(node, 'lora3_clip_strength'), true)
-		}
-	}
-	if (widget.name === 'refiner_ckpt_name') {
-		let refiner_lora1 = findWidgetByName(node, 'refiner_lora1_name').value
-		let refiner_lora2 = findWidgetByName(node, 'refiner_lora2_name').value
-		if (widget.value === "None") {
-			toggleWidget(node, findWidgetByName(node, 'refiner_vae_name'))
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora1_name'))
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora1_model_strength'))
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora1_clip_strength'))
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora2_name'))
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora2_model_strength'))
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora2_clip_strength'))
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'refiner_vae_name'), true)
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora1_name'), true)
-			if (refiner_lora1 !== "None") {
-				toggleWidget(node, findWidgetByName(node, 'refiner_lora1_model_strength'), true)
-				toggleWidget(node, findWidgetByName(node, 'refiner_lora1_clip_strength'), true)
-			}
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora2_name'), true)
-			if (refiner_lora2 !== "None") {
-				toggleWidget(node, findWidgetByName(node, 'refiner_lora2_model_strength'), true)
-				toggleWidget(node, findWidgetByName(node, 'refiner_lora2_clip_strength'), true)
-			}
-		}
-	}
-	if (widget.name === 'refiner_lora1_name') {
-		let refiner_ckpt = findWidgetByName(node, 'refiner_ckpt_name').value
-
-		if (widget.value === "None" || refiner_ckpt === "None") {
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora1_model_strength'))
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora1_clip_strength'))
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora1_model_strength'), true)
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora1_clip_strength'), true)
-		}
-	}
-	if (widget.name === 'refiner_lora2_name') {
-		let refiner_ckpt = findWidgetByName(node, 'refiner_ckpt_name').value
-
-		if (widget.value === "None" || refiner_ckpt === "None") {
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora2_model_strength'))
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora2_clip_strength'))
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora2_model_strength'), true)
-			toggleWidget(node, findWidgetByName(node, 'refiner_lora2_clip_strength'), true)
-		}
-	}
-	if (widget.name === 'rescale_after_model') {
-		if (widget.value === false) {
-			toggleWidget(node, findWidgetByName(node, 'rescale_method'))
-			toggleWidget(node, findWidgetByName(node, 'rescale'))
-			toggleWidget(node, findWidgetByName(node, 'percent'))
-			toggleWidget(node, findWidgetByName(node, 'width'))
-			toggleWidget(node, findWidgetByName(node, 'height'))
-			toggleWidget(node, findWidgetByName(node, 'longer_side'))
-			toggleWidget(node, findWidgetByName(node, 'crop'))
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'rescale_method'), true)
-			toggleWidget(node, findWidgetByName(node, 'rescale'), true)
-			
-			let rescale_value = findWidgetByName(node, 'rescale').value
-
-			if (rescale_value === 'by percentage') {
-				toggleWidget(node, findWidgetByName(node, 'percent'), true)
-			} else if (rescale_value === 'to Width/Height') {
-				toggleWidget(node, findWidgetByName(node, 'width'), true)
-				toggleWidget(node, findWidgetByName(node, 'height'), true)
-			} else {
-				toggleWidget(node, findWidgetByName(node, 'longer_side'), true)
-			}
-			toggleWidget(node, findWidgetByName(node, 'crop'), true)
 		}
 	}
 	if (widget.name === 'rescale') {
@@ -192,28 +93,6 @@ function widgetLogic(node, widget) {
 		} else {
 			toggleWidget(node, findWidgetByName(node, 'seed_num'), true)
 			toggleWidget(node, findWidgetByName(node, 'control_before_generate'), true)
-		}
-	}
-	if (widget.name === 'ckpt_B_name') {
-		if (widget.value === "None") {
-			toggleWidget(node, findWidgetByName(node, 'config_B_name'))
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'config_B_name'), true)
-		}
-	}
-	if (widget.name === 'ckpt_C_name') {
-		if (widget.value === "None") {
-			toggleWidget(node, findWidgetByName(node, 'config_C_name'))
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'config_C_name'), true)
-		}
-	}
-	if (widget.name === 'save_model') {
-		if (widget.value === "True") {
-			toggleWidget(node, findWidgetByName(node, 'save_prefix'), true)
-
-		} else {
-			toggleWidget(node, findWidgetByName(node, 'save_prefix'))
 		}
 	}
 	if (widget.name === 'num_loras') {
@@ -299,17 +178,87 @@ app.registerExtension({
 	name: "comfy.easyUse.dynamicWidgets",
 
 	nodeCreated(node) {
-		if (["easy a1111Loader","easy comfyLoader","easy preSamplingAdvanced","easy preSamplingSdTurbo", "easy kSampler","easy kSamplerSDTurbo","easy kSamplerTiled"].includes(node.comfyClass)) {
-			getSetters(node)
+		switch (node.comfyClass){
+			case "easy loader":
+			case "easy a1111Loader":
+			case "easy comfyLoader":
+			case "easy svdLoader":
+			case "easy loraStack":
+			case "easy preSamplingAdvanced":
+			case "easy preSamplingSdTurbo":
+			case "easy fullkSampler":
+			case "easy kSampler":
+			case "easy kSamplerSDTurbo":
+			case "easy kSamplerTiled":
+			case "easy hiresFix":
+			case "easy detailerFix":
+			case "easy imageRemoveBG":
+				getSetters(node)
+				break
+			case "easy wildcards":
+				const wildcard_text_widget_index = node.widgets.findIndex((w) => w.name == 'text');
+				const wildcard_text_widget = node.widgets[wildcard_text_widget_index];
+
+				// lora selector, wildcard selector
+				let combo_id = 1;
+
+				Object.defineProperty(node.widgets[combo_id], "value", {
+					set: (value) => {
+							const stackTrace = new Error().stack;
+							if(stackTrace.includes('inner_value_change')) {
+								if(value != "Select the LoRA to add to the text") {
+									let lora_name = value;
+									if (lora_name.endsWith('.safetensors')) {
+										lora_name = lora_name.slice(0, -12);
+									}
+
+									wildcard_text_widget.value += `<lora:${lora_name}>`;
+								}
+							}
+						},
+					get: () => { return "Select the LoRA to add to the text"; }
+				});
+
+				Object.defineProperty(node.widgets[combo_id+1], "value", {
+					set: (value) => {
+							const stackTrace = new Error().stack;
+							if(stackTrace.includes('inner_value_change')) {
+								if(value != "Select the Wildcard to add to the text") {
+									if(wildcard_text_widget.value != '')
+										wildcard_text_widget.value += ', '
+
+									wildcard_text_widget.value += value;
+								}
+							}
+						},
+					get: () => { return "Select the Wildcard to add to the text"; }
+				});
+
+				// Preventing validation errors from occurring in any situation.
+				node.widgets[combo_id].serializeValue = () => { return "Select the LoRA to add to the text"; }
+				node.widgets[combo_id+1].serializeValue = () => { return "Select the Wildcard to add to the text"; }
+				break
+			case "easy detailerFix":
+				const textarea_widget_index = node.widgets.findIndex((w) => w.type === "customtext");
+				if(textarea_widget_index == -1) return
+				node.widgets[textarea_widget_index].dynamicPrompts = false
+				node.widgets[textarea_widget_index].inputEl.placeholder = "wildcard spec: if kept empty, this option will be ignored";
+				node.widgets[textarea_widget_index].serializeValue = () => {return node.widgets[textarea_widget_index].value};
+				break
 		}
+
 	},
 	async beforeRegisterNodeDef(nodeType, nodeData, app) {
+		function addText(arr_text) {
+			var text = '';
+			for (let i = 0; i < arr_text.length; i++){
+				text += arr_text[i];
+			}
+			return text
+		}
+
 		if (["easy showSpentTime"].includes(nodeData.name)) {
-			function populate(arr_text) {
-				var text = '';
-				for (let i = 0; i < arr_text.length; i++){
-					text += arr_text[i];
-				}
+			function populate(text) {
 				if (this.widgets) {
 					const pos = this.widgets.findIndex((w) => w.name === "spent_time");
 					if (pos !== -1 && this.widgets[pos]) {
@@ -317,36 +266,98 @@ app.registerExtension({
 						w.value = text;
 					}
 				}
-				requestAnimationFrame(() => {
-					const sz = this.computeSize();
-					if (sz[0] < this.size[0]) {
-						sz[0] = this.size[0];
-					}
-					if (sz[1] < this.size[1]) {
-						sz[1] = this.size[1];
-					}
-					this.onResize?.(sz);
-					app.graph.setDirtyCanvas(true, false);
-				});
 			}
-
 			// When the node is executed we will be sent the input text, display this in the widget
 			const onExecuted = nodeType.prototype.onExecuted;
 			nodeType.prototype.onExecuted = function (message) {
 				onExecuted?.apply(this, arguments);
-				populate.call(this, message.text);
+				const text = addText(message.text)
+				populate.call(this, text);
 			};
 		}
 
-		if (["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingDynamicCFG"].includes(nodeData.name)) {
+		if (["easy fullLoader","easy a1111Loader", "easy comfyLoader"].includes(nodeData.name)) {
+			function populate(text, type='positive') {
+				if (this.widgets) {
+					const pos = this.widgets.findIndex((w) => w.name === type+"_prompt");
+					const className = "comfy-multiline-input wildcard_"+type+'_' + this.id.toString()
+					if (pos == -1 && text){
+						const inputEl = document.createElement("textarea");
+						inputEl.className = className;
+						inputEl.placeholder = "Wildcard Prompt ("+ type + ")"
+						const widget = this.addDOMWidget(type+"_prompt", "customtext", inputEl, {
+							getValue() {
+								return inputEl.value;
+							},
+							setValue(v) {
+								inputEl.value = v;
+							},
+							serialize:false,
+						});
+						widget.inputEl = inputEl;
+						widget.inputEl.readOnly = true
+						inputEl.addEventListener("input", () => {
+							widget.callback?.(widget.value);
+						});
+						widget.value = text;
+					}
+					else if (this.widgets[pos]) {
+						if(text){
+							const w = this.widgets[pos]
+							w.value = text;
+						}else{
+							 this.widgets.splice(pos, 1);
+							 const element = document.getElementsByClassName(className)
+							 if(element && element[0]) element[0].remove()
+						}
+					}
+				}
+			}
+
 			const onExecuted = nodeType.prototype.onExecuted;
 			nodeType.prototype.onExecuted = function (message) {
 				onExecuted?.apply(this, arguments);
-				const seed_changed = message.value[0]
-				const seed_index = this.widgets.findIndex((w) => w.name === "seed_num")
-				const w = this.widgets[seed_index]
-				w.value = seed_changed;
+				const positive = addText(message.positive)
+				const negative = addText(message.negative)
+				populate.call(this, positive, "positive");
+				populate.call(this, negative, "negative");
 			};
+		}
+
+		if (["easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingDynamicCFG", "easy fullkSampler"].includes(nodeData.name)) {
+			const control_seed = (action,seed) =>{
+				switch (action){
+					case 'randomize':
+						seed = Math.floor(Math.random() * 1125899906842624)
+						break
+					case 'increment':
+						seed = seed + 1
+						break
+					case 'decrement':
+						seed = seed - 1
+						break
+				}
+				return seed
+			}
+
+			const onNodeCreated = nodeType.prototype.onNodeCreated;
+            nodeType.prototype.onNodeCreated = async function () {
+				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
+				const values = ["randomize","fixed","increment","decrement"]
+				const seed_control = this.addWidget("combo", "control_before_generate", values[0], () => {},{
+					values,
+					serialize:false
+				})
+				let seedWidget = this.widgets.find(w=> w.name == "seed_num")
+				seedWidget.serializeValue = async (node, index) => {
+					const _seed = control_seed(seed_control.value,seedWidget.value)
+					if(node && node['widgets']){
+						node['widgets'][index]['value'] = _seed
+						if(node['widgets_values'] && node['widgets_values'][index]) node['widgets_values'][index] = _seed
+					}
+					return _seed
+				}
+			}
 		}
 	},
 });

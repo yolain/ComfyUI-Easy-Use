@@ -1,59 +1,736 @@
 {
+  "easy bookmark": {
+    "title": "书签 🔖",
+    "widgets":{
+      "shortcut_key": "快捷键",
+      "zoom": "缩放比例"
+    }
+  },
   "easy setNode": {
-    "title": "设置点"
+    "title": "设置点",
+    "widgets":{
+      "Constant": "变量名"
+    }
   },
   "easy getNode": {
-    "title": "获取点"
+    "title": "获取点",
+    "widgets":{
+      "Constant": "变量名"
+    }
+  },
+  "easy positive":{
+    "title": "正面提示词",
+    "outputs": {
+      "positive": "正面提示词"
+    }
+  },
+  "easy negative":{
+    "title": "负面提示词",
+    "outputs": {
+      "negative": "负面提示词"
+    }
+  },
+  "easy wildcards":{
+    "title": "通配符提示词",
+    "widgets": {
+      "Select to add LoRA": "选择要添加的Lora",
+      "Select to add Wildcard": "选择要添加的通配符",
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作"
+    },
+    "outputs": {
+      "text": "提示词"
+    }
+  },
+  "easy portraitMaster": {
+    "title": "肖像大师",
+    "widgets": {
+      "shot": "镜头",
+      "shot_weight": "镜头比重",
+      "gender": "性别",
+      "age": "年龄",
+      "nationality_1": "国籍1",
+      "nationality_2": "国籍2",
+      "nationality_mix": "国籍融合比重",
+      "body_type": "体型",
+      "body_type_weight": "体型比重",
+      "model_pose": "模特姿势 (Pose)",
+      "eyes_color": "眼睛颜色",
+      "facial_expression": "面部表情",
+      "facial_expression_weight": "面部表情比重",
+      "face_shape": "脸型",
+      "face_shape_weight": "脸型比重",
+      "facial_asymmetry": "面部对称比重",
+      "hair_style": "发型",
+      "hair_color": "发色",
+      "disheveled": "头发蓬松程度",
+      "beard": "胡子",
+      "skin_details": "皮肤细节",
+      "skin_pores": "皮肤毛孔",
+      "dimples": "酒窝",
+      "wrinkles": "皱纹",
+      "freckles": "雀斑",
+      "moles": "痣",
+      "skin_imperfections": "皮肤瑕疵",
+      "skin_acne": "皮肤痤疮",
+      "tanned_skin": "晒黑的皮肤",
+      "eyes_details": "眼睛细节",
+      "iris_details": "虹膜细节",
+      "circular_iris": "圆形虹膜",
+      "circular_pupil": "圆形瞳孔",
+      "light_type": "光源类型",
+      "light_direction": "光源方向",
+      "light_weight": "光源比重",
+      "photorealism_improvement": "照片真实度"
+    },
+    "outputs": {
+      "positive": "正面提示词",
+      "negative": "负面提示词"
+    }
+  },
+  "easy fullLoader": {
+    "title": "简易加载器 (完整版)",
+    "widgets": {
+      "ckpt_name": "Checkpoint名称",
+      "config_name": "配置名称",
+      "vae_name": "VAE名称",
+      "clip_skip": "Clip停止层",
+      "lora_name": "Lora名称",
+      "lora_model_strength": "模型强度",
+      "lora_clip_strength": "CLIP强度",
+      "resolution": "分辨率",
+      "empty_latent_width": "宽",
+      "empty_latent_height": "高",
+      "batch_size": "每批生成数量",
+      "positive": "正面提示词",
+      "positive_token_normalization": "正面规范",
+      "positive_weight_interpretation": "正面权重理解",
+      "negative": "负面提示词",
+      "negative_token_normalization": "负面规范",
+      "negative_weight_interpretation": "负面权重理解"
+    },
+    "inputs": {
+      "optional_lora_stack": "Lora堆（可选）",
+      "model_override": "模型（可选）",
+      "clip_override": "CLIP（可选）"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    }
   },
   "easy a1111Loader": {
-    "title": "简易加载器（A1111）"
+    "title": "简易加载器（A1111）",
+    "widgets": {
+      "ckpt_name": "大模型",
+      "vae_name": "VAE",
+      "clip_skip": "Clip停止层",
+      "lora_name": "Lora模型",
+      "lora_model_strength": "模型强度",
+      "lora_clip_strength": "CLIP强度",
+      "resolution": "分辨率",
+      "empty_latent_width": "宽",
+      "empty_latent_height": "高",
+      "batch_size": "每批生成数量",
+      "positive": "正面提示词",
+      "negative": "负面提示词"
+    },
+    "inputs": {
+      "optional_lora_stack": "Lora堆（可选）"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    }
   },
   "easy comfyLoader": {
-    "title": "简易加载器（comfy）"
+    "title": "简易加载器（Comfy）",
+    "widgets": {
+      "ckpt_name": "大模型",
+      "vae_name": "VAE",
+      "clip_skip": "Clip停止层",
+      "lora_name": "Lora模型",
+      "lora_model_strength": "模型强度",
+      "lora_clip_strength": "CLIP强度",
+      "resolution": "分辨率",
+      "empty_latent_width": "宽",
+      "empty_latent_height": "高",
+      "batch_size": "每批生成数量",
+      "positive": "正面提示词",
+      "negative": "负面提示词"
+    },
+    "inputs": {
+      "optional_lora_stack": "Lora堆（可选）"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    }
+  },
+  "easy zero123Loader": {
+    "title": "简易加载器（Zero123）",
+    "widgets": {
+      "ckpt_name": "大模型",
+      "vae_name": "VAE",
+      "resolution": "分辨率",
+      "empty_latent_width": "宽",
+      "empty_latent_height": "高",
+      "batch_size": "每批生成数量",
+      "positive": "正面提示词",
+      "negative": "负面提示词",
+      "elevation": "仰俯角",
+      "azimuth": "旋转角度"
+    },
+    "inputs": {
+      "init_image": "图像"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    }
+  },
+  "easy svdLoader": {
+    "title": "简易加载器（SVD）",
+    "widgets": {
+      "ckpt_name": "大模型",
+      "vae_name": "VAE",
+      "resolution": "分辨率",
+      "empty_latent_width": "宽",
+      "empty_latent_height": "高",
+      "video_frames": "帧数",
+      "motion_bucket_id": "动态桶ID",
+      "negative": "负面提示词",
+      "fps": "FPS帧率",
+      "augmentation_level": "增强"
+    },
+    "inputs": {
+      "init_image": "图像"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    }
+  },
+  "easy loraStack": {
+    "title": "简易Lora堆",
+    "widgets": {
+      "toggle": "开关",
+      "mode": "模式",
+      "num_loras": "Lora数量"
+    },
+    "inputs": {
+      "optional_lora_stack": "Lora堆（可选）"
+    },
+    "outputs": {
+      "lora_stack": "Lora堆"
+    }
   },
   "easy controlnetLoader": {
-    "title": "简易Controlnet"
+    "title": "简易Controlnet",
+    "widgets": {
+      "pipe": "节点束",
+      "control_net_name": "ControlNet",
+      "strength": "强度",
+      "image": "图像"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "control_net": "ControlNet (可选)",
+      "image": "图像"
+    }
   },
   "easy controlnetLoaderADV": {
-    "title": "简易Controlnet（高级）"
+    "title": "简易Controlnet（高级）",
+    "widgets": {
+
+      "control_net_name": "ControlNet",
+
+      "strength": "强度",
+      "start_percent": "开始时间"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "control_net": "ControlNet (可选)",
+      "image": "图像"
+    }
   },
-  "easy LLLite": {
-    "title": "简易LLLite"
+  "easy LLLiteLoader": {
+    "title": "简易LLLite",
+    "widgets": {
+      "model_name": "LLLite模型",
+      "strength": "强度",
+      "steps": "步数",
+      "start_percent": "开始时间",
+      "end_percent": "结束时间"
+    },
+    "inputs": {
+      "model": "模型",
+      "cond_image": "输入图像"
+    },
+    "outputs": {
+      "model": "模型"
+    }
   },
   "easy globalSeed": {
-    "title": "全局Seed"
+    "title": "全局随机种",
+    "widgets": {
+      "value": "种子值",
+      "mode": "生成时序",
+      "action": "运行操作",
+      "last_seed": "上次种子值"
+    }
   },
   "easy preSampling": {
-    "title": "预采样参数（基础）"
+    "title": "预采样参数（基础）",
+    "widgets": {
+      "steps": "步数",
+      "cfg": "CFG",
+      "sampler_name": "采样器",
+      "scheduler": "调度器",
+      "denoise": "降噪",
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间"
+    },
+    "outputs": {
+      "pipe": "节点束"
+    }
   },
   "easy preSamplingAdvanced": {
-    "title": "预采样参数（高级）"
+    "title": "预采样参数（高级）",
+    "widgets": {
+      "steps": "步数",
+      "start_at_step": "开始步数",
+      "end_at_step": "结束步数",
+      "add_noise": "增加噪声",
+      "cfg": "CFG",
+      "sampler_name": "采样器",
+      "scheduler": "调度器",
+      "denoise": "降噪",
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间"
+    },
+    "outputs": {
+      "pipe": "节点束"
+    }
   },
   "easy preSamplingSdTurbo": {
-    "title": "预采样参数（SdTurbo）"
+    "title": "预采样参数（SdTurbo）",
+    "widgets": {
+      "steps": "步数",
+      "cfg": "CFG",
+      "sampler_name": "采样器",
+      "scheduler": "调度器",
+      "denoise": "降噪",
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间"
+    },
+    "outputs": {
+      "pipe": "节点束"
+    }
   },
   "easy preSamplingDynamicCFG": {
-    "title": "预采样参数（动态CFG）"
+    "title": "预采样参数（动态CFG）",
+    "widgets": {
+      "steps": "步数",
+      "cfg": "CFG",
+      "cfg_mode": "CFG模式",
+      "cfg_scale_min": "CFG最小值",
+      "sampler_name": "采样器",
+      "scheduler": "调度器",
+      "denoise": "降噪",
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间"
+    },
+    "outputs": {
+      "pipe": "节点束"
+    }
+  },
+  "easy fullkSampler": {
+    "title": "简易k采样器（完整版）",
+    "widgets": {
+      "steps": "步数",
+      "start_at_step": "开始步数",
+      "end_at_step": "结束步数",
+      "add_noise": "增加噪声",
+      "cfg": "CFG",
+      "sampler_name": "采样器",
+      "scheduler": "调度器",
+      "denoise": "降噪",
+      "image_output": "图像输出",
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型",
+      "positive": "正向条件",
+      "negative": "反向条件",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "image": "图像",
+      "model": "模型",
+      "positive": "正向条件",
+      "negative": "反向条件",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间",
+      "seed": "种子"
+    }
   },
   "easy kSampler": {
-    "title": "简易K采样器"
+    "title": "简易K采样器",
+    "widgets": {
+      "image_output": "图像输出"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    },
+     "outputs": {
+      "pipe": "节点束",
+      "image": "图像"
+    }
   },
   "easy kSamplerTiled": {
-    "title": "简易采样器（分块解码）"
+    "title": "简易k采样器（分块解码）",
+    "widgets":{
+      "image_output": "图像输出",
+      "tile_size": "分块大小"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    },
+     "outputs": {
+      "pipe": "节点束",
+      "image": "图像"
+    }
   },
   "easy kSamplerSDTurbo": {
-    "title": "简易采样器（SDTurbo）"
+    "title": "简易k采样器（SDTurbo）",
+    "widgets": {
+      "image_output": "图像输出"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    },
+     "outputs": {
+      "pipe": "节点束",
+      "image": "图像"
+    }
+  },
+  "easy pipeIn": {
+    "title": "节点束输入",
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型",
+      "positive": "正向条件",
+      "negative": "反向条件",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间",
+      "image": "图像"
+    },
+    "outputs": {
+      "pipe": "节点束"
+    }
+  },
+  "easy pipeOut": {
+    "title": "节点束输出",
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型",
+      "positive": "正向条件",
+      "negative": "反向条件",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间",
+      "image": "图像"
+    },
+    "outputs": {
+      "pipe": "节点束"
+    }
+  },
+  "easy pipeEdit": {
+    "title": "节点束编辑",
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型",
+      "positive": "正向条件",
+      "negative": "反向条件",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间",
+      "image": "图像"
+    },
+    "outputs": {
+      "pipe": "节点束",
+       "model": "模型",
+      "positive": "正向条件",
+      "negative": "反向条件",
+      "image_to_latent": "图像转潜空间",
+      "latent": "潜空间",
+      "image": "图像"
+    }
+  },
+  "easy XYPlot": {
+    "title": "简易XY图表",
+    "widgets": {
+      "grid_spacing": "间隔",
+      "flip_xy": "XY互换",
+      "x_axis": "X轴",
+      "y_axis": "y轴"
+    },
+    "inputs": {
+      "pipe": "节点束"
+    },
+     "outputs": {
+      "pipe": "节点束"
+    }
+  },
+  "easy hiresFix": {
+    "title": "高清修复",
+    "widgets": {
+      "model_name": "放大模型",
+      "rescale_after_model": "重新缩放",
+      "rescale_method": "重新缩放方法",
+      "rescale": "重新缩放尺寸",
+      "percent": "百分比",
+      "width": "宽",
+      "height": "高",
+      "crop": "裁切",
+      "image_output": "图像输出"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "image": "图像"
+    },
+     "outputs": {
+       "pipe": "节点束",
+       "image": "图像",
+       "latent": "潜空间"
+    }
+  },
+  "easy ultralyticsDetectorPipe": {
+    "title": "检测加载器（细节修复节点束）",
+    "widgets": {
+      "model_name": "模型",
+      "bbox_threshold": "BBox阈值",
+      "bbox_dilation": "BBox膨胀",
+      "bbox_crop_factor": "BBox裁剪系数",
+      "open_segm": "开启Segm检测"
+    },
+    "outputs": {
+      "bbox_segm_pipe": "BBox节点束"
+    }
+  },
+  "easy samLoaderPipe": {
+    "title": "Sam模型加载器（细节修复节点束）",
+    "widgets": {
+      "model_name": "模型",
+      "device_mode": "设备模式",
+      "sam_detection_hint": "SAM检测提示",
+          "center-1": "中心",
+          "horizontal-2": "水平",
+          "vertical-2": "竖直",
+          "rect-4": "斜角",
+          "diamond-4": "菱形",
+          "mask-area": "遮罩区域",
+          "mask-points": "遮罩点",
+          "mask-point-bbox": "遮罩点BBox",
+      "sam_dilation": "SAM膨胀",
+      "sam_threshold": "SAM阈值",
+      "sam_bbox_expansion": "SAMBBox扩展",
+      "sam_mask_hint_threshold": "SAM遮罩检测阈值",
+      "sam_mask_hint_use_negative": "SAM负面遮罩提示"
+    },
+    "outputs": {
+      "sam_pipe": "SAM模型节点束"
+    }
+  },
+  "easy preDetailerFix": {
+    "title": "预细节修复处理",
+    "inputs": {
+      "pipe": "节点束",
+      "image": "图像",
+      "model": "模型",
+      "clip": "CLIP",
+      "vae": "VAE",
+      "positive": "正面提示词",
+      "negative": "负面提示词",
+      "bbox_segm_pipe": "BBox&Segm节点束",
+      "sam_pipe": "SAM模型节点束"
+    },
+    "widgets": {
+      "guide_size": "引导大小",
+      "max_size": "最大尺寸",
+      "guide_size_for": "引导目标",
+          "bbox": "BBox",
+          "crop_region": "裁剪区域",
+      "seed": "随机种",
+      "control_after_generate": "运行后操作",
+          "fixed": "固定",
+          "increment": "增加",
+          "decrement": "减少",
+          "randomize": "随机",
+      "steps": "步数",
+      "cfg": "CFG",
+      "sampler_name": "采样器",
+      "scheduler": "调度器",
+      "denoise": "降噪",
+      "feather": "羽化",
+      "noise_mask": "仅生成遮罩",
+      "force_inpaint": "强制重绘",
+      "drop_size": "最小尺寸",
+      "cycle": "循环"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "image": "图像",
+      "cropped_refined": "细化图像",
+      "cropped_enhanced_alpha": "细化部分",
+      "mask": "遮罩",
+      "detailer_pipe": "细化节点束",
+      "cnet_images": "ControlNet图像"
+    }
+  },
+  "easy detailerFix": {
+    "title": "细节修复",
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "image": "图像"
+    },
+    "widgets": {
+      "image_output": "图像输出"
+    }
+  },
+  "easy imageRemoveBG": {
+    "title": "图像去除背景",
+    "inputs": {
+      "image": "图像"
+    },
+    "widgets": {
+      "image_output": "图像输出",
+      "save_prefix": "保存前缀"
+    },
+    "outputs": {
+      "image": "图像",
+      "mask": "遮罩"
+    }
   },
   "easy imageInsetCrop": {
-    "title": "图像裁切"
+    "title": "图像裁切",
+    "inputs": {
+      "image": "图像"
+    },
+    "widgets": {
+      "measurement": "测量",
+      "left": "左",
+      "right": "右",
+      "top": "顶部",
+      "bottom": "底部"
+    },
+    "outputs": {
+      "IMAGE": "图像"
+    }
   },
   "easy imageSize": {
-    "title": "图像尺寸"
+    "title": "图像尺寸",
+    "inputs": {
+      "image": "图像"
+    },
+    "outputs": {
+      "width_int": "宽",
+      "height_int": "高"
+    }
+  },
+  "easy imageSizeBySide": {
+    "title": "图像尺寸（一边）",
+    "inputs": {
+      "image": "图像"
+    },
+    "outputs": {
+      "resolution": "分辨率"
+    },
+    "widgets": {
+      "side": "选择边"
+    }
   },
   "easy imageSizeByLongerSide": {
-    "title": "图像尺寸（长边）"
+    "title": "图像尺寸（最长边）",
+     "inputs": {
+      "image": "图像"
+    },
+    "outputs": {
+      "resolution": "分辨率"
+    }
+  },
+  "easy imageSizeShow": {
+    "title": "图像尺寸显示",
+    "widgets": {
+      "resize_mode": "拉伸模式",
+          "Just Resize": "仅拉伸",
+          "Crop and Resize": "裁剪并拉伸",
+          "Resize and Fill": "拉伸并填充"
+    },
+    "inputs": {
+      "image": "图像"
+    }
+  },
+  "easy imagePixelPerfect": {
+    "title": "图像完美像素",
+    "widgets": {
+      "resize_mode": "拉伸模式",
+          "Just Resize": "仅拉伸",
+          "Crop and Resize": "裁剪并拉伸",
+          "Resize and Fill": "拉伸并填充"
+    },
+    "inputs": {
+      "image": "图像"
+    },
+    "outputs": {
+      "resolution": "分辨率(整数)"
+    }
+  },
+  "easy poseEditor": {
+    "title": "姿势编辑器",
+    "widgets": {
+      "image": "图像",
+      "Add pose": "添加姿势",
+      "Reset pose": "重置姿势"
+    },
+    "outputs": {
+      "IMAGE": "图像"
+    }
   },
   "easy showSpentTime": {
-    "title": "稳定扩散花费时间"
+    "title": "显示推理时间",
+    "inputs": {
+      "pipe": "节点束"
+    }
   }
 }

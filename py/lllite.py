@@ -263,7 +263,7 @@ class LLLiteLoader:
 
     RETURN_TYPES = ("MODEL",)
     FUNCTION = "load_lllite"
-    CATEGORY = "EasyUse/Loader"
+    CATEGORY = "EasyUse/Loaders"
 
     def load_lllite(self, model, model_name, cond_image, strength, steps, start_percent, end_percent):
         # cond_image is b,h,w,3, 0-1

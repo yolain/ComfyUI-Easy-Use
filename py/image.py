@@ -1,7 +1,27 @@
 from PIL import Image
+from enum import Enum
+import os
+import hashlib
+import folder_paths
+import torch
 import numpy as np
 from nodes import MAX_RESOLUTION
 from .log import log_node_info
+
+class ResizeMode(Enum):
+  RESIZE = "Just Resize"
+  INNER_FIT = "Crop and Resize"
+  OUTER_FIT = "Resize and Fill"
+  def int_value(self):
+    if self == ResizeMode.RESIZE:
+      return 0
+    elif self == ResizeMode.INNER_FIT:
+      return 1
+    elif self == ResizeMode.OUTER_FIT:
+      return 2
+    assert False, "NOTREACHED"
+
+RESIZE_MODES = [ResizeMode.RESIZE.value, ResizeMode.INNER_FIT.value, ResizeMode.OUTER_FIT.value]
 
 def get_new_bounds(width, height, left, right, top, bottom):
   """Returns the new bounds for an image with inset crop data."""
@@ -107,6 +127,7 @@ class imageSize:
 
   RETURN_TYPES = ("INT", "INT")
   RETURN_NAMES = ("width_int", "height_int")
+  OUTPUT_NODE = True
   FUNCTION = "image_width_height"
 
   CATEGORY = "EasyUse/Image"
@@ -135,6 +156,7 @@ class imageSizeBySide:
 
   RETURN_TYPES = ("INT",)
   RETURN_NAMES = ("resolution",)
+  OUTPUT_NODE = True
   FUNCTION = "image_side"
 
   CATEGORY = "EasyUse/Image"
@@ -165,6 +187,7 @@ class imageSizeByLongerSide:
 
   RETURN_TYPES = ("INT",)
   RETURN_NAMES = ("resolution",)
+  OUTPUT_NODE = True
   FUNCTION = "image_longer_side"
 
   CATEGORY = "EasyUse/Image"
@@ -180,16 +203,100 @@ class imageSizeByLongerSide:
       result = (0,)
     return {"ui": {"text": str(result[0])}, "result": result}
 
+# 图像完美像素
+class imagePixelPerfect:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "image": ("IMAGE",),
+        "resize_mode": (RESIZE_MODES, {"default": ResizeMode.RESIZE.value})
+      }
+    }
+
+  RETURN_TYPES = ("INT",)
+  RETURN_NAMES = ("resolution",)
+  OUTPUT_NODE = True
+  FUNCTION = "execute"
+
+  CATEGORY = "EasyUse/Image"
+
+  def execute(self, image, resize_mode):
+
+    _, raw_H, raw_W, _ = image.shape
+    image = tensor2pil(image)
+    width = image.size[0]
+    height = image.size[1]
+
+    k0 = float(height) / float(raw_H)
+    k1 = float(width) / float(raw_W)
+
+    if resize_mode == ResizeMode.OUTER_FIT.value:
+      estimation = min(k0, k1) * float(min(raw_H, raw_W))
+    else:
+      estimation = max(k0, k1) * float(min(raw_H, raw_W))
+
+    result = int(np.round(estimation))
+    text = f"Width:{str(width)}\nHeight:{str(height)}\nPixelPerfect:{str(result)}"
+
+    return {"ui": {"text": text}, "result": (result,)}
+
+# 姿势编辑器
+class poseEditor:
+  @classmethod
+  def INPUT_TYPES(self):
+    temp_dir = folder_paths.get_temp_directory()
+
+    if not os.path.isdir(temp_dir):
+      os.makedirs(temp_dir)
+
+    temp_dir = folder_paths.get_temp_directory()
+
+    return {"required":
+              {"image": (sorted(os.listdir(temp_dir)),)},
+            }
+
+  RETURN_TYPES = ("IMAGE",)
+  FUNCTION = "output_pose"
+
+  CATEGORY = "EasyUse/Image"
+
+  def output_pose(self, image):
+    image_path = os.path.join(folder_paths.get_temp_directory(), image)
+    # print(f"Create: {image_path}")
+
+    i = Image.open(image_path)
+    image = i.convert("RGB")
+    image = np.array(image).astype(np.float32) / 255.0
+    image = torch.from_numpy(image)[None,]
+
+    return (image,)
+
+  @classmethod
+  def IS_CHANGED(self, image):
+    image_path = os.path.join(
+      folder_paths.get_temp_directory(), image)
+    # print(f'Change: {image_path}')
+
+    m = hashlib.sha256()
+    with open(image_path, 'rb') as f:
+      m.update(f.read())
+    return m.digest().hex()
+
 NODE_CLASS_MAPPINGS = {
   "easy imageInsetCrop": imageInsetCrop,
   "easy imageSize": imageSize,
   "easy imageSizeBySide": imageSizeBySide,
-  "easy imageSizeByLongerSide": imageSizeByLongerSide
+  "easy imageSizeByLongerSide": imageSizeByLongerSide,
+  "easy imagePixelPerfect": imagePixelPerfect,
+  "easy poseEditor": poseEditor
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageInsetCrop": "ImageInsetCrop",
   "easy imageSize": "ImageSize",
   "easy imageSizeBySide": "ImageSize (Side)",
-  "easy imageSizeByLongerSide": "ImageSize (LongerSide)"
+  "easy imageSizeByLongerSide": "ImageSize (LongerSide)",
+  "easy imagePixelPerfect": "ImagePixelPerfect",
+  "easy poseEditor": "PoseEditor"
 }

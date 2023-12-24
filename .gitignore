@@ -1,2 +1,5 @@
-nsp_pantry.json
 __pycache__
+*.ini
+wildcards/**
+.vscode/
+.idea/

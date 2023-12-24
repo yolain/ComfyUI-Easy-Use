@@ -45,5 +45,3 @@ async function queuePrompt_with_seed(number, { output, workflow }) {
 }
 
 api.queuePrompt = queuePrompt_with_seed;
-
-
