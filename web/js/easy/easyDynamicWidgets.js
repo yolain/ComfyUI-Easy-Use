@@ -325,21 +325,21 @@ app.registerExtension({
 		}
 
 		if (["easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingDynamicCFG", "easy fullkSampler"].includes(nodeData.name)) {
-			const control_seed = (action,seed) =>{
-				switch (action){
-					case 'randomize':
-						seed = Math.floor(Math.random() * 1125899906842624)
-						break
-					case 'increment':
-						seed = seed + 1
-						break
-					case 'decrement':
-						seed = seed - 1
-						break
-				}
-				return seed
-			}
-
+			// const control_seed = (action,seed) =>{
+			// 	switch (action){
+			// 		case 'randomize':
+			// 			seed = Math.floor(Math.random() * 1125899906842624)
+			// 			break
+			// 		case 'increment':
+			// 			seed = seed + 1
+			// 			break
+			// 		case 'decrement':
+			// 			seed = seed - 1
+			// 			break
+			// 	}
+			// 	return seed
+			// }
+			//
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
@@ -348,15 +348,15 @@ app.registerExtension({
 					values,
 					serialize:false
 				})
-				let seedWidget = this.widgets.find(w=> w.name == "seed_num")
-				seedWidget.serializeValue = async (node, index) => {
-					const _seed = control_seed(seed_control.value,seedWidget.value)
-					if(node && node['widgets']){
-						node['widgets'][index]['value'] = _seed
-						if(node['widgets_values'] && node['widgets_values'][index]) node['widgets_values'][index] = _seed
-					}
-					return _seed
-				}
+				// let seedWidget = this.widgets.find(w=> w.name == "seed_num")
+				// seedWidget.serializeValue = async (node, index) => {
+				// 	const _seed = control_seed(seed_control.value,seedWidget.value)
+				// 	if(node && node['widgets']){
+				// 		node['widgets'][index]['value'] = _seed
+				// 		if(node['widgets_values'] && node['widgets_values'][index]) node['widgets_values'][index] = _seed
+				// 	}
+				// 	return _seed
+				// }
 			}
 		}
 	},

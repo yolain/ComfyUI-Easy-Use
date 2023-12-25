@@ -13,8 +13,6 @@
 
 ## 介绍
 
-**不兼容提示**：目前无法与 [cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) 节点包当前版本兼容（该节点包的机制会导致序列化时随机种一直赋值等问题），可使用 **getNode**、**setNode** 替代。
-
 ### 更符合人性化的随机种
 <img src="./docs/seed_generate_compare.jpg">
 
@@ -37,6 +35,11 @@
 , 程序将在启动时拷贝中文对照文件至该节点包目录下，当您选择语言为中文时即可看到已更改后的简体中文节点。
 
 ## 更新日志
+
+**2023-12-25**
+
+- 修复 `easy globalSeed` 不生效问题
+- 修复所有的`seed_num` 因 [cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) 实时更新图表导致值错乱的问题
 
 **v1.0.0（2023-12-24）**
 

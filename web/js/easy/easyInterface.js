@@ -794,96 +794,96 @@ app.registerExtension({
     }
 })
 
-// 补充：解决control_before_generate时从历史记录调起时seed值不一致
-const element = document.getElementsByClassName('comfy-list')
-let new_element = null
-async function load(){
-    const items = await api.getItems('history');
-    new_element.replaceChildren(
-        ...Object.keys(items).flatMap((section) => [
-            $el("h4", {
-                textContent: section,
-            }),
-            $el("div.comfy-list-items", [
-                ...(items[section].reverse()).map((item) => {
-                    // Allow items to specify a custom remove action (e.g. for interrupt current prompt)
-                    const removeAction = item.remove || {
-                        name: "Delete",
-                        cb: () => api.deleteItem('history', item.prompt[1]),
-                    };
-                    return $el("div", {textContent: item.prompt[0] + ": "}, [
-                        $el("button", {
-                            textContent: "Load",
-                            onclick: async () => {
-                                // 补充：解决control_before_generate时从历史记录调起时seed值错误
-                                const outputs = item.outputs
-                                let workflow = item.prompt[3].extra_pnginfo.workflow
-                                const seed_widgets = workflow.seed_widgets
-                                if(seed_widgets){
-                                    for(let id in seed_widgets){
-                                        id = parseInt(id)
-                                        if(outputs[id] && outputs[id]['value']){
-                                            const seed = outputs[id]['value'][0]
-                                            let nodeIndex = workflow.nodes.findIndex(cate=>cate.id == id)
-                                            if(nodeIndex!==-1 && workflow.nodes[nodeIndex]){
-                                                workflow.nodes[nodeIndex]['widgets_values'][seed_widgets[id]] = seed
-                                            }
-                                        }
-                                    }
-                                }
-                                // end
-                                await app.loadGraphData(workflow);
-                                if (item.outputs) {
-                                    app.nodeOutputs = item.outputs;
-                                }
-                            },
-                        }),
-                        $el("button", {
-                            textContent: removeAction.name,
-                            onclick: async () => {
-                                await removeAction.cb();
-                                if (new_element.style.display != 'none') {
-                                    await load();
-                                }
-                            },
-                        }),
-                    ]);
-                }),
-            ]),
-        ]),
-        $el("div.comfy-list-actions", [
-            $el("button", {
-                textContent: "Clear History",
-                onclick: async () => {
-                    await api.clearItems('history');
-                    await load();
-                },
-            }),
-            $el("button", {textContent: "Refresh", onclick: () => load()}),
-        ])
-    );
-}
-if(element && element[1]){
-    const history_button = document.getElementById('comfy-view-history-button')
-    history_button.addEventListener('click',e=>{
-        if(new_element){
-            if(new_element.style.display == 'none') new_element.style.display = 'block'
-            else  new_element.style.display = 'none'
-        }
-        if(element[1].style.display != 'none'){
-            element[1].remove()
-            const parentNode = element[0].parentNode
-            new_element = document.createElement('div')
-            new_element.className = 'comfy-list easyuse'
-            new_element.style.display = 'block'
-            parentNode.insertBefore(new_element, element[0].nextSibling);
-            setTimeout(_=>load(),10)
-        }
-    })
-}
-api.addEventListener("status", () => {
-    if (new_element && new_element.style.display != 'none') {
-        load();
-    }
-});
+// 不需要了，之前的解决方案（解决control_before_generate时从历史记录调起时seed值不一致）
+// const element = document.getElementsByClassName('comfy-list')
+// let new_element = null
+// async function load(){
+//     const items = await api.getItems('history');
+//     new_element.replaceChildren(
+//         ...Object.keys(items).flatMap((section) => [
+//             $el("h4", {
+//                 textContent: section,
+//             }),
+//             $el("div.comfy-list-items", [
+//                 ...(items[section].reverse()).map((item) => {
+//                     // Allow items to specify a custom remove action (e.g. for interrupt current prompt)
+//                     const removeAction = item.remove || {
+//                         name: "Delete",
+//                         cb: () => api.deleteItem('history', item.prompt[1]),
+//                     };
+//                     return $el("div", {textContent: item.prompt[0] + ": "}, [
+//                         $el("button", {
+//                             textContent: "Load",
+//                             onclick: async () => {
+//                                 // 补充：解决control_before_generate时从历史记录调起时seed值错误
+//                                 const outputs = item.outputs
+//                                 let workflow = item.prompt[3].extra_pnginfo.workflow
+//                                 const seed_widgets = workflow.seed_widgets
+//                                 if(seed_widgets){
+//                                     for(let id in seed_widgets){
+//                                         id = parseInt(id)
+//                                         if(outputs[id] && outputs[id]['value']){
+//                                             const seed = outputs[id]['value'][0]
+//                                             let nodeIndex = workflow.nodes.findIndex(cate=>cate.id == id)
+//                                             if(nodeIndex!==-1 && workflow.nodes[nodeIndex]){
+//                                                 workflow.nodes[nodeIndex]['widgets_values'][seed_widgets[id]] = seed
+//                                             }
+//                                         }
+//                                     }
+//                                 }
+//                                 // end
+//                                 await app.loadGraphData(workflow);
+//                                 if (item.outputs) {
+//                                     app.nodeOutputs = item.outputs;
+//                                 }
+//                             },
+//                         }),
+//                         $el("button", {
+//                             textContent: removeAction.name,
+//                             onclick: async () => {
+//                                 await removeAction.cb();
+//                                 if (new_element.style.display != 'none') {
+//                                     await load();
+//                                 }
+//                             },
+//                         }),
+//                     ]);
+//                 }),
+//             ]),
+//         ]),
+//         $el("div.comfy-list-actions", [
+//             $el("button", {
+//                 textContent: "Clear History",
+//                 onclick: async () => {
+//                     await api.clearItems('history');
+//                     await load();
+//                 },
+//             }),
+//             $el("button", {textContent: "Refresh", onclick: () => load()}),
+//         ])
+//     );
+// }
+// if(element && element[1]){
+//     const history_button = document.getElementById('comfy-view-history-button')
+//     history_button.addEventListener('click',e=>{
+//         if(new_element){
+//             if(new_element.style.display == 'none') new_element.style.display = 'block'
+//             else  new_element.style.display = 'none'
+//         }
+//         if(element[1].style.display != 'none'){
+//             element[1].remove()
+//             const parentNode = element[0].parentNode
+//             new_element = document.createElement('div')
+//             new_element.className = 'comfy-list easyuse'
+//             new_element.style.display = 'block'
+//             parentNode.insertBefore(new_element, element[0].nextSibling);
+//             setTimeout(_=>load(),10)
+//         }
+//     })
+// }
+// api.addEventListener("status", () => {
+//     if (new_element && new_element.style.display != 'none') {
+//         load();
+//     }
+// });
 

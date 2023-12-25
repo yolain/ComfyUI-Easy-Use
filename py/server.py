@@ -8,6 +8,7 @@ class SGmode(Enum):
     DECR = 3
     RAND = 4
 
+
 class SeedGenerator:
     def __init__(self, base_value, action):
         self.base_value = base_value
@@ -38,9 +39,9 @@ class SeedGenerator:
         return seed
 
 
-def control_seed(v):
-    action = v['inputs']['action']
-    value = v['inputs']['value']
+def control_seed(v, action, seed_is_global):
+    action = action or v['inputs']['action']
+    value = v['inputs']['value'] if seed_is_global else v['inputs']['seed_num']
 
     if action == 'increment' or action == 'increment for each node':
         value += 1
@@ -53,7 +54,10 @@ def control_seed(v):
     elif action == 'randomize' or action == 'randomize for each node':
         value = random.randint(0, 1125899906842624)
 
-    v['inputs']['value'] = value
+    if seed_is_global:
+        v['inputs']['value'] = value
+    else:
+        v['inputs']['seed_num'] = value
 
     return value
 
@@ -64,57 +68,83 @@ def prompt_seed_update(json_data):
     except:
         return None
 
-    seed_widget_map = json_data['extra_data']['extra_pnginfo']['workflow']['seed_widgets']
+    workflow = json_data['extra_data']['extra_pnginfo']['workflow']
+    seed_widget_map = workflow['seed_widgets']
     value = None
     mode = None
     node = None
     action = None
+    seed_is_global = False
 
     for k, v in json_data['prompt'].items():
         if 'class_type' not in v:
             continue
 
         cls = v['class_type']
-        if cls == 'globalSeed':
+
+        if cls == 'easy globalSeed':
             mode = v['inputs']['mode']
             action = v['inputs']['action']
             value = v['inputs']['value']
             node = k, v
+            seed_is_global = True
 
     # control before generated
-    if mode is not None and mode:
-        value = control_seed(node[1])
+    if mode is not None and mode and seed_is_global:
+        value = control_seed(node[1], action, seed_is_global)
 
-    if value is not None:
-        seed_generator = SeedGenerator(value, action)
+    if seed_is_global:
+        if value is not None:
+            seed_generator = SeedGenerator(value, action)
 
+            for k, v in json_data['prompt'].items():
+                for k2, v2 in v['inputs'].items():
+                    if isinstance(v2, str) and '$GlobalSeed.value$' in v2:
+                        v['inputs'][k2] = v2.replace('$GlobalSeed.value$', str(value))
+
+                if k not in seed_widget_map:
+                    continue
+
+                if 'seed_num' in v['inputs']:
+                    if isinstance(v['inputs']['seed_num'], int):
+                        v['inputs']['seed_num'] = seed_generator.next()
+
+                if 'seed' in v['inputs']:
+                    if isinstance(v['inputs']['seed'], int):
+                        v['inputs']['seed'] = seed_generator.next()
+
+                if 'noise_seed' in v['inputs']:
+                    if isinstance(v['inputs']['noise_seed'], int):
+                        v['inputs']['noise_seed'] = seed_generator.next()
+
+                for k2, v2 in v['inputs'].items():
+                    if isinstance(v2, str) and '$GlobalSeed.value$' in v2:
+                        v['inputs'][k2] = v2.replace('$GlobalSeed.value$', str(value))
+        # control after generated
+        if mode is not None and not mode:
+            control_seed(node[1], action, seed_is_global)
+    else:
         for k, v in json_data['prompt'].items():
-            for k2, v2 in v['inputs'].items():
-                if isinstance(v2, str) and '$GlobalSeed.value$' in v2:
-                    v['inputs'][k2] = v2.replace('$GlobalSeed.value$', str(value))
-
-            if k not in seed_widget_map:
+            if 'class_type' not in v:
                 continue
+            cls = v['class_type']
+            if cls == "easy wildcards" or cls == "easy preSampling" or cls == "easy preSamplingAdvanced" or cls == "easy preSamplingSdTurbo" or cls == "easy preSamplingDynamicCFG" or cls == "easy fullkSampler":
+                extra_data = next((x for x in workflow["nodes"] if str(x["id"]) == k), None)
+                if extra_data is not None:
+                    widgets_value = extra_data.get('widgets_values')
+                    widgets_length = len(widgets_value)
+                    action = widgets_value[widgets_length - 1]
+                    node = k, v
 
-            if 'seed_num' in v['inputs']:
-                if isinstance(v['inputs']['seed_num'], int):
-                    v['inputs']['seed'] = seed_generator.next()
+                    value = control_seed(node[1], action, False)
+                    _seed_generator = SeedGenerator(value, action)
+                    print(value)
+                    if k not in seed_widget_map:
+                        continue
 
-            if 'seed' in v['inputs']:
-                if isinstance(v['inputs']['seed'], int):
-                    v['inputs']['seed'] = seed_generator.next()
-
-            if 'noise_seed' in v['inputs']:
-                if isinstance(v['inputs']['noise_seed'], int):
-                    v['inputs']['noise_seed'] = seed_generator.next()
-
-            for k2, v2 in v['inputs'].items():
-                if isinstance(v2, str) and '$GlobalSeed.value$' in v2:
-                    v['inputs'][k2] = v2.replace('$GlobalSeed.value$', str(value))
-
-    # control after generated
-    if mode is not None and not mode:
-        control_seed(node[1])
+                    if 'seed_num' in v['inputs']:
+                        if isinstance(v['inputs']['seed_num'], int):
+                            v['inputs']['seed_num'] = _seed_generator.next()
 
     return value is not None
 
@@ -126,19 +156,22 @@ def workflow_seed_update(json_data):
 
     updated_seed_map = {}
     value = None
+
     for node in nodes:
         node_id = str(node['id'])
         if node_id in prompt:
-            if node['type'] == 'globalSeed':
+            if node['type'] == 'easy globalSeed':
                 value = prompt[node_id]['inputs']['value']
+                length = len(node['widgets_values'])
+                node['widgets_values'][length-1] = node['widgets_values'][0]
                 node['widgets_values'][0] = value
             elif node_id in seed_widget_map:
                 widget_idx = seed_widget_map[node_id]
 
-                if 'noise_seed' in prompt[node_id]['inputs']:
-                    seed = prompt[node_id]['inputs']['noise_seed']
-                elif 'seed_num' in prompt[node_id]['inputs']:
+                if 'seed_num' in prompt[node_id]['inputs']:
                     seed = prompt[node_id]['inputs']['seed_num']
+                elif 'noise_seed' in prompt[node_id]['inputs']:
+                    seed = prompt[node_id]['inputs']['noise_seed']
                 else:
                     seed = prompt[node_id]['inputs']['seed']
 
@@ -146,6 +179,7 @@ def workflow_seed_update(json_data):
                 updated_seed_map[node_id] = seed
 
     server.PromptServer.instance.send_sync("easyuse-global-seed", {"id": node_id, "value": value, "seed_map": updated_seed_map})
+
 
 def onprompt(json_data):
     is_changed = prompt_seed_update(json_data)

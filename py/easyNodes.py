@@ -1027,14 +1027,14 @@ class wildcardsPrompt:
         my_unique_id = int(my_unique_id)
 
         easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
-        if my_unique_id:
-            workflow = extra_pnginfo["workflow"]
-            node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-            if node:
-                seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
-                    'inputs'] else 0
-                length = len(node["widgets_values"])
-                node["widgets_values"][length - 2] = seed_num
+        # if my_unique_id:
+        #     workflow = extra_pnginfo["workflow"]
+        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
+        #     if node:
+        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
+        #             'inputs'] else 0
+        #         length = len(node["widgets_values"])
+        #         node["widgets_values"][length - 2] = seed_num
 
         text = kwargs['text']
         return {"ui": {"value": [seed_num]}, "result": (text,)}
@@ -1985,14 +1985,14 @@ class samplerSettings:
 
     def settings(self, pipe, steps, cfg, sampler_name, scheduler, denoise, seed_num, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
-        if my_unique_id:
-            workflow = extra_pnginfo["workflow"]
-            node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-            if node:
-                seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
-                    'inputs'] else 0
-                length = len(node["widgets_values"])
-                node["widgets_values"][length - 2] = seed_num
+        # if my_unique_id:
+        #     workflow = extra_pnginfo["workflow"]
+        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
+        #     if node:
+        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
+        #             'inputs'] else 0
+        #         length = len(node["widgets_values"])
+        #         node["widgets_values"][length - 2] = seed_num
 
         # 图生图转换
         vae = pipe["vae"]
@@ -2070,14 +2070,14 @@ class samplerSettingsAdvanced:
 
     def settings(self, pipe, steps, cfg, sampler_name, scheduler, start_at_step, end_at_step, add_noise, seed_num, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
-        if my_unique_id:
-            workflow = extra_pnginfo["workflow"]
-            node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-            if node:
-                seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
-                    'inputs'] else 0
-                length = len(node["widgets_values"])
-                node["widgets_values"][length - 2] = seed_num
+        # if my_unique_id:
+        #     workflow = extra_pnginfo["workflow"]
+        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
+        #     if node:
+        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
+        #             'inputs'] else 0
+        #         length = len(node["widgets_values"])
+        #         node["widgets_values"][length - 2] = seed_num
 
         # 图生图转换
         vae = pipe["vae"]
@@ -2192,14 +2192,14 @@ class sdTurboSettings:
             _sampler = comfy.samplers.sampler_object(sampler_name)
             extra_options = None
 
-        if my_unique_id:
-            workflow = extra_pnginfo["workflow"]
-            node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-            if node:
-                seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
-                    'inputs'] else 0
-                length = len(node["widgets_values"])
-                node["widgets_values"][length - 2] = seed_num
+        # if my_unique_id:
+        #     workflow = extra_pnginfo["workflow"]
+        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
+        #     if node:
+        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
+        #             'inputs'] else 0
+        #         length = len(node["widgets_values"])
+        #         node["widgets_values"][length - 2] = seed_num
 
         new_pipe = {
             "model": pipe['model'],
@@ -2278,13 +2278,14 @@ class dynamicCFGSettings:
         m = model.clone()
         m.set_model_sampler_cfg_function(sampler_dyn_thresh)
 
-        if my_unique_id:
-            workflow = extra_pnginfo["workflow"]
-            node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-            if node:
-                seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id]['inputs'] else 0
-                length = len(node["widgets_values"])
-                node["widgets_values"][length - 2] = seed_num
+        # if my_unique_id:
+        #     workflow = extra_pnginfo["workflow"]
+        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
+        #     if node:
+        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
+        #             'inputs'] else 0
+        #         length = len(node["widgets_values"])
+        #         node["widgets_values"][length - 2] = seed_num
 
         new_pipe = {
             "model": m,
@@ -2406,13 +2407,13 @@ class samplerFull:
 
         my_unique_id = int(my_unique_id)
 
-        if my_unique_id:
-            workflow = extra_pnginfo["workflow"]
-            node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-            if node and 'seed_num' in prompt[my_unique_id]['inputs']:
-                seed_num = prompt[my_unique_id]['inputs']['seed_num']
-                length = len(node["widgets_values"])
-                node["widgets_values"][length - 2] = seed_num
+        # if my_unique_id:
+        #     workflow = extra_pnginfo["workflow"]
+        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
+        #     if node and 'seed_num' in prompt[my_unique_id]['inputs']:
+        #         seed_num = prompt[my_unique_id]['inputs']['seed_num']
+        #         length = len(node["widgets_values"])
+        #         node["widgets_values"][length - 2] = seed_num
 
         easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
 

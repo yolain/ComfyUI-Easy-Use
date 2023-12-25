@@ -11,8 +11,6 @@
 
 ## Introduce
 
-**Incompatibility Notice**: Not compatible with the current version of the [cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) node package at this time
-
 ### Random species
 <img src="./docs/seed_generate_compare.jpg">
 
@@ -30,6 +28,11 @@ To use the Lora Block Weight usage, make sure that [ComfyUI-Inspire-Pack](https:
 After installing the node package, the UI interface will be automatically switched, if you need to change other themes, please switch and refresh the page in Settings -> Color Palette.
 
 ## Changelog
+
+**Updated at 2023-12-25**
+
+- Fixed `easy globalSeed` is not working
+- Fixed an issue where all `seed_num` values were out of order due to [cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) updating the chart in real time
 
 **v1.0.0（Updated at 12/24/2023 GMT+0800）**
 
