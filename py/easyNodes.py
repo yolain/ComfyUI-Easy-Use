@@ -738,6 +738,33 @@ class easyXYPlot:
 easyCache = easyLoader()
 sampler = easySampler()
 
+
+def check_link_to_clip(node_id, clip_id, visited=None, node=None):
+    """Check if a given node links directly or indirectly to a loader node."""
+    if visited is None:
+        visited = set()
+
+    if node_id in visited:
+        return False
+    visited.add(node_id)
+    if "pipe" in node["inputs"]:
+        link_ids = node["inputs"]["pipe"]
+        for id in link_ids:
+            if id != 0 and id == str(clip_id):
+                return True
+    return False
+
+def find_nearest_steps(clip_id, prompt):
+    """Find the nearest KSampler or preSampling node that references the given id."""
+    for id in prompt:
+        node = prompt[id]
+        if "Sampler" in node["class_type"] or "sampler" in node["class_type"] or "Sampling" in node["class_type"]:
+            # Check if this KSampler node directly or indirectly references the given CLIPTextEncode node
+            if check_link_to_clip(id, clip_id, None, node):
+                steps = node["inputs"]["steps"] if "steps" in node["inputs"] else 1
+                return steps
+    return 1
+
 def find_wildcards_seed(text, prompt):
     if "__" in text:
         for i in prompt:
@@ -1256,6 +1283,27 @@ class portraitMaster:
 
         return (prompt, negative_prompt,)
 
+# 随机种
+class easySeed:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ("INT",)
+    RETURN_NAMES = ("seed_num",)
+    FUNCTION = "doit"
+
+    CATEGORY = "EasyUse/Prompt"
+
+    OUTPUT_NODE = True
+
+    def doit(self, seed_num=0, prompt=None, extra_pnginfo=None, my_unique_id=None):
+        return seed_num,
 # 全局随机种
 class globalSeed:
     @classmethod
@@ -1316,7 +1364,8 @@ class fullLoader:
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
             "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "optional_lora_stack": ("LORA_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),},
-            "hidden": {"prompt": "PROMPT"}, "my_unique_id": "UNIQUE_ID"}
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE", "CLIP")
     RETURN_NAMES = ("pipe", "model", "vae", "clip")
@@ -1384,8 +1433,9 @@ class fullLoader:
         if a1111_prompt_style:
             if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
                 cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-                positive_embeddings_final, = cls().encode(clipped, positive, positive_weight_interpretation, True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '')
-                negative_embeddings_final, = cls().encode(clipped, negative, negative_weight_interpretation, True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '')
+                steps = find_nearest_steps(my_unique_id, prompt)
+                positive_embeddings_final, = cls().encode(clipped, positive, "A1111", True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+                negative_embeddings_final, = cls().encode(clipped, negative, "A1111", True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
             else:
                 raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
         else:
@@ -1469,7 +1519,8 @@ class a1111Loader:
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
             "optional": {"optional_lora_stack": ("LORA_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default})},
-            "hidden": {"prompt": "PROMPT",}, "my_unique_id": "UNIQUE_ID"}
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
     RETURN_NAMES = ("pipe", "model", "vae")
@@ -3591,6 +3642,7 @@ NODE_CLASS_MAPPINGS = {
     "easy loraStack": loraStackLoader,
     "easy controlnetLoader": controlnetSimple,
     "easy controlnetLoaderADV": controlnetAdvanced,
+    "easy seed": easySeed,
     "easy globalSeed": globalSeed,
     "easy preSampling": samplerSettings,
     "easy preSamplingAdvanced": samplerSettingsAdvanced,
@@ -3625,6 +3677,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy loraStack": "EasyLoraStack",
     "easy controlnetLoader": "EasyControlnet",
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
+    "easy seed": "EasySeed",
     "easy globalSeed": "EasyGlobalSeed",
     "easy preSampling": "PreSampling",
     "easy preSamplingAdvanced": "PreSampling (Advanced)",

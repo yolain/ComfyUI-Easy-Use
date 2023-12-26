@@ -107,7 +107,8 @@
       "positive_weight_interpretation": "正面权重理解",
       "negative": "负面提示词",
       "negative_token_normalization": "负面规范",
-      "negative_weight_interpretation": "负面权重理解"
+      "negative_weight_interpretation": "负面权重理解",
+      "a1111_prompt_style": "A1111提示词风格"
     },
     "inputs": {
       "optional_lora_stack": "Lora堆（可选）",
@@ -133,7 +134,8 @@
       "empty_latent_height": "高",
       "batch_size": "每批生成数量",
       "positive": "正面提示词",
-      "negative": "负面提示词"
+      "negative": "负面提示词",
+      "a1111_prompt_style": "A1111提示词风格"
     },
     "inputs": {
       "optional_lora_stack": "Lora堆（可选）"

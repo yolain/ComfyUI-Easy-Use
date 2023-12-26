@@ -51,7 +51,6 @@ def read_wildcard_dict(wildcard_path):
                         read_wildcard(k, v)
             elif file.endswith('.json'):
                 file_path = os.path.join(root, file)
-                print(file_path)
                 try:
                     with open(file_path, 'r') as f:
                         json_data = json.load(f)

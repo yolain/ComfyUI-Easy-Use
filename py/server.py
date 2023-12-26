@@ -128,7 +128,7 @@ def prompt_seed_update(json_data):
             if 'class_type' not in v:
                 continue
             cls = v['class_type']
-            if cls == "easy wildcards" or cls == "easy preSampling" or cls == "easy preSamplingAdvanced" or cls == "easy preSamplingSdTurbo" or cls == "easy preSamplingDynamicCFG" or cls == "easy fullkSampler":
+            if cls == "easy wildcards" or cls == "easy preSampling" or cls == "easy preSamplingAdvanced" or cls == "easy preSamplingSdTurbo" or cls == "easy preSamplingDynamicCFG" or cls == "easy fullkSampler" or cls == 'easy seed':
                 extra_data = next((x for x in workflow["nodes"] if str(x["id"]) == k), None)
                 if extra_data is not None:
                     widgets_value = extra_data.get('widgets_values')
