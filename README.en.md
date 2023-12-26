@@ -31,6 +31,7 @@ After installing the node package, the UI interface will be automatically switch
 
 **v1.0.1（Updated at 12/26/2023）**
 
+- Fixed `easy zero123Loader` and `easy svdLoader` model into cache.
 - Added `easy seed`
 - Fixed `image_output` default value is "Preview"
 - `easy fullLoader` and `easy a1111Loader` have added a new parameter `a1111_prompt_style`,that can reproduce the same image generated from stable-diffusion-webui on comfyui, but you need to install [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes) to use this feature in the current version

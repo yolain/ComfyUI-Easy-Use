@@ -40,6 +40,7 @@ class easyLoader:
         self.loaded_objects = {
             "ckpt": defaultdict(tuple),  # {ckpt_name: (model, ...)}
             "clip": defaultdict(tuple),
+            "clip_vision": defaultdict(tuple),
             "bvae": defaultdict(tuple),
             "vae": defaultdict(object),
             "lora": defaultdict(dict),  # {lora_name: {UID: (model_lora, clip_lora)}}
@@ -106,10 +107,13 @@ class easyLoader:
 
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name"))
                 desired_vae_names.add(self.get_input_value(entry, "vae_name"))
+            elif class_type == "easy zero123Loader" or class_type == 'easy svdLoader':
+                desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name"))
+                desired_vae_names.add(self.get_input_value(entry, "vae_name"))
+
         object_types = ["ckpt", "clip", "bvae", "vae", "lora"]
         for object_type in object_types:
-            desired_names = desired_ckpt_names if object_type in ["ckpt", "clip",
-                                                                  "bvae"] else desired_vae_names if object_type == "vae" else desired_lora_names
+            desired_names = desired_ckpt_names if object_type in ["ckpt", "clip", "bvae"] else desired_vae_names if object_type == "vae" else desired_lora_names
             self.clear_unused_objects(desired_names, object_type)
 
     def add_to_cache(self, obj_type, key, value):
@@ -167,30 +171,37 @@ class easyLoader:
                 del self.loaded_objects[obj_type][item[0]]
                 current_memory = self.get_memory_usage()
 
-    def load_checkpoint(self, ckpt_name, config_name=None):
+    def load_checkpoint(self, ckpt_name, config_name=None, load_vision=False):
         cache_name = ckpt_name
         if config_name not in [None, "Default"]:
             cache_name = ckpt_name + "_" + config_name
         if cache_name in self.loaded_objects["ckpt"]:
-            return self.loaded_objects["ckpt"][cache_name][0], self.loaded_objects["clip"][cache_name][0], \
-            self.loaded_objects["bvae"][cache_name][0]
+            cache_out = self.loaded_objects["clip_vision"][cache_name][0] if load_vision else  self.loaded_objects["clip"][cache_name][0]
+            return self.loaded_objects["ckpt"][cache_name][0], cache_out, self.loaded_objects["bvae"][cache_name][0]
 
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
+        output_clip = False if load_vision else True
+        output_clipvision = True if load_vision else False
         if config_name not in [None, "Default"]:
             config_path = folder_paths.get_full_path("configs", config_name)
-            loaded_ckpt = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=True,
+            loaded_ckpt = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision,
                                                    embedding_directory=folder_paths.get_folder_paths("embeddings"))
         else:
-            loaded_ckpt = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, embedding_directory=folder_paths.get_folder_paths("embeddings"))
+            loaded_ckpt = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"))
 
         self.add_to_cache("ckpt", cache_name, loaded_ckpt[0])
-        self.add_to_cache("clip", cache_name, loaded_ckpt[1])
         self.add_to_cache("bvae", cache_name, loaded_ckpt[2])
+        if load_vision:
+            out = loaded_ckpt[3]
+            self.add_to_cache("clip_vision", cache_name, out)
+        else:
+            out = loaded_ckpt[1]
+            self.add_to_cache("clip", cache_name, loaded_ckpt[1])
 
         self.eviction_based_on_memory()
 
-        return loaded_ckpt[0], loaded_ckpt[1], loaded_ckpt[2]
+        return loaded_ckpt[0], out, loaded_ckpt[2]
 
     def load_vae(self, vae_name):
         if vae_name in self.loaded_objects["vae"]:
@@ -1629,9 +1640,10 @@ class zero123Loader:
         clip: CLIP | None = None
         clip_vision = None
 
-        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
-        out = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=False, output_clipvision=True, embedding_directory=folder_paths.get_folder_paths("embeddings"))
-        model, clip_vision, vae = (out[0], out[3], out[2])
+        # Clean models from loaded_objects
+        easyCache.update_loaded_objects(prompt)
+
+        model, clip_vision, vae = easyCache.load_checkpoint(ckpt_name, "Default", True)
 
         output = clip_vision.encode_image(init_image)
         pooled = output.image_embeds.unsqueeze(0)
@@ -1724,11 +1736,10 @@ class svdLoader:
             except ValueError:
                 raise ValueError("Invalid base_resolution format.")
 
-        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
-        out = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=False,
-                                                    output_clipvision=True,
-                                                    embedding_directory=folder_paths.get_folder_paths("embeddings"))
-        model, clip_vision, vae = (out[0], out[3], out[2])
+        # Clean models from loaded_objects
+        easyCache.update_loaded_objects(prompt)
+
+        model, clip_vision, vae = easyCache.load_checkpoint(ckpt_name, "Default", True)
 
         output = clip_vision.encode_image(init_image)
         pooled = output.image_embeds.unsqueeze(0)
