@@ -11,19 +11,19 @@
 
 ## Introduce
 
-### Random species
+### Random seed control before generate
 <img src="./docs/seed_generate_compare.jpg">
 
 ### Separate sampling parameters from sample preview
 
 <img src="./docs/workflow_node_compare.png">
 
-### Wildcard and Lora prompt nodes are supported
+### Wildcard prompt nodes are supported
 
 Support `.yaml`, `.txt`, `.json` format wildcard files, just place them in the 'wildcards' folder of the node package, and update the file to run ComfyUI again. <br>
 To use the Lora Block Weight usage, make sure that [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) is installed in the custom node package.
 
-### The UI interface is beautified
+### UI interface is beautified
 
 After installing the node package, the UI interface will be automatically switched, if you need to change other themes, please switch and refresh the page in Settings -> Color Palette.
 
