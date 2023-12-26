@@ -36,6 +36,11 @@
 
 ## 更新日志
 
+**v1.0.1（2023-12-26）**
+
+- 修复 `easy kSampler` `easy kSamplerTiled` `easy detailerFix` 的 `image_output` 默认值为 Preview
+- `easy fullLoader` 和 `easy a1111Loader` 新增了 `a1111_prompt_style` 参数可以重现和webui生成相同的图像，当前您需要安装 [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes) 才能使用此功能
+
 **2023-12-25**
 
 - 修复 `easy globalSeed` 不生效问题

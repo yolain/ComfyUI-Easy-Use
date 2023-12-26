@@ -29,12 +29,18 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**v1.0.1（Updated at 12/26/2023）**
+
+- Fixed `image_output` default value is "Preview"
+- `easy fullLoader` and `easy a1111Loader` have added a new parameter `a1111_prompt_style`,that can reproduce the same image generated from stable-diffusion-webui on comfyui, but you need to install [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes) to use this feature in the current version
+
+
 **Updated at 2023-12-25**
 
 - Fixed `easy globalSeed` is not working
 - Fixed an issue where all `seed_num` values were out of order due to [cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) updating the chart in real time
 
-**v1.0.0（Updated at 12/24/2023 GMT+0800）**
+**v1.0.0（Updated at 12/24/2023）**
 
 - Added `easy positive` - simple positive prompt text
 - Added `easy negative` - simple negative prompt text

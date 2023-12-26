@@ -138,7 +138,6 @@ def prompt_seed_update(json_data):
 
                     value = control_seed(node[1], action, False)
                     _seed_generator = SeedGenerator(value, action)
-                    print(value)
                     if k not in seed_widget_map:
                         continue
 

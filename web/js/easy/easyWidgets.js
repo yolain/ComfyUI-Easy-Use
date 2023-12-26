@@ -360,9 +360,7 @@ app.registerExtension({
     nodeCreated(node) {
         if (node.widgets) {
             // Locate info widgets
-            const widgets = node.widgets.filter(
-                (n) => (n.type === "easyInfo")
-            );
+            const widgets = node.widgets.filter((n) => (n.type === "easyInfo"));
             for (const widget of widgets) {
                     widget.inputEl.addEventListener('contextmenu', function(e) {
                         hideInfoWidget(e, node, widget);

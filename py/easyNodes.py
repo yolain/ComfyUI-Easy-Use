@@ -1289,6 +1289,8 @@ class fullLoader:
     @classmethod
     def INPUT_TYPES(cls):
         resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
+        a1111_prompt_style_default = True if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS else False
+
         return {"required": {
             "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
             "config_name": (["Default", ] + folder_paths.get_filename_list("configs"), {"default": "Default"}),
@@ -1313,7 +1315,7 @@ class fullLoader:
 
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
-            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "optional_lora_stack": ("LORA_STACK",)},
+            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "optional_lora_stack": ("LORA_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),},
             "hidden": {"prompt": "PROMPT"}, "my_unique_id": "UNIQUE_ID"}
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE", "CLIP")
@@ -1327,7 +1329,7 @@ class fullLoader:
                        resolution, empty_latent_width, empty_latent_height,
                        positive, positive_token_normalization, positive_weight_interpretation,
                        negative, negative_token_normalization, negative_weight_interpretation,
-                       batch_size, model_override=None, clip_override=None, optional_lora_stack=None, prompt=None,
+                       batch_size, model_override=None, clip_override=None, optional_lora_stack=None, a1111_prompt_style=False, prompt=None,
                        my_unique_id=None
                        ):
 
@@ -1378,15 +1380,24 @@ class fullLoader:
         if clip_skip != 0:
             clipped.clip_layer(clip_skip)
 
-        positive_embeddings_final, positive_pooled = advanced_encode(clipped, positive, positive_token_normalization,
-                                                                     positive_weight_interpretation, w_max=1.0,
-                                                                     apply_to_pooled='enable')
-        positive_embeddings_final = [[positive_embeddings_final, {"pooled_output": positive_pooled}]]
+        # Use new clip text encode by smzNodes like same as webui, when if you installed the smzNodes
+        if a1111_prompt_style:
+            if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
+                cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
+                positive_embeddings_final, = cls().encode(clipped, positive, positive_weight_interpretation, True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '')
+                negative_embeddings_final, = cls().encode(clipped, negative, negative_weight_interpretation, True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '')
+            else:
+                raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
+        else:
+            positive_embeddings_final, positive_pooled = advanced_encode(clipped, positive, positive_token_normalization,
+                                                                         positive_weight_interpretation, w_max=1.0,
+                                                                         apply_to_pooled='enable')
+            positive_embeddings_final = [[positive_embeddings_final, {"pooled_output": positive_pooled}]]
 
-        negative_embeddings_final, negative_pooled = advanced_encode(clipped, negative, negative_token_normalization,
-                                                                     negative_weight_interpretation, w_max=1.0,
-                                                                     apply_to_pooled='enable')
-        negative_embeddings_final = [[negative_embeddings_final, {"pooled_output": negative_pooled}]]
+            negative_embeddings_final, negative_pooled = advanced_encode(clipped, negative, negative_token_normalization,
+                                                                         negative_weight_interpretation, w_max=1.0,
+                                                                         apply_to_pooled='enable')
+            negative_embeddings_final = [[negative_embeddings_final, {"pooled_output": negative_pooled}]]
         image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
 
         pipe = {"model": model,
@@ -1439,6 +1450,7 @@ class a1111Loader:
     @classmethod
     def INPUT_TYPES(cls):
         resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
+        a1111_prompt_style_default = True if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS else False
         return {"required": {
             "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
             "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
@@ -1456,7 +1468,7 @@ class a1111Loader:
             "negative": ("STRING", {"default": "Negative", "multiline": True}),
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
-            "optional": {"optional_lora_stack": ("LORA_STACK",)},
+            "optional": {"optional_lora_stack": ("LORA_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default})},
             "hidden": {"prompt": "PROMPT",}, "my_unique_id": "UNIQUE_ID"}
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
@@ -1468,7 +1480,7 @@ class a1111Loader:
     def adv_pipeloader(self, ckpt_name, vae_name, clip_skip,
                        lora_name, lora_model_strength, lora_clip_strength,
                        resolution, empty_latent_width, empty_latent_height,
-                       positive, negative, batch_size, optional_lora_stack=None, prompt=None,
+                       positive, negative, batch_size, optional_lora_stack=None, a1111_prompt_style=False, prompt=None,
                        my_unique_id=None):
 
         return fullLoader.adv_pipeloader(self, ckpt_name, 'Default', vae_name, clip_skip,
@@ -1476,7 +1488,7 @@ class a1111Loader:
              resolution, empty_latent_width, empty_latent_height,
              positive, 'none', 'A1111',
              negative,'none','A1111',
-             batch_size, None, None, optional_lora_stack, prompt,
+             batch_size, None, None, optional_lora_stack, a1111_prompt_style, prompt,
              my_unique_id
         )
 
@@ -2600,7 +2612,7 @@ class samplerSimple:
     def INPUT_TYPES(cls):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
+                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -2637,7 +2649,7 @@ class samplerSimpleTiled:
         return {"required":
                 {"pipe": ("PIPE_LINE",),
                  "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
+                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"})
                  },
@@ -2670,7 +2682,7 @@ class samplerSDTurbo:
     def INPUT_TYPES(cls):
         return {"required":
                     {"pipe": ("PIPE_LINE",),
-                     "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
+                     "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
                      "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                      "save_prefix": ("STRING", {"default": "ComfyUI"}),
                      },
@@ -2798,7 +2810,7 @@ class hiresFix:
                              "height": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
                              "longer_side": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
                              "crop": (s.crop_methods,),
-                             "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
+                             "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
                              "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                              "save_prefix": ("STRING", {"default": "ComfyUI"}),
                               },
@@ -2886,22 +2898,25 @@ class hiresFix:
         pixels = self.vae_encode_crop_pixels(s)
         t = vae.encode(pixels[:, :, :, :3])
 
-        new_pipe = {
-            "model": pipe['model'],
-            "positive": pipe['positive'],
-            "negative": pipe['negative'],
-            "vae": vae,
-            "clip": pipe['clip'],
+        if pipe is not None:
+            new_pipe = {
+                "model": pipe['model'],
+                "positive": pipe['positive'],
+                "negative": pipe['negative'],
+                "vae": vae,
+                "clip": pipe['clip'],
 
-            "samples": {"samples": t},
-            "images": s,
-            "seed": pipe['seed'],
+                "samples": {"samples": t},
+                "images": s,
+                "seed": pipe['seed'],
 
-            "loader_settings": {
-                **pipe["loader_settings"],
+                "loader_settings": {
+                    **pipe["loader_settings"],
+                }
             }
-        }
-        del pipe
+            del pipe
+        else:
+            new_pipe = {}
 
         easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
         results = easy_save.images(s, save_prefix, image_output)
@@ -2952,6 +2967,9 @@ class preDetailerFix:
 
     def doit(self, pipe, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name, scheduler, denoise, feather, noise_mask, force_inpaint, drop_size, wildcard, cycle, bbox_segm_pipe=None, sam_pipe=None,):
 
+        samples = pipe["samples"] if "samples" in pipe else None
+        if samples is None:
+            raise Exception(f"[ERROR] pipe['samples'] is missing")
         image = pipe["images"] if "images" in pipe else None
         if image is None:
             raise Exception(f"[ERROR] pipe['image'] is missing")
@@ -2980,6 +2998,7 @@ class preDetailerFix:
         loader_settings = pipe["loader_settings"] if "loader_settings" in pipe else {}
 
         new_pipe = {
+            "samples": samples,
             "images": image,
             "model": model,
             "clip": clip,
@@ -3024,7 +3043,7 @@ class detailerFix:
     def INPUT_TYPES(s):
         return {"required": {
             "pipe": ("PIPE_LINE",),
-            "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
+            "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
             "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
             "save_prefix": ("STRING", {"default": "ComfyUI"}),
         },
@@ -3118,6 +3137,7 @@ class detailerFix:
         easyCache.update_loaded_objects(prompt)
 
         new_pipe = {
+            "samples": None,
             "images": enhanced_img,
             "model": model,
             "clip": clip,
