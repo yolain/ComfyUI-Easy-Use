@@ -36,6 +36,12 @@
 
 ## 更新日志
 
+**2023-12-27**
+
+- 修复 convert 到 `easy seed` 随机种无法固定的问题
+- 修复 `easy pipeIn` 值传入的报错问题
+- `easy preDetailerFix` 新增了 `optional_image` 传入图像可选，如未传默认取值为pipe里的图像
+
 **v1.0.1（2023-12-26）**
 
 - 修复 `easy zero123Loader` 和 `easy svdLoader` 读取模型时将模型加入到缓存中

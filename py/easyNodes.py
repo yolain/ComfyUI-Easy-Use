@@ -3017,6 +3017,7 @@ class preDetailerFix:
             "optional": {
                 "bbox_segm_pipe": ("PIPE_LINE",),
                 "sam_pipe": ("PIPE_LINE",),
+                "optional_image": ("IMAGE",),
             },
         }
 
@@ -3027,14 +3028,8 @@ class preDetailerFix:
 
     CATEGORY = "EasyUse/Fix"
 
-    def doit(self, pipe, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name, scheduler, denoise, feather, noise_mask, force_inpaint, drop_size, wildcard, cycle, bbox_segm_pipe=None, sam_pipe=None,):
+    def doit(self, pipe, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name, scheduler, denoise, feather, noise_mask, force_inpaint, drop_size, wildcard, cycle, bbox_segm_pipe=None, sam_pipe=None, optional_image=None):
 
-        samples = pipe["samples"] if "samples" in pipe else None
-        if samples is None:
-            raise Exception(f"[ERROR] pipe['samples'] is missing")
-        image = pipe["images"] if "images" in pipe else None
-        if image is None:
-            raise Exception(f"[ERROR] pipe['image'] is missing")
         model = pipe["model"] if "model" in pipe else None
         if model is None:
             raise Exception(f"[ERROR] pipe['model'] is missing")
@@ -3044,6 +3039,18 @@ class preDetailerFix:
         vae = pipe["vae"] if "vae" in pipe else None
         if vae is None:
             raise Exception(f"[ERROR] pipe['vae'] is missing")
+        if optional_image is not None:
+            batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+            samples = {"samples": vae.encode(optional_image)}
+            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+            image = optional_image
+        else:
+            samples = pipe["samples"] if "samples" in pipe else None
+            if samples is None:
+                raise Exception(f"[ERROR] pipe['samples'] is missing")
+            image = pipe["images"] if "images" in pipe else None
+            if image is None:
+                raise Exception(f"[ERROR] pipe['image'] is missing")
         positive = pipe["positive"] if "positive" in pipe else None
         if positive is None:
             raise Exception(f"[ERROR] pipe['positive'] is missing")
@@ -3325,27 +3332,30 @@ class pipeIn:
 
     def flush(self, pipe, model=None, pos=None, neg=None, latent=None, vae=None, clip=None, image=None, xyplot=None, my_unique_id=None):
 
-        model = model or pipe.get("model")
+        model = model if model is not None else pipe.get("model")
         if model is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Model missing from pipeLine")
-        pos = pos or pipe.get("positive")
+        pos = pos if pos is not None else pipe.get("positive")
         if pos is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Positive conditioning missing from pipeLine")
-        neg = neg or pipe.get("negative")
+        neg = neg if neg is not None else pipe.get("negative")
         if neg is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Negative conditioning missing from pipeLine")
-        samples = latent or pipe.get("samples")
+        samples = latent if latent is not None else pipe.get("samples")
         if samples is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Latent missing from pipeLine")
-        vae = vae or pipe.get("vae")
+        vae = vae if vae is not None else pipe.get("vae")
         if vae is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "VAE missing from pipeLine")
-        clip = clip or pipe.get("clip")
+        clip = clip if clip is not None else pipe.get("clip")
         if clip is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Clip missing from pipeLine")
-        image = image or pipe.get("images")
         if image is None:
-            log_node_warn(f'pipeIn[{my_unique_id}]', "Image missing from pipeLine")
+            image = pipe.get("images")
+        else:
+            batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+            samples = {"samples": vae.encode(image)}
+            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
         seed = pipe.get("seed")
         if seed is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Seed missing from pipeLine")

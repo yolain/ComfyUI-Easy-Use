@@ -329,10 +329,12 @@ app.registerExtension({
             nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
 				const values = ["randomize","fixed","increment","decrement"]
+				const seed_widget = this.widgets.find(w=> w.name == 'seed_num')
 				const seed_control = this.addWidget("combo", "control_before_generate", values[0], () => {},{
 					values,
 					serialize:false
 				})
+				seed_widget.linkedWidgets = [seed_control]
 			}
 		}
 	},

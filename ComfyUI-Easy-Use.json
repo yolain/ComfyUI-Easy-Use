@@ -273,6 +273,16 @@
       "model": "模型"
     }
   },
+  "easy seed": {
+    "title": "随机种",
+    "widgets": {
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作"
+    },
+    "outputs": {
+      "seed_num": "种子值"
+    }
+  },
   "easy globalSeed": {
     "title": "全局随机种",
     "widgets": {
@@ -581,7 +591,8 @@
       "positive": "正面提示词",
       "negative": "负面提示词",
       "bbox_segm_pipe": "BBox&Segm节点束",
-      "sam_pipe": "SAM模型节点束"
+      "sam_pipe": "SAM模型节点束",
+      "optional_image": "图像（可选）"
     },
     "widgets": {
       "guide_size": "引导大小",

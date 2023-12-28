@@ -29,6 +29,12 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2023-12-27**
+
+- Fixed seed that cannot be fixed when you convert `seed_num` to `easy seed` 
+- Fixed `easy pipeIn` inputs bug
+- `easy preDetailerFix` have added a new parameter `optional_image`
+- 
 **v1.0.1（Updated at 12/26/2023）**
 
 - Fixed `easy zero123Loader` and `easy svdLoader` model into cache.
