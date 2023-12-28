@@ -491,7 +491,7 @@ class easyXYPlot:
 
     @staticmethod
     def get_font(font_size):
-        return ImageFont.truetype(str(Path(os.path.join(Path(__file__).parent.parent, '/resources/arial.ttf'))), font_size)
+        return ImageFont.truetype(str(Path(os.path.join(Path(__file__).parent.parent, 'resources/arial.ttf'))), font_size)
 
     @staticmethod
     def update_label(label, value, num_items):

@@ -31,6 +31,7 @@ After installing the node package, the UI interface will be automatically switch
 
 **2023-12-27**
 
+- Fixed `easy xyplot` font file path error
 - Fixed seed that cannot be fixed when you convert `seed_num` to `easy seed` 
 - Fixed `easy pipeIn` inputs bug
 - `easy preDetailerFix` have added a new parameter `optional_image`

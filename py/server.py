@@ -135,9 +135,10 @@ def prompt_seed_update(json_data):
                     inputs = extra_data.get('inputs')
                     widgets_value = extra_data.get('widgets_values')
                     widgets_length = len(widgets_value)
-                    seed_num_input = next((x for x in inputs if x['name'] == 'seed_num' and x['type'] == 'INT'), None)
-                    if seed_num_input:
-                        action = 'fixed'
+                    if inputs is not None:
+                        seed_num_input = next((x for x in inputs if x['name'] == 'seed_num' and x['type'] == 'INT'), None)
+                        if seed_num_input is not None:
+                            action = 'fixed'
                     else:
                         action = widgets_value[widgets_length - 1]
                     node = k, v

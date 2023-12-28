@@ -38,6 +38,7 @@
 
 **2023-12-27**
 
+- 修复 `easy xyplot` 的字体文件路径读取错误
 - 修复 convert 到 `easy seed` 随机种无法固定的问题
 - 修复 `easy pipeIn` 值传入的报错问题
 - `easy preDetailerFix` 新增了 `optional_image` 传入图像可选，如未传默认取值为pipe里的图像
