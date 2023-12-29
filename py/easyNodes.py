@@ -1374,7 +1374,7 @@ class fullLoader:
 
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
-            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "optional_lora_stack": ("LORA_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),},
+            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",), "optional_lora_stack": ("LORA_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),},
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
@@ -1389,7 +1389,7 @@ class fullLoader:
                        resolution, empty_latent_width, empty_latent_height,
                        positive, positive_token_normalization, positive_weight_interpretation,
                        negative, negative_token_normalization, negative_weight_interpretation,
-                       batch_size, model_override=None, clip_override=None, optional_lora_stack=None, a1111_prompt_style=False, prompt=None,
+                       batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, a1111_prompt_style=False, prompt=None,
                        my_unique_id=None
                        ):
 
@@ -1414,7 +1414,18 @@ class fullLoader:
         easyCache.update_loaded_objects(prompt)
 
         # Load models
-        model, clip, vae = easyCache.load_checkpoint(ckpt_name, config_name)
+        if model_override is not None and clip_override is not None and vae_override is not None:
+            model = model_override
+            clip = clip_override
+            vae = vae_override
+        elif model_override is not None:
+            raise Exception(f"[ERROR] clip or vae is missing")
+        elif vae_override is not None:
+            raise Exception(f"[ERROR] model or clip is missing")
+        elif clip_override is not None:
+            raise Exception(f"[ERROR] model or vae is missing")
+        else:
+            model, clip, vae = easyCache.load_checkpoint(ckpt_name, config_name)
 
         if optional_lora_stack is not None:
             for lora in optional_lora_stack:
@@ -1512,12 +1523,14 @@ class a1111Loader:
     def INPUT_TYPES(cls):
         resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         a1111_prompt_style_default = True if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS else False
+        checkpoints = folder_paths.get_filename_list("checkpoints")
+        loras = ["None"] + folder_paths.get_filename_list("loras")
         return {"required": {
-            "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
+            "ckpt_name": (checkpoints,),
             "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
             "clip_skip": ("INT", {"default": -1, "min": -24, "max": 0, "step": 1}),
 
-            "lora_name": (["None"] + folder_paths.get_filename_list("loras"),),
+            "lora_name": (loras,),
             "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
             "lora_clip_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
 
@@ -1545,12 +1558,14 @@ class a1111Loader:
                        positive, negative, batch_size, optional_lora_stack=None, a1111_prompt_style=False, prompt=None,
                        my_unique_id=None):
 
+        print(ckpt_name)
+        print(lora_name)
         return fullLoader.adv_pipeloader(self, ckpt_name, 'Default', vae_name, clip_skip,
              lora_name, lora_model_strength, lora_clip_strength,
              resolution, empty_latent_width, empty_latent_height,
              positive, 'none', 'A1111',
              negative,'none','A1111',
-             batch_size, None, None, optional_lora_stack, a1111_prompt_style, prompt,
+             batch_size, None, None, None, optional_lora_stack, a1111_prompt_style, prompt,
              my_unique_id
         )
 
@@ -1596,7 +1611,7 @@ class comfyLoader:
              resolution, empty_latent_width, empty_latent_height,
              positive, 'none', 'comfy',
              negative, 'none', 'comfy',
-             batch_size, None, None, optional_lora_stack, prompt,
+             batch_size, None, None, None, optional_lora_stack, prompt,
              my_unique_id
          )
 
@@ -3238,6 +3253,26 @@ class detailerFix:
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
         return {"ui": {"images": results}, "result": (new_pipe, enhanced_img, cropped_enhanced, cropped_enhanced_alpha, mask, cnet_pil_list)}
+
+def add_folder_path_and_extensions(folder_name, full_folder_paths, extensions):
+    for full_folder_path in full_folder_paths:
+        folder_paths.add_model_folder_path(folder_name, full_folder_path)
+    if folder_name in folder_paths.folder_names_and_paths:
+        current_paths, current_extensions = folder_paths.folder_names_and_paths[folder_name]
+        updated_extensions = current_extensions | extensions
+        folder_paths.folder_names_and_paths[folder_name] = (current_paths, updated_extensions)
+    else:
+        folder_paths.folder_names_and_paths[folder_name] = (full_folder_paths, extensions)
+
+model_path = folder_paths.models_dir
+add_folder_path_and_extensions("ultralytics_bbox", [os.path.join(model_path, "ultralytics", "bbox")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("ultralytics_segm", [os.path.join(model_path, "ultralytics", "segm")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("ultralytics", [os.path.join(model_path, "ultralytics")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("mmdets_bbox", [os.path.join(model_path, "mmdets", "bbox")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("mmdets_segm", [os.path.join(model_path, "mmdets", "segm")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("mmdets", [os.path.join(model_path, "mmdets")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("sams", [os.path.join(model_path, "sams")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("onnx", [os.path.join(model_path, "onnx")], {'.onnx'})
 
 class ultralyticsDetectorForDetailerFix:
     @classmethod

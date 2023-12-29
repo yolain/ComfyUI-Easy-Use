@@ -1,6 +1,9 @@
 import { app } from "../../../../scripts/app.js";
 import { ComfyWidgets } from "../../../../scripts/widgets.js";
+import { $el } from "../../../../scripts/ui.js";
+import { api } from "../../../../scripts/api.js";
 
+const BETTER_COMBOS_NODES = ["easy a1111Loader"]
 const CONVERTED_TYPE = "converted-widget";
 const GET_CONFIG = Symbol();
 
@@ -63,6 +66,7 @@ function getWidgetType(config) {
 app.registerExtension({
     name: "comfy.easyUse",
     init() {
+        // 刷新节点
         const easyReloadNode = function (node) {
             const nodeType = node.constructor.type;
             const origVals = node.properties.origVals || {};
