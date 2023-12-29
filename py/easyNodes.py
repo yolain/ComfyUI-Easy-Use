@@ -2922,8 +2922,8 @@ class hiresFix:
 
         new_pipe = {}
         if pipe is not None:
-            image = image or pipe["images"]
-            vae = vae or pipe.get("vae")
+            image = image if image is not None else pipe["images"]
+            vae = vae if vae is not None else pipe.get("vae")
         elif image is None or vae is None:
             raise ValueError("pipe or image or vae missing.")
         # Load Model

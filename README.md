@@ -36,6 +36,11 @@
 
 ## 更新日志
 
+**2023-12-29**
+
+- 修复 `easy hiresFix` 输入连接pipe和image、vae同时存在时报错
+- 修复 `easy fullLoader` 中 `model_override` 连接后未执行 
+
 **2023-12-27**
 
 - 修复 因新增`easy seed` 导致action错误

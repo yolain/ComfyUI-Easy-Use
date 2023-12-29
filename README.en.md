@@ -29,6 +29,11 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2023-12-29**
+
+- Fixed `model_override` is not working in `easy fullLoader`
+- Fixed `easy hiresFix` error
+
 **2023-12-27**
 
 - Fixed `easy xyplot` font file path error
