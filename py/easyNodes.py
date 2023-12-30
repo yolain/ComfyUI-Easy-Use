@@ -412,6 +412,7 @@ class easySampler:
         return (
             pipe,
             pipe.get("images"),
+            pipe.get("model"),
             pipe.get("positive"),
             pipe.get("negative"),
             pipe.get("samples"),
