@@ -29,6 +29,11 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2023-12-31**
+
+- Fixed `vae_name` is not working in `easy fullLoader` and `easy a1111Loader` and `easy comfyLoader`
+- Fixed `easy fullkSampler` outputs error
+
 **2023-12-29**
 
 - Fixed `model_override` is not working in `easy fullLoader`

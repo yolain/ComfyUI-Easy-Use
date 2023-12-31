@@ -1435,6 +1435,9 @@ class fullLoader:
         if lora_name != "None":
             model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength, lora_clip_strength)
 
+        # Check for custom VAE
+        if vae_name not in ["Baked VAE", "Baked-VAE"]:
+            vae = easyCache.load_vae(vae_name)
         # CLIP skip
         if not clip:
             raise Exception("No CLIP found")

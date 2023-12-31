@@ -36,6 +36,11 @@
 
 ## 更新日志
 
+**2023-12-31**
+
+- 修复 `vae_name` 在 `easy fullLoader` 和 `easy a1111Loader` 和 `easy comfyLoader` 中选择但未替换原始vae问题
+- 修复 `easy fullkSampler` 除pipe外其他输出值的报错
+- 
 **2023-12-29**
 
 - 修复 `easy hiresFix` 输入连接pipe和image、vae同时存在时报错
