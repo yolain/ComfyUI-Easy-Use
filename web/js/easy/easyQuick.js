@@ -1,7 +1,7 @@
 // 1.0.2版本的内容 增加node_template的快捷键
 // ps: (测试中) 还差个设置管理开启，以免其他包或后续官方添加快捷键造成冲突，后续开放
-// import { app } from "../../../../scripts/app.js";
-// import { GroupNodeConfig } from "../../../../extensions/core/groupNode.js";
+// import { app } from "/scripts/app.js";
+// import { GroupNodeConfig } from "extensions/core/groupNode.js";
 //
 // function loadTemplate(){
 //     return localStorage['Comfy.NodeTemplates'] ? JSON.parse(localStorage['Comfy.NodeTemplates']) : null

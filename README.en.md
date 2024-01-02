@@ -29,6 +29,11 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-01-02**
+
+- Fixed `width` and `height` can not customize in `easy svdLoader`
+- Fixed all preview image path (Previously, it was not possible to preview the image on the Mac system)
+
 **2023-12-31**
 
 - Fixed `vae_name` is not working in `easy fullLoader` and `easy a1111Loader` and `easy comfyLoader`
@@ -54,12 +59,15 @@ After installing the node package, the UI interface will be automatically switch
 - `easy fullLoader` and `easy a1111Loader` have added a new parameter `a1111_prompt_style`,that can reproduce the same image generated from stable-diffusion-webui on comfyui, but you need to install [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes) to use this feature in the current version
 
 
-**Updated at 2023-12-25**
+<details>
+<summary><b>Updated at 2023-12-25</b></summary>
 
 - Fixed `easy globalSeed` is not working
 - Fixed an issue where all `seed_num` values were out of order due to [cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) updating the chart in real time
+</details>
 
-**v1.0.0（Updated at 12/24/2023）**
+<details>
+<summary><b>v1.0.0（Updated at 12/24/2023)</b></summary>
 
 - Added `easy positive` - simple positive prompt text
 - Added `easy negative` - simple negative prompt text
@@ -83,6 +91,7 @@ After installing the node package, the UI interface will be automatically switch
 
 - Fixed `easy imageSize`, `easy imageSizeBySide`, `easy imageSizeByLongerSide` as end nodes
 - Fixed the bug that `seed_num` (random seed value) could not be read consistently in history
+</details>
 
 <details>
 <summary><b>Updated at 12/14/2023</b></summary>

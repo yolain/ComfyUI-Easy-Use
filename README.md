@@ -6,7 +6,8 @@
 
 # ComfyUI Easy Use
 
-[![Bilibili Badge](https://img.shields.io/badge/基本介绍(较早版本)-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white&link=https://www.bilibili.com/video/BV1vQ4y1G7z7)](https://www.bilibili.com/video/BV1vQ4y1G7z7/)
+[![Bilibili Badge](https://img.shields.io/badge/1.0版本-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white&link=https://www.bilibili.com/video/BV1Wi4y1h76G)](https://www.bilibili.com/video/BV1Wi4y1h76G)
+[![Bilibili Badge](https://img.shields.io/badge/基本介绍-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white&link=https://www.bilibili.com/video/BV1vQ4y1G7z7)](https://www.bilibili.com/video/BV1vQ4y1G7z7/)
 </div>
 
 **ComfyUI-Easy-Use** 是一个化繁为简的节点整合包, 在 [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes) 的基础上进行延展，并针对了诸多主流的节点包做了整合与优化，以达到更快更方便使用ComfyUI的目的，在保证自由度的同时还原了本属于Stable Diffusion的极致畅快出图体验。
@@ -36,11 +37,16 @@
 
 ## 更新日志
 
+**2024-01-02**
+
+- 修复 `width` 和 `height` 无法在 `easy svdLoader` 自定义报错的问题
+- 修复所有采样器预览图片的地址链接 (此前，解决在 MACOS 系统中图片无法在采样预览中预览的问题）
+
 **2023-12-31**
 
 - 修复 `vae_name` 在 `easy fullLoader` 和 `easy a1111Loader` 和 `easy comfyLoader` 中选择但未替换原始vae问题
 - 修复 `easy fullkSampler` 除pipe外其他输出值的报错
-- 
+
 **2023-12-29**
 
 - 修复 `easy hiresFix` 输入连接pipe和image、vae同时存在时报错
@@ -61,12 +67,15 @@
 - 修复 `easy kSampler` `easy kSamplerTiled` `easy detailerFix` 的 `image_output` 默认值为 Preview
 - `easy fullLoader` 和 `easy a1111Loader` 新增了 `a1111_prompt_style` 参数可以重现和webui生成相同的图像，当前您需要安装 [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes) 才能使用此功能
 
-**2023-12-25**
+<details>
+<summary><b>2023-12-25</b></summary>
 
 - 修复 `easy globalSeed` 不生效问题
 - 修复所有的`seed_num` 因 [cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) 实时更新图表导致值错乱的问题
+</details>
 
-**v1.0.0（2023-12-24）**
+<details>
+<summary><b>v1.0.0（2023-12-24）</b></summary>
 
 - 新增`easy positive` - 简易正面提示词文本
 - 新增`easy negative`  - 简易负面提示词文本
@@ -90,6 +99,7 @@
 
 - 修复`easy imageSize` `easy imageSizeBySide` `easy imageSizeByLongerSide` 可作为终节点
 - 修复 `seed_num` (随机种子值) 在历史记录中读取无法一致的Bug
+</details>
 
 <details>
 <summary><b>2023-12-14</b></summary>

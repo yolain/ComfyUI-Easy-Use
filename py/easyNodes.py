@@ -978,7 +978,7 @@ class easySave:
                     log_node_error("",f"File {file_path} already exists... Skipping")
 
             results.append({
-                "filename": file_path,
+                "filename": filename,
                 "subfolder": subfolder,
                 "type": self.type
             })
@@ -1774,7 +1774,7 @@ class svdLoader:
         negative = [[torch.zeros_like(pooled),
                      {"motion_bucket_id": motion_bucket_id, "fps": fps, "augmentation_level": augmentation_level,
                       "concat_latent_image": torch.zeros_like(t)}]]
-        latent = torch.zeros([video_frames, 4, height // 8, width // 8])
+        latent = torch.zeros([video_frames, 4, empty_latent_height // 8, empty_latent_width // 8])
         samples = {"samples": latent}
 
         image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))

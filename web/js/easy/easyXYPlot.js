@@ -1,4 +1,4 @@
-import { app } from "../../../../scripts/app.js";
+import { app } from "/scripts/app.js";
 import { easy_CreateDropdown, easy_RemoveDropdown } from "./easy.js";
 
 function generateNumList(dictionary) {
