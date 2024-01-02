@@ -239,14 +239,15 @@
       "pipe": "节点束",
       "control_net": "ControlNet (可选)",
       "image": "图像"
+    },
+    "outputs": {
+      "pipe": "节点束"
     }
   },
   "easy controlnetLoaderADV": {
     "title": "简易Controlnet（高级）",
     "widgets": {
-
       "control_net_name": "ControlNet",
-
       "strength": "强度",
       "start_percent": "开始时间"
     },
@@ -254,6 +255,9 @@
       "pipe": "节点束",
       "control_net": "ControlNet (可选)",
       "image": "图像"
+    },
+    "outputs": {
+      "pipe": "节点束"
     }
   },
   "easy LLLiteLoader": {
@@ -440,6 +444,22 @@
       "image": "图像"
     }
   },
+  "easy kSamplerInpainting": {
+    "title": "简易K采样器 (内补)",
+    "widgets": {
+      "grow_mask_by": "遮罩扩展",
+      "image_output": "图像输出"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型",
+      "mask": "遮罩"
+    },
+     "outputs": {
+      "pipe": "节点束",
+      "image": "图像"
+    }
+  },
   "easy kSamplerSDTurbo": {
     "title": "简易k采样器（SDTurbo）",
     "widgets": {
@@ -482,6 +502,15 @@
     },
     "outputs": {
       "pipe": "节点束"
+    }
+  },
+   "easy pipeToBasicPipe": {
+    "title": "节点束转换基础节点束",
+    "inputs": {
+      "pipe": "节点束"
+    },
+    "outputs": {
+      "basic_pipe": "基础节点束"
     }
   },
   "easy pipeEdit": {

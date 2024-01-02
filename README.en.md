@@ -29,6 +29,11 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-01-03**
+
+- Added `easy kSamplerInpainting`
+- Added `easy pipeToBasicPipe`
+
 **2024-01-02**
 
 - Fixed `width` and `height` can not customize in `easy svdLoader`

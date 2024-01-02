@@ -190,6 +190,7 @@ app.registerExtension({
 			case "easy kSampler":
 			case "easy kSamplerSDTurbo":
 			case "easy kSamplerTiled":
+			case "easy kSamplerInpainting":
 			case "easy hiresFix":
 			case "easy detailerFix":
 			case "easy imageRemoveBG":

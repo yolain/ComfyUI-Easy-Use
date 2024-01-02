@@ -3,6 +3,7 @@ import os
 import re
 import json
 import time
+import math
 import torch
 import psutil
 import random
@@ -1562,8 +1563,6 @@ class a1111Loader:
                        positive, negative, batch_size, optional_lora_stack=None, a1111_prompt_style=False, prompt=None,
                        my_unique_id=None):
 
-        print(ckpt_name)
-        print(lora_name)
         return fullLoader.adv_pipeloader(self, ckpt_name, 'Default', vae_name, clip_skip,
              lora_name, lora_model_strength, lora_clip_strength,
              resolution, empty_latent_width, empty_latent_height,
@@ -1876,11 +1875,13 @@ class loraStackLoader:
 class controlnetSimple:
     @classmethod
     def INPUT_TYPES(s):
+        def get_file_list(filenames):
+            return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
                 "image": ("IMAGE",),
-                "control_net_name": (folder_paths.get_filename_list("controlnet"),),
+                "control_net_name": (get_file_list(folder_paths.get_filename_list("controlnet")),),
             },
             "optional": {
                 "control_net": ("CONTROL_NET",),
@@ -1958,13 +1959,16 @@ class controlnetSimple:
 
 # controlnetADV
 class controlnetAdvanced:
+
     @classmethod
     def INPUT_TYPES(s):
+        def get_file_list(filenames):
+            return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
                 "image": ("IMAGE",),
-                "control_net_name": (folder_paths.get_filename_list("controlnet"),),
+                "control_net_name": (get_file_list(folder_paths.get_filename_list("controlnet")),),
             },
             "optional": {
                 "control_net": ("CONTROL_NET",),
@@ -2753,6 +2757,96 @@ class samplerSimpleTiled:
         return samplerFull.run(self, pipe, None, None,None,None,None, image_output, link_id, save_prefix,
                                None, model, None, None, None, None, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
+
+# 简易采样器 (内补)
+class samplerSimpleInpainting:
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required":
+                {"pipe": ("PIPE_LINE",),
+                 "grow_mask_by": ("INT", {"default": 6, "min": 0, "max": 64, "step": 1}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
+                 "save_prefix": ("STRING", {"default": "ComfyUI"}),
+                 },
+                "optional": {
+                    "model": ("MODEL",),
+                    "mask": ("MASK",),
+                },
+                "hidden":
+                  {"tile_size": "INT", "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
+                    "embeddingsList": (folder_paths.get_filename_list("embeddings"),)
+                  }
+                }
+
+    RETURN_TYPES = ("PIPE_LINE", "IMAGE", "VAE")
+    RETURN_NAMES = ("pipe", "image", "vae")
+    OUTPUT_NODE = True
+    FUNCTION = "run"
+    CATEGORY = "EasyUse/Sampler"
+
+    def run(self, pipe, grow_mask_by, image_output, link_id, save_prefix, model=None, mask=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+        if mask is not None:
+            pixels = pipe["images"] if pipe and "images" in pipe else None
+            if pixels is None:
+                raise Exception("No Images found")
+            vae = pipe["vae"] if pipe and "vae" in pipe else None
+            if pixels is None:
+                raise Exception("No VAE found")
+            x = (pixels.shape[1] // 8) * 8
+            y = (pixels.shape[2] // 8) * 8
+            mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])),
+                                                   size=(pixels.shape[1], pixels.shape[2]), mode="bilinear")
+
+            pixels = pixels.clone()
+            if pixels.shape[1] != x or pixels.shape[2] != y:
+                x_offset = (pixels.shape[1] % 8) // 2
+                y_offset = (pixels.shape[2] % 8) // 2
+                pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
+                mask = mask[:, :, x_offset:x + x_offset, y_offset:y + y_offset]
+
+            if grow_mask_by == 0:
+                mask_erosion = mask
+            else:
+                kernel_tensor = torch.ones((1, 1, grow_mask_by, grow_mask_by))
+                padding = math.ceil((grow_mask_by - 1) / 2)
+
+                mask_erosion = torch.clamp(torch.nn.functional.conv2d(mask.round(), kernel_tensor, padding=padding), 0,
+                                           1)
+
+            m = (1.0 - mask.round()).squeeze(1)
+            for i in range(3):
+                pixels[:, :, :, i] -= 0.5
+                pixels[:, :, :, i] *= m
+                pixels[:, :, :, i] += 0.5
+            t = vae.encode(pixels)
+
+            latent = {"samples": t, "noise_mask": (mask_erosion[:, :, :x, :y].round())}
+
+            new_pipe = {
+                "model": pipe['model'],
+                "positive": pipe['positive'],
+                "negative": pipe['negative'],
+                "vae": pipe['vae'],
+                "clip": pipe['clip'],
+
+                "samples": latent,
+                "images": pipe['images'],
+                "seed": pipe['seed'],
+
+                "loader_settings": pipe["loader_settings"],
+            }
+        else:
+            new_pipe = pipe
+        del pipe
+        return samplerFull.run(self, new_pipe, None, None,None,None,None, image_output, link_id, save_prefix,
+                               None, model, None, None, None, None, None, None,
+                               tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
+
 # SDTurbo采样器
 class samplerSDTurbo:
 
@@ -3454,6 +3548,28 @@ class pipeOut:
 
         return pipe, model, pos, neg, latent, vae, clip, image, seed
 
+# pipeToBasicPipe
+class pipeToBasicPipe:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+            },
+            "hidden": {"my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ("BASIC_PIPE",)
+    RETURN_NAMES = ("basic_pipe",)
+    FUNCTION = "doit"
+
+    CATEGORY = "ImpactPack/Pipe"
+
+    def doit(self, pipe):
+        new_pipe = (pipe.get('model'), pipe.get('clip'), pipe.get('vae'), pipe.get('positive'), pipe.get('negative'))
+        del pipe
+        return (new_pipe,)
+
 # pipeXYPlot
 class pipeXYPlot:
     lora_list = ["None"] + folder_paths.get_filename_list("loras")
@@ -3711,6 +3827,7 @@ NODE_CLASS_MAPPINGS = {
     "easy kSampler": samplerSimple,
     "easy fullkSampler": samplerFull,
     "easy kSamplerTiled": samplerSimpleTiled,
+    "easy kSamplerInpainting": samplerSimpleInpainting,
     "easy kSamplerSDTurbo": samplerSDTurbo,
     "easy hiresFix": hiresFix,
     "easy preDetailerFix": preDetailerFix,
@@ -3719,6 +3836,7 @@ NODE_CLASS_MAPPINGS = {
     "easy detailerFix": detailerFix,
     "easy pipeIn": pipeIn,
     "easy pipeOut": pipeOut,
+    "easy pipeToBasicPipe": pipeToBasicPipe,
     "easy XYPlot": pipeXYPlot,
     "easy showSpentTime": showSpentTime,
     "easy imageRemoveBG": imageREMBG,
@@ -3746,6 +3864,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy kSampler": "EasyKSampler",
     "easy fullkSampler": "EasyKSampler (Full)",
     "easy kSamplerTiled": "EasyKSampler (Tiled Decode)",
+    "easy kSamplerInpainting": "EasyKSampler (Inpainting)",
     "easy kSamplerSDTurbo": "EasyKSampler (SDTurbo)",
     "easy hiresFix": "HiresFix",
     "easy preDetailerFix": "PreDetailerFix",
@@ -3754,6 +3873,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy detailerFix": "DetailerFix",
     "easy pipeIn": "Pipe In",
     "easy pipeOut": "Pipe Out",
+    "easy pipeToBasicPipe": "Pipe -> BasicPipe",
     "easy XYPlot": "XY Plot",
     "easy showSpentTime": "ShowSpentTime",
     "easy imageRemoveBG": "ImageRemoveBG",

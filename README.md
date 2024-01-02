@@ -37,10 +37,15 @@
 
 ## 更新日志
 
+**2024-01-03**
+
+- 增加 `easy kSamplerInpainting` 用于内补潜空间的采样器
+- 增加 `easy pipeToBasicPipe` 用于转换到Impact的某些节点上
+
 **2024-01-02**
 
-- 修复 `width` 和 `height` 无法在 `easy svdLoader` 自定义报错的问题
-- 修复所有采样器预览图片的地址链接 (此前，解决在 MACOS 系统中图片无法在采样预览中预览的问题）
+- 修复 `width` 和 `height` 无法在 `easy svdLoader` 自定义的报错问题
+- 修复所有采样器预览图片的地址链接 (解决在 MACOS 系统中图片无法在采样器中预览的问题）
 
 **2023-12-31**
 

@@ -50,20 +50,17 @@ def control_seed(v, action, seed_is_global):
     value = v['inputs']['value'] if seed_is_global else v['inputs']['seed_num']
 
     if action == 'increment' or action == 'increment for each node':
-        value += 1
+        value = value + 1
         if value > 1125899906842624:
             value = 0
     elif action == 'decrement' or action == 'decrement for each node':
-        value -= 1
+        value = value - 1
         if value < 0:
             value = 1125899906842624
     elif action == 'randomize' or action == 'randomize for each node':
         value = random.randint(0, 1125899906842624)
-
     if seed_is_global:
         v['inputs']['value'] = value
-    else:
-        v['inputs']['seed_num'] = value
 
     return value
 
@@ -152,13 +149,12 @@ def prompt_seed_update(json_data):
 
                     node = k, v
                     value = control_seed(node[1], action, False)
-                    _seed_generator = SeedGenerator(value, action)
                     if k not in seed_widget_map:
                         continue
 
                     if 'seed_num' in v['inputs']:
                         if isinstance(v['inputs']['seed_num'], int):
-                            v['inputs']['seed_num'] = _seed_generator.next()
+                            v['inputs']['seed_num'] = value
 
     return value is not None
 
