@@ -133,12 +133,16 @@ class imageSize:
   CATEGORY = "EasyUse/Image"
 
   def image_width_height(self, image):
-    image = tensor2pil(image)
-    if image.size:
-      result = (image.size[0], image.size[1])
+    _, raw_H, raw_W, _ = image.shape
+
+    width = raw_W
+    height = raw_H
+
+    if width is not None and height is not None:
+      result = (width, height)
     else:
       result = (0, 0)
-    return {"ui": {"text": "Width: "+str(result[0])+" , Height: "+str(result[1])}, "result": result}
+    return {"ui": {"text": "Width: "+str(width)+" , Height: "+str(height)}, "result": result}
 
 # 图像尺寸（最长边）
 class imageSizeBySide:
@@ -162,12 +166,15 @@ class imageSizeBySide:
   CATEGORY = "EasyUse/Image"
 
   def image_side(self, image, side):
-    image = tensor2pil(image)
-    if image.size:
+    _, raw_H, raw_W, _ = image.shape
+
+    width = raw_W
+    height = raw_H
+    if width is not None and height is not None:
       if side == "Longest":
-         result = (image.size[0],) if image.size[0] > image.size[1] else (image.size[1],)
+         result = (width,) if width > height else (height,)
       elif side == 'Shortest':
-         result = (image.size[0],) if image.size[0] < image.size[1] else (image.size[1],)
+         result = (width,) if width < height else (height,)
     else:
       result = (0,)
     return {"ui": {"text": str(result[0])}, "result": result}
@@ -193,12 +200,15 @@ class imageSizeByLongerSide:
   CATEGORY = "EasyUse/Image"
 
   def image_longer_side(self, image):
-    image = tensor2pil(image)
-    if image.size:
-      if image.size[0] > image.size[1]:
-         result = (image.size[0],)
+    _, raw_H, raw_W, _ = image.shape
+
+    width = raw_W
+    height = raw_H
+    if width is not None and height is not None:
+      if width > height:
+         result = (width,)
       else:
-         result = (image.size[1],)
+         result = (height,)
     else:
       result = (0,)
     return {"ui": {"text": str(result[0])}, "result": result}
@@ -224,9 +234,9 @@ class imagePixelPerfect:
   def execute(self, image, resize_mode):
 
     _, raw_H, raw_W, _ = image.shape
-    image = tensor2pil(image)
-    width = image.size[0]
-    height = image.size[1]
+
+    width = raw_W
+    height = raw_H
 
     k0 = float(height) / float(raw_H)
     k1 = float(width) / float(raw_W)

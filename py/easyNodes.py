@@ -1614,7 +1614,7 @@ class comfyLoader:
              resolution, empty_latent_width, empty_latent_height,
              positive, 'none', 'comfy',
              negative, 'none', 'comfy',
-             batch_size, None, None, None, optional_lora_stack, prompt,
+             batch_size, None, None, None, optional_lora_stack, False, prompt,
              my_unique_id
          )
 

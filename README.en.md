@@ -31,6 +31,8 @@ After installing the node package, the UI interface will be automatically switch
 
 **2024-01-03**
 
+- Fixed `easy comfyLoader` error
+- Fixed All nodes that contain the value of the image size
 - Added `easy kSamplerInpainting`
 - Added `easy pipeToBasicPipe`
 

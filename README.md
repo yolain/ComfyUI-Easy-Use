@@ -39,6 +39,8 @@
 
 **2024-01-03**
 
+- 修复 `easy comfyLoader` 报错
+- 修复所有包含输出图片尺寸的节点取值方式无法批处理的问题
 - 增加 `easy kSamplerInpainting` 用于内补潜空间的采样器
 - 增加 `easy pipeToBasicPipe` 用于转换到Impact的某些节点上
 
