@@ -32,7 +32,7 @@ After installing the node package, the UI interface will be automatically switch
 **v1.0.2（2024-01-05）**
 
 - Added `easy XYPlotAdvanced` and some nodes about `easy XYInputs`
-- Added **Alt+1~Alt+9** Shortcut keys to quickly paste node presets for Node templates (corresponding to 1~9 sequences)
+- Added **Alt+1-Alt+9** Shortcut keys to quickly paste node presets for Node templates (corresponding to 1~9 sequences)
 - Remove the introductory diagram and workflow files from the package to reduce the package size
 
 <details>

@@ -40,7 +40,7 @@
 **v1.0.2（2024-01-05）**
 
 - 增加 `easy XYPlotAdvanced` 和 `easy XYInputs` 等相关节点
-- 增加 Alt+1~9 快捷键，可快速粘贴 Node templates 的节点预设 （对应 1~9 顺序）
+- 增加 **Alt+1到9** 快捷键，可快速粘贴 Node templates 的节点预设 （对应 1到9 顺序）
 - 移除包中的介绍图和工作流文件，减少包体积
 
 <details>
