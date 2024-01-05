@@ -12,11 +12,11 @@
 ## Introduce
 
 ### Random seed control before generate
-<img src="./docs/seed_generate_compare.jpg">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Docs/seed_generate_compare.jpg">
 
 ### Separate sampling parameters from sample preview
 
-<img src="./docs/workflow_node_compare.png">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Docs/workflow_node_compare.png">
 
 ### Wildcard prompt nodes are supported
 
@@ -29,35 +29,51 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
-**2024-01-03**
+**v1.0.2（2024-01-05）**
+
+- Added `easy XYPlotAdvanced` and some nodes about `easy XYInputs`
+- Added **Alt+1~Alt+9** Shortcut keys to quickly paste node presets for Node templates (corresponding to 1~9 sequences)
+- Remove the introductory diagram and workflow files from the package to reduce the package size
+
+<details>
+<summary><b>2024-01-03</b></summary>
 
 - Fixed `easy comfyLoader` error
 - Fixed All nodes that contain the value of the image size
 - Added `easy kSamplerInpainting`
 - Added `easy pipeToBasicPipe`
+</details>
 
-**2024-01-02**
+<details>
+<summary><b>2024-01-02</b></summary>
 
 - Fixed `width` and `height` can not customize in `easy svdLoader`
 - Fixed all preview image path (Previously, it was not possible to preview the image on the Mac system)
+</details>
 
-**2023-12-31**
+<details>
+<summary><b>2023-12-31</b></summary>
 
 - Fixed `vae_name` is not working in `easy fullLoader` and `easy a1111Loader` and `easy comfyLoader`
 - Fixed `easy fullkSampler` outputs error
+</details>
 
-**2023-12-29**
+<details>
+<summary><b>2023-12-29</b></summary>
 
 - Fixed `model_override` is not working in `easy fullLoader`
 - Fixed `easy hiresFix` error
+</details>
 
-**2023-12-27**
+<details>
+<summary><b>2023-12-27</b></summary>
 
 - Fixed `easy xyplot` font file path error
 - Fixed seed that cannot be fixed when you convert `seed_num` to `easy seed` 
 - Fixed `easy pipeIn` inputs bug
 - `easy preDetailerFix` have added a new parameter `optional_image`
-- 
+</details>
+
 **v1.0.1（Updated at 12/26/2023）**
 
 - Fixed `easy zero123Loader` and `easy svdLoader` model into cache.
@@ -144,15 +160,15 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 
 ### Text to image
 
-<img src="workflow/text_to_image.png">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/text_to_image.png">
 
 ### Image to image + controlnet
 
-<img src="workflow/image_to_image_controlnet.png">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/image_to_image_controlnet.png">
 
 ### SDTurbo + HiresFix + SVD
 
-<img src="workflow/sdturbo_hiresfix_svd.png">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/sdturbo_hiresfix_svd.png">
 
 
 ## Credits

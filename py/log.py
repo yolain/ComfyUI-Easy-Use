@@ -45,33 +45,33 @@ COLORS_BG = {
   'BRIGHT_WHITE': '\33[107m',
 }
 
-def log_node_success(node_name, message):
+def log_node_success(node_name, message=None):
   """Logs a success message."""
   _log_node(COLORS_FG["GREEN"], node_name, message)
 
-def log_node_info(node_name, message):
+def log_node_info(node_name, message=None):
   """Logs an info message."""
   _log_node(COLORS_FG["CYAN"], node_name, message)
 
 
-def log_node_warn(node_name, message):
+def log_node_warn(node_name, message=None):
   """Logs an warn message."""
   _log_node(COLORS_FG["YELLOW"], node_name, message)
 
-def log_node_error(node_name, message):
+def log_node_error(node_name, message=None):
   """Logs an warn message."""
   _log_node(COLORS_FG["RED"], node_name, message)
 
-def log_node(node_name, message):
+def log_node(node_name, message=None):
   """Logs a message."""
   _log_node(COLORS_FG["CYAN"], node_name, message)
 
 
-def _log_node(color, node_name, message, prefix=''):
+def _log_node(color, node_name, message=None, prefix=''):
   print(_get_log_msg(color, node_name, message, prefix=prefix))
 
-def _get_log_msg(color, node_name, message, prefix=''):
+def _get_log_msg(color, node_name, message=None, prefix=''):
   msg = f'{COLORS_STYLE["BOLD"]}{color}{prefix}[EasyUse] {node_name.replace(" (EasyUse)", "")}'
-  msg += f':{COLORS_STYLE["RESET"]} {message}'
+  msg += f':{COLORS_STYLE["RESET"]} {message}' if message is not None else f'{COLORS_STYLE["RESET"]}'
   return msg
 

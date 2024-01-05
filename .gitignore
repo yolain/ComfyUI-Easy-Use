@@ -1,5 +1,8 @@
 __pycache__
 *.ini
 wildcards/**
+workflow/**
+docs/**
 .vscode/
 .idea/
+mmb-preset.custom.txt

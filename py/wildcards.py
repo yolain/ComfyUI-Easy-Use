@@ -287,7 +287,7 @@ def resolve_lora_name(lora_name_cache, name):
                 return x
 
 
-def process_with_loras(wildcard_opt, model, clip, title="Positive", seed=None):
+def process_with_loras(wildcard_opt, model, clip, title="Positive", seed=None, can_load_lora=True, pipe_lora_stack=[]):
     lora_name_cache = []
 
     pass1 = process(wildcard_opt, seed)
@@ -307,20 +307,30 @@ def process_with_loras(wildcard_opt, model, clip, title="Positive", seed=None):
         path = folder_paths.get_full_path("loras", lora_name)
 
         if path is not None:
-            print(f"LOAD LORA: {lora_name}: {model_weight}, {clip_weight}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
+            print(f"LORA: {lora_name}: {model_weight}, {clip_weight}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
 
             def default_lora():
                 return nodes.LoraLoader().load_lora(model, clip, lora_name, model_weight, clip_weight)
 
             if lbw is not None:
                     cls = nodes.NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
-                    model, clip, _ = cls().doit(model, clip, lora_name, model_weight, clip_weight, False, 0, lbw_a, lbw_b, "", lbw)
+                    if can_load_lora:
+                        model, clip, _ = cls().doit(model, clip, lora_name, model_weight, clip_weight, False, 0, lbw_a, lbw_b, "", lbw)
+                    pipe_lora_stack.append({
+                        "lora_name": lora_name, "model": model, "clip": clip, "lora_model_strength": model_weight,
+                        "lora_clip_strength": clip_weight,
+                        "lbw_a": lbw_a,
+                        "lbw_b": lbw_b,
+                        "lbw": lbw
+                    })
             else:
-                model, clip = default_lora()
+                pipe_lora_stack.append({"lora_name": lora_name, "model": model, "clip": clip, "lora_model_strength": model_weight, "lora_clip_strength": clip_weight})
+                if can_load_lora:
+                    model, clip = default_lora()
         else:
             print(f"LORA NOT FOUND: {lora_name}")
 
     # print(f"{title}: {pass2}")
     # print(f'{title}_decode:', pass1)
 
-    return model, clip, pass2, pass1, show_wildcard_prompt
+    return model, clip, pass2, pass1, show_wildcard_prompt, pipe_lora_stack

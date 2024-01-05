@@ -30,7 +30,7 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 from .adv_encode import advanced_encode, advanced_encode_XL
 
 from server import PromptServer
-from nodes import MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
+from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
 from .config import BASE_RESOLUTIONS
 from .log import log_node_info, log_node_error, log_node_warn, log_node_success
 from .wildcards import process_with_loras, get_wildcard_list
@@ -111,6 +111,13 @@ class easyLoader:
             elif class_type == "easy zero123Loader" or class_type == 'easy svdLoader':
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name"))
                 desired_vae_names.add(self.get_input_value(entry, "vae_name"))
+
+            elif class_type == "easy XYInputs: ModelMergeBlocks":
+                desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name_1"))
+                desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name_2"))
+                vae_use = self.get_input_value(entry, "vae_use")
+                if vae_use != 'Use Model 1' and vae_use != 'Use Model 2':
+                    desired_vae_names.add(vae_use)
 
         object_types = ["ckpt", "clip", "bvae", "vae", "lora"]
         for object_type in object_types:
@@ -475,10 +482,29 @@ class easyXYPlot:
 
 
         plot_image_vars[value_type] = value
-        if value_type == 'seed':
+        if value_type in ["seed", "Seeds++ Batch"]:
             value_label = f"{value}"
         else:
             value_label = f"{value_type}: {value}"
+
+        if "ControlNet" in value_type:
+            if "," in value:
+                line = value.split(',')
+                value_label = f"{value_type}: {line[2]}"
+
+        if value_type in ["ModelMergeBlocks"]:
+            if ":" in value:
+                line = value.split(':')
+                value_label = f"{line[0]}"
+            elif len(value) > 16:
+                value_label = f"ModelMergeBlocks {index + 1}"
+            else:
+                value_label = f"MMB: {value}"
+
+        if value_type in ["Positive Prompt S/R"]:
+            value_label = f"pos prompt {index + 1}" if index>0 else f"pos prompt"
+        if value_type in ["Negative Prompt S/R"]:
+            value_label = f"neg prompt {index + 1}" if index>0 else f"neg prompt"
 
         if value_type in ["steps", "cfg", "denoise", "clip_skip",
                           "lora_model_strength", "lora_clip_strength"]:
@@ -575,9 +601,192 @@ class easyXYPlot:
         return label_bg
 
     def sample_plot_image(self, plot_image_vars, samples, preview_latent, latents_plot, image_list, disable_noise,
-                          start_step, last_step, force_full_denoise):
-        model, clip, vae, positive, negative = None, None, None, None, None
+                          start_step, last_step, force_full_denoise, x_value=None, y_value=None):
+        model, clip, vae, positive, negative, seed, steps, cfg = None, None, None, None, None, None, None, None
+        sampler_name, scheduler, denoise = None, None, None
 
+        # 高级用法
+        if plot_image_vars["x_node_type"] == "advanced" or plot_image_vars["y_node_type"] == "advanced":
+
+            if self.x_type == "Seeds++ Batch" or self.y_type == "Seeds++ Batch":
+                seed = int(x_value) if self.x_type == "Seeds++ Batch" else int(y_value)
+            if self.x_type == "Steps" or self.y_type == "Steps":
+                steps = int(x_value) if self.x_type == "Steps" else int(y_value)
+            if self.x_type == "StartStep" or self.y_type == "StartStep":
+                start_step = int(x_value) if self.x_type == "StartStep" else int(y_value)
+            if self.x_type == "EndStep" or self.y_type == "EndStep":
+                last_step = int(x_value) if self.x_type == "EndStep" else int(y_value)
+            if self.x_type == "CFG Scale" or self.y_type == "CFG Scale":
+                cfg = float(x_value) if self.x_type == "CFG Scale" else float(y_value)
+            if self.x_type == "Sampler" or self.y_type == "Sampler" or self.y_type == "Sampler & Scheduler":
+                sampler_name = float(x_value) if self.x_type == "Sampler" or self.x_type == "Sampler & Scheduler" else float(y_value)
+            if self.x_type == "Scheduler" or self.y_type == "Scheduler" or self.y_type == "Sampler & Scheduler":
+                scheduler = float(x_value) if self.x_type == "Scheduler" or self.x_type == "Sampler & Scheduler" else float(y_value)
+            if self.x_type == "Denoise" or self.y_type == "Denoise":
+                denoise = float(x_value) if self.x_type == "Denoise" else float(y_value)
+            # 模型叠加
+            if self.x_type == "ModelMergeBlocks" or self.y_type == "ModelMergeBlocks":
+                ckpt_name_1, ckpt_name_2 = plot_image_vars['models']
+                model1, clip1, vae1 = easyCache.load_checkpoint(ckpt_name_1)
+                model2, clip2, vae2 = easyCache.load_checkpoint(ckpt_name_2)
+                xy_values = x_value if self.x_type == "ModelMergeBlocks" else y_value
+                if ":" in xy_values:
+                    xy_line = xy_values.split(':')
+                    xy_values = xy_line[1]
+
+                xy_arrs = xy_values.split(',')
+                # ModelMergeBlocks
+                if len(xy_arrs) == 3:
+                    input, middle, out = xy_arrs
+                    kwargs = {
+                        "input": input,
+                        "middle": middle,
+                        "out": out
+                    }
+                elif len(xy_arrs) == 30:
+                    kwargs = {}
+                    kwargs["time_embed."] = xy_arrs[0]
+                    kwargs["label_emb."] = xy_arrs[1]
+
+                    for i in range(12):
+                        kwargs["input_blocks.{}.".format(i)] = xy_arrs[2+i]
+
+                    for i in range(3):
+                        kwargs["middle_block.{}.".format(i)] = xy_arrs[14+i]
+
+                    for i in range(12):
+                        kwargs["output_blocks.{}.".format(i)] = xy_arrs[17+i]
+
+                    kwargs["out."] = xy_arrs[29]
+                else:
+                    raise Exception("ModelMergeBlocks weight length error")
+                default_ratio = next(iter(kwargs.values()))
+
+                m = model1.clone()
+                kp = model2.get_key_patches("diffusion_model.")
+
+                for k in kp:
+                    ratio = float(default_ratio)
+                    k_unet = k[len("diffusion_model."):]
+
+                    last_arg_size = 0
+                    for arg in kwargs:
+                        if k_unet.startswith(arg) and last_arg_size < len(arg):
+                            ratio = float(kwargs[arg])
+                            last_arg_size = len(arg)
+
+                    m.add_patches({k: kp[k]}, 1.0 - ratio, ratio)
+
+                vae_use = plot_image_vars['vae_use']
+
+                clip = clip2 if vae_use == 'Use Model 2' else clip1
+                if vae_use == 'Use Model 2':
+                    vae = vae2
+                elif vae_use == 'Use Model 1':
+                    vae = vae1
+                else:
+                    (vae,) = VAELoader().load_vae(vae_use)
+                model = m
+
+                # 如果存在lora_stack叠加lora
+                optional_lora_stack = plot_image_vars['lora_stack']
+                if optional_lora_stack is not None and optional_lora_stack != []:
+                    for lora in optional_lora_stack:
+                        lora_name = lora["lora_name"]
+                        model = lora["model"]
+                        clip = lora["clip"]
+                        lora_model_strength = lora["lora_model_strength"]
+                        lora_clip_strength = lora["lora_clip_strength"]
+                        if "lbw" in lora:
+                            lbw = lora["lbw"]
+                            lbw_a = lora["lbw_a"]
+                            lbw_b = lora["lbw_b"]
+                            cls = ALL_NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
+                            model, clip, _ = cls().doit(model, clip, lora_name, lora_model_strength, lora_clip_strength, False, 0,
+                                                        lbw_a, lbw_b, "", lbw)
+                        model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength, lora_clip_strength)
+
+                # 处理clip
+                clip = clip.clone()
+                if plot_image_vars['clip_skip'] != 0:
+                    clip.clip_layer(plot_image_vars['clip_skip'])
+
+            # 提示词
+            if "Positive" in self.x_type or "Positive" in self.y_type:
+                if self.x_type == 'Positive Prompt S/R' or self.y_type == 'Positive Prompt S/R':
+                    positive = x_value if self.x_type == "Positive Prompt S/R" else y_value
+                if plot_image_vars['a1111_prompt_style']:
+                    if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
+                        cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
+                        steps = plot_image_vars['steps']
+                        clip = clip if clip is not None else plot_image_vars["clip"]
+                        positive, = cls().encode(clip, positive, "A1111", True, True, False, False, 6,
+                                                 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+                    else:
+                        raise Exception(
+                            f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
+                else:
+                    positive, positive_pooled = advanced_encode(clip, plot_image_vars['positive'],
+                                                                plot_image_vars['positive_token_normalization'],
+                                                                plot_image_vars[
+                                                                    'positive_weight_interpretation'],
+                                                                w_max=1.0,
+                                                                apply_to_pooled="enable")
+                    positive = [[positive, {"pooled_output": positive_pooled}]]
+            if "Negative" in self.x_type or "Negative" in self.y_type:
+                if self.x_type == 'Negative Prompt S/R' or self.y_type == 'Negative Prompt S/R':
+                    negative = x_value if self.x_type == "Negative Prompt S/R" else y_value
+                if plot_image_vars['a1111_prompt_style']:
+                    if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
+                        cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
+                        steps = plot_image_vars['steps']
+                        clip = clip if clip is not None else plot_image_vars["clip"]
+                        negative, = cls().encode(clip, negative, "A1111", True, True, False, False, 6,
+                                                 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+                    else:
+                        raise Exception(
+                            f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
+                else:
+                    negative, negative_pooled = advanced_encode(clip, plot_image_vars['negative'],
+                                                                plot_image_vars['negative_token_normalization'],
+                                                                plot_image_vars[
+                                                                    'negative_weight_interpretation'],
+                                                                w_max=1.0,
+                                                                apply_to_pooled="enable")
+                    negative = [[negative, {"pooled_output": negative_pooled}]]
+
+            # ControlNet
+            if "ControlNet" in self.x_type or "ControlNet" in self.y_type:
+                _pipe = {
+                    "model": model if model is not None else plot_image_vars["model"],
+                    "positive": positive if positive is not None else plot_image_vars["positive_cond"],
+                    "negative": negative if negative is not None else plot_image_vars["negative_cond"],
+                    "vae": vae if vae is not None else plot_image_vars['vae'],
+                    "clip": clip if clip is not None else plot_image_vars['clip'],
+                    "samples": None,
+                    "images": None,
+                    "loader_settings": {}
+                }
+                cnet = plot_image_vars["cnet"] if "cnet" in plot_image_vars else None
+                if cnet:
+                    strength, start_percent, end_percent = x_value.split(',') if "ControlNet" in self.x_type else y_value.split(',')
+                    strength = float(strength)
+                    start_percent = float(start_percent)
+                    end_percent = float(end_percent)
+                    for index, item in enumerate(cnet):
+                        control_net_names = item[0]
+                        image = item[1]
+                        for idx, control_net_name in enumerate(control_net_names):
+                            # print(control_net_name)
+                            _pipe, = controlnetAdvanced().controlnetApply(_pipe, image, control_net_name, None, strength, start_percent,
+                                        end_percent)
+
+                            positive = _pipe['positive']
+                            negative = _pipe['negative']
+
+                del _pipe
+
+        # 简单用法
         if plot_image_vars["x_node_type"] == "loader" or plot_image_vars["y_node_type"] == "loader":
             model, clip, vae = easyCache.load_checkpoint(plot_image_vars['ckpt_name'])
 
@@ -596,17 +805,28 @@ class easyXYPlot:
             clip = clip.clone()
             clip.clip_layer(plot_image_vars['clip_skip'])
 
-            positive, positive_pooled = advanced_encode(clip, plot_image_vars['positive'],
-                                                        plot_image_vars['positive_token_normalization'],
-                                                        plot_image_vars['positive_weight_interpretation'], w_max=1.0,
-                                                        apply_to_pooled="enable")
-            positive = [[positive, {"pooled_output": positive_pooled}]]
+            if plot_image_vars['a1111_prompt_style']:
+                if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
+                    cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
+                    steps = plot_image_vars['steps']
+                    positive, = cls().encode(clip, positive, "A1111", True, True, False, False, 6,
+                                                              1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+                    negative, = cls().encode(clip, negative, "A1111", True, True, False, False, 6,
+                                                              1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+                else:
+                    raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
+            else:
+                positive, positive_pooled = advanced_encode(clip, plot_image_vars['positive'],
+                                                            plot_image_vars['positive_token_normalization'],
+                                                            plot_image_vars['positive_weight_interpretation'], w_max=1.0,
+                                                            apply_to_pooled="enable")
+                positive = [[positive, {"pooled_output": positive_pooled}]]
 
-            negative, negative_pooled = advanced_encode(clip, plot_image_vars['negative'],
-                                                        plot_image_vars['negative_token_normalization'],
-                                                        plot_image_vars['negative_weight_interpretation'], w_max=1.0,
-                                                        apply_to_pooled="enable")
-            negative = [[negative, {"pooled_output": negative_pooled}]]
+                negative, negative_pooled = advanced_encode(clip, plot_image_vars['negative'],
+                                                            plot_image_vars['negative_token_normalization'],
+                                                            plot_image_vars['negative_weight_interpretation'], w_max=1.0,
+                                                            apply_to_pooled="enable")
+                negative = [[negative, {"pooled_output": negative_pooled}]]
 
         model = model if model is not None else plot_image_vars["model"]
         clip = clip if clip is not None else plot_image_vars["clip"]
@@ -614,12 +834,12 @@ class easyXYPlot:
         positive = positive if positive is not None else plot_image_vars["positive_cond"]
         negative = negative if negative is not None else plot_image_vars["negative_cond"]
 
-        seed = plot_image_vars["seed"]
-        steps = plot_image_vars["steps"]
-        cfg = plot_image_vars["cfg"]
-        sampler_name = plot_image_vars["sampler_name"]
-        scheduler = plot_image_vars["scheduler"]
-        denoise = plot_image_vars["denoise"]
+        seed = seed if seed is not None else plot_image_vars["seed"]
+        steps = steps if steps is not None else plot_image_vars["steps"]
+        cfg = cfg if cfg is not None else plot_image_vars["cfg"]
+        sampler_name = sampler_name if sampler_name is not None else plot_image_vars["sampler_name"]
+        scheduler = scheduler if scheduler is not None else plot_image_vars["scheduler"]
+        denoise = denoise if denoise is not None else plot_image_vars["denoise"]
         # Sample
         samples = sampler.common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, samples,
                                           denoise=denoise, disable_noise=disable_noise, preview_latent=preview_latent,
@@ -693,13 +913,13 @@ class easyXYPlot:
 
                     self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
                         plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list,
-                        disable_noise, start_step, last_step, force_full_denoise)
+                        disable_noise, start_step, last_step, force_full_denoise, x_value, y_value)
                     self.num += 1
             else:
                 # ttNl(f'{CC.GREY}X: {x_value_label}').t(f'Plot Values {self.num}/{self.total} ->').p()
                 self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
                     plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list, disable_noise,
-                    start_step, last_step, force_full_denoise)
+                    start_step, last_step, force_full_denoise, x_value)
                 self.num += 1
 
         # Rearrange latent array to match preview image grid
@@ -1398,6 +1618,8 @@ class fullLoader:
         model: ModelPatcher | None = None
         clip: CLIP | None = None
         vae: VAE | None = None
+        can_load_lora = True
+        pipe_lora_stack = []
 
         # resolution
         if resolution != "自定义 x 自定义":
@@ -1415,8 +1637,18 @@ class fullLoader:
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
 
+        log_node_warn("正在处理模型...")
+        # 判断是否存在 模型叠加xyplot, 若存在优先缓存第一个模型
+        xyinputs_id = next((x for x in prompt if str(prompt[x]["class_type"]) == "easy XYInputs: ModelMergeBlocks"), None)
+        if xyinputs_id is not None:
+            node = prompt[xyinputs_id]
+            if "ckpt_name_1" in node["inputs"]:
+                ckpt_name_1 = node["inputs"]["ckpt_name_1"]
+                model, clip, vae = easyCache.load_checkpoint(ckpt_name_1)
+                can_load_lora = False
+
         # Load models
-        if model_override is not None and clip_override is not None and vae_override is not None:
+        elif model_override is not None and clip_override is not None and vae_override is not None:
             model = model_override
             clip = clip_override
             vae = vae_override
@@ -1431,10 +1663,15 @@ class fullLoader:
 
         if optional_lora_stack is not None:
             for lora in optional_lora_stack:
-                model, clip = easyCache.load_lora(lora[0], model, clip, lora[1], lora[2])
+                if can_load_lora:
+                    model, clip = easyCache.load_lora(lora[0], model, clip, lora[1], lora[2])
+                pipe_lora_stack.append({"lora_name": lora[0], "model": model, "clip": clip, "lora_model_strength": lora[1], "lora_clip_strength": lora[2]})
 
         if lora_name != "None":
-            model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength, lora_clip_strength)
+            if can_load_lora:
+                model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength, lora_clip_strength)
+            pipe_lora_stack.append({"lora_name": lora_name, "model": model, "clip": clip, "lora_model_strength": lora_model_strength,
+                                    "lora_clip_strength": lora_clip_strength})
 
         # Check for custom VAE
         if vae_name not in ["Baked VAE", "Baked-VAE"]:
@@ -1443,19 +1680,21 @@ class fullLoader:
         if not clip:
             raise Exception("No CLIP found")
 
+        log_node_warn("正在处理提示词...")
         positive_seed = find_wildcards_seed(positive, prompt)
-        model, clip, positive, positive_decode, show_positive_prompt = process_with_loras(positive, model, clip, "Positive", positive_seed)
+        model, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(positive, model, clip, "Positive", positive_seed, can_load_lora, pipe_lora_stack)
         positive_wildcard_prompt = positive_decode if show_positive_prompt else ""
 
         negative_seed = find_wildcards_seed(negative, prompt)
-        model, clip, negative, negative_decode, show_negative_prompt = process_with_loras(negative, model, clip,
-                                                                                          "Negative", negative_seed)
+        model, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(negative, model, clip,
+                                                                                          "Negative", negative_seed, can_load_lora, pipe_lora_stack)
         negative_wildcard_prompt = negative_decode if show_negative_prompt else ""
 
         clipped = clip.clone()
-        if clip_skip != 0:
+        if clip_skip != 0 and can_load_lora:
             clipped.clip_layer(clip_skip)
 
+        log_node_warn("正在处理提示词编码...")
         # Use new clip text encode by smzNodes like same as webui, when if you installed the smzNodes
         if a1111_prompt_style:
             if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
@@ -1477,6 +1716,7 @@ class fullLoader:
             negative_embeddings_final = [[negative_embeddings_final, {"pooled_output": negative_pooled}]]
         image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
 
+        log_node_warn("处理结束...")
         pipe = {"model": model,
                 "positive": positive_embeddings_final,
                 "negative": negative_embeddings_final,
@@ -1494,6 +1734,8 @@ class fullLoader:
                                     "lora_model_strength": lora_model_strength,
                                     "lora_clip_strength": lora_clip_strength,
 
+                                    "lora_stack": pipe_lora_stack,
+
                                     "refiner_ckpt_name": None,
                                     "refiner_vae_name": None,
                                     "refiner_lora_name": None,
@@ -1501,6 +1743,7 @@ class fullLoader:
                                     "refiner_lora_clip_strength": None,
 
                                     "clip_skip": clip_skip,
+                                    "a1111_prompt_style": a1111_prompt_style,
                                     "positive": positive,
                                     "positive_l": None,
                                     "positive_g": None,
@@ -1990,7 +2233,6 @@ class controlnetAdvanced:
             controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
             control_net = comfy.controlnet.load_controlnet(controlnet_path)
         control_hint = image.movedim(-1, 1)
-
         positive = pipe["positive"]
         negative = pipe["negative"]
 
@@ -2043,6 +2285,8 @@ class controlnetAdvanced:
 
             "loader_settings": pipe["loader_settings"]
         }
+
+        del pipe
 
         return (new_pipe,)
 
@@ -2602,13 +2846,14 @@ class samplerFull:
 
         def process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative,
                            steps, cfg, sampler_name, scheduler, denoise,
-                           image_output, save_prefix, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot):
+                           image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot):
 
             sampleXYplot = easyXYPlot(xyPlot, save_prefix, image_output, prompt, extra_pnginfo, my_unique_id)
 
             if not sampleXYplot.validate_xy_plot():
-                return process_sample_state(pipe, steps, cfg,
-                                            sampler_name, scheduler, denoise, image_output, save_prefix, prompt,
+                return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
+                                            samp_negative, steps, 0, 10000, cfg,
+                                            sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt,
                                             extra_pnginfo, my_unique_id, preview_latent)
 
             plot_image_vars = {
@@ -2616,6 +2861,7 @@ class samplerFull:
                 "lora_name": pipe["loader_settings"]["lora_name"],
                 "lora_model_strength": pipe["loader_settings"]["lora_model_strength"],
                 "lora_clip_strength": pipe["loader_settings"]["lora_clip_strength"],
+                "lora_stack":  pipe["loader_settings"]["lora_stack"] if "lora_stack" in pipe["loader_settings"] else None,
                 "steps": steps, "cfg": cfg, "sampler_name": sampler_name, "scheduler": scheduler, "denoise": denoise,
                 "seed": samp_seed,
 
@@ -2632,6 +2878,15 @@ class samplerFull:
                 "negative_token_normalization": pipe['loader_settings']['negative_token_normalization'],
                 "negative_weight_interpretation": pipe['loader_settings']['negative_weight_interpretation'],
             }
+
+            if "models" in pipe["loader_settings"]:
+                plot_image_vars["models"] = pipe["loader_settings"]["models"]
+            if "vae_use" in pipe["loader_settings"]:
+                plot_image_vars["vae_use"] = pipe["loader_settings"]["vae_use"]
+            if "a1111_prompt_style" in pipe["loader_settings"]:
+                plot_image_vars["a1111_prompt_style"] = pipe["loader_settings"]["a1111_prompt_style"]
+            if "cnet_stack" in pipe["loader_settings"]:
+                plot_image_vars["cnet"] = pipe["loader_settings"]["cnet_stack"]
 
             latent_image = sampleXYplot.get_latent(pipe["samples"])
 
@@ -2662,7 +2917,7 @@ class samplerFull:
                 "clip": samp_clip,
 
                 "samples": samp_samples,
-                "images": samp_images,
+                "images": output_images,
                 "seed": samp_seed,
 
                 "loader_settings": pipe["loader_settings"],
@@ -2675,7 +2930,7 @@ class samplerFull:
             if image_output in ("Hide", "Hide/Save"):
                 return sampler.get_output(new_pipe)
 
-            return {"ui": {"images": results}, "result": sampler.get_output(new_pipe)}
+            return {"ui": {"images": results}, "result": (sampler.get_output(new_pipe))}
 
         preview_latent = True
         if image_output in ("Hide", "Hide/Save"):
@@ -2683,7 +2938,7 @@ class samplerFull:
 
         xyPlot = pipe["loader_settings"]["xyplot"] if "xyplot" in pipe["loader_settings"] else None
         if xyPlot is not None:
-            return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, save_prefix, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot)
+            return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot)
         else:
             return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent)
 
@@ -3563,7 +3818,7 @@ class pipeToBasicPipe:
     RETURN_NAMES = ("basic_pipe",)
     FUNCTION = "doit"
 
-    CATEGORY = "ImpactPack/Pipe"
+    CATEGORY = "EasyUse/Pipe"
 
     def doit(self, pipe):
         new_pipe = (pipe.get('model'), pipe.get('clip'), pipe.get('vae'), pipe.get('positive'), pipe.get('negative'))
@@ -3610,7 +3865,7 @@ class pipeXYPlot:
     def __init__(self):
         pass
 
-    rejected = ["None", "---------------------"]
+    rejected = ["None", "---------------------", "Nothing"]
 
     @classmethod
     def INPUT_TYPES(s):
@@ -3698,6 +3953,526 @@ class pipeXYPlot:
             }
             del pipe
         return (new_pipe, xy_plot,)
+
+# pipeXYPlotAdvanced
+class pipeXYPlotAdvanced:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "grid_spacing": ("INT", {"min": 0, "max": 500, "step": 5, "default": 0, }),
+                "output_individuals": (["False", "True"], {"default": "False"}),
+                "flip_xy": (["False", "True"], {"default": "False"}),
+            },
+            "optional": {
+                "X": ("X_Y",),
+                "Y": ("X_Y",),
+            },
+            "hidden": {"my_unique_id": "UNIQUE_ID"}
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "XYPLOT",)
+    RETURN_NAMES = ("pipe", "xyPlot",)
+    FUNCTION = "plot"
+
+    CATEGORY = "EasyUse/Pipe"
+
+    def plot(self, pipe, grid_spacing, output_individuals, flip_xy, X=None, Y=None, my_unique_id=None):
+        if X != None:
+            x_axis = X.get('axis')
+            x_values = X.get('values')
+        else:
+            x_axis = "Nothing"
+            x_values = [""]
+        if Y != None:
+            y_axis = Y.get('axis')
+            y_values = Y.get('values')
+        else:
+            y_axis = "Nothing"
+            y_values = [""]
+
+        if pipe is not None:
+            new_pipe = pipe
+            positive = pipe["loader_settings"]["positive"] if "positive" in pipe["loader_settings"] else ""
+            negative = pipe["loader_settings"]["negative"] if "negative" in pipe["loader_settings"] else ""
+
+            if x_axis == 'advanced: ModelMergeBlocks':
+                models = X.get('models')
+                vae_use = X.get('vae_use')
+                if models is None:
+                    raise Exception("models is not found")
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "models": models,
+                    "vae_use": vae_use
+                }
+            if y_axis == 'advanced: ModelMergeBlocks':
+                models = Y.get('models')
+                vae_use = Y.get('vae_use')
+                if models is None:
+                    raise Exception("models is not found")
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "models": models,
+                    "vae_use": vae_use
+                }
+
+            if x_axis == 'advanced: Seeds++ Batch':
+                if new_pipe['seed']:
+                    value = x_values
+                    x_values = []
+                    for index in range(value):
+                        x_values.append(str(new_pipe['seed'] + index))
+                    x_values = "; ".join(x_values)
+            if y_axis == 'advanced: Seeds++ Batch':
+                if new_pipe['seed']:
+                    value = y_values
+                    y_values = []
+                    for index in range(value):
+                        y_values.append(str(new_pipe['seed'] + index))
+                    y_values = "; ".join(y_values)
+
+            if x_axis == 'advanced: Positive Prompt S/R':
+                if positive:
+                    x_value = x_values
+                    x_values = []
+                    for index, value in enumerate(x_value):
+                        search_txt, replace_txt, replace_all = value
+                        if replace_all:
+                            txt = replace_txt if replace_txt is not None else positive
+                            x_values.append(txt)
+                        else:
+                            txt = positive.replace(search_txt, replace_txt, 1) if replace_txt is not None else positive
+                            x_values.append(txt)
+                    x_values = "; ".join(x_values)
+            if y_axis == 'advanced: Positive Prompt S/R':
+                if positive:
+                    y_value = y_values
+                    y_values = []
+                    for index, value in enumerate(y_value):
+                        search_txt, replace_txt, replace_all = value
+                        if replace_all:
+                            txt = replace_txt if replace_txt is not None else positive
+                            y_values.append(txt)
+                        else:
+                            txt = positive.replace(search_txt, replace_txt, 1) if replace_txt is not None else positive
+                            y_values.append(txt)
+                    y_values = "; ".join(y_values)
+
+            if x_axis == 'advanced: Negative Prompt S/R':
+                if negative:
+                    x_value = x_values
+                    x_values = []
+                    for index, value in enumerate(x_value):
+                        search_txt, replace_txt, replace_all = value
+                        if replace_all:
+                            txt = replace_txt if replace_txt is not None else negative
+                            x_values.append(txt)
+                        else:
+                            txt = negative.replace(search_txt, replace_txt, 1) if replace_txt is not None else negative
+                            x_values.append(txt)
+                    x_values = "; ".join(x_values)
+            if y_axis == 'advanced: Negative Prompt S/R':
+                if negative:
+                    y_value = y_values
+                    y_values = []
+                    for index, value in enumerate(y_value):
+                        search_txt, replace_txt, replace_all = value
+                        if replace_all:
+                            txt = replace_txt if replace_txt is not None else negative
+                            y_values.append(txt)
+                        else:
+                            txt = negative.replace(search_txt, replace_txt, 1) if replace_txt is not None else negative
+                            y_values.append(txt)
+                    y_values = "; ".join(y_values)
+
+            if "advanced: ControlNet" in x_axis:
+                x_value = x_values
+                x_values = []
+                cnet = []
+                for index, value in enumerate(x_value):
+                    cnet_stack, image, strength, start_percent, end_percent = value
+                    cnet.append((cnet_stack, image,), )
+                    x_values.append((",".join((str(strength), str(start_percent), str(end_percent),))),)
+                x_values = "; ".join(x_values)
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "cnet_stack": cnet,
+                }
+
+            if "advanced: ControlNet" in y_axis:
+                y_value = y_values
+                y_values = []
+                cnet = []
+                for index, value in enumerate(y_value):
+                    cnet_stack, image, strength, start_percent, end_percent = value
+                    cnet.append((cnet_stack, image,),)
+                    y_values.append((",".join((str(strength), str(start_percent), str(end_percent),))),)
+                y_values = "; ".join(y_values)
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "cnet_stack": cnet,
+                }
+
+            del pipe
+
+        return pipeXYPlot().plot(grid_spacing, output_individuals, flip_xy, x_axis, x_values, y_axis, y_values, new_pipe)
+
+#---------------------------------------------------------------XY Inputs 开始----------------------------------------------------------------------#
+
+def load_preset(filename):
+    path = os.path.join(os.path.dirname(__file__), "..", "resources", filename)
+    path = os.path.abspath(path)
+    preset_list = []
+
+    if os.path.exists(path):
+        with open(path, 'r') as file:
+            for line in file:
+                preset_list.append(line.strip())
+
+        return preset_list
+    else:
+        return []
+def generate_floats(batch_count, first_float, last_float):
+    if batch_count > 1:
+        interval = (last_float - first_float) / (batch_count - 1)
+        values = [str(round(first_float + i * interval, 3)) for i in range(batch_count)]
+    else:
+        values = [str(first_float)] if batch_count == 1 else []
+    return "; ".join(values)
+
+def generate_ints(batch_count, first_int, last_int):
+    if batch_count > 1:
+        interval = (last_int - first_int) / (batch_count - 1)
+        values = [str(int(first_int + i * interval)) for i in range(batch_count)]
+    else:
+        values = [str(first_int)] if batch_count == 1 else []
+    # values = list(set(values))  # Remove duplicates
+    # values.sort()  # Sort in ascending order
+    return "; ".join(values)
+
+# Seed++ Batch
+class XYplot_SeedsBatch:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "batch_count": ("INT", {"default": 3, "min": 1, "max": 50}), },
+        }
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, batch_count):
+
+        axis = "advanced: Seeds++ Batch"
+        xy_values = {"axis": axis, "values": batch_count}
+        return (xy_values,)
+
+# Step Values
+class XYplot_Steps:
+    parameters = ["steps", "start_at_step", "end_at_step",]
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "target_parameter": (cls.parameters,),
+                "batch_count": ("INT", {"default": 3, "min": 0, "max": 50}),
+                "first_step": ("INT", {"default": 10, "min": 1, "max": 10000}),
+                "last_step": ("INT", {"default": 20, "min": 1, "max": 10000}),
+                "first_start_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
+                "last_start_step": ("INT", {"default": 10, "min": 0, "max": 10000}),
+                "first_end_step": ("INT", {"default": 10, "min": 0, "max": 10000}),
+                "last_end_step": ("INT", {"default": 20, "min": 0, "max": 10000}),
+            }
+        }
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, target_parameter, batch_count, first_step, last_step, first_start_step, last_start_step,
+                 first_end_step, last_end_step,):
+
+        axis, xy_first, xy_last = None, None, None
+
+        if target_parameter == "steps":
+            axis = "advanced: Steps"
+            xy_first = first_step
+            xy_last = last_step
+        elif target_parameter == "start_at_step":
+            axis = "advanced: StartStep"
+            xy_first = first_start_step
+            xy_last = last_start_step
+        elif target_parameter == "end_at_step":
+            axis = "advanced: EndStep"
+            xy_first = first_end_step
+            xy_last = last_end_step
+
+        values = generate_ints(batch_count, xy_first, xy_last)
+        return ({"axis": axis, "values": values},) if values is not None else (None,)
+
+class XYplot_CFG:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "batch_count": ("INT", {"default": 3, "min": 0, "max": 50}),
+                "first_cfg": ("FLOAT", {"default": 7.0, "min": 0.0, "max": 100.0}),
+                "last_cfg": ("FLOAT", {"default": 9.0, "min": 0.0, "max": 100.0}),
+            }
+        }
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, batch_count, first_cfg, last_cfg):
+        axis = "advanced: CFG Scale"
+        values = generate_floats(batch_count, first_cfg, last_cfg)
+        return ({"axis": axis, "values": values},) if values else (None,)
+
+# Step Values
+class XYplot_Sampler_Scheduler:
+    parameters = ["sampler", "scheduler", "sampler & scheduler"]
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        samplers = ["None"] + comfy.samplers.KSampler.SAMPLERS
+        schedulers = ["None"] + comfy.samplers.KSampler.SCHEDULERS
+        inputs = {
+            "required": {
+                "target_parameter": (cls.parameters,),
+                "input_count": ("INT", {"default": 1, "min": 1, "max": 30, "step": 1})
+            }
+        }
+        for i in range(1, 30 + 1):
+            inputs["required"][f"sampler_{i}"] = (samplers,)
+            inputs["required"][f"scheduler_{i}"] = (schedulers,)
+
+        return inputs
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, target_parameter, input_count, **kwargs):
+        axis, values, = None, None,
+        if target_parameter == "scheduler":
+            axis = "advanced: Scheduler"
+            schedulers = [kwargs.get(f"scheduler_{i}") for i in range(1, input_count + 1)]
+            values = [scheduler for scheduler in schedulers if scheduler != "None"]
+        elif target_parameter == "sampler":
+            axis = "advanced: Sampler"
+            samplers = [kwargs.get(f"sampler_{i}") for i in range(1, input_count + 1)]
+            values = [(sampler, None) for sampler in samplers if sampler != "None"]
+        else:
+            axis = "advanced: Sampler&Scheduler"
+            samplers = [kwargs.get(f"sampler_{i}") for i in range(1, input_count + 1)]
+            schedulers = [kwargs.get(f"scheduler_{i}") for i in range(1, input_count + 1)]
+            values = [(sampler, scheduler if scheduler != "None" else None) for sampler, scheduler in zip(samplers, schedulers) if sampler != "None"]
+        values = "; ".join(values)
+        return ({"axis": axis, "values": values},) if values else (None,)
+
+class XYplot_Denoise:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "batch_count": ("INT", {"default": 3, "min": 0, "max": 50}),
+                "first_denoise": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.1}),
+                "last_denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.1}),
+            }
+        }
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, batch_count, first_denoise, last_denoise):
+        axis = "advanced: Denoise"
+        values = generate_floats(batch_count, first_denoise, last_denoise)
+        return ({"axis": axis, "values": values},) if values else (None,)
+
+# PromptSR
+class XYplot_PromptSR:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs = {
+            "required": {
+                "target_prompt": (["positive", "negative"],),
+                "search_txt": ("STRING", {"default": "", "multiline": False}),
+                "replace_all_text": ("BOOLEAN", {"default": False}),
+                "replace_count": ("INT", {"default": 3, "min": 1, "max": 30 - 1}),
+            }
+        }
+
+        # Dynamically add replace_X inputs
+        for i in range(1, 30):
+            replace_key = f"replace_{i}"
+            inputs["required"][replace_key] = ("STRING", {"default": "", "multiline": False, "placeholder": replace_key})
+
+        return inputs
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, target_prompt, search_txt, replace_all_text, replace_count, **kwargs):
+        axis = None
+
+        if target_prompt == "positive":
+            axis = "advanced: Positive Prompt S/R"
+        elif target_prompt == "negative":
+            axis = "advanced: Negative Prompt S/R"
+
+        # Create base entry
+        values = [(search_txt, None, replace_all_text)]
+
+        if replace_count > 0:
+            # Append additional entries based on replace_count
+            values.extend([(search_txt, kwargs.get(f"replace_{i+1}"), replace_all_text) for i in range(replace_count)])
+        return ({"axis": axis, "values": values},) if values is not None else (None,)
+
+
+# XY Plot: ControlNet
+class XYplot_Control_Net:
+    parameters = ["strength", "start_percent", "end_percent"]
+    @classmethod
+    def INPUT_TYPES(cls):
+        def get_file_list(filenames):
+            return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
+
+        return {
+            "required": {
+                "control_net_name": (get_file_list(folder_paths.get_filename_list("controlnet")),),
+                "image": ("IMAGE",),
+                "target_parameter": (cls.parameters,),
+                "batch_count": ("INT", {"default": 3, "min": 1, "max": 30}),
+                "first_strength": ("FLOAT", {"default": 0.0, "min": 0.00, "max": 10.0, "step": 0.01}),
+                "last_strength": ("FLOAT", {"default": 1.0, "min": 0.00, "max": 10.0, "step": 0.01}),
+                "first_start_percent": ("FLOAT", {"default": 0.0, "min": 0.00, "max": 1.0, "step": 0.01}),
+                "last_start_percent": ("FLOAT", {"default": 1.0, "min": 0.00, "max": 1.0, "step": 0.01}),
+                "first_end_percent": ("FLOAT", {"default": 0.0, "min": 0.00, "max": 1.0, "step": 0.01}),
+                "last_end_percent": ("FLOAT", {"default": 1.0, "min": 0.00, "max": 1.0, "step": 0.01}),
+                "strength": ("FLOAT", {"default": 1.0, "min": 0.00, "max": 10.0, "step": 0.01}),
+                "start_percent": ("FLOAT", {"default": 0.0, "min": 0.00, "max": 1.0, "step": 0.01}),
+                "end_percent": ("FLOAT", {"default": 1.0, "min": 0.00, "max": 1.0, "step": 0.01}),
+            },
+        }
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, control_net_name, image, target_parameter, batch_count, first_strength, last_strength, first_start_percent,
+                 last_start_percent, first_end_percent, last_end_percent, strength, start_percent, end_percent):
+
+        axis, = None,
+
+        # If cnet_stack is provided, extend each inner array with its content
+        # if cnet_stack:
+        #     for inner_list in values:
+        #         inner_list.extend(cnet_stack)
+        cnet_stack = [control_net_name]
+
+        values = []
+
+        if target_parameter == "strength":
+            axis = "advanced: ControlNetStrength"
+
+            values.append((cnet_stack, image, first_strength, start_percent, end_percent))
+            strength_increment = (last_strength - first_strength) / (batch_count - 1) if batch_count > 1 else 0
+            for i in range(1, batch_count - 1):
+                values.append((cnet_stack, image, first_strength + i * strength_increment, start_percent,
+                                end_percent))
+            if batch_count > 1:
+                values.append((cnet_stack, image, last_strength, start_percent, end_percent))
+
+        elif target_parameter == "start_percent":
+            axis = "advanced: ControlNetStart%"
+
+            percent_increment = (last_start_percent - first_start_percent) / (batch_count - 1) if batch_count > 1 else 0
+            values.append((cnet_stack, image, strength, first_start_percent, end_percent))
+            for i in range(1, batch_count - 1):
+                values.append((cnet_stack, image, strength, first_start_percent + i * percent_increment,
+                                  end_percent))
+
+            # Always add the last start_percent if batch_count is more than 1.
+            if batch_count > 1:
+                values.append((cnet_stack, image, strength, last_start_percent, end_percent))
+
+        elif target_parameter == "end_percent":
+            axis = "advanced: ControlNetEnd%"
+
+            percent_increment = (last_end_percent - first_end_percent) / (batch_count - 1) if batch_count > 1 else 0
+            values.append((cnet_stack, image, strength, start_percent, first_end_percent))
+            for i in range(1, batch_count - 1):
+                values.append((cnet_stack, image, strength, start_percent,
+                                  first_end_percent + i * percent_increment))
+
+            if batch_count > 1:
+                values.append((cnet_stack, image, strength, start_percent, last_end_percent))
+
+
+        return ({"axis": axis, "values": values},)
+
+
+# 模型叠加
+class XYplot_ModelMergeBlocks:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        checkpoints = folder_paths.get_filename_list("checkpoints")
+        vae = ["Use Model 1", "Use Model 2"] + folder_paths.get_filename_list("vae")
+
+        preset = ["Preset"]  # 20
+        preset += load_preset("mmb-preset.txt")
+        preset += load_preset("mmb-preset.custom.txt")
+
+        default_vectors = "1,0,0; \n0,1,0; \n0,0,1; \n1,1,0; \n1,0,1; \n0,1,1; "
+        return {
+            "required": {
+                "ckpt_name_1": (checkpoints,),
+                "ckpt_name_2": (checkpoints,),
+                "vae_use": (vae, {"default": "Use Model 1"}),
+                "preset": (preset, {"default": "preset"}),
+                "values": ("STRING", {"default": default_vectors, "multiline": True, "placeholder": 'Support 2 methods:\n\n1.input, middle, out in same line and insert values seperated by "; "\n\n2.model merge block number seperated by ", " in same line and insert values seperated by "; "'}),
+            },
+            "hidden": {"my_unique_id": "UNIQUE_ID"}
+        }
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, ckpt_name_1, ckpt_name_2, vae_use, preset, values, my_unique_id=None):
+
+        axis = "advanced: ModelMergeBlocks"
+        if ckpt_name_1 is None:
+            raise Exception("ckpt_name_1 is not found")
+        if ckpt_name_2 is None:
+            raise Exception("ckpt_name_2 is not found")
+
+        models = (ckpt_name_1, ckpt_name_2)
+
+        xy_values = {"axis":axis, "values":values, "models":models, "vae_use": vae_use}
+        return (xy_values,)
 
 # 显示推理时间
 class showSpentTime:
@@ -3806,10 +4581,12 @@ except:
       return None
 
 NODE_CLASS_MAPPINGS = {
+    # prompt 提示词
     "easy positive": positivePrompt,
     "easy negative": negativePrompt,
     "easy wildcards": wildcardsPrompt,
     "easy portraitMaster": portraitMaster,
+    # loaders 加载器
     "easy fullLoader": fullLoader,
     "easy a1111Loader": a1111Loader,
     "easy comfyLoader": comfyLoader,
@@ -3818,35 +4595,52 @@ NODE_CLASS_MAPPINGS = {
     "easy loraStack": loraStackLoader,
     "easy controlnetLoader": controlnetSimple,
     "easy controlnetLoaderADV": controlnetAdvanced,
+    # preSampling 预采样处理
     "easy seed": easySeed,
     "easy globalSeed": globalSeed,
     "easy preSampling": samplerSettings,
     "easy preSamplingAdvanced": samplerSettingsAdvanced,
     "easy preSamplingSdTurbo": sdTurboSettings,
     "easy preSamplingDynamicCFG": dynamicCFGSettings,
+    # kSampler k采样器
     "easy kSampler": samplerSimple,
     "easy fullkSampler": samplerFull,
     "easy kSamplerTiled": samplerSimpleTiled,
     "easy kSamplerInpainting": samplerSimpleInpainting,
     "easy kSamplerSDTurbo": samplerSDTurbo,
+    # fix 修复相关
     "easy hiresFix": hiresFix,
     "easy preDetailerFix": preDetailerFix,
     "easy ultralyticsDetectorPipe": ultralyticsDetectorForDetailerFix,
     "easy samLoaderPipe": samLoaderForDetailerFix,
     "easy detailerFix": detailerFix,
+    # pipe 管道（节点束）
     "easy pipeIn": pipeIn,
     "easy pipeOut": pipeOut,
     "easy pipeToBasicPipe": pipeToBasicPipe,
     "easy XYPlot": pipeXYPlot,
+    "easy XYPlotAdvanced": pipeXYPlotAdvanced,
+    # XY Inputs
+    "easy XYInputs: Seeds++ Batch": XYplot_SeedsBatch,
+    "easy XYInputs: Steps": XYplot_Steps,
+    "easy XYInputs: CFG Scale": XYplot_CFG,
+    "easy XYInputs: Sampler/Scheduler": XYplot_Sampler_Scheduler,
+    "easy XYInputs: Denoise": XYplot_Denoise,
+    "easy XYInputs: ModelMergeBlocks": XYplot_ModelMergeBlocks,
+    "easy XYInputs: PromptSR": XYplot_PromptSR,
+    "easy XYInputs: ControlNet": XYplot_Control_Net,
+    # others 其他
     "easy showSpentTime": showSpentTime,
     "easy imageRemoveBG": imageREMBG,
     "dynamicThresholdingFull": dynamicThresholdingFull
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
+    # prompt 提示词
     "easy positive": "Positive",
     "easy negative": "Negative",
     "easy wildcards": "Wildcards",
     "easy portraitMaster": "Portrait Master",
+    # loaders 加载器
     "easy fullLoader": "EasyLoader (Full)",
     "easy a1111Loader": "EasyLoader (A1111)",
     "easy comfyLoader": "EasyLoader (Comfy)",
@@ -3857,24 +4651,39 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
     "easy seed": "EasySeed",
     "easy globalSeed": "EasyGlobalSeed",
+    # preSampling 预采样处理
     "easy preSampling": "PreSampling",
     "easy preSamplingAdvanced": "PreSampling (Advanced)",
     "easy preSamplingSdTurbo": "PreSampling (SDTurbo)",
     "easy preSamplingDynamicCFG": "PreSampling (DynamicCFG)",
+    # kSampler k采样器
     "easy kSampler": "EasyKSampler",
     "easy fullkSampler": "EasyKSampler (Full)",
     "easy kSamplerTiled": "EasyKSampler (Tiled Decode)",
     "easy kSamplerInpainting": "EasyKSampler (Inpainting)",
     "easy kSamplerSDTurbo": "EasyKSampler (SDTurbo)",
+    # fix 修复相关
     "easy hiresFix": "HiresFix",
     "easy preDetailerFix": "PreDetailerFix",
     "easy ultralyticsDetectorPipe": "UltralyticsDetector (Pipe)",
     "easy samLoaderPipe": "SAMLoader (Pipe)",
     "easy detailerFix": "DetailerFix",
+    # pipe 管道（节点束）
     "easy pipeIn": "Pipe In",
     "easy pipeOut": "Pipe Out",
     "easy pipeToBasicPipe": "Pipe -> BasicPipe",
     "easy XYPlot": "XY Plot",
+    "easy XYPlotAdvanced": "XY Plot Advanced",
+    # XY Inputs
+    "easy XYInputs: Seeds++ Batch": "XY Inputs: Seeds++ Batch //EasyUse",
+    "easy XYInputs: Steps": "XY Inputs: Steps //EasyUse",
+    "easy XYInputs: CFG Scale": "XY Inputs: CFG Scale //EasyUse",
+    "easy XYInputs: Sampler/Scheduler": "XY Inputs: Sampler/Scheduler //EasyUse",
+    "easy XYInputs: Denoise": "XY Inputs: Denoise //EasyUse",
+    "easy XYInputs: ModelMergeBlocks": "XY Inputs: ModelMergeBlocks //EasyUse",
+    "easy XYInputs: PromptSR": "XY Inputs: PromptSR //EasyUse",
+    "easy XYInputs: ControlNet": "XY Inputs: Controlnet //EasyUse",
+    # others 其他
     "easy showSpentTime": "ShowSpentTime",
     "easy imageRemoveBG": "ImageRemoveBG",
     "dynamicThresholdingFull": "DynamicThresholdingFull"

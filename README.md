@@ -15,11 +15,11 @@
 ## 介绍
 
 ### 更符合人性化的随机种
-<img src="./docs/seed_generate_compare.jpg">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Docs/seed_generate_compare.jpg">
 
 ### 分离采样参数与采样预览
 
-<img src="./docs/workflow_node_compare.png">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Docs/workflow_node_compare.png">
 
 ### 支持通配符与Lora的提示词节点
 
@@ -37,35 +37,51 @@
 
 ## 更新日志
 
-**2024-01-03**
+**v1.0.2（2024-01-05）**
+
+- 增加 `easy XYPlotAdvanced` 和 `easy XYInputs` 等相关节点
+- 增加 Alt+1~9 快捷键，可快速粘贴 Node templates 的节点预设 （对应 1~9 顺序）
+- 移除包中的介绍图和工作流文件，减少包体积
+
+<details>
+<summary><b>2024-01-03</b></summary>
 
 - 修复 `easy comfyLoader` 报错
 - 修复所有包含输出图片尺寸的节点取值方式无法批处理的问题
 - 增加 `easy kSamplerInpainting` 用于内补潜空间的采样器
 - 增加 `easy pipeToBasicPipe` 用于转换到Impact的某些节点上
+</details>
 
-**2024-01-02**
+<details>
+<summary><b>2024-01-02</b></summary>
 
 - 修复 `width` 和 `height` 无法在 `easy svdLoader` 自定义的报错问题
 - 修复所有采样器预览图片的地址链接 (解决在 MACOS 系统中图片无法在采样器中预览的问题）
+</details>
 
-**2023-12-31**
+<details>
+<summary><b>2023-12-31</b></summary>
 
 - 修复 `vae_name` 在 `easy fullLoader` 和 `easy a1111Loader` 和 `easy comfyLoader` 中选择但未替换原始vae问题
 - 修复 `easy fullkSampler` 除pipe外其他输出值的报错
+</details>
 
-**2023-12-29**
+<details>
+<summary><b>2023-12-29</b></summary>
 
 - 修复 `easy hiresFix` 输入连接pipe和image、vae同时存在时报错
 - 修复 `easy fullLoader` 中 `model_override` 连接后未执行 
+</details>
 
-**2023-12-27**
+<details>
+<summary><b>2023-12-27</b></summary>
 
 - 修复 因新增`easy seed` 导致action错误
 - 修复 `easy xyplot` 的字体文件路径读取错误
 - 修复 convert 到 `easy seed` 随机种无法固定的问题
 - 修复 `easy pipeIn` 值传入的报错问题
 - `easy preDetailerFix` 新增了 `optional_image` 传入图像可选，如未传默认取值为pipe里的图像
+</details>
 
 **v1.0.1（2023-12-26）**
 
@@ -155,15 +171,15 @@
 
 ### 文生图
 
-<img src="./workflow/text_to_image.png">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/text_to_image.png">
 
 ### 图生图+controlnet
 
-<img src="./workflow/image_to_image_controlnet.png">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/image_to_image_controlnet.png">
 
 ### SDTurbo+高清修复+SVD
 
-<img src="./workflow/sdturbo_hiresfix_svd.png">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/sdturbo_hiresfix_svd.png">
 
 ## Credits
 
