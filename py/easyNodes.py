@@ -693,8 +693,8 @@ class easyXYPlot:
                 if optional_lora_stack is not None and optional_lora_stack != []:
                     for lora in optional_lora_stack:
                         lora_name = lora["lora_name"]
-                        model = lora["model"]
-                        clip = lora["clip"]
+                        model = model if model is not None else lora["model"]
+                        clip = clip if clip is not None else lora["clip"]
                         lora_model_strength = lora["lora_model_strength"]
                         lora_clip_strength = lora["lora_clip_strength"]
                         if "lbw" in lora:
