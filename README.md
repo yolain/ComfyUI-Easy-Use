@@ -37,6 +37,12 @@
 
 ## 更新日志
 
+**2024-01-08**
+
+- `easy XYInputs ModelMergeBlocks` 支持csv文件导入数值
+- `easy kSamplerFull` 等相关采样器 增加了对模型context_dim的判断，若超出一定比例将使用默认参数自动收缩模型Unet (若连接了收缩Unet的相关节点将不执行此操作)
+- 修复 `easy pipeToBasicPipe` 报错
+
 **v1.0.2（2024-01-05）**
 
 - 增加 `easy XYPlotAdvanced` 和 `easy XYInputs` 等相关节点

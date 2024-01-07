@@ -6,6 +6,7 @@ import shutil
 
 node_list = [
     "server",
+    "api",
     "easyNodes",
     "image",
     "lllite"

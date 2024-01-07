@@ -1782,7 +1782,7 @@ class a1111Loader:
             "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
             "lora_clip_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
 
-            "resolution": (resolution_strings,),
+            "resolution": (resolution_strings, {"default": "512 x 512"}),
             "empty_latent_width": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
             "empty_latent_height": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
 
@@ -1829,7 +1829,7 @@ class comfyLoader:
             "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
             "lora_clip_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
 
-            "resolution": (resolution_strings,),
+            "resolution": (resolution_strings, {"default": "512 x 512"}),
             "empty_latent_width": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
             "empty_latent_height": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
 
@@ -2746,7 +2746,7 @@ class samplerFull:
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        my_unique_id = int(my_unique_id)
+        # my_unique_id = int(my_unique_id)
 
         # if my_unique_id:
         #     workflow = extra_pnginfo["workflow"]
@@ -2782,12 +2782,48 @@ class samplerFull:
         if add_noise == "disable":
             disable_noise = True
 
+        def downscale_model_unet(samp_model):
+            is_linked_downscale_unet = False
+            # 判断如果连接了 Apply kohyas hiresfix 不走默认Downscale unet
+            if my_unique_id:
+                if "model" in prompt[my_unique_id]['inputs']:
+                    linked_model_id = prompt[my_unique_id]['inputs']['model'][0]
+                    linked_model_class_type = prompt[linked_model_id]["class_type"]
+                    if linked_model_class_type in ["PatchModelAddDownscale", "Hires"]:
+                        is_linked_downscale_unet = True
+            # 获取Unet参数
+            if is_linked_downscale_unet == False:
+                unet_config = samp_model.model.model_config.unet_config
+                if unet_config is not None and "samples" in samp_samples:
+                    height = samp_samples['samples'].shape[2] * 8
+                    width = samp_samples['samples'].shape[3] * 8
+                    context_dim = unet_config.get('context_dim')
+                    longer_side = width if width > height else height
+                    if context_dim is not None and longer_side > context_dim and "PatchModelAddDownscale" in ALL_NODE_CLASS_MAPPINGS:
+                        cls = ALL_NODE_CLASS_MAPPINGS['PatchModelAddDownscale']
+                        width_downscale_factor = float(width / context_dim)
+                        height_downscale_factor = float(height / context_dim)
+                        if width_downscale_factor > 1.75:
+                            log_node_warn("正在收缩模型Unet...")
+                            log_node_warn("收缩系数:" + str(width_downscale_factor))
+                            (samp_model,) = cls().patch(samp_model, 2, width_downscale_factor, 0, 0.35, True, "bicubic",
+                                                        "bicubic")
+                        elif height_downscale_factor > 1.25:
+                            log_node_warn("正在收缩模型Unet...")
+                            log_node_warn("收缩系数:" + str(height_downscale_factor))
+                            (samp_model,) = cls().patch(samp_model, 2, height_downscale_factor, 0, 0.35, True, "bicubic",
+                                                        "bicubic")
+            return samp_model
+
         def process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
                                  samp_negative,
                                  steps, start_step, last_step, cfg, sampler_name, scheduler, denoise,
                                  image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id,
                                  preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise):
 
+            # Downscale Model Unet
+            if samp_model is not None:
+                samp_model = downscale_model_unet(samp_model)
             # 推理初始时间
             start_time = int(time.time() * 1000)
             # 开始推理
@@ -2855,6 +2891,10 @@ class samplerFull:
                                             samp_negative, steps, 0, 10000, cfg,
                                             sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt,
                                             extra_pnginfo, my_unique_id, preview_latent)
+
+            # Downscale Model Unet
+            if samp_model is not None:
+                samp_model = downscale_model_unet(samp_model)
 
             plot_image_vars = {
                 "x_node_type": sampleXYplot.x_node_type, "y_node_type": sampleXYplot.y_node_type,
@@ -3820,7 +3860,7 @@ class pipeToBasicPipe:
 
     CATEGORY = "EasyUse/Pipe"
 
-    def doit(self, pipe):
+    def doit(self, pipe, my_unique_id=None):
         new_pipe = (pipe.get('model'), pipe.get('clip'), pipe.get('vae'), pipe.get('positive'), pipe.get('negative'))
         del pipe
         return (new_pipe,)
@@ -4506,79 +4546,79 @@ class showSpentTime:
 
         return {"ui": {"text": spent_time}, "result": {}}
 
-try:
-  from rembg import remove
-
-  class imageREMBG:
-
-    def __init__(self):
-      pass
-
-    @classmethod
-    def INPUT_TYPES(s):
-      return {"required": {
-        "image": ("IMAGE",),
-        "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
-        "save_prefix": ("STRING", {"default": "ComfyUI"}),
-      },
-        "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
-                  },
-      }
-
-    RETURN_TYPES = ("IMAGE", "MASK")
-    RETURN_NAMES = ("image", "mask")
-    FUNCTION = "remove_background"
-    CATEGORY = "EasyUse/Image"
-    OUTPUT_NODE = True
-
-    def remove_background(self, image, image_output, save_prefix, prompt, extra_pnginfo, my_unique_id):
-      image = remove(easySampler.tensor2pil(image))
-      tensor = easySampler.pil2tensor(image)
-
-      # Get alpha mask
-      if image.getbands() != ("R", "G", "B", "A"):
-        image = image.convert("RGBA")
-      mask = None
-      if "A" in image.getbands():
-        mask = np.array(image.getchannel("A")).astype(np.float32) / 255.0
-        mask = torch.from_numpy(mask)
-        mask = 1. - mask
-      else:
-        mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
-
-      if image_output == "Disabled":
-        results = []
-      else:
-        easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
-        results = easy_save.images(tensor, save_prefix, image_output)
-
-      if image_output in ("Hide", "Hide/Save"):
-        return (tensor, mask)
-
-      # Output image results to ui and node outputs
-      return {"ui": {"images": results},
-              "result": (tensor, mask)}
-
-except:
-  class imageREMBG:
-
-    def __init__(self):
-      pass
-
-    @classmethod
-    def INPUT_TYPES(s):
-      return {"required": {
-        "error": ("STRING", {"default": "RemBG is not installed", "multiline": False, 'readonly': True}),
-        "link": ("STRING", {"default": "https://github.com/danielgatis/rembg", "multiline": False}),
-      },
-    }
-
-    RETURN_TYPES = ("")
-    FUNCTION = "remove_background"
-    CATEGORY = "EasyUse/Image"
-
-    def remove_background(error):
-      return None
+# try:
+#   from rembg import remove
+#
+#   class imageREMBG:
+#
+#     def __init__(self):
+#       pass
+#
+#     @classmethod
+#     def INPUT_TYPES(s):
+#       return {"required": {
+#         "image": ("IMAGE",),
+#         "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
+#         "save_prefix": ("STRING", {"default": "ComfyUI"}),
+#       },
+#         "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
+#                   },
+#       }
+#
+#     RETURN_TYPES = ("IMAGE", "MASK")
+#     RETURN_NAMES = ("image", "mask")
+#     FUNCTION = "remove_background"
+#     CATEGORY = "EasyUse/Image"
+#     OUTPUT_NODE = True
+#
+#     def remove_background(self, image, image_output, save_prefix, prompt, extra_pnginfo, my_unique_id):
+#       image = remove(easySampler.tensor2pil(image))
+#       tensor = easySampler.pil2tensor(image)
+#
+#       # Get alpha mask
+#       if image.getbands() != ("R", "G", "B", "A"):
+#         image = image.convert("RGBA")
+#       mask = None
+#       if "A" in image.getbands():
+#         mask = np.array(image.getchannel("A")).astype(np.float32) / 255.0
+#         mask = torch.from_numpy(mask)
+#         mask = 1. - mask
+#       else:
+#         mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+#
+#       if image_output == "Disabled":
+#         results = []
+#       else:
+#         easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
+#         results = easy_save.images(tensor, save_prefix, image_output)
+#
+#       if image_output in ("Hide", "Hide/Save"):
+#         return (tensor, mask)
+#
+#       # Output image results to ui and node outputs
+#       return {"ui": {"images": results},
+#               "result": (tensor, mask)}
+#
+# except:
+#   class imageREMBG:
+#
+#     def __init__(self):
+#       pass
+#
+#     @classmethod
+#     def INPUT_TYPES(s):
+#       return {"required": {
+#         "error": ("STRING", {"default": "RemBG is not installed", "multiline": False, 'readonly': True}),
+#         "link": ("STRING", {"default": "https://github.com/danielgatis/rembg", "multiline": False}),
+#       },
+#     }
+#
+#     RETURN_TYPES = ("")
+#     FUNCTION = "remove_background"
+#     CATEGORY = "EasyUse/Image"
+#
+#     def remove_background(error):
+#       return None
 
 NODE_CLASS_MAPPINGS = {
     # prompt 提示词
@@ -4631,7 +4671,7 @@ NODE_CLASS_MAPPINGS = {
     "easy XYInputs: ControlNet": XYplot_Control_Net,
     # others 其他
     "easy showSpentTime": showSpentTime,
-    "easy imageRemoveBG": imageREMBG,
+    # "easy imageRemoveBG": imageREMBG,
     "dynamicThresholdingFull": dynamicThresholdingFull
 }
 NODE_DISPLAY_NAME_MAPPINGS = {

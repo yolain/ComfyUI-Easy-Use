@@ -291,7 +291,7 @@ function addInfoWidget(node, name, opts, app) {
 		// if it goes off screen quickly, the input may not be removed
 		// this shifts it off screen so it can be moved back if the node is visible.
 		for (let n in app.graph._nodes) {
-			n = graph._nodes[n];
+			n = app.graph._nodes[n];
 			for (let w in n.widgets) {
 				let wid = n.widgets[w];
 				if (Object.hasOwn(wid, "inputEl")) {

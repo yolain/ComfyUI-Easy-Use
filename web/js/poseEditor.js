@@ -597,7 +597,7 @@ app.registerExtension({
       border-color: var(--error-text);
       color: var(--error-text) !important;
     }
-    
+
     `;
     document.head.appendChild(style);
   },

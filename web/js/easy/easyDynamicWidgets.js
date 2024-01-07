@@ -389,14 +389,17 @@ app.registerExtension({
 			case "easy XYInputs: ModelMergeBlocks":
  				let preset_i = 3;
 		    	let vector_i = 4;
+		    	let file_i = 5;
 				node._value = "Preset";
+
+				let valuesWidget = node.widgets[vector_i]
 				Object.defineProperty(node.widgets[preset_i], "value", {
 					set: (value) => {
 							const stackTrace = new Error().stack;
 							if(stackTrace.includes('inner_value_change')) {
 								if(value != "Preset") {
-									if(!value.startsWith('@') && node.widgets[vector_i].value != "")
-										node.widgets[vector_i].value += "\n";
+									if(!value.startsWith('@') && valuesWidget.value != "")
+										valuesWidget.value += "\n";
 									if(value.startsWith('@')) {
 										let spec = value.split(':')[1];
 										var n;
@@ -407,7 +410,7 @@ app.registerExtension({
 											let sub_spec = spec.split(',');
 
 											if(sub_spec.length != 3) {
-												node.widgets_values[vector_i] = '!! SPEC ERROR !!';
+												valuesWidget = '!! SPEC ERROR !!';
 												node._value = '';
 												return;
 											}
@@ -420,7 +423,7 @@ app.registerExtension({
 											n = parseInt(spec.trim());
 										}
 
-										node.widgets[vector_i].value = "";
+										valuesWidget.value = "";
 										if(sub_n == null) {
 											for(let i=1; i<=n; i++) {
 												var temp = "1,1";
@@ -434,7 +437,7 @@ app.registerExtension({
 												}
 												temp += ',1; ';
 
-												node.widgets[vector_i].value += `B${i}:${temp}\n`;
+												valuesWidget.value += `B${i}:${temp}\n`;
 											}
 										}
 										else {
@@ -457,15 +460,15 @@ app.registerExtension({
 													}
 												}
 
-												node.widgets[vector_i].value += `B${block}.SUB${i}:${temp}\n`;
+												valuesWidget.value += `B${block}.SUB${i}:${temp}\n`;
 											}
 										}
 									}
 									else {
-										node.widgets[vector_i].value += `${value}; `;
+										valuesWidget.value += `${value}; `;
 									}
 									if(node.widgets_values) {
-										node.widgets_values[vector_i] = node.widgets[preset_i].value+ `; `;
+										valuesWidget = node.widgets[preset_i].value+ `; `;
 									}
 								}
 							}
@@ -473,9 +476,60 @@ app.registerExtension({
 							node._value = value;
 						},
 					get: () => {
-							return node._value;
-						 }
+						return node._value;
+				 	}
 				});
+
+				const cb = node.callback;
+				valuesWidget.callback = function () {
+					if (cb) {
+						return cb.apply(this, arguments);
+					}
+				};
+
+				// upload .csv
+				async function uploadFile(file) {
+					try {
+						const body = new FormData();
+						body.append("csv", file);
+						const resp = await api.fetchApi("/easyuse/upload/csv", {
+							method: "POST",
+							body,
+						});
+
+						if (resp.status === 200) {
+							const data = await resp.json();
+							node.widgets[vector_i].value = data
+						} else {
+							alert(resp.status + " - " + resp.statusText);
+						}
+					} catch (error) {
+						alert(error);
+					}
+				}
+
+				const fileInput = document.createElement("input");
+				Object.assign(fileInput, {
+					type: "file",
+					accept: "text/csv",
+					style: "display: none",
+					onchange: async (event) => {
+
+						if (fileInput.files.length) {
+							await uploadFile(fileInput.files[0], true);
+							event.target.value = ''
+						}
+					},
+				});
+				document.body.append(fileInput);
+
+				const name = "choose .csv file to input values"
+				let uploadWidget = node.addWidget("button", name, "csv", () => {
+					fileInput.click();
+				});
+				uploadWidget.label = name;
+				uploadWidget.serialize = false;
+
 				break
 		}
 
