@@ -42,6 +42,8 @@
 - `easy XYInputs ModelMergeBlocks` 支持csv文件导入数值
 - `easy kSamplerFull` 等相关采样器 增加了对模型context_dim的判断，若超出一定比例将使用默认参数自动收缩模型Unet (若连接了收缩Unet的相关节点将不执行此操作)
 - 修复 `easy pipeToBasicPipe` 报错
+- 移除了 `easy imageRemBg` (很多包中都有移除背景的节点，由于比较占用ComfyUI启动加载时间，这次更新中注释掉了其相关代码)
+
 
 **v1.0.2（2024-01-05）**
 
