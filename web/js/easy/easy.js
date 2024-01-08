@@ -372,7 +372,6 @@ app.registerExtension({
 
                         updateGroups(groups, groupsDiv)
 
-
                         div.appendChild(groupsDiv)
 
                         let graphDiv = document.getElementById("graph-canvas")

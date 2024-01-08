@@ -3,7 +3,7 @@ import { api } from "/scripts/api.js";
 import { $el } from "/scripts/ui.js";
 
 const customThemeColor = "#3f3eed"
-const customThemeColorLight = "F"
+const customThemeColorLight = "#006691"
 // 增加Slot颜色
 const customPipeLineLink = "#7737AA"
 const customPipeLineSDXLLink = "#7737AA"
