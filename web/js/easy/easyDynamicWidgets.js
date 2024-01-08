@@ -523,7 +523,7 @@ app.registerExtension({
 				});
 				document.body.append(fileInput);
 
-				const name = "choose .csv file to input values"
+				const name = "choose .csv file into values"
 				let uploadWidget = node.addWidget("button", name, "csv", () => {
 					fileInput.click();
 				});

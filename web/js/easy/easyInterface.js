@@ -3,7 +3,7 @@ import { api } from "/scripts/api.js";
 import { $el } from "/scripts/ui.js";
 
 const customThemeColor = "#3f3eed"
-const customThemeColorLight = "#006691"
+const customThemeColorLight = "F"
 // 增加Slot颜色
 const customPipeLineLink = "#7737AA"
 const customPipeLineSDXLLink = "#7737AA"
@@ -779,6 +779,7 @@ function setNodeColors(node, theme) {
     if(theme.color) node.color = theme.color;
     if(theme.bgcolor) node.bgcolor = theme.bgcolor;
 }
+
 
 app.registerExtension({
     name: "comfy.easyUse.interface",

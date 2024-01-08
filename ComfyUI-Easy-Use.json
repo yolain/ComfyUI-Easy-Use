@@ -632,7 +632,8 @@
       "ckpt_name_2": "模型_2",
       "vae_use": "VAE使用",
       "preset": "预置参数",
-      "choose .csv file to input values": "选择.csv文件覆盖到数值中"
+      "choose .csv file to input values": "选择.csv文件覆盖到数值中",
+      "choose .csv file into values": "选择.csv文件覆盖到数值中"
     }
   },
   "easy XYInputs: PromptSR": {

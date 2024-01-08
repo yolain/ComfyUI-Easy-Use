@@ -168,7 +168,6 @@ LGraphCanvas.prototype.pasteFromClipboard = function(isConnectUnselected = false
         }
     }
 
-
     //create links
     for (var i = 0; i < clipboard_info.links.length; ++i) {
         var link_info = clipboard_info.links[i];

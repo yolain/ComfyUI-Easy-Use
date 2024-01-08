@@ -29,6 +29,11 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-01-09**
+
+- An `autocomplete` folder has been added, If you have [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) installed, the txt files in that folder will be merged and overwritten to the autocomplete .txt file of the pyssss package at startup.
+- Added a `📜Groups Map(EasyUse)` to the context menu.
+
 **2024-01-08**
 
 - `easy XYInputs ModelMergeBlocks` Values can be imported from CSV files

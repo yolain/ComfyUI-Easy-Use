@@ -2,6 +2,7 @@ __pycache__
 *.ini
 wildcards/**
 workflow/**
+autocomplete/**
 docs/**
 .vscode/
 .idea/
