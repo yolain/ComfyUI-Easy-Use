@@ -1570,7 +1570,7 @@ class fullLoader:
     @classmethod
     def INPUT_TYPES(cls):
         resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
-        a1111_prompt_style_default = True if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS else False
+        a1111_prompt_style_default = False
 
         return {"required": {
             "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
@@ -1770,7 +1770,7 @@ class a1111Loader:
     @classmethod
     def INPUT_TYPES(cls):
         resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
-        a1111_prompt_style_default = True if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS else False
+        a1111_prompt_style_default = False
         checkpoints = folder_paths.get_filename_list("checkpoints")
         loras = ["None"] + folder_paths.get_filename_list("loras")
         return {"required": {
@@ -2741,7 +2741,7 @@ class samplerFull:
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
-    def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed_num=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+    def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed_num=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, auto_downscale=False):
 
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
@@ -2822,8 +2822,8 @@ class samplerFull:
                                  preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise):
 
             # Downscale Model Unet
-            if samp_model is not None:
-                samp_model = downscale_model_unet(samp_model)
+            # if samp_model is not None and auto_downscale:
+            #     samp_model = downscale_model_unet(samp_model)
             # 推理初始时间
             start_time = int(time.time() * 1000)
             # 开始推理

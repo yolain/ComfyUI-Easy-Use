@@ -32,7 +32,6 @@ After installing the node package, the UI interface will be automatically switch
 **2024-01-08**
 
 - `easy XYInputs ModelMergeBlocks` Values can be imported from CSV files
-- `easy kSamplerFull` and other related samplers have added the judgment of the model context_dim, and if it exceeds a certain percentage, the model Unet will be automatically contracted with the default parameters (if the relevant node of the shrinking Unet is connected, this operation will not be performed)
 - Fixed `easy pipeToBasicPipe` Bug
 - Removed `easy imageRemBg`
 
