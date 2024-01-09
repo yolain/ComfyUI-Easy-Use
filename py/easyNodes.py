@@ -2585,6 +2585,10 @@ class dynamicCFGSettings:
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                      "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
                      },
+                "optional":{
+                    "image_to_latent": ("IMAGE",),
+                    "latent": ("LATENT",)
+                },
                 "hidden":
                     {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
                 }
@@ -2596,7 +2600,7 @@ class dynamicCFGSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, steps, cfg, cfg_mode, cfg_scale_min,sampler_name, scheduler, denoise, seed_num, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, steps, cfg, cfg_mode, cfg_scale_min,sampler_name, scheduler, denoise, seed_num, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
 
         dynamic_thresh = DynThresh(7.0, 1.0,"CONSTANT", 0, cfg_mode, cfg_scale_min, 0, 0, 999, False,
@@ -2617,14 +2621,19 @@ class dynamicCFGSettings:
         m = model.clone()
         m.set_model_sampler_cfg_function(sampler_dyn_thresh)
 
-        # if my_unique_id:
-        #     workflow = extra_pnginfo["workflow"]
-        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-        #     if node:
-        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
-        #             'inputs'] else 0
-        #         length = len(node["widgets_values"])
-        #         node["widgets_values"][length - 2] = seed_num
+        # 图生图转换
+        vae = pipe["vae"]
+        batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+        if image_to_latent is not None:
+            samples = {"samples": vae.encode(image_to_latent)}
+            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+            images = image_to_latent
+        elif latent is not None:
+            samples = RepeatLatentBatch().repeat(latent, batch_size)[0]
+            images = pipe["images"]
+        else:
+            samples = pipe["samples"]
+            images = pipe["images"]
 
         new_pipe = {
             "model": m,
@@ -2633,8 +2642,8 @@ class dynamicCFGSettings:
             "vae": pipe['vae'],
             "clip": pipe['clip'],
 
-            "samples": pipe["samples"],
-            "images": pipe["images"],
+            "samples": samples,
+            "images": images,
             "seed": seed_num,
 
             "loader_settings": {

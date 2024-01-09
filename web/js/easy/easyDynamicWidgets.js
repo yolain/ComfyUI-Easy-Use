@@ -545,7 +545,7 @@ app.registerExtension({
 	async beforeRegisterNodeDef(nodeType, nodeData, app) {
 		function addText(arr_text) {
 			var text = '';
-			for (let i = 0; i < arr_text.length; i++){
+			for (let i = 0; i < arr_text.length; i++) {
 				text += arr_text[i];
 			}
 			return text
@@ -561,6 +561,7 @@ app.registerExtension({
 					}
 				}
 			}
+
 			// When the node is executed we will be sent the input text, display this in the widget
 			const onExecuted = nodeType.prototype.onExecuted;
 			nodeType.prototype.onExecuted = function (message) {
@@ -570,23 +571,23 @@ app.registerExtension({
 			};
 		}
 
-		if (["easy fullLoader","easy a1111Loader", "easy comfyLoader"].includes(nodeData.name)) {
-			function populate(text, type='positive') {
+		if (["easy fullLoader", "easy a1111Loader", "easy comfyLoader"].includes(nodeData.name)) {
+			function populate(text, type = 'positive') {
 				if (this.widgets) {
-					const pos = this.widgets.findIndex((w) => w.name === type+"_prompt");
-					const className = "comfy-multiline-input wildcard_"+type+'_' + this.id.toString()
-					if (pos == -1 && text){
+					const pos = this.widgets.findIndex((w) => w.name === type + "_prompt");
+					const className = "comfy-multiline-input wildcard_" + type + '_' + this.id.toString()
+					if (pos == -1 && text) {
 						const inputEl = document.createElement("textarea");
 						inputEl.className = className;
-						inputEl.placeholder = "Wildcard Prompt ("+ type + ")"
-						const widget = this.addDOMWidget(type+"_prompt", "customtext", inputEl, {
+						inputEl.placeholder = "Wildcard Prompt (" + type + ")"
+						const widget = this.addDOMWidget(type + "_prompt", "customtext", inputEl, {
 							getValue() {
 								return inputEl.value;
 							},
 							setValue(v) {
 								inputEl.value = v;
 							},
-							serialize:false,
+							serialize: false,
 						});
 						widget.inputEl = inputEl;
 						widget.inputEl.readOnly = true
@@ -594,15 +595,14 @@ app.registerExtension({
 							widget.callback?.(widget.value);
 						});
 						widget.value = text;
-					}
-					else if (this.widgets[pos]) {
-						if(text){
+					} else if (this.widgets[pos]) {
+						if (text) {
 							const w = this.widgets[pos]
 							w.value = text;
-						}else{
-							 this.widgets.splice(pos, 1);
-							 const element = document.getElementsByClassName(className)
-							 if(element && element[0]) element[0].remove()
+						} else {
+							this.widgets.splice(pos, 1);
+							const element = document.getElementsByClassName(className)
+							if (element && element[0]) element[0].remove()
 						}
 					}
 				}
@@ -620,18 +620,46 @@ app.registerExtension({
 
 		if (["easy seed", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingDynamicCFG", "easy fullkSampler"].includes(nodeData.name)) {
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
-            nodeType.prototype.onNodeCreated = async function () {
+			nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
-				const values = ["randomize","fixed","increment","decrement"]
-				const seed_widget = this.widgets.find(w=> w.name == 'seed_num')
-				const seed_control = this.addWidget("combo", "control_before_generate", values[0], () => {},{
+				const values = ["randomize", "fixed", "increment", "decrement"]
+				const seed_widget = this.widgets.find(w => w.name == 'seed_num')
+				const seed_control = this.addWidget("combo", "control_before_generate", values[0], () => {
+				}, {
 					values,
-					serialize:false
+					serialize: false
 				})
 				seed_widget.linkedWidgets = [seed_control]
 			}
 		}
-	},
+
+		if (nodeData.name == 'easy imageInsetCrop') {
+			function setWidgetStep(a) {
+				const measurementWidget = a.widgets[0]
+				for (let i = 1; i <= 4; i++) {
+					if (measurementWidget.value === 'Pixels') {
+						a.widgets[i].options.step = 80;
+						a.widgets[i].options.max = 8192;
+					} else {
+						a.widgets[i].options.step = 10;
+						a.widgets[i].options.max = 99;
+					}
+				}
+			}
+
+			nodeType.prototype.onAdded = async function (graph) {
+				const measurementWidget = this.widgets[0];
+				let callback = measurementWidget.callback;
+				measurementWidget.callback = (...args) => {
+					setWidgetStep(this);
+					callback && callback.apply(measurementWidget, [...args]);
+				};
+				setTimeout(_=>{
+					setWidgetStep(this);
+				},1)
+			}
+		}
+	}
 });
 
 
