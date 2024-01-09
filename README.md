@@ -39,6 +39,7 @@
 
 **2024-01-09**
 
+- 修复 开启`a1111_prompt_style` 时XY图表无法使用的问题
 - 增加了一个 **autocomplete** 文件夹，如果您安装了 [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts), 将在启动时合并该文件夹下的所有txt文件并覆盖到pyssss包里的autocomplete.txt文件。
 - 右键菜单中增加了一个 `📜Groups Map(EasyUse)` 
 

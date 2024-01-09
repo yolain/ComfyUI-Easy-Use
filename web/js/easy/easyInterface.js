@@ -756,6 +756,19 @@ try{
             .litegraph .litemenu-entry.has_submenu {
                 border-right: 2px solid #3f3eed;
             }
+            ::-webkit-scrollbar {
+                width: 0em;
+            }
+            ::-webkit-scrollbar-track {
+                background-color: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background-color: transparent;
+                border-radius: 2px; 
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background-color: transparent;
+            }
         `
         styleElement.innerHTML = cssCode
         document.head.appendChild(styleElement);

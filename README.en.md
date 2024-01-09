@@ -31,6 +31,7 @@ After installing the node package, the UI interface will be automatically switch
 
 **2024-01-09**
 
+- Fixed XYPlot is not working when `a1111_prompt_style` is True
 - An `autocomplete` folder has been added, If you have [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) installed, the txt files in that folder will be merged and overwritten to the autocomplete .txt file of the pyssss package at startup.
 - Added a `📜Groups Map(EasyUse)` to the context menu.
 

@@ -809,10 +809,8 @@ class easyXYPlot:
                 if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
                     cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
                     steps = plot_image_vars['steps']
-                    positive, = cls().encode(clip, positive, "A1111", True, True, False, False, 6,
-                                                              1024, 1024, 0, 0, 1024, 1024, '', '', steps)
-                    negative, = cls().encode(clip, negative, "A1111", True, True, False, False, 6,
-                                                              1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+                    positive, = cls().encode(clip, plot_image_vars['positive'], "A1111", True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+                    negative, = cls().encode(clip, plot_image_vars['negative'], "A1111", True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
                 else:
                     raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
             else:
@@ -2741,7 +2739,7 @@ class samplerFull:
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
-    def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed_num=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, auto_downscale=False):
+    def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed_num=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None):
 
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
@@ -2783,36 +2781,37 @@ class samplerFull:
             disable_noise = True
 
         def downscale_model_unet(samp_model):
-            is_linked_downscale_unet = False
-            # 判断如果连接了 Apply kohyas hiresfix 不走默认Downscale unet
-            if my_unique_id:
-                if "model" in prompt[my_unique_id]['inputs']:
-                    linked_model_id = prompt[my_unique_id]['inputs']['model'][0]
-                    linked_model_class_type = prompt[linked_model_id]["class_type"]
-                    if linked_model_class_type in ["PatchModelAddDownscale", "Hires"]:
-                        is_linked_downscale_unet = True
+            if downscale_options is None:
+                return  samp_model
             # 获取Unet参数
-            if is_linked_downscale_unet == False:
-                unet_config = samp_model.model.model_config.unet_config
-                if unet_config is not None and "samples" in samp_samples:
-                    height = samp_samples['samples'].shape[2] * 8
-                    width = samp_samples['samples'].shape[3] * 8
-                    context_dim = unet_config.get('context_dim')
-                    longer_side = width if width > height else height
-                    if context_dim is not None and longer_side > context_dim and "PatchModelAddDownscale" in ALL_NODE_CLASS_MAPPINGS:
-                        cls = ALL_NODE_CLASS_MAPPINGS['PatchModelAddDownscale']
-                        width_downscale_factor = float(width / context_dim)
-                        height_downscale_factor = float(height / context_dim)
-                        if width_downscale_factor > 1.75:
-                            log_node_warn("正在收缩模型Unet...")
-                            log_node_warn("收缩系数:" + str(width_downscale_factor))
-                            (samp_model,) = cls().patch(samp_model, 2, width_downscale_factor, 0, 0.35, True, "bicubic",
-                                                        "bicubic")
-                        elif height_downscale_factor > 1.25:
-                            log_node_warn("正在收缩模型Unet...")
-                            log_node_warn("收缩系数:" + str(height_downscale_factor))
-                            (samp_model,) = cls().patch(samp_model, 2, height_downscale_factor, 0, 0.35, True, "bicubic",
-                                                        "bicubic")
+            elif "PatchModelAddDownscale" in ALL_NODE_CLASS_MAPPINGS:
+                cls = ALL_NODE_CLASS_MAPPINGS['PatchModelAddDownscale']
+                # 自动收缩Unet
+                if downscale_options['downscale_factor'] is None:
+                    unet_config = samp_model.model.model_config.unet_config
+                    if unet_config is not None and "samples" in samp_samples:
+                        height = samp_samples['samples'].shape[2] * 8
+                        width = samp_samples['samples'].shape[3] * 8
+                        context_dim = unet_config.get('context_dim')
+                        longer_side = width if width > height else height
+                        if context_dim is not None and longer_side > context_dim:
+                            width_downscale_factor = float(width / context_dim)
+                            height_downscale_factor = float(height / context_dim)
+                            if width_downscale_factor > 1.75:
+                                log_node_warn("正在收缩模型Unet...")
+                                log_node_warn("收缩系数:" + str(width_downscale_factor))
+                                (samp_model,) = cls().patch(samp_model, downscale_options['block_number'], width_downscale_factor, 0, 0.35, True, "bicubic",
+                                                            "bicubic")
+                            elif height_downscale_factor > 1.25:
+                                log_node_warn("正在收缩模型Unet...")
+                                log_node_warn("收缩系数:" + str(height_downscale_factor))
+                                (samp_model,) = cls().patch(samp_model, downscale_options['block_number'], height_downscale_factor, 0, 0.35, True, "bicubic",
+                                                            "bicubic")
+                else:
+                    cls = ALL_NODE_CLASS_MAPPINGS['PatchModelAddDownscale']
+                    log_node_warn("正在收缩模型Unet...")
+                    log_node_warn("收缩系数:" + str(downscale_options['downscale_factor']))
+                    (samp_model,) = cls().patch(samp_model, downscale_options['block_number'], downscale_options['downscale_factor'], downscale_options['start_percent'], downscale_options['end_percent'], downscale_options['downscale_after_skip'], downscale_options['downscale_method'], downscale_options['upscale_method'])
             return samp_model
 
         def process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
@@ -2822,8 +2821,8 @@ class samplerFull:
                                  preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise):
 
             # Downscale Model Unet
-            # if samp_model is not None and auto_downscale:
-            #     samp_model = downscale_model_unet(samp_model)
+            if samp_model is not None:
+                samp_model = downscale_model_unet(samp_model)
             # 推理初始时间
             start_time = int(time.time() * 1000)
             # 开始推理
@@ -2902,7 +2901,11 @@ class samplerFull:
                 "lora_model_strength": pipe["loader_settings"]["lora_model_strength"],
                 "lora_clip_strength": pipe["loader_settings"]["lora_clip_strength"],
                 "lora_stack":  pipe["loader_settings"]["lora_stack"] if "lora_stack" in pipe["loader_settings"] else None,
-                "steps": steps, "cfg": cfg, "sampler_name": sampler_name, "scheduler": scheduler, "denoise": denoise,
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler_name,
+                "scheduler": scheduler,
+                "denoise": denoise,
                 "seed": samp_seed,
 
                 "model": samp_model, "vae": samp_vae, "clip": samp_clip, "positive_cond": samp_positive,
@@ -3053,6 +3056,72 @@ class samplerSimpleTiled:
                                None, model, None, None, None, None, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
+# 简易采样器(收缩Unet)
+class samplerSimpleDownscaleUnet:
+
+    def __init__(self):
+        pass
+
+    upscale_methods = ["bicubic", "nearest-exact", "bilinear", "area", "bislerp"]
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                {"pipe": ("PIPE_LINE",),
+                 "downscale_mode": (["None", "Auto", "Custom"],{"default": "Auto"}),
+                 "block_number": ("INT", {"default": 3, "min": 1, "max": 32, "step": 1}),
+                 "downscale_factor": ("FLOAT", {"default": 2.0, "min": 0.1, "max": 9.0, "step": 0.001}),
+                 "start_percent": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                 "end_percent": ("FLOAT", {"default": 0.35, "min": 0.0, "max": 1.0, "step": 0.001}),
+                 "downscale_after_skip": ("BOOLEAN", {"default": True}),
+                 "downscale_method": (s.upscale_methods,),
+                 "upscale_method": (s.upscale_methods,),
+                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
+                 "save_prefix": ("STRING", {"default": "ComfyUI"}),
+                 },
+                "optional": {
+                    "model": ("MODEL",),
+                },
+                "hidden":
+                  {"tile_size": "INT", "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
+                    "embeddingsList": (folder_paths.get_filename_list("embeddings"),)
+                  }
+                }
+
+
+    RETURN_TYPES = ("PIPE_LINE", "IMAGE",)
+    RETURN_NAMES = ("pipe", "image",)
+    OUTPUT_NODE = True
+    FUNCTION = "run"
+    CATEGORY = "EasyUse/Sampler"
+
+    def run(self, pipe, downscale_mode, block_number, downscale_factor, start_percent, end_percent, downscale_after_skip, downscale_method, upscale_method, image_output, link_id, save_prefix, model=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+        downscale_options = None
+        if downscale_mode == 'Auto':
+            downscale_options = {
+                "block_number": block_number,
+                "downscale_factor": None,
+                "start_percent": 0,
+                "end_percent":0.35,
+                "downscale_after_skip": True,
+                "downscale_method": "bicubic",
+                "upscale_method": "bicubic"
+            }
+        elif downscale_mode == 'Custom':
+            downscale_options = {
+                "block_number": block_number,
+                "downscale_factor": downscale_factor,
+                "start_percent": start_percent,
+                "end_percent": end_percent,
+                "downscale_after_skip": downscale_after_skip,
+                "downscale_method": downscale_method,
+                "upscale_method": upscale_method
+            }
+
+        return samplerFull.run(self, pipe, None, None,None,None,None, image_output, link_id, save_prefix,
+                               None, model, None, None, None, None, None, None,
+                               tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise, downscale_options)
 # 简易采样器 (内补)
 class samplerSimpleInpainting:
 
@@ -4647,6 +4716,7 @@ NODE_CLASS_MAPPINGS = {
     "easy fullkSampler": samplerFull,
     "easy kSamplerTiled": samplerSimpleTiled,
     "easy kSamplerInpainting": samplerSimpleInpainting,
+    "easy kSamplerDownscaleUnet": samplerSimpleDownscaleUnet,
     "easy kSamplerSDTurbo": samplerSDTurbo,
     # fix 修复相关
     "easy hiresFix": hiresFix,
@@ -4701,6 +4771,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy fullkSampler": "EasyKSampler (Full)",
     "easy kSamplerTiled": "EasyKSampler (Tiled Decode)",
     "easy kSamplerInpainting": "EasyKSampler (Inpainting)",
+    "easy kSamplerDownscaleUnet": "EasyKsampler (Downscale Unet)",
     "easy kSamplerSDTurbo": "EasyKSampler (SDTurbo)",
     # fix 修复相关
     "easy hiresFix": "HiresFix",

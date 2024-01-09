@@ -139,6 +139,14 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'empty_latent_width'), false)
 			toggleWidget(node, findWidgetByName(node, 'empty_latent_height'), false)
 		}
+		updateNodeHeight(node)
+	}
+	if (widget.name === 'downscale_mode') {
+		const widget_names = ['block_number', 'downscale_factor', 'start_percent', 'end_percent', 'downscale_after_skip', 'downscale_method', 'upscale_method']
+		if (widget.value === "None") widget_names.map(name=> toggleWidget(node, findWidgetByName(node, name)))
+		else if(widget.value == 'Auto') widget_names.map(name =>toggleWidget(node, findWidgetByName(node, name),name == 'block_number' ? true : false))
+		else widget_names.map(name=> toggleWidget(node, findWidgetByName(node, name), true))
+		updateNodeHeight(node)
 	}
 
 	if (widget.name === 'toggle') {
@@ -225,7 +233,6 @@ function widgetLogic3(node, widget){
 			updateNodeHeight(node)
 		}
 		if (node.comfyClass == 'easy XYInputs: ControlNet'){
-			console.log(1)
 			switch (widget.value){
 				case "strength":
 					toggleWidget(node, findWidgetByName(node, 'first_strength'), true)
@@ -327,6 +334,7 @@ app.registerExtension({
 			case "easy kSamplerSDTurbo":
 			case "easy kSamplerTiled":
 			case "easy kSamplerInpainting":
+			case "easy kSamplerDownscaleUnet":
 			case "easy hiresFix":
 			case "easy detailerFix":
 			case "easy imageRemoveBG":
@@ -632,7 +640,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale', 'image_output',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count']
+						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', "downscale_mode"]
 
 function getSetters(node) {
 	if (node.widgets)
