@@ -519,7 +519,7 @@ class easyXYPlot:
 
     @staticmethod
     def get_font(font_size):
-        return ImageFont.truetype(str(Path(os.path.join(Path(__file__).parent.parent, 'resources/arial.ttf'))), font_size)
+        return ImageFont.truetype(str(Path(os.path.join(Path(__file__).parent.parent, 'resources/OpenSans-Medium.ttf'))), font_size)
 
     @staticmethod
     def update_label(label, value, num_items):
@@ -3349,19 +3349,19 @@ class hiresFix:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                             "model_name": (folder_paths.get_filename_list("upscale_models"),),
-                             "rescale_after_model": ([False, True], {"default": True}),
-                             "rescale_method": (s.upscale_methods,),
-                             "rescale": (["by percentage", "to Width/Height", 'to longer side - maintain aspect'],),
-                             "percent": ("INT", {"default": 50, "min": 0, "max": 1000, "step": 1}),
-                             "width": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
-                             "height": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
-                             "longer_side": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
-                             "crop": (s.crop_methods,),
-                             "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
-                             "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
-                             "save_prefix": ("STRING", {"default": "ComfyUI"}),
-                              },
+                 "model_name": (folder_paths.get_filename_list("upscale_models"),),
+                 "rescale_after_model": ([False, True], {"default": True}),
+                 "rescale_method": (s.upscale_methods,),
+                 "rescale": (["by percentage", "to Width/Height", 'to longer side - maintain aspect'],),
+                 "percent": ("INT", {"default": 50, "min": 0, "max": 1000, "step": 1}),
+                 "width": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                 "height": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                 "longer_side": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                 "crop": (s.crop_methods,),
+                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
+                 "save_prefix": ("STRING", {"default": "ComfyUI"}),
+                },
                 "optional": {
                     "pipe": ("PIPE_LINE",),
                     "image": ("IMAGE",),

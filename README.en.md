@@ -29,6 +29,10 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-01-11**
+
+- Replaced the font file used in the generation of XY diagrams
+
 **2024-01-09**
 
 - Fixed XYPlot is not working when `a1111_prompt_style` is True
