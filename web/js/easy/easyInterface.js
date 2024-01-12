@@ -81,15 +81,34 @@ const ui = {
       }
   }
 }
+
+const custom_theme_name = 'custom_obsidian'
+let custom_theme = null
+try{
+    custom_theme = localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes') ? JSON.parse(localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes')) : {};
+}
+catch (e) {custom_theme = {}}
 try{
     // 修改自定义主题
-    let custom_theme = localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes') ? JSON.parse(localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes')) : {};
     if(!custom_theme || !custom_theme.obsidian || !custom_theme.obsidian.version || custom_theme.obsidian.version<ui.version){
         custom_theme.obsidian = ui
         localStorage.setItem('Comfy.Settings.Comfy.CustomColorPalettes', JSON.stringify(custom_theme));
-        localStorage.setItem('Comfy.Settings.Comfy.ColorPalette','"custom_obsidian"')
+        localStorage.setItem('Comfy.Settings.Comfy.ColorPalette',`"${custom_theme_name}"`)
     }
     const theme_name = localStorage.getItem('Comfy.Settings.Comfy.ColorPalette')
+    // 兼容 ComfyUI Revision: 1887 [235727fe] 以上版本
+    if(api.storeSettings){
+        const settings = {
+            "Comfy.CustomColorPalettes": localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes') ? JSON.parse(localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes')) : {},
+        }
+        if(theme_name == '"custom_obsidian"') settings["Comfy.ColorPalette"] = custom_theme_name
+        const _settings = await api.getSettings()
+        if(!_settings || !_settings["Comfy.CustomColorPalettes"] || !_settings["Comfy.CustomColorPalettes"]["obsidian"]){
+            await api.storeSettings(settings);
+            app.ui.settings.load()
+        }
+    }
+    // 判断主题为黑曜石时改变扩展UI
     if(theme_name == '"custom_obsidian"'){
         // canvas
         const bgcolor = LGraphCanvas.node_colors.bgcolor;
@@ -776,7 +795,6 @@ try{
 }catch(e){
     console.error(e)
 }
-
 
 // 节点颜色
 const COLOR_THEMES = LGraphCanvas.node_colors

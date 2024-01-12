@@ -29,6 +29,10 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-01-12**
+
+- Fixed UI loading failure in the new version of ComfyUI
+
 **2024-01-11**
 
 - Replaced the font file used in the generation of XY diagrams

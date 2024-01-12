@@ -1514,6 +1514,60 @@ class portraitMaster:
 
         return (prompt, negative_prompt,)
 
+# 潜空间sigma相乘
+class latentMultiplyBySigma:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+            "steps": ("INT", {"default": 10000, "min": 0, "max": 10000}),
+            "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
+            "end_at_step": ("INT", {"default": 10000, "min": 1, "max": 10000}),
+        },
+        "optional": {
+            "pipe": ("PIPE_LINE",),
+            "optional_model": ("MODEL",),
+            "optional_latent": ("LATENT",)
+        }}
+
+    RETURN_TYPES = ("PIPE_LINE", "LATENT", "FLOAT",)
+    RETURN_NAMES = ("pipe", "latent", "sigma",)
+    FUNCTION = "run"
+
+    CATEGORY = "EasyUse/Latent"
+
+    def run(self, sampler_name, scheduler, steps, start_at_step, end_at_step, pipe=None, optional_model=None, optional_latent=None):
+        model = optional_model if optional_model is not None else pipe["model"]
+        samples = optional_latent if optional_latent is not None else pipe["samples"]
+
+        device = comfy.model_management.get_torch_device()
+        end_at_step = min(steps, end_at_step)
+        start_at_step = min(start_at_step, end_at_step)
+        real_model = None
+        comfy.model_management.load_model_gpu(model)
+        real_model = model.model
+        sampler = comfy.samplers.KSampler(real_model, steps=steps, device=device, sampler=sampler_name,
+                                          scheduler=scheduler, denoise=1.0, model_options=model.model_options)
+        sigmas = sampler.sigmas
+        sigma = sigmas[start_at_step] - sigmas[end_at_step]
+        sigma /= model.model.latent_format.scale_factor
+        sigma = sigma.cpu().numpy()
+
+        samples_out = samples.copy()
+
+        s1 = samples["samples"]
+        samples_out["samples"] = s1 * sigma
+
+        if pipe is None:
+            pipe = {}
+        new_pipe = {
+            **pipe,
+            "samples": samples_out
+        }
+        del pipe
+
+        return (new_pipe, samples_out, sigma)
 # 随机种
 class easySeed:
     @classmethod
@@ -1529,7 +1583,7 @@ class easySeed:
     RETURN_NAMES = ("seed_num",)
     FUNCTION = "doit"
 
-    CATEGORY = "EasyUse/Prompt"
+    CATEGORY = "EasyUse/Seed"
 
     OUTPUT_NODE = True
 
@@ -1552,7 +1606,7 @@ class globalSeed:
     RETURN_TYPES = ()
     FUNCTION = "doit"
 
-    CATEGORY = "EasyUse/Prompt"
+    CATEGORY = "EasyUse/Seed"
 
     OUTPUT_NODE = True
 
@@ -3339,6 +3393,102 @@ class samplerSDTurbo:
         return {"ui": {"images": results},
                 "result": sampler.get_output(new_pipe, )}
 
+
+class unsampler:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":{
+             "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+             "end_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
+             "cfg": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 100.0}),
+             "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+             "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+             "normalize": (["disable", "enable"],),
+
+             },
+            "optional": {
+                "pipe": ("PIPE_LINE",),
+                "optional_model": ("MODEL",),
+                "optional_positive": ("CONDITIONING",),
+                "optional_negative": ("CONDITIONING",),
+                "optional_latent": ("LATENT",),
+            }
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "LATENT",)
+    RETURN_NAMES = ("pipe", "latent",)
+    FUNCTION = "unsampler"
+
+    CATEGORY = "EasyUse/Sampler"
+
+    def unsampler(self, cfg, sampler_name, steps, end_at_step, scheduler, normalize, pipe=None, optional_model=None, optional_positive=None, optional_negative=None,
+                  optional_latent=None):
+
+        model = optional_model if optional_model is not None else pipe["model"]
+        positive = optional_positive if optional_positive is not None else pipe["positive"]
+        negative = optional_negative if optional_negative is not None else pipe["negative"]
+        latent_image = optional_latent if optional_latent is not None else pipe["samples"]
+
+        normalize = normalize == "enable"
+        device = comfy.model_management.get_torch_device()
+        latent = latent_image
+        latent_image = latent["samples"]
+
+        end_at_step = min(end_at_step, steps - 1)
+        end_at_step = steps - end_at_step
+
+        noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout, device="cpu")
+        noise_mask = None
+        if "noise_mask" in latent:
+            noise_mask = comfy.sample.prepare_mask(latent["noise_mask"], noise.shape, device)
+
+        real_model = None
+        real_model = model.model
+
+        noise = noise.to(device)
+        latent_image = latent_image.to(device)
+
+        positive = comfy.sample.convert_cond(positive)
+        negative = comfy.sample.convert_cond(negative)
+
+        models, inference_memory = comfy.sample.get_additional_models(positive, negative, model.model_dtype())
+
+        comfy.model_management.load_models_gpu([model] + models, model.memory_required(noise.shape) + inference_memory)
+
+        sampler = comfy.samplers.KSampler(real_model, steps=steps, device=device, sampler=sampler_name,
+                                          scheduler=scheduler, denoise=1.0, model_options=model.model_options)
+
+        sigmas = sigmas = sampler.sigmas.flip(0) + 0.0001
+
+        pbar = comfy.utils.ProgressBar(steps)
+
+        def callback(step, x0, x, total_steps):
+            pbar.update_absolute(step + 1, total_steps)
+
+        samples = sampler.sample(noise, positive, negative, cfg=cfg, latent_image=latent_image,
+                                 force_full_denoise=False, denoise_mask=noise_mask, sigmas=sigmas, start_step=0,
+                                 last_step=end_at_step, callback=callback)
+        if normalize:
+            # technically doesn't normalize because unsampling is not guaranteed to end at a std given by the schedule
+            samples -= samples.mean()
+            samples /= samples.std()
+        samples = samples.cpu()
+
+        comfy.sample.cleanup_additional_models(models)
+
+        out = latent.copy()
+        out["samples"] = samples
+
+        if pipe is None:
+            pipe = {}
+
+        new_pipe = {
+            **pipe,
+            "samples": out
+        }
+
+        return (new_pipe, out,)
+
 #---------------------------------------------------------------修复 开始----------------------------------------------------------------------#
 
 # 高清修复
@@ -4713,9 +4863,12 @@ NODE_CLASS_MAPPINGS = {
     "easy loraStack": loraStackLoader,
     "easy controlnetLoader": controlnetSimple,
     "easy controlnetLoaderADV": controlnetAdvanced,
-    # preSampling 预采样处理
+    # latent 潜空间
+    "easy latentMultiplyBySigma": latentMultiplyBySigma,
+    # seed 随机种
     "easy seed": easySeed,
     "easy globalSeed": globalSeed,
+    # preSampling 预采样处理
     "easy preSampling": samplerSettings,
     "easy preSamplingAdvanced": samplerSettingsAdvanced,
     "easy preSamplingSdTurbo": sdTurboSettings,
@@ -4727,6 +4880,7 @@ NODE_CLASS_MAPPINGS = {
     "easy kSamplerInpainting": samplerSimpleInpainting,
     "easy kSamplerDownscaleUnet": samplerSimpleDownscaleUnet,
     "easy kSamplerSDTurbo": samplerSDTurbo,
+    "easy unSampler": unsampler,
     # fix 修复相关
     "easy hiresFix": hiresFix,
     "easy preDetailerFix": preDetailerFix,
@@ -4768,6 +4922,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy loraStack": "EasyLoraStack",
     "easy controlnetLoader": "EasyControlnet",
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
+    # latent 潜空间
+    "easy latentMultiplyBySigma": "LatentMultiplyBySigma",
+    # seed 随机种
     "easy seed": "EasySeed",
     "easy globalSeed": "EasyGlobalSeed",
     # preSampling 预采样处理
@@ -4782,6 +4939,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy kSamplerInpainting": "EasyKSampler (Inpainting)",
     "easy kSamplerDownscaleUnet": "EasyKsampler (Downscale Unet)",
     "easy kSamplerSDTurbo": "EasyKSampler (SDTurbo)",
+    "easy unSampler": "EasyUnSampler",
     # fix 修复相关
     "easy hiresFix": "HiresFix",
     "easy preDetailerFix": "PreDetailerFix",

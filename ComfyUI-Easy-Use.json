@@ -460,6 +460,22 @@
       "image": "图像"
     }
   },
+  "easy kSamplerDownscaleUnet": {
+    "title": "简易K采样器 (收缩Unet)",
+    "widgets": {
+      "downscale_mode": "收缩模式",
+      "block_number": "块编号",
+      "image_output": "图像输出"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "model": "模型"
+    },
+     "outputs": {
+      "pipe": "节点束",
+      "image": "图像"
+    }
+  },
   "easy kSamplerSDTurbo": {
     "title": "简易k采样器（SDTurbo）",
     "widgets": {
