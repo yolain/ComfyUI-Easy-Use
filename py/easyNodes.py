@@ -30,7 +30,8 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 from .adv_encode import advanced_encode, advanced_encode_XL
 
 from server import PromptServer
-from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
+from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask
+from comfy_extras.nodes_mask import LatentCompositeMasked
 from .config import BASE_RESOLUTIONS
 from .log import log_node_info, log_node_error, log_node_warn, log_node_success
 from .wildcards import process_with_loras, get_wildcard_list
@@ -726,7 +727,8 @@ class easyXYPlot:
                         raise Exception(
                             f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
                 else:
-                    positive, positive_pooled = advanced_encode(clip, plot_image_vars['positive'],
+                    clip = clip if clip is not None else plot_image_vars["clip"]
+                    positive, positive_pooled = advanced_encode(clip, positive,
                                                                 plot_image_vars['positive_token_normalization'],
                                                                 plot_image_vars[
                                                                     'positive_weight_interpretation'],
@@ -747,7 +749,8 @@ class easyXYPlot:
                         raise Exception(
                             f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
                 else:
-                    negative, negative_pooled = advanced_encode(clip, plot_image_vars['negative'],
+                    clip = clip if clip is not None else plot_image_vars["clip"]
+                    negative, negative_pooled = advanced_encode(clip, negative,
                                                                 plot_image_vars['negative_token_normalization'],
                                                                 plot_image_vars[
                                                                     'negative_weight_interpretation'],
@@ -1568,6 +1571,78 @@ class latentMultiplyBySigma:
         del pipe
 
         return (new_pipe, samples_out, sigma)
+
+
+# Latent遮罩复合
+class latentCompositeMaskedWithCond:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "text_combine": ("STRING", {"default": ""}),
+                "source_latent": ("LATENT",),
+                "source_mask": ("MASK",),
+                "new_mask": ("MASK",),
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "LATENT", "CONDITIONING")
+    RETURN_NAMES = ("pipe", "latent", "conditioning",)
+    FUNCTION = "run"
+    OUTPUT_MODE = True
+
+    CATEGORY = "EasyUse/Latent"
+
+    def run(self, pipe, text_combine, source_latent, source_mask, new_mask, prompt=None, extra_pnginfo=None, my_unique_id=None):
+        clip = pipe["clip"]
+        destination_latent = pipe["samples"]
+        positive = pipe["loader_settings"]["positive"] + ',' + text_combine
+        positive_token_normalization = pipe["loader_settings"]["positive_token_normalization"]
+        positive_weight_interpretation = pipe["loader_settings"]["positive_weight_interpretation"]
+        a1111_prompt_style = pipe["loader_settings"]["a1111_prompt_style"]
+        positive_cond = pipe["positive"]
+
+        log_node_warn("正在处理提示词编码...")
+        # Use new clip text encode by smzNodes like same as webui, when if you installed the smzNodes
+        if a1111_prompt_style:
+            if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
+                cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
+                steps = pipe["steps"]
+                positive_embeddings_final, = cls().encode(clip, positive, "A1111", True, True, False, False, 6, 1024,
+                                                          1024, 0, 0, 1024, 1024, '', '', steps)
+            else:
+                raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
+        else:
+            positive_embeddings_final, positive_pooled = advanced_encode(clip, positive,
+                                                                         positive_token_normalization,
+                                                                         positive_weight_interpretation, w_max=1.0,
+                                                                         apply_to_pooled='enable')
+            positive_embeddings_final = [[positive_embeddings_final, {"pooled_output": positive_pooled}]]
+
+        # source cond
+        (cond_1,) = ConditioningSetMask().append(positive_cond, source_mask, "default", 1)
+        (cond_2,) = ConditioningSetMask().append(positive_embeddings_final, new_mask, "default", 1)
+        positive_cond = cond_1 + cond_2
+
+        # latent composite masked
+        (samples,) = LatentCompositeMasked().composite(destination_latent, source_latent, 0, 0, False)
+
+        new_pipe = {
+            **pipe,
+            "positive": positive_cond,
+            "samples": samples,
+            "loader_settings": {
+                **pipe["loader_settings"],
+                "positive": positive,
+            }
+        }
+
+        del pipe
+
+        return (new_pipe, samples, positive_cond)
+
 # 随机种
 class easySeed:
     @classmethod
@@ -4865,6 +4940,7 @@ NODE_CLASS_MAPPINGS = {
     "easy controlnetLoaderADV": controlnetAdvanced,
     # latent 潜空间
     "easy latentMultiplyBySigma": latentMultiplyBySigma,
+    # "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
     # seed 随机种
     "easy seed": easySeed,
     "easy globalSeed": globalSeed,
@@ -4924,6 +5000,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
     # latent 潜空间
     "easy latentMultiplyBySigma": "LatentMultiplyBySigma",
+    # "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",
     # seed 随机种
     "easy seed": "EasySeed",
     "easy globalSeed": "EasyGlobalSeed",

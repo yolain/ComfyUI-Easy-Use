@@ -61,9 +61,16 @@ if os.path.exists(pyssss_path):
                 merged_content += file_content + '\n'
             except UnicodeDecodeError:
                 pass
-    # 将合并的内容写入目标文件 autocomplete.txt，并指定编码为 utf-8
-    with open(output_file, 'w', encoding='utf-8') as target_file:
-        target_file.write(merged_content)
+    # 备份之前的autocomplete
+    # bak_file = os.path.join(pyssss_path, "autocomplete.txt.bak")
+    # if os.path.exists(bak_file):
+    #     pass
+    # elif os.path.exists(output_file):
+    #     shutil.copy(output_file, bak_file)
+    if merged_content != '':
+        # 将合并的内容写入目标文件 autocomplete.txt，并指定编码为 utf-8
+        with open(output_file, 'w', encoding='utf-8') as target_file:
+            target_file.write(merged_content)
 
 WEB_DIRECTORY = "./web"
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]
