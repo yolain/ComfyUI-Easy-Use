@@ -119,6 +119,18 @@ const registerListeners = () => {
         }
 
     }, false);
+
+    api.addEventListener('status', ({
+      detail,
+    }) => {
+      const queueRemaining = detail?.exec_info.queue_remaining;
+      if(queueRemaining === 0){
+          let queue_button =  document.getElementById("queue-button")
+          queue_button.innerText = old_queue_button_text
+          queue_button.setAttribute('data-attr', "")
+          document.documentElement.style.setProperty('--process-bar-width', '0%')
+      }
+    }, false);
 };
 
 
