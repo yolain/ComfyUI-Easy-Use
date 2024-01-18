@@ -67,6 +67,12 @@ app.registerExtension({
 						this.validateName(node.graph);
 						this.inputs[0].type = type;
 						this.inputs[0].name = type;
+
+						setTimeout(_=>{
+							if(type != this.widgets[0].value){
+								this.title = "Set_" + this.widgets[0].value;
+							}
+						},1)
 					}
 
 					//Update either way
@@ -75,7 +81,6 @@ app.registerExtension({
 
 				this.validateName = function(graph) {
 					let widgetValue = node.widgets[0].value;
-					
 					if (widgetValue != '') {
 						let tries = 0;
 						let collisions = [];
@@ -213,7 +218,10 @@ app.registerExtension({
                     link_info,
                     output
 				) {
-					this.validateLinks();	
+					this.validateLinks();
+					setTimeout(_=>{
+						this.title = 'Get_' + this.widgets[0].value
+					},1)
 				}
 
 				

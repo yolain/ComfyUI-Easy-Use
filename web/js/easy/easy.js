@@ -313,6 +313,7 @@ app.registerExtension({
                         })
 
                         function updateGroups(groups, groupsDiv){
+                            groups = groups.sort((a,b)=> a['pos'][0] - b['pos'][0]).sort((a,b)=> a['pos'][1] - b['pos'][1])
                             for (let index in groups) {
                                 const group = groups[index]
                                 const title = group.title

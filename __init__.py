@@ -43,6 +43,16 @@ if os.path.exists(wildcards_path):
 else:
     os.mkdir(wildcards_path)
 
+#Styles
+styles_path = os.path.join(os.path.dirname(__file__), "styles")
+samples_path = os.path.join(os.path.dirname(__file__), "styles", "samples")
+if os.path.exists(styles_path):
+    if not os.path.exists(samples_path):
+        os.mkdir(samples_path)
+else:
+    os.mkdir(styles_path)
+    os.mkdir(samples_path)
+
 #合并autocomplete覆盖到pyssss包
 pyssss_path = os.path.join(comfy_path, "custom_nodes", "ComfyUI-Custom-Scripts", "user")
 combine_folder = os.path.join(cwd_path, "autocomplete")
@@ -76,4 +86,4 @@ WEB_DIRECTORY = "./web"
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]
 
 
-print('\033[34mComfy-Easy-Use (v1.0.2): \033[92mLoaded\033[0m')
+print('\033[34mComfy-Easy-Use (v1.0.3): \033[92mLoaded\033[0m')

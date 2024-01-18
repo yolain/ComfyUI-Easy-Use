@@ -502,6 +502,11 @@ class easyXYPlot:
             else:
                 value_label = f"MMB: {value}"
 
+        if value_type in ["Pos Condition"]:
+            value_label = f"pos cond {index + 1}" if index>0 else f"pos cond"
+        if value_type in ["Neg Condition"]:
+            value_label = f"neg cond {index + 1}" if index>0 else f"neg cond"
+
         if value_type in ["Positive Prompt S/R"]:
             value_label = f"pos prompt {index + 1}" if index>0 else f"pos prompt"
         if value_type in ["Negative Prompt S/R"]:
@@ -625,6 +630,10 @@ class easyXYPlot:
                 scheduler = float(x_value) if self.x_type == "Scheduler" or self.x_type == "Sampler & Scheduler" else float(y_value)
             if self.x_type == "Denoise" or self.y_type == "Denoise":
                 denoise = float(x_value) if self.x_type == "Denoise" else float(y_value)
+            if self.x_type == "Pos Condition" or self.y_type == "Pos Condition":
+                positive = plot_image_vars['positive_cond_stack'][int(x_value)] if self.x_type == "Pos Condition" else plot_image_vars['positive_cond_stack'][int(y_value)]
+            if self.x_type == "Neg Condition" or self.y_type == "Neg Condition":
+                negative = plot_image_vars['negative_cond_stack'][int(x_value)] if self.x_type == "Neg Condition" else plot_image_vars['negative_cond_stack'][int(y_value)]
             # 模型叠加
             if self.x_type == "ModelMergeBlocks" or self.y_type == "ModelMergeBlocks":
                 ckpt_name_1, ckpt_name_2 = plot_image_vars['models']
@@ -1025,11 +1034,11 @@ class easySave:
     @staticmethod
     def _create_directory(folder: str):
         """Try to create the directory and log the status."""
-        log_node_warn("", f"Folder {folder} does not exist. Attempting to create...")
+        log_node_warn(f"Folder {folder} does not exist. Attempting to create...")
         if not os.path.exists(folder):
             try:
                 os.makedirs(folder)
-                log_node_success("",f"{folder} Created Successfully")
+                log_node_success(f"{folder} Created Successfully")
             except OSError:
                 log_node_error(f"Failed to create folder {folder}")
                 pass
@@ -1087,9 +1096,9 @@ class easySave:
         collected_inputs = collected_inputs or {}
         prompt_inputs = prompt[str(unique_id)]["inputs"]
 
-
         for p_input, p_input_value in prompt_inputs.items():
             a_input = f"{linkInput}>{p_input}" if linkInput else p_input
+
             if isinstance(p_input_value, list):
                 easySave._gather_all_inputs(prompt, p_input_value[0], a_input, collected_inputs)
             else:
@@ -1098,9 +1107,7 @@ class easySave:
                     collected_inputs[a_input] = p_input_value
                 elif p_input_value not in existing_value:
                     collected_inputs[a_input] = existing_value + "; " + p_input_value
-        # if "text" in collected_inputs:
-        #     del collected_inputs['text']
-        # print(collected_inputs)
+
         return collected_inputs
 
     @staticmethod
@@ -1166,44 +1173,37 @@ class easySave:
 
         if output_type == "Hide":
             return list()
-        if output_type in ("Save", "Hide/Save", "Sender/Save"):
+        if output_type in ("Save", "Hide/Save"):
             output_dir = self.output_dir if self.output_dir != folder_paths.get_temp_directory() else folder_paths.get_output_directory()
             self.type = "output"
-        if output_type in ("Preview", "Sender"):
+        if output_type == "Preview":
             output_dir = self.output_dir
             filename_prefix = 'easyPreview'
-
         results = list()
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
+            filename_prefix, output_dir, images[0].shape[1], images[0].shape[0])
         for image in images:
             img = Image.fromarray(np.clip(255. * image.cpu().numpy(), 0, 255).astype(np.uint8))
-
-            filename = filename_prefix.replace("%width%", str(img.size[0])).replace("%height%", str(img.size[1]))
-
-            filename, subfolder = easySave.filename_parser(output_dir, filename, self.prompt, self.my_unique_id,
-                                                          self.number_padding, group_id, ext)
-
-            file_path = os.path.join(output_dir, filename)
-
-            if ext == "png" and embed_workflow in (True, "True"):
+            filename = filename.replace("%width%", str(img.size[0])).replace("%height%", str(img.size[1]))
+            filename = re.sub(r'%date:(.*?)%', lambda m: easySave._format_date(m.group(1), datetime.datetime.now()),
+                              filename)
+            metadata = None
+            if embed_workflow in (True, "True"):
                 metadata = PngInfo()
                 if self.prompt is not None:
                     metadata.add_text("prompt", json.dumps(self.prompt))
                 if hasattr(self, 'extra_pnginfo') and self.extra_pnginfo is not None:
                     for key, value in self.extra_pnginfo.items():
                         metadata.add_text(key, json.dumps(value))
-                if self.overwrite_existing or not os.path.isfile(file_path):
-                    img.save(file_path, pnginfo=metadata, format=FORMAT_MAP[ext])
-            else:
-                if self.overwrite_existing or not os.path.isfile(file_path):
-                    img.save(file_path, format=FORMAT_MAP[ext])
-                else:
-                    log_node_error("",f"File {file_path} already exists... Skipping")
 
+            file = f"{filename}_{counter:05}_.png"
+            img.save(os.path.join(full_output_folder, file), pnginfo=metadata)
             results.append({
-                "filename": filename,
+                "filename": file,
                 "subfolder": subfolder,
                 "type": self.type
             })
+            counter += 1
 
         return results
 
@@ -1321,6 +1321,82 @@ class negativePrompt:
     @staticmethod
     def main(negative):
         return negative,
+
+# 风格提示词选择器
+class stylesPromptSelector:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        styles = ["fooocus_styles"]
+        for file_name in os.listdir(os.path.join(__file__, "../../styles")):
+            file = os.path.join(__file__, "../../styles", file_name)
+            if os.path.isfile(file) and file_name.endswith(".json") and "styles" in file_name.split(".")[0]:
+                styles.append(file_name.split(".")[0])
+        return {
+            "required": {
+               "styles": (styles, {"default": "fooocus_styles"}),
+            },
+            "optional": {
+                "positive": ("STRING", {"forceInput": True}),
+                "negative": ("STRING", {"forceInput": True}),
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ("STRING", "STRING",)
+    RETURN_NAMES = ("positive", "negative",)
+
+    CATEGORY = 'EasyUse/Prompt'
+    FUNCTION = 'run'
+    OUTPUT_MODE = True
+
+
+    def replace_repeat(self, prompt):
+        arr = prompt.replace("，", ",").split(",")
+        if len(arr) != len(set(arr)):
+            for i in range(len(arr)):
+                arr[i] = arr[i].strip()
+            arr = list(set(arr))
+            return ", ".join(arr)
+        else:
+            return prompt
+
+    def run(self, styles, positive='', negative='', prompt=None, extra_pnginfo=None, my_unique_id=None):
+        values = []
+        all_styles = {}
+        positive_prompt, negative_prompt = '', negative
+        if styles == "fooocus_styles":
+            file = Path(os.path.join(Path(__file__).parent.parent, 'resources/' + styles + '.json'))
+        else:
+            file = Path(os.path.join(Path(__file__).parent.parent, 'styles/' + styles + '.json'))
+        f = open(file, 'r', encoding='utf-8')
+        data = json.load(f)
+        f.close()
+        for d in data:
+            all_styles[d['name']] = d
+        if my_unique_id in prompt:
+            if prompt[my_unique_id]["inputs"]['select_styles']:
+                values = prompt[my_unique_id]["inputs"]['select_styles'].split(',')
+
+        has_prompt = False
+        for index, val in enumerate(values):
+            if 'prompt' in all_styles[val]:
+                if "{prompt}" in all_styles[val]['prompt'] and has_prompt == False:
+                    positive_prompt = all_styles[val]['prompt'].format(prompt=positive)
+                    has_prompt = True
+                else:
+                    positive_prompt += ', ' + all_styles[val]['prompt'].replace(', {prompt}', '').replace('{prompt}', '')
+            if 'negative_prompt' in all_styles[val]:
+                negative_prompt += ', ' + all_styles[val]['negative_prompt'] if negative_prompt else all_styles[val]['negative_prompt']
+
+        if has_prompt == False and positive:
+            positive_prompt = positive + ', '
+
+        # 去重
+        positive_prompt = self.replace_repeat(positive_prompt) if positive_prompt else ''
+        negative_prompt = self.replace_repeat(negative_prompt) if negative_prompt else ''
+
+        return (positive_prompt, negative_prompt)
 
 # 肖像大师
 # Created by AI Wiz Art (Stefano Flore)
@@ -1518,7 +1594,7 @@ class portraitMaster:
         return (prompt, negative_prompt,)
 
 # 潜空间sigma相乘
-class latentMultiplyBySigma:
+class latentNoisy:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
@@ -1527,6 +1603,8 @@ class latentMultiplyBySigma:
             "steps": ("INT", {"default": 10000, "min": 0, "max": 10000}),
             "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
             "end_at_step": ("INT", {"default": 10000, "min": 1, "max": 10000}),
+            "source": (["CPU", "GPU"],),
+            "seed_num": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
         },
         "optional": {
             "pipe": ("PIPE_LINE",),
@@ -1540,9 +1618,24 @@ class latentMultiplyBySigma:
 
     CATEGORY = "EasyUse/Latent"
 
-    def run(self, sampler_name, scheduler, steps, start_at_step, end_at_step, pipe=None, optional_model=None, optional_latent=None):
+    def run(self, sampler_name, scheduler, steps, start_at_step, end_at_step, source, seed_num, pipe=None, optional_model=None, optional_latent=None):
         model = optional_model if optional_model is not None else pipe["model"]
-        samples = optional_latent if optional_latent is not None else pipe["samples"]
+        batch_size = pipe["loader_settings"]["batch_size"]
+        empty_latent_height = pipe["loader_settings"]["empty_latent_height"]
+        empty_latent_width = pipe["loader_settings"]["empty_latent_width"]
+
+        if optional_latent is not None:
+            samples = optional_latent
+        else:
+            torch.manual_seed(seed_num)
+            if source == "CPU":
+                device = "cpu"
+            else:
+                device = comfy.model_management.get_torch_device()
+            noise = torch.randn((batch_size, 4, empty_latent_height // 8, empty_latent_width // 8), dtype=torch.float32,
+                                device=device).cpu()
+
+            samples = {"samples": noise}
 
         device = comfy.model_management.get_torch_device()
         end_at_step = min(steps, end_at_step)
@@ -1609,7 +1702,7 @@ class latentCompositeMaskedWithCond:
         if a1111_prompt_style:
             if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
                 cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-                steps = pipe["steps"]
+                steps = pipe["loader_settings"]["steps"] if "steps" in pipe["loader_settings"] else 5
                 positive_embeddings_final, = cls().encode(clip, positive, "A1111", True, True, False, False, 6, 1024,
                                                           1024, 0, 0, 1024, 1024, '', '', steps)
             else:
@@ -1807,15 +1900,24 @@ class fullLoader:
         if not clip:
             raise Exception("No CLIP found")
 
+        # 判断是否连接 styles selector
+        is_positive_linked_styles_selector = False
+        inputs_positive_values = prompt[my_unique_id]['inputs']['positive'] if "positive" in prompt[my_unique_id]['inputs'] else None
+        if inputs_positive_values != 'undefined' and inputs_positive_values[0]:
+             is_positive_linked_styles_selector = True if prompt[inputs_positive_values[0]]['class_type'] == 'easy stylesSelector' else False
+        is_negative_linked_styles_selector = False
+        inputs_negative_values = prompt[my_unique_id]['inputs']['negative'] if "negative" in prompt[my_unique_id]['inputs'] else None
+        if inputs_negative_values != 'undefined' and inputs_negative_values[0]:
+            is_negative_linked_styles_selector = True if prompt[inputs_negative_values[0]]['class_type'] == 'easy stylesSelector' else False
+
         log_node_warn("正在处理提示词...")
         positive_seed = find_wildcards_seed(positive, prompt)
         model, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(positive, model, clip, "Positive", positive_seed, can_load_lora, pipe_lora_stack)
-        positive_wildcard_prompt = positive_decode if show_positive_prompt else ""
-
+        positive_wildcard_prompt = positive_decode if show_positive_prompt or is_positive_linked_styles_selector else ""
         negative_seed = find_wildcards_seed(negative, prompt)
         model, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(negative, model, clip,
                                                                                           "Negative", negative_seed, can_load_lora, pipe_lora_stack)
-        negative_wildcard_prompt = negative_decode if show_negative_prompt else ""
+        negative_wildcard_prompt = negative_decode if show_negative_prompt or is_negative_linked_styles_selector else ""
 
         clipped = clip.clone()
         if clip_skip != 0 and can_load_lora:
@@ -1936,8 +2038,8 @@ class a1111Loader:
         return fullLoader.adv_pipeloader(self, ckpt_name, 'Default', vae_name, clip_skip,
              lora_name, lora_model_strength, lora_clip_strength,
              resolution, empty_latent_width, empty_latent_height,
-             positive, 'none', 'A1111',
-             negative,'none','A1111',
+             positive, 'mean', 'A1111',
+             negative,'mean','A1111',
              batch_size, None, None, None, optional_lora_stack, a1111_prompt_style, prompt,
              my_unique_id
         )
@@ -2255,21 +2357,32 @@ class controlnetSimple:
             },
             "optional": {
                 "control_net": ("CONTROL_NET",),
-                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01})
+                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                "scale_soft_weights": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},),
             }
         }
 
-    RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_TYPES = ("PIPE_LINE", "CONDITIONING", "CONDITIONING")
+    RETURN_NAMES = ("pipe", "positive", "negative")
     OUTPUT_NODE = True
 
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loaders"
 
-    def controlnetApply(self, pipe, image, control_net_name, control_net=None,strength=1):
+    def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, scale_soft_weights=1):
         if control_net is None:
-            controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
-            control_net = comfy.controlnet.load_controlnet(controlnet_path)
+            if scale_soft_weights < 1:
+                if "ScaledSoftControlNetWeights" in ALL_NODE_CLASS_MAPPINGS:
+                    soft_weight_cls = ALL_NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
+                    (weights, timestep_keyframe) = soft_weight_cls().load_weights(scale_soft_weights, False)
+                    cn_adv_cls = ALL_NODE_CLASS_MAPPINGS['ControlNetLoaderAdvanced']
+                    control_net, = cn_adv_cls().load_controlnet(control_net_name, timestep_keyframe)
+                else:
+                    raise Exception(f"[ERROR] To use Scale soft weight, you need to install 'COMFYUI-Advanced-ControlNet'")
+            else:
+                controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
+                control_net = comfy.controlnet.load_controlnet(controlnet_path)
+
         control_hint = image.movedim(-1, 1)
 
         positive = pipe["positive"]
@@ -2325,7 +2438,8 @@ class controlnetSimple:
             "loader_settings": pipe["loader_settings"]
         }
 
-        return (new_pipe,)
+
+        return (new_pipe, positive, negative)
 
 # controlnetADV
 class controlnetAdvanced:
@@ -2334,6 +2448,7 @@ class controlnetAdvanced:
     def INPUT_TYPES(s):
         def get_file_list(filenames):
             return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
+
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
@@ -2344,21 +2459,34 @@ class controlnetAdvanced:
                 "control_net": ("CONTROL_NET",),
                 "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 "start_percent": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-                "end_percent": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001})
+                "end_percent": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "scale_soft_weights": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},),
             }
         }
 
-    RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_TYPES = ("PIPE_LINE", "CONDITIONING", "CONDITIONING")
+    RETURN_NAMES = ("pipe", "positive", "negative")
     OUTPUT_NODE = True
 
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loaders"
 
-    def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1):
+
+    def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=0):
         if control_net is None:
-            controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
-            control_net = comfy.controlnet.load_controlnet(controlnet_path)
+            if scale_soft_weights < 1:
+                if "ScaledSoftControlNetWeights" in ALL_NODE_CLASS_MAPPINGS:
+                    soft_weight_cls = ALL_NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
+                    (weights, timestep_keyframe) = soft_weight_cls().load_weights(scale_soft_weights, False)
+                    cn_adv_cls = ALL_NODE_CLASS_MAPPINGS['ControlNetLoaderAdvanced']
+                    control_net, = cn_adv_cls().load_controlnet(control_net_name, timestep_keyframe)
+                else:
+                    raise Exception(
+                        f"[ERROR] To use Scale soft weight, you need to install 'COMFYUI-Advanced-ControlNet'")
+            else:
+                controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
+                control_net = comfy.controlnet.load_controlnet(controlnet_path)
+
         control_hint = image.movedim(-1, 1)
         positive = pipe["positive"]
         negative = pipe["negative"]
@@ -2415,7 +2543,7 @@ class controlnetAdvanced:
 
         del pipe
 
-        return (new_pipe,)
+        return (new_pipe, positive, negative)
 
 #---------------------------------------------------------------预采样 开始----------------------------------------------------------------------#
 
@@ -3068,6 +3196,10 @@ class samplerFull:
                 plot_image_vars["a1111_prompt_style"] = pipe["loader_settings"]["a1111_prompt_style"]
             if "cnet_stack" in pipe["loader_settings"]:
                 plot_image_vars["cnet"] = pipe["loader_settings"]["cnet_stack"]
+            if "positive_cond_stack" in pipe["loader_settings"]:
+                plot_image_vars["positive_cond_stack"] = pipe["loader_settings"]["positive_cond_stack"]
+            if "negative_cond_stack" in pipe["loader_settings"]:
+                plot_image_vars["negative_cond_stack"] = pipe["loader_settings"]["negative_cond_stack"]
 
             latent_image = sampleXYplot.get_latent(pipe["samples"])
 
@@ -3117,11 +3249,15 @@ class samplerFull:
         if image_output in ("Hide", "Hide/Save"):
             preview_latent = False
 
-        xyPlot = pipe["loader_settings"]["xyplot"] if "xyplot" in pipe["loader_settings"] else None
+        xyplot_id = next((x for x in prompt if "XYPlot" in str(prompt[x]["class_type"])), None)
+        if xyplot_id is None:
+            xyPlot = None
+        else:
+            xyPlot = pipe["loader_settings"]["xyplot"] if "xyplot" in pipe["loader_settings"] else xyPlot
         if xyPlot is not None:
             return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot)
         else:
-            return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent)
+            return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, force_full_denoise, disable_noise)
 
 # 简易采样器
 class samplerSimple:
@@ -4068,10 +4204,10 @@ class pipeIn:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Model missing from pipeLine")
         pos = pos if pos is not None else pipe.get("positive")
         if pos is None:
-            log_node_warn(f'pipeIn[{my_unique_id}]', "Positive conditioning missing from pipeLine")
+            log_node_warn(f'pipeIn[{my_unique_id}]', "Pos Conditioning missing from pipeLine")
         neg = neg if neg is not None else pipe.get("negative")
         if neg is None:
-            log_node_warn(f'pipeIn[{my_unique_id}]', "Negative conditioning missing from pipeLine")
+            log_node_warn(f'pipeIn[{my_unique_id}]', "Neg Conditioning missing from pipeLine")
         samples = latent if latent is not None else pipe.get("samples")
         if samples is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Latent missing from pipeLine")
@@ -4232,8 +4368,8 @@ class pipeXYPlot:
             },
         }
 
-    RETURN_TYPES = ("PIPE_LINE", "XYPLOT",)
-    RETURN_NAMES = ("pipe", "xyPlot",)
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
     FUNCTION = "plot"
 
     CATEGORY = "EasyUse/Pipe"
@@ -4315,8 +4451,8 @@ class pipeXYPlotAdvanced:
             "hidden": {"my_unique_id": "UNIQUE_ID"}
         }
 
-    RETURN_TYPES = ("PIPE_LINE", "XYPLOT",)
-    RETURN_NAMES = ("pipe", "xyPlot",)
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
     FUNCTION = "plot"
 
     CATEGORY = "EasyUse/Pipe"
@@ -4456,6 +4592,36 @@ class pipeXYPlotAdvanced:
                 new_pipe['loader_settings'] = {
                     **pipe['loader_settings'],
                     "cnet_stack": cnet,
+                }
+
+            if "advanced: Pos Condition" in x_axis:
+                x_values = "; ".join(x_values)
+                cond = X.get('cond')
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "positive_cond_stack": cond,
+                }
+            if "advanced: Pos Condition" in y_axis:
+                y_values = "; ".join(y_values)
+                cond = Y.get('cond')
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "positive_cond_stack": cond,
+                }
+
+            if "advanced: Neg Condition" in x_axis:
+                x_values = "; ".join(x_values)
+                cond = X.get('cond')
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "negative_cond_stack": cond,
+                }
+            if "advanced: Neg Condition" in y_axis:
+                y_values = "; ".join(y_values)
+                cond = Y.get('cond')
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "negative_cond_stack": cond,
                 }
 
             del pipe
@@ -4689,6 +4855,87 @@ class XYplot_PromptSR:
             values.extend([(search_txt, kwargs.get(f"replace_{i+1}"), replace_all_text) for i in range(replace_count)])
         return ({"axis": axis, "values": values},) if values is not None else (None,)
 
+# XYPlot Pos Condition
+class XYplot_Positive_Cond:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs = {
+            "optional": {
+                "positive_1": ("CONDITIONING",),
+                "positive_2": ("CONDITIONING",),
+                "positive_3": ("CONDITIONING",),
+                "positive_4": ("CONDITIONING",),
+            }
+        }
+
+        return inputs
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, positive_1=None, positive_2=None, positive_3=None, positive_4=None):
+        axis = "advanced: Pos Condition"
+        values = []
+        cond = []
+        # Create base entry
+        if positive_1 is not None:
+            values.append("0")
+            cond.append(positive_1)
+        if positive_2 is not None:
+            values.append("1")
+            cond.append(positive_2)
+        if positive_3 is not None:
+            values.append("2")
+            cond.append(positive_3)
+        if positive_4 is not None:
+            values.append("3")
+            cond.append(positive_4)
+
+        return ({"axis": axis, "values": values, "cond": cond},) if values is not None else (None,)
+
+# XYPlot Neg Condition
+class XYplot_Negative_Cond:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs = {
+            "optional": {
+                "negative_1": ("CONDITIONING"),
+                "negative_2": ("CONDITIONING"),
+                "negative_3": ("CONDITIONING"),
+                "negative_4": ("CONDITIONING"),
+            }
+        }
+
+        return inputs
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, negative_1=None, negative_2=None, negative_3=None, negative_4=None):
+        axis = "advanced: Neg Condition"
+        values = []
+        cond = []
+        # Create base entry
+        if negative_1 is not None:
+            values.append(0)
+            cond.append(negative_1)
+        if negative_2 is not None:
+            values.append(1)
+            cond.append(negative_2)
+        if negative_3 is not None:
+            values.append(2)
+            cond.append(negative_3)
+        if negative_4 is not None:
+            values.append(3)
+            cond.append(negative_4)
+
+        return ({"axis": axis, "values": values, "cond": cond},) if values is not None else (None,)
 
 # XY Plot: ControlNet
 class XYplot_Control_Net:
@@ -4928,6 +5175,7 @@ NODE_CLASS_MAPPINGS = {
     "easy positive": positivePrompt,
     "easy negative": negativePrompt,
     "easy wildcards": wildcardsPrompt,
+    "easy stylesSelector": stylesPromptSelector,
     "easy portraitMaster": portraitMaster,
     # loaders 加载器
     "easy fullLoader": fullLoader,
@@ -4939,8 +5187,8 @@ NODE_CLASS_MAPPINGS = {
     "easy controlnetLoader": controlnetSimple,
     "easy controlnetLoaderADV": controlnetAdvanced,
     # latent 潜空间
-    "easy latentMultiplyBySigma": latentMultiplyBySigma,
-    # "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
+    "easy latentNoisy": latentNoisy,
+    "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
     # seed 随机种
     "easy seed": easySeed,
     "easy globalSeed": globalSeed,
@@ -4978,6 +5226,8 @@ NODE_CLASS_MAPPINGS = {
     "easy XYInputs: ModelMergeBlocks": XYplot_ModelMergeBlocks,
     "easy XYInputs: PromptSR": XYplot_PromptSR,
     "easy XYInputs: ControlNet": XYplot_Control_Net,
+    "easy XYInputs: PositiveCond": XYplot_Positive_Cond,
+    "easy XYInputs: NegativeCond": XYplot_Negative_Cond,
     # others 其他
     "easy showSpentTime": showSpentTime,
     # "easy imageRemoveBG": imageREMBG,
@@ -4988,6 +5238,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy positive": "Positive",
     "easy negative": "Negative",
     "easy wildcards": "Wildcards",
+    "easy stylesSelector": "Styles Selector",
     "easy portraitMaster": "Portrait Master",
     # loaders 加载器
     "easy fullLoader": "EasyLoader (Full)",
@@ -4999,8 +5250,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy controlnetLoader": "EasyControlnet",
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
     # latent 潜空间
-    "easy latentMultiplyBySigma": "LatentMultiplyBySigma",
-    # "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",
+    "easy latentNoisy": "latentNoisy",
+    "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",
     # seed 随机种
     "easy seed": "EasySeed",
     "easy globalSeed": "EasyGlobalSeed",
@@ -5038,6 +5289,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy XYInputs: ModelMergeBlocks": "XY Inputs: ModelMergeBlocks //EasyUse",
     "easy XYInputs: PromptSR": "XY Inputs: PromptSR //EasyUse",
     "easy XYInputs: ControlNet": "XY Inputs: Controlnet //EasyUse",
+    "easy XYInputs: PositiveCond": "XY Inputs: PositiveCond //EasyUse",
+    "easy XYInputs: NegativeCond": "XY Inputs: NegativeCond //EasyUse",
     # others 其他
     "easy showSpentTime": "ShowSpentTime",
     "easy imageRemoveBG": "ImageRemoveBG",

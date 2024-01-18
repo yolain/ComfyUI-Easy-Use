@@ -692,7 +692,7 @@ try{
         document.head.appendChild(fontFile);
         // 样式
         const styleElement = document.createElement("style");
-        const fontFamily = 'Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif'
+        const fontFamily = 'Inter,-apple-system,BlinkMacSystemFont,Helvetica Neue,sans-serif'
         const cssCode = `
             .pysssss-workflow-popup{
                 min-width:200px!important;
@@ -770,6 +770,27 @@ try{
             #shareButton{
                 background:linear-gradient(to left,${customThemeColor},${LGraphCanvas.node_colors.pale_blue.color})!important;
                 color:white!important;
+            }
+            #queue-button{
+                position:relative;
+                overflow:hidden;
+                z-index:1;
+            }
+            
+            #queue-button:after{
+                content:attr(data-attr);
+                background:green;
+                color:#FFF;
+                width:var(--process-bar-width);
+                height:100%;
+                position:absolute;
+                top:0;
+                left:0;
+                z-index:0;
+                text-align:center;
+                display:flex;
+                justify-content:center;
+                align-items:center;
             }
             
             .litegraph .litemenu-entry.has_submenu {

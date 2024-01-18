@@ -132,12 +132,14 @@ def prompt_seed_update(json_data):
             if 'class_type' not in v:
                 continue
             cls = v['class_type']
-            if cls == "easy wildcards" or cls == "easy preSampling" or cls == "easy preSamplingAdvanced" or cls == "easy preSamplingSdTurbo" or cls == "easy preSamplingDynamicCFG" or cls == "easy fullkSampler" or cls == 'easy seed':
+            if cls == "easy wildcards" or cls == "easy preSampling" or cls == "easy preSamplingAdvanced" or cls == "easy preSamplingSdTurbo" or cls == "easy preSamplingDynamicCFG" or cls == "easy fullkSampler" or cls == 'easy seed' or cls == "easy latentNoisy":
                 extra_data = next((x for x in workflow["nodes"] if str(x["id"]) == k), None)
                 if extra_data is not None:
                     inputs = extra_data.get('inputs')
                     widgets_value = extra_data.get('widgets_values')
                     widgets_length = len(widgets_value)
+                    if "disable" in widgets_value:
+                        break
                     if inputs is not None and inputs != []:
                         seed_num_input = next((x for x in inputs if x['name'] == 'seed_num' and x['type'] == 'INT'), None)
                         if seed_num_input is not None:

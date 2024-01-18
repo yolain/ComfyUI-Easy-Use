@@ -158,27 +158,13 @@ function widgetLogic(node, widget) {
 
 function widgetLogic2(node, widget) {
 	if (widget.name === 'sampler_name') {
+		const widget_names = ['eta','s_noise','upscale_ratio','start_step','end_step','upscale_n_step','unsharp_kernel_size','unsharp_sigma','unsharp_strength']
 		if (["euler_ancestral", "dpmpp_2s_ancestral", "dpmpp_2m_sde", "lcm"].includes(widget.value)) {
-			toggleWidget(node, findWidgetByName(node, 'eta'), true)
-			toggleWidget(node, findWidgetByName(node, 's_noise'), true)
-			toggleWidget(node, findWidgetByName(node, 'upscale_ratio'), true)
-			toggleWidget(node, findWidgetByName(node, 'start_step'), true)
-			toggleWidget(node, findWidgetByName(node, 'end_step'), true)
-			toggleWidget(node, findWidgetByName(node, 'upscale_n_step'), true)
-			toggleWidget(node, findWidgetByName(node, 'unsharp_kernel_size'), true)
-			toggleWidget(node, findWidgetByName(node, 'unsharp_sigma'), true)
-			toggleWidget(node, findWidgetByName(node, 'unsharp_strength'), true)
+			widget_names.map(name=> toggleWidget(node, findWidgetByName(node, name)), true)
 		} else {
-			toggleWidget(node, findWidgetByName(node, 'eta'))
-			toggleWidget(node, findWidgetByName(node, 's_noise'))
-			toggleWidget(node, findWidgetByName(node, 'upscale_ratio'))
-			toggleWidget(node, findWidgetByName(node, 'start_step'))
-			toggleWidget(node, findWidgetByName(node, 'end_step'))
-			toggleWidget(node, findWidgetByName(node, 'upscale_n_step'))
-			toggleWidget(node, findWidgetByName(node, 'unsharp_kernel_size'))
-			toggleWidget(node, findWidgetByName(node, 'unsharp_sigma'))
-			toggleWidget(node, findWidgetByName(node, 'unsharp_strength'))
+			widget_names.map(name=> toggleWidget(node, findWidgetByName(node, name)))
 		}
+		updateNodeHeight(node)
 	}
 }
 
@@ -327,6 +313,7 @@ app.registerExtension({
 			case "easy comfyLoader":
 			case "easy svdLoader":
 			case "easy loraStack":
+			case "easy latentNoisy":
 			case "easy preSamplingAdvanced":
 			case "easy preSamplingSdTurbo":
 			case "easy fullkSampler":
@@ -618,7 +605,7 @@ app.registerExtension({
 			};
 		}
 
-		if (["easy seed", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingDynamicCFG", "easy fullkSampler"].includes(nodeData.name)) {
+		if (["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingDynamicCFG", "easy fullkSampler"].includes(nodeData.name)) {
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
 			nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;

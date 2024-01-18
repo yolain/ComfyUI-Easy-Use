@@ -29,6 +29,14 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**v1.0.3（2024-01-19）**
+
+- Added `easy stylesSelector`
+- Added **scale_soft_weights** in `easy controlnetLoader` and `easy controlnetLoaderADV` 
+- Added the queue progress bar setting item, which is not enabled by default
+- Fixed `easy getNode` and `easy setNode` the title does not change when loading
+- Fixed all samplers using subdirectories to store images
+
 **2024-01-12**
 
 - Fixed UI loading failure in the new version of ComfyUI

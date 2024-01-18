@@ -37,7 +37,13 @@
 
 ## 更新日志
 
-**2024-01-13**
+**v1.0.3（2024-01-19）**
+
+- 增加 `easy stylesSelector` 风格化提示词选择器
+- `easy controlnetLoader` 和 `easy controlnetLoaderADV` 增加参数 **scale_soft_weights** 
+- 增加队列进度条设置项，默认为未启用状态
+- 修复 `easy getNode` 和 `easy setNode` 加载时标题未更改
+- 修复所有采样器中存储图片使用子目录前缀不生效的问题
 
 **2024-01-12**
 

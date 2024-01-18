@@ -42,6 +42,20 @@
       "text": "提示词"
     }
   },
+  "easy stylesSelector": {
+    "title": "风格提示词选择器",
+    "inputs": {
+      "positive": "正面提示词（可选）",
+      "negative": "反面提示词（可选）"
+    },
+    "outputs": {
+      "positive": "正面提示词",
+      "negative": "反面提示词"
+    },
+    "widgets": {
+      "styles": "风格类型"
+    }
+  },
   "easy portraitMaster": {
     "title": "肖像大师",
     "widgets": {
@@ -233,7 +247,7 @@
       "pipe": "节点束",
       "control_net_name": "ControlNet",
       "strength": "强度",
-      "image": "图像"
+      "scale_soft_weights": "缩放柔和权重"
     },
     "inputs": {
       "pipe": "节点束",
@@ -241,7 +255,9 @@
       "image": "图像"
     },
     "outputs": {
-      "pipe": "节点束"
+      "pipe": "节点束",
+      "positive": "正向条件",
+      "negative": "反向条件"
     }
   },
   "easy controlnetLoaderADV": {
@@ -257,7 +273,9 @@
       "image": "图像"
     },
     "outputs": {
-      "pipe": "节点束"
+      "pipe": "节点束",
+      "positive": "正向条件",
+      "negative": "反向条件"
     }
   },
   "easy LLLiteLoader": {
@@ -275,6 +293,46 @@
     },
     "outputs": {
       "model": "模型"
+    }
+  },
+  "easy latentNoisy": {
+    "title": "噪波潜空间（Sigma乘积）",
+    "inputs": {
+      "pipe": "节点束",
+      "optional_model": "模型（可选）",
+      "optional_latent": "潜空间（可选）"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "latent": "潜空间",
+      "sigma": "伽马值"
+    },
+    "widgets": {
+      "sample_name": "采样器",
+      "scheduler": "调度器",
+      "steps": "步数",
+      "start_at_step": "开始步数",
+      "end_at_step": "结束步数",
+      "source": "生成设备",
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作"
+    }
+  },
+  "easy latentCompositeMaskedWithCond": {
+    "title": "Latent遮罩复合 (带条件)",
+    "inputs": {
+      "pipe": "节点束",
+      "source_latent": "潜空间（源）",
+      "source_mask": "遮罩（源）",
+      "new_mask": "遮罩（新）"
+    },
+    "widgets": {
+      "text_combine": "文字拼接"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "latent": "潜空间",
+      "conditioning": "条件"
     }
   },
   "easy seed": {
@@ -309,8 +367,8 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "image_to_latent": "图像转潜空间",
-      "latent": "潜空间"
+      "image_to_latent": "图像（可选）",
+      "latent": "潜空间（可选）"
     },
     "outputs": {
       "pipe": "节点束"
@@ -352,8 +410,8 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "image_to_latent": "图像转潜空间",
-      "latent": "潜空间"
+      "image_to_latent": "图像（可选）",
+      "latent": "潜空间（可选）"
     },
     "outputs": {
       "pipe": "节点束"
@@ -374,8 +432,8 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "image_to_latent": "图像转潜空间",
-      "latent": "潜空间"
+      "image_to_latent": "图像（可选）",
+      "latent": "潜空间（可选）"
     },
     "outputs": {
       "pipe": "节点束"
@@ -488,6 +546,28 @@
      "outputs": {
       "pipe": "节点束",
       "image": "图像"
+    }
+  },
+  "easy unSampler": {
+    "title": "逆(不)采样器",
+    "inputs": {
+        "pipe": "节点束",
+        "optional_model": "模型（可选）",
+        "optional_positive": "正向条件（可选）",
+        "optional_negative": "负向条件（可选）",
+        "optional_latent": "潜空间（可选）"
+    },
+    "widgets": {
+        "steps": "步数",
+        "cfg": "CFG",
+        "end_at_step": "结束步数",
+        "sampler_name": "采样器",
+        "scheduler": "调度器",
+        "normalize": "规格化"
+    },
+    "outputs": {
+        "pipe": "节点束",
+        "latent": "潜空间"
     }
   },
   "easy pipeIn": {
@@ -650,6 +730,24 @@
       "preset": "预置参数",
       "choose .csv file to input values": "选择.csv文件覆盖到数值中",
       "choose .csv file into values": "选择.csv文件覆盖到数值中"
+    }
+  },
+  "easy XYInputs: PositiveCond": {
+    "title": "XY输入: 正向条件x4",
+    "inputs": {
+      "positive_1": "正向条件_1",
+      "positive_2": "正向条件_2",
+      "positive_3": "正向条件_3",
+      "positive_4": "正向条件_4"
+    }
+  },
+  "easy XYInputs: NegativeCond": {
+    "title": "XY输入: 反向条件x4",
+    "inputs": {
+      "positive_1": "反向条件_1",
+      "positive_2": "反向条件_2",
+      "positive_3": "反向条件_3",
+      "positive_4": "反向条件_4"
     }
   },
   "easy XYInputs: PromptSR": {

@@ -7,6 +7,11 @@ import torch
 import numpy as np
 from nodes import MAX_RESOLUTION
 from .log import log_node_info
+import cv2
+
+
+def pil2tensor(image):
+  return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
 
 class ResizeMode(Enum):
   RESIZE = "Just Resize"
@@ -251,6 +256,47 @@ class imagePixelPerfect:
 
     return {"ui": {"text": text}, "result": (result,)}
 
+# 图片到遮罩
+class imageToMask:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required": {
+        "image": ("IMAGE",),
+        "channel": (['red', 'green', 'blue'],),
+       }
+    }
+
+  RETURN_TYPES = ("MASK",)
+  FUNCTION = "convert"
+  CATEGORY = "EasyUse/Image"
+
+  def convert_to_single_channel(self, image, channel='red'):
+    # Convert to RGB mode to access individual channels
+    image = image.convert('RGB')
+
+    # Extract the desired channel and convert to greyscale
+    if channel == 'red':
+      channel_img = image.split()[0].convert('L')
+    elif channel == 'green':
+      channel_img = image.split()[1].convert('L')
+    elif channel == 'blue':
+      channel_img = image.split()[2].convert('L')
+    else:
+      raise ValueError(
+        "Invalid channel option. Please choose 'red', 'green', or 'blue'.")
+
+    # Convert the greyscale channel back to RGB mode
+    channel_img = Image.merge(
+      'RGB', (channel_img, channel_img, channel_img))
+
+    return channel_img
+
+  def convert(self, image, channel='red'):
+    image = self.convert_to_single_channel(tensor2pil(image), channel)
+    image = pil2tensor(image)
+    return (image.squeeze().mean(2),)
+
+
 # 姿势编辑器
 class poseEditor:
   @classmethod
@@ -299,6 +345,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageSizeBySide": imageSizeBySide,
   "easy imageSizeByLongerSide": imageSizeByLongerSide,
   "easy imagePixelPerfect": imagePixelPerfect,
+  "easy imageToMask": imageToMask,
   "easy poseEditor": poseEditor
 }
 
@@ -308,5 +355,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageSizeBySide": "ImageSize (Side)",
   "easy imageSizeByLongerSide": "ImageSize (LongerSide)",
   "easy imagePixelPerfect": "ImagePixelPerfect",
+  "easy imageToMask": "ImageToMask",
+  "easy imageHSVMask": "ImageHSVMask",
   "easy poseEditor": "PoseEditor"
 }

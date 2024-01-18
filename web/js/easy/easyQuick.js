@@ -1,10 +1,13 @@
 // 1.0.2
 import { app } from "/scripts/app.js";
 import { GroupNodeConfig } from "/extensions/core/groupNode.js";
+import { api } from "/scripts/api.js";
 
 const nodeTemplateShortcutId = "Comfy.EasyUse.NodeTemplateShortcut"
+const processBarId = "Comfy.EasyUse.queueProcessBar"
 
 let enableNodeTemplateShortcut = true
+let enableQueueProcess = false
 export function addNodeTemplateShortcutSetting(app) {
 	app.ui.settings.addSetting({
 		id: nodeTemplateShortcutId,
@@ -16,7 +19,19 @@ export function addNodeTemplateShortcutSetting(app) {
 		},
 	});
 }
+export function addQueueProcessSetting(app) {
+	app.ui.settings.addSetting({
+		id: processBarId,
+		name: "Enable process bar in queue button (ComfyUI-Easy-Use)",
+		type: "boolean",
+		defaultValue: enableNodeTemplateShortcut,
+		onChange(value) {
+			enableNodeTemplateShortcut = !!value;
+		},
+	});
+}
 const getEnableNodeTemplateShortcut = _ => app.ui.settings.getSettingValue(nodeTemplateShortcutId, true)
+const getQueueProcessSetting = _ => app.ui.settings.getSettingValue(processBarId, false)
 
 function loadTemplate(){
     return localStorage['Comfy.NodeTemplates'] ? JSON.parse(localStorage['Comfy.NodeTemplates']) : null
@@ -76,8 +91,35 @@ app.registerExtension({
 
     setup(app) {
         addNodeTemplateShortcutSetting(app)
+        addQueueProcessSetting(app)
+        registerListeners()
     }
 });
+
+const registerListeners = () => {
+    const queue_button =  document.getElementById("queue-button")
+    const old_queue_button_text = queue_button.innerText
+    api.addEventListener('progress', ({
+      detail,
+    }) => {
+        const isEnabled = getQueueProcessSetting()
+        if(isEnabled){
+          const {
+            value, max, node,
+          } = detail;
+          const progress = Math.floor((value / max) * 100);
+          // console.log(progress)
+          if (!isNaN(progress) && progress >= 0 && progress <= 100) {
+              queue_button.innerText = progress ==0 || progress == 100 ? old_queue_button_text : "ㅤ "
+              const width = progress ==0 || progress == 100 ? '0%' : progress.toString() + '%'
+                        let bar = document.createElement("div")
+              queue_button.setAttribute('data-attr', progress ==0 || progress == 100 ? "" : progress.toString() + '%')
+              document.documentElement.style.setProperty('--process-bar-width', width)
+          }
+        }
+
+    }, false);
+};
 
 
 // 修改粘贴指令

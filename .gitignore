@@ -2,6 +2,7 @@ __pycache__
 *.ini
 *.bak
 wildcards/**
+styles/**
 workflow/**
 autocomplete/**
 docs/**
