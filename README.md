@@ -39,6 +39,7 @@
 
 **v1.0.3（2024-01-19）**
 
+- 修复加载器中提示词为组件时报错
 - 增加 `easy stylesSelector` 风格化提示词选择器
 - `easy controlnetLoader` 和 `easy controlnetLoaderADV` 增加参数 **scale_soft_weights** 
 - 增加队列进度条设置项，默认为未启用状态

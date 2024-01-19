@@ -1903,12 +1903,12 @@ class fullLoader:
         # 判断是否连接 styles selector
         is_positive_linked_styles_selector = False
         inputs_positive_values = prompt[my_unique_id]['inputs']['positive'] if "positive" in prompt[my_unique_id]['inputs'] else None
-        if inputs_positive_values != 'undefined' and inputs_positive_values[0]:
-             is_positive_linked_styles_selector = True if prompt[inputs_positive_values[0]]['class_type'] == 'easy stylesSelector' else False
+        if type(inputs_positive_values) == list and inputs_positive_values != 'undefined' and inputs_positive_values[0]:
+             is_positive_linked_styles_selector = True if prompt[inputs_positive_values[0]] and prompt[inputs_positive_values[0]]['class_type'] == 'easy stylesSelector' else False
         is_negative_linked_styles_selector = False
         inputs_negative_values = prompt[my_unique_id]['inputs']['negative'] if "negative" in prompt[my_unique_id]['inputs'] else None
-        if inputs_negative_values != 'undefined' and inputs_negative_values[0]:
-            is_negative_linked_styles_selector = True if prompt[inputs_negative_values[0]]['class_type'] == 'easy stylesSelector' else False
+        if type(inputs_negative_values) == list and inputs_negative_values != 'undefined' and inputs_negative_values[0]:
+            is_negative_linked_styles_selector = True if prompt[inputs_negative_values[0]] and prompt[inputs_negative_values[0]]['class_type'] == 'easy stylesSelector' else False
 
         log_node_warn("正在处理提示词...")
         positive_seed = find_wildcards_seed(positive, prompt)

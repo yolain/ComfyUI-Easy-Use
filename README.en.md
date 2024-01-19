@@ -31,6 +31,7 @@ After installing the node package, the UI interface will be automatically switch
 
 **v1.0.3（2024-01-19）**
 
+- Fixed the error message in the loader when the prompt word was component
 - Added `easy stylesSelector`
 - Added **scale_soft_weights** in `easy controlnetLoader` and `easy controlnetLoaderADV` 
 - Added the queue progress bar setting item, which is not enabled by default
