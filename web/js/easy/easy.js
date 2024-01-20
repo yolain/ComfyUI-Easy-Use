@@ -243,12 +243,17 @@ app.registerExtension({
         const getCanvasMenuOptions = LGraphCanvas.prototype.getCanvasMenuOptions;
         LGraphCanvas.prototype.getCanvasMenuOptions = function () {
             const options = getCanvasMenuOptions.apply(this, arguments);
+            let draggerEl = null
+            let isGroupMapcanMove = true
+            let emptyImg = new Image()
+            emptyImg.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
+
             options.push(null,
                 {
                     content: "📜Groups Map (EasyUse)",
                     callback: () => {
                         const locale = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
-                        const groups = app.canvas.graph._groups
+                        let groups = app.canvas.graph._groups
                         let nodes = app.canvas.graph._nodes
                         let groups_len = groups.length
                         let div =
@@ -308,12 +313,16 @@ app.registerExtension({
                               document.removeEventListener('mouseup', stopMoving)
                             }
 
-                            document.addEventListener('mousemove', moveBox)
-                            document.addEventListener('mouseup', stopMoving)
+                            if(isGroupMapcanMove){
+                                document.addEventListener('mousemove', moveBox)
+                                document.addEventListener('mouseup', stopMoving)
+                            }
                         })
 
-                        function updateGroups(groups, groupsDiv){
-                            groups = groups.sort((a,b)=> a['pos'][0] - b['pos'][0]).sort((a,b)=> a['pos'][1] - b['pos'][1])
+                        function updateGroups(groups, groupsDiv, autoSortDiv){
+                            if(groups.length>0){
+                                autoSortDiv.style.display = 'block'
+                            }else autoSortDiv.style.display = 'none'
                             for (let index in groups) {
                                 const group = groups[index]
                                 const title = group.title
@@ -330,11 +339,53 @@ app.registerExtension({
                                     event.preventDefault()
                                     group_item.style = group_item_style + "filter:brightness(1);"
                                 })
+                                group_item.addEventListener("dragstart",e=>{
+                                    draggerEl = e.currentTarget;
+                                    e.currentTarget.style.opacity = "0.6";
+									e.currentTarget.style.border = "1px dashed yellow";
+									e.dataTransfer.effectAllowed = 'move';
+									e.dataTransfer.setDragImage(emptyImg, 0, 0);
+                                })
+                                group_item.addEventListener("dragend",e=>{
+                                    e.target.style.opacity = "1";
+                                    e.currentTarget.style.border = "1px dashed transparent";
+                                    e.currentTarget.removeAttribute("draggable");
+									document.querySelectorAll('.easyuse-group-item').forEach((el,i) => {
+										var prev_i = el.dataset.id;
+										if (el == draggerEl && prev_i != i ) {
+											groups.splice(i, 0, groups.splice(prev_i, 1)[0]);
+										}
+										el.dataset.id = i;
+									});
+                                     isGroupMapcanMove = true
+                                })
+                                group_item.addEventListener("dragover",e=>{
+                                    e.preventDefault();
+									if (e.currentTarget == draggerEl) return;
+									let rect = e.currentTarget.getBoundingClientRect();
+									if (e.clientY > rect.top + rect.height / 2) {
+										e.currentTarget.parentNode.insertBefore(draggerEl, e.currentTarget.nextSibling);
+									} else {
+										e.currentTarget.parentNode.insertBefore(draggerEl, e.currentTarget);
+									}
+                                    isGroupMapcanMove = true
+                                })
+
+
+                                group_item.setAttribute('data-id',index)
+                                group_item.className = 'easyuse-group-item'
                                 group_item.style = group_item_style
                                 // 标题
                                 let text_group_title = document.createElement('div')
-                                text_group_title.style = `flex:1;font-size:12px;color:var(--input-text);padding:4px;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;`
+                                text_group_title.style = `flex:1;font-size:12px;color:var(--input-text);padding:4px;white-space: nowrap;overflow: hidden;text-overflow: ellipsis;cursor:pointer`
                                 text_group_title.innerHTML = `${title}`
+                                text_group_title.addEventListener('mousedown',e=>{
+                                    isGroupMapcanMove = false
+                                    e.currentTarget.parentNode.draggable = 'true';
+                                })
+                                text_group_title.addEventListener('mouseleave',e=>{
+                                    isGroupMapcanMove = true
+                                })
                                 group_item.append(text_group_title)
                                 // 按钮组
                                 let buttons = document.createElement('div')
@@ -401,9 +452,20 @@ app.registerExtension({
                         }
 
                         let groupsDiv =  document.createElement('div')
+                        groupsDiv.id = 'easyuse-groups-items'
                         groupsDiv.style = `overflow-y: auto;max-height: 400px;height:100%;width: 100%;`
 
-                        updateGroups(groups, groupsDiv)
+                        let autoSortDiv = document.createElement('button')
+                        autoSortDiv.style = `cursor:pointer;font-size:10px;padding:2px 4px;color:var(--input-text);background-color: var(--comfy-input-bg);border: 1px solid var(--border-color);border-radius:4px;`
+                        autoSortDiv.innerText = locale == 'zh-CN' ? '自动排序' : 'Automatic sorting'
+                        autoSortDiv.addEventListener('click',e=>{
+                            e.preventDefault()
+                            groupsDiv.innerHTML = ``
+                            let new_groups = groups.sort((a,b)=> a['pos'][0] - b['pos'][0]).sort((a,b)=> a['pos'][1] - b['pos'][1])
+                            updateGroups(new_groups, groupsDiv, autoSortDiv)
+                        })
+
+                        updateGroups(groups, groupsDiv, autoSortDiv)
 
                         div.appendChild(groupsDiv)
 
@@ -412,14 +474,14 @@ app.registerExtension({
                         remarkDiv.innerText = locale == 'zh-CN' ? "点击`启用中/已忽略`可设置组模式, 长按可停用该组节点" : "Toggle `Show/Hide` can set mode of group, LongPress can set group nodes to never"
                         div.appendChild(groupsDiv)
                         div.appendChild(remarkDiv)
-
+                        div.appendChild(autoSortDiv)
                         let graphDiv = document.getElementById("graph-canvas")
                         graphDiv.addEventListener('mouseover', async () => {
                             let n = (await app.graphToPrompt()).output
                             if (!deepEqual(n, nodes)) {
                               groupsDiv.innerHTML = ``
                               let new_groups = app.canvas.graph._groups
-                              updateGroups(new_groups, groupsDiv)
+                              updateGroups(new_groups, groupsDiv, autoSortDiv)
                             }
                         })
                         if (!document.querySelector('#easyuse_groups_map')){

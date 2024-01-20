@@ -16,10 +16,14 @@ import comfy.samplers
 import comfy.controlnet
 import latent_preview
 import comfy.model_base
-from pathlib import Path
 import comfy.model_management
 from comfy.sd import CLIP, VAE
-from comfy.cli_args import args
+import comfy.clip_vision
+from comfy.clip_vision import ClipVisionModel
+import comfy.clip_model
+import comfy.sd1_clip
+from comfy.sd1_clip import escape_important, token_weights, unescape_important
+from pathlib import Path
 from urllib.request import urlopen
 from collections import defaultdict
 from PIL.PngImagePlugin import PngInfo
@@ -27,6 +31,9 @@ from PIL import Image, ImageDraw, ImageFont
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
 from typing import Dict, List, Optional, Tuple, Union, Any
+from transformers import CLIPImageProcessor
+from transformers.image_utils import PILImageResampling
+from itertools import zip_longest
 from .adv_encode import advanced_encode, advanced_encode_XL
 
 from server import PromptServer
@@ -1007,12 +1014,32 @@ def find_nearest_steps(clip_id, prompt):
                 steps = node["inputs"]["steps"] if "steps" in node["inputs"] else 1
                 return steps
     return 1
-
-def find_wildcards_seed(text, prompt):
+def find_wildcards_seed(clip_id, text, prompt):
+    def find_link_clip_id(id, seed, wildcard_id):
+        node = prompt[id]
+        if "positive" in node['inputs']:
+            link_ids = node["inputs"]["positive"]
+            if type(link_ids) == list:
+                for id in link_ids:
+                    if id != 0:
+                        if id == wildcard_id:
+                            wildcard_node = prompt[wildcard_id]
+                            seed = wildcard_node["inputs"]["seed_num"] if "seed_num" in wildcard_node["inputs"] else None
+                            return seed
+                        else:
+                            return find_link_clip_id(id, seed, wildcard_id)
+            else:
+                return None
+        else:
+            return None
     if "__" in text:
-        for i in prompt:
-            if "wildcards" in prompt[i]['class_type'] and text == prompt[i]['inputs']['text']:
-                return prompt[i]['inputs']['seed_num'] if "seed_num" in prompt[i]['inputs'] else None
+        seed = None
+        for id in prompt:
+            node = prompt[id]
+            if "wildcards" in node["class_type"]:
+                wildcard_id = id
+                return find_link_clip_id(str(clip_id), seed, wildcard_id)
+        return seed
     else:
         return None
 
@@ -1352,12 +1379,21 @@ class stylesPromptSelector:
 
 
     def replace_repeat(self, prompt):
-        arr = prompt.replace("，", ",").split(",")
+        prompt = prompt.replace("，", ",")
+        arr = prompt.split(",")
         if len(arr) != len(set(arr)):
-            for i in range(len(arr)):
-                arr[i] = arr[i].strip()
-            arr = list(set(arr))
-            return ", ".join(arr)
+            all_weight_prompt = re.findall(re.compile(r'[(](.*?)[)]', re.S), prompt)
+            if len(all_weight_prompt) > 0:
+                # others_prompt = prompt
+                # for w_prompt in all_weight_prompt:
+                # others_prompt = others_prompt.replace('(','').replace(')','')
+                # print(others_prompt)
+                return prompt
+            else:
+                for i in range(len(arr)):
+                    arr[i] = arr[i].strip()
+                arr = list(set(arr))
+                return ", ".join(arr)
         else:
             return prompt
 
@@ -1911,10 +1947,10 @@ class fullLoader:
             is_negative_linked_styles_selector = True if prompt[inputs_negative_values[0]] and prompt[inputs_negative_values[0]]['class_type'] == 'easy stylesSelector' else False
 
         log_node_warn("正在处理提示词...")
-        positive_seed = find_wildcards_seed(positive, prompt)
+        positive_seed = find_wildcards_seed(my_unique_id, positive, prompt)
         model, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(positive, model, clip, "Positive", positive_seed, can_load_lora, pipe_lora_stack)
         positive_wildcard_prompt = positive_decode if show_positive_prompt or is_positive_linked_styles_selector else ""
-        negative_seed = find_wildcards_seed(negative, prompt)
+        negative_seed = find_wildcards_seed(my_unique_id, negative, prompt)
         model, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(negative, model, clip,
                                                                                           "Negative", negative_seed, can_load_lora, pipe_lora_stack)
         negative_wildcard_prompt = negative_decode if show_negative_prompt or is_negative_linked_styles_selector else ""
@@ -2068,7 +2104,7 @@ class comfyLoader:
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
             "optional": {"optional_lora_stack": ("LORA_STACK",)},
-            "hidden": {"prompt": "PROMPT", "positive_weight_interpretation": "comfy", "negative_weight_interpretation": "comfy"}, "my_unique_id": "UNIQUE_ID"}
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}}
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
     RETURN_NAMES = ("pipe", "model", "vae")
@@ -2279,6 +2315,7 @@ class svdLoader:
                 }
 
         return (pipe, model, vae)
+
 
 # lora
 class loraStackLoader:
@@ -5249,8 +5286,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy loraStack": "EasyLoraStack",
     "easy controlnetLoader": "EasyControlnet",
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
+    "easy photoMakerApply": "Apply PhotoMaker",
     # latent 潜空间
-    "easy latentNoisy": "latentNoisy",
+    "easy latentNoisy": "LatentNoisy",
     "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",
     # seed 随机种
     "easy seed": "EasySeed",
