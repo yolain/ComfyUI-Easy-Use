@@ -29,6 +29,12 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-01-21**
+
+- Compatible with styles paths
+- Fixed `easy comfyLoader` error
+- Fixed xyPlot error when connecting to zero123
+
 **v1.0.3（2024-01-19）**
 
 - Fixed the error message in the loader when the prompt word was component

@@ -1355,8 +1355,9 @@ class stylesPromptSelector:
     @classmethod
     def INPUT_TYPES(s):
         styles = ["fooocus_styles"]
-        for file_name in os.listdir(os.path.join(__file__, "../../styles")):
-            file = os.path.join(__file__, "../../styles", file_name)
+        styles_dir = os.path.join(Path(__file__).parent.parent, "styles")
+        for file_name in os.listdir(styles_dir):
+            file = os.path.join(styles_dir, file_name)
             if os.path.isfile(file) and file_name.endswith(".json") and "styles" in file_name.split(".")[0]:
                 styles.append(file_name.split(".")[0])
         return {
@@ -3200,9 +3201,9 @@ class samplerFull:
 
             plot_image_vars = {
                 "x_node_type": sampleXYplot.x_node_type, "y_node_type": sampleXYplot.y_node_type,
-                "lora_name": pipe["loader_settings"]["lora_name"],
-                "lora_model_strength": pipe["loader_settings"]["lora_model_strength"],
-                "lora_clip_strength": pipe["loader_settings"]["lora_clip_strength"],
+                "lora_name": pipe["loader_settings"]["lora_name"] if "lora_name" in pipe["loader_settings"] else None,
+                "lora_model_strength": pipe["loader_settings"]["lora_model_strength"] if "lora_model_strength" in pipe["loader_settings"] else None,
+                "lora_clip_strength": pipe["loader_settings"]["lora_clip_strength"] if "lora_clip_strength" in pipe["loader_settings"] else None,
                 "lora_stack":  pipe["loader_settings"]["lora_stack"] if "lora_stack" in pipe["loader_settings"] else None,
                 "steps": steps,
                 "cfg": cfg,
@@ -3214,15 +3215,15 @@ class samplerFull:
                 "model": samp_model, "vae": samp_vae, "clip": samp_clip, "positive_cond": samp_positive,
                 "negative_cond": samp_negative,
 
-                "ckpt_name": pipe['loader_settings']['ckpt_name'],
-                "vae_name": pipe['loader_settings']['vae_name'],
-                "clip_skip": pipe['loader_settings']['clip_skip'],
-                "positive": pipe['loader_settings']['positive'],
-                "positive_token_normalization": pipe['loader_settings']['positive_token_normalization'],
-                "positive_weight_interpretation": pipe['loader_settings']['positive_weight_interpretation'],
-                "negative": pipe['loader_settings']['negative'],
-                "negative_token_normalization": pipe['loader_settings']['negative_token_normalization'],
-                "negative_weight_interpretation": pipe['loader_settings']['negative_weight_interpretation'],
+                "ckpt_name": pipe['loader_settings']['ckpt_name'] if "ckpt_name" in pipe["loader_settings"] else None,
+                "vae_name": pipe['loader_settings']['vae_name'] if "vae_name" in pipe["loader_settings"] else None,
+                "clip_skip": pipe['loader_settings']['clip_skip'] if "clip_skip" in pipe["loader_settings"] else None,
+                "positive": pipe['loader_settings']['positive'] if "positive" in pipe["loader_settings"] else None,
+                "positive_token_normalization": pipe['loader_settings']['positive_token_normalization'] if "positive_token_normalization" in pipe["loader_settings"] else None,
+                "positive_weight_interpretation": pipe['loader_settings']['positive_weight_interpretation'] if "positive_weight_interpretation" in pipe["loader_settings"] else None,
+                "negative": pipe['loader_settings']['negative'] if "negative" in pipe["loader_settings"] else None,
+                "negative_token_normalization": pipe['loader_settings']['negative_token_normalization'] if "negative_token_normalization" in pipe["loader_settings"] else None,
+                "negative_weight_interpretation": pipe['loader_settings']['negative_weight_interpretation'] if "negative_weight_interpretation" in pipe["loader_settings"] else None,
             }
 
             if "models" in pipe["loader_settings"]:

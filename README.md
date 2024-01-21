@@ -37,6 +37,12 @@
 
 ## 更新日志
 
+**2024-01-21**
+
+- 兼容 styles 路径写法
+- 修复 `easy comfyLoader` 读取错误
+- 修复 xyPlot 在连接 zero123 时报错
+
 **v1.0.3（2024-01-19）**
 
 - 修复加载器中提示词为组件时报错
@@ -54,20 +60,23 @@
 
 - 替换了XY图生成时的字体文件
 
-**2024-01-09**
+<details>
+<summary><b>2024-01-09</b></summary>
 
 - 修复 `easy imageInsetCrop` 测量值为百分比时步进为1
 - 修复 开启 `a1111_prompt_style` 时XY图表无法使用的问题
 - 增加了一个 **autocomplete** 文件夹，如果您安装了 [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts), 将在启动时合并该文件夹下的所有txt文件并覆盖到pyssss包里的autocomplete.txt文件。
 - 右键菜单中增加了一个 `📜Groups Map(EasyUse)` 
+</details>
 
-**2024-01-08** 
+<details>
+<summary><b>2024-01-08</b></summary>
 
 - 修改 `easy fullLoader` 和 `easy a1111Loader` 中的 **a1111_prompt_style** 默认值为 False
 - `easy XYInputs ModelMergeBlocks` 支持csv文件导入数值
 - 修复 `easy pipeToBasicPipe` 报错
 - 移除了 `easy imageRemBg` (很多包中都有移除背景的节点，由于比较占用ComfyUI启动加载时间，这次更新中注释掉了其相关代码)
-
+</details>
 
 **v1.0.2（2024-01-05）**
 
