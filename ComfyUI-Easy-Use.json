@@ -390,8 +390,8 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "image_to_latent": "图像转潜空间",
-      "latent": "潜空间"
+      "image_to_latent": "图像（可选）",
+      "latent": "潜空间（可选）"
     },
     "outputs": {
       "pipe": "节点束"
@@ -456,11 +456,11 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "model": "模型",
-      "positive": "正向条件",
-      "negative": "反向条件",
-      "image_to_latent": "图像转潜空间",
-      "latent": "潜空间"
+      "model": "模型（可选）",
+      "positive": "正向条件（可选）",
+      "negative": "反向条件（可选）",
+      "image_to_latent": "图像（可选）",
+      "latent": "潜空间（可选）"
     },
     "outputs": {
       "pipe": "节点束",
@@ -480,7 +480,7 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "model": "模型"
+      "model": "模型（可选）"
     },
      "outputs": {
       "pipe": "节点束",
@@ -495,7 +495,7 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "model": "模型"
+      "model": "模型（可选）"
     },
      "outputs": {
       "pipe": "节点束",
@@ -510,8 +510,8 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "model": "模型",
-      "mask": "遮罩"
+      "model": "模型（可选）",
+      "mask": "遮罩（可选）"
     },
      "outputs": {
       "pipe": "节点束",
@@ -527,7 +527,7 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "model": "模型"
+      "model": "模型（可选）"
     },
      "outputs": {
       "pipe": "节点束",
@@ -541,7 +541,7 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "model": "模型"
+      "model": "模型（可选）"
     },
      "outputs": {
       "pipe": "节点束",

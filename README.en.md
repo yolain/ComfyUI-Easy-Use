@@ -29,9 +29,15 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-01-22**
+
+- Fixed `easy XYInputs: Sampler/Scheduler` Error
+- Fixed the right menu has a problem when clicking the button
+- Adjust the UI theme, divided into two sets of styles: the official default background and the dark black background, which can be switched in the color palette in the settings
+
 **2024-01-21**
 
-- Compatible with styles paths
+- Modify the styles path to be compatible with other environments
 - Fixed `easy comfyLoader` error
 - Fixed xyPlot error when connecting to zero123
 

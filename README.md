@@ -37,9 +37,15 @@
 
 ## 更新日志
 
+**2024-01-22**
+
+- 修复 `easy XYInputs: Sampler/Scheduler` 报错
+- 修复 右侧菜单 点击按钮时老是跑位的问题 
+- 调整UI主题，分为官方默认背景和深黑色背景两套样式，可在设置里调色板里切换（调整原因：深黑色背景对亮度较暗的用户和UP主不太友好）
+
 **2024-01-21**
 
-- 兼容 styles 路径写法
+- 修改 styles 路径以兼容其他环境
 - 修复 `easy comfyLoader` 读取错误
 - 修复 xyPlot 在连接 zero123 时报错
 
@@ -52,13 +58,17 @@
 - 修复 `easy getNode` 和 `easy setNode` 加载时标题未更改
 - 修复所有采样器中存储图片使用子目录前缀不生效的问题
 
-**2024-01-12**
+<details>
+<summary>2024-01-12</summary>
 
 - 修复在Comfy新版本中UI加载失败
+</details>
 
-**2024-01-11**
+<details>
+<summary>2024-01-11</summary>
 
 - 替换了XY图生成时的字体文件
+</details>
 
 <details>
 <summary><b>2024-01-09</b></summary>

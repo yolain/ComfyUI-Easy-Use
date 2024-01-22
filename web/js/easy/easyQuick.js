@@ -8,10 +8,12 @@ const processBarId = "Comfy.EasyUse.queueProcessBar"
 
 let enableNodeTemplateShortcut = true
 let enableQueueProcess = false
+const locale = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
+
 export function addNodeTemplateShortcutSetting(app) {
 	app.ui.settings.addSetting({
 		id: nodeTemplateShortcutId,
-		name: "Enable ALT+1~9 to paste nodes from nodes template (ComfyUI-Easy-Use)",
+		name: locale == 'zh-CN' ? "启用ALT1~9从节点模板粘贴到工作流（ComfyUI-Easy-Use）" : "Enable ALT+1~9 to paste nodes from nodes template (ComfyUI-Easy-Use)",
 		type: "boolean",
 		defaultValue: enableNodeTemplateShortcut,
 		onChange(value) {
@@ -22,7 +24,7 @@ export function addNodeTemplateShortcutSetting(app) {
 export function addQueueProcessSetting(app) {
 	app.ui.settings.addSetting({
 		id: processBarId,
-		name: "Enable process bar in queue button (ComfyUI-Easy-Use)",
+		name: locale == 'zh-CN' ? "启用提示词队列进度显示条（ComfyUI-Easy-Use）" : "Enable process bar in queue button (ComfyUI-Easy-Use)",
 		type: "boolean",
 		defaultValue: enableNodeTemplateShortcut,
 		onChange(value) {

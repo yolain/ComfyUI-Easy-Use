@@ -243,6 +243,7 @@ app.registerExtension({
         const getCanvasMenuOptions = LGraphCanvas.prototype.getCanvasMenuOptions;
         LGraphCanvas.prototype.getCanvasMenuOptions = function () {
             const options = getCanvasMenuOptions.apply(this, arguments);
+            const locale = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
             let draggerEl = null
             let isGroupMapcanMove = true
             let emptyImg = new Image()
@@ -250,9 +251,8 @@ app.registerExtension({
 
             options.push(null,
                 {
-                    content: "📜Groups Map (EasyUse)",
+                    content: locale == 'zh-CN' ? "📜管理组 (EasyUse)" : "📜Groups Map (EasyUse)",
                     callback: () => {
-                        const locale = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
                         let groups = app.canvas.graph._groups
                         let nodes = app.canvas.graph._nodes
                         let groups_len = groups.length
@@ -489,7 +489,7 @@ app.registerExtension({
                         }
 
                     }
-                }
+                },
             );
             return options;
         };

@@ -631,10 +631,16 @@ class easyXYPlot:
                 last_step = int(x_value) if self.x_type == "EndStep" else int(y_value)
             if self.x_type == "CFG Scale" or self.y_type == "CFG Scale":
                 cfg = float(x_value) if self.x_type == "CFG Scale" else float(y_value)
-            if self.x_type == "Sampler" or self.y_type == "Sampler" or self.y_type == "Sampler & Scheduler":
-                sampler_name = float(x_value) if self.x_type == "Sampler" or self.x_type == "Sampler & Scheduler" else float(y_value)
-            if self.x_type == "Scheduler" or self.y_type == "Scheduler" or self.y_type == "Sampler & Scheduler":
-                scheduler = float(x_value) if self.x_type == "Scheduler" or self.x_type == "Sampler & Scheduler" else float(y_value)
+            if self.x_type == "Sampler" or self.y_type == "Sampler":
+                sampler_name = x_value if self.x_type == "Sampler" else y_value
+            if self.x_type == "Scheduler" or self.y_type == "Scheduler":
+                scheduler = x_value if self.x_type == "Scheduler" else y_value
+            if self.x_type == "Sampler&Scheduler" or self.y_type == "Sampler&Scheduler":
+                arr = x_value.split(',') if self.x_type == "Sampler&Scheduler" else y_value.split(',')
+                if arr[0] and arr[0]!= 'None':
+                    sampler_name = arr[0]
+                if arr[1] and arr[1]!= 'None':
+                    scheduler = arr[1]
             if self.x_type == "Denoise" or self.y_type == "Denoise":
                 denoise = float(x_value) if self.x_type == "Denoise" else float(y_value)
             if self.x_type == "Pos Condition" or self.y_type == "Pos Condition":
@@ -4820,12 +4826,16 @@ class XYplot_Sampler_Scheduler:
         elif target_parameter == "sampler":
             axis = "advanced: Sampler"
             samplers = [kwargs.get(f"sampler_{i}") for i in range(1, input_count + 1)]
-            values = [(sampler, None) for sampler in samplers if sampler != "None"]
+            values = [sampler for sampler in samplers if sampler != "None"]
         else:
             axis = "advanced: Sampler&Scheduler"
             samplers = [kwargs.get(f"sampler_{i}") for i in range(1, input_count + 1)]
             schedulers = [kwargs.get(f"scheduler_{i}") for i in range(1, input_count + 1)]
-            values = [(sampler, scheduler if scheduler != "None" else None) for sampler, scheduler in zip(samplers, schedulers) if sampler != "None"]
+            values = []
+            for sampler, scheduler in zip(samplers, schedulers):
+                sampler = sampler if sampler else 'None'
+                scheduler = scheduler if scheduler else 'None'
+                values.append(sampler +', '+ scheduler)
         values = "; ".join(values)
         return ({"axis": axis, "values": values},) if values else (None,)
 
