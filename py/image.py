@@ -1,5 +1,9 @@
 from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 from enum import Enum
+import datetime
+import re
+import json
 import os
 import hashlib
 import folder_paths
@@ -218,6 +222,109 @@ class imageSizeByLongerSide:
       result = (0,)
     return {"ui": {"text": str(result[0])}, "result": result}
 
+# 图像缩放
+class imageScaleDown:
+  crop_methods = ["disabled", "center"]
+
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+        "width": (
+          "INT",
+          {"default": 512, "min": 1, "max": MAX_RESOLUTION, "step": 1},
+        ),
+        "height": (
+          "INT",
+          {"default": 512, "min": 1, "max": MAX_RESOLUTION, "step": 1},
+        ),
+        "crop": (s.crop_methods,),
+      }
+    }
+
+  RETURN_TYPES = ("IMAGE",)
+  CATEGORY = "EasyUse/Image"
+  FUNCTION = "image_scale_down"
+
+  def image_scale_down(self, images, width, height, crop):
+    if crop == "center":
+      old_width = images.shape[2]
+      old_height = images.shape[1]
+      old_aspect = old_width / old_height
+      new_aspect = width / height
+      x = 0
+      y = 0
+      if old_aspect > new_aspect:
+        x = round((old_width - old_width * (new_aspect / old_aspect)) / 2)
+      elif old_aspect < new_aspect:
+        y = round((old_height - old_height * (old_aspect / new_aspect)) / 2)
+      s = images[:, y: old_height - y, x: old_width - x, :]
+    else:
+      s = images
+
+    results = []
+    for image in s:
+      img = tensor2pil(image).convert("RGB")
+      img = img.resize((width, height), Image.LANCZOS)
+      results.append(pil2tensor(img))
+
+    return (torch.cat(results, dim=0),)
+
+# 图像缩放比例
+class imageScaleDownBy(imageScaleDown):
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+        "scale_by": (
+          "FLOAT",
+          {"default": 0.5, "min": 0.01, "max": 1.0, "step": 0.01},
+        ),
+      }
+    }
+
+  RETURN_TYPES = ("IMAGE",)
+  CATEGORY = "EasyUse/Image"
+  FUNCTION = "image_scale_down_by"
+
+  def image_scale_down_by(self, images, scale_by):
+    width = images.shape[2]
+    height = images.shape[1]
+    new_width = int(width * scale_by)
+    new_height = int(height * scale_by)
+    return self.image_scale_down(images, new_width, new_height, "center")
+
+# 图像缩放尺寸
+class imageScaleDownToSize(imageScaleDownBy):
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+        "size": ("INT", {"default": 512, "min": 1, "max": MAX_RESOLUTION, "step": 1}),
+        "mode": ("BOOLEAN", {"default": True, "label_on": "max", "label_off": "min"}),
+      }
+    }
+
+  RETURN_TYPES = ("IMAGE",)
+  CATEGORY = "EasyUse/Image"
+  FUNCTION = "image_scale_down_to_size"
+
+  def image_scale_down_to_size(self, images, size, mode):
+    width = images.shape[2]
+    height = images.shape[1]
+
+    if mode:
+      scale_by = size / max(width, height)
+    else:
+      scale_by = size / min(width, height)
+
+    scale_by = min(scale_by, 1.0)
+    return self.image_scale_down_by(images, scale_by)
+
+
 # 图像完美像素
 class imagePixelPerfect:
   @classmethod
@@ -296,6 +403,110 @@ class imageToMask:
     image = pil2tensor(image)
     return (image.squeeze().mean(2),)
 
+# 图像保存 (简易)
+from comfy.cli_args import args
+class imageSaveSimple:
+
+  def __init__(self):
+    self.output_dir = folder_paths.get_output_directory()
+    self.type = "output"
+
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required":
+              {"images": ("IMAGE",),
+               "filename_prefix": ("STRING", {"default": "ComfyUI"}),},
+              "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+            }
+
+  RETURN_TYPES = ()
+  FUNCTION = "save"
+  OUTPUT_NODE = True
+  CATEGORY = "EasyUse/Image"
+
+  @staticmethod
+  def _format_date(text: str, date: datetime.datetime) -> str:
+    """Format the date according to specific patterns."""
+    date_formats = {
+      'd': lambda d: d.day,
+      'dd': lambda d: '{:02d}'.format(d.day),
+      'M': lambda d: d.month,
+      'MM': lambda d: '{:02d}'.format(d.month),
+      'h': lambda d: d.hour,
+      'hh': lambda d: '{:02d}'.format(d.hour),
+      'm': lambda d: d.minute,
+      'mm': lambda d: '{:02d}'.format(d.minute),
+      's': lambda d: d.second,
+      'ss': lambda d: '{:02d}'.format(d.second),
+      'y': lambda d: d.year,
+      'yy': lambda d: str(d.year)[2:],
+      'yyy': lambda d: str(d.year)[1:],
+      'yyyy': lambda d: d.year,
+    }
+
+    # We need to sort the keys in reverse order to ensure we match the longest formats first
+    for format_str in sorted(date_formats.keys(), key=len, reverse=True):
+      if format_str in text:
+        text = text.replace(format_str, str(date_formats[format_str](date)))
+    return text
+
+  def save(self, images, filename_prefix="ComfyUI", prompt=None, extra_pnginfo=None):
+
+    filename_prefix = re.sub(r'%date:(.*?)%', lambda m: self._format_date(m.group(1), datetime.datetime.now()),
+                      filename_prefix)
+    full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
+
+    results = list()
+    for image in images:
+      img = Image.fromarray(np.clip(255. * image.cpu().numpy(), 0, 255).astype(np.uint8))
+      filename = filename.replace("%width%", str(img.size[0])).replace("%height%", str(img.size[1]))
+
+      metadata = None
+      metadata = PngInfo()
+      if prompt is not None:
+        metadata.add_text("prompt", json.dumps(prompt))
+      if extra_pnginfo is not None:
+        for x in extra_pnginfo:
+          metadata.add_text(x, json.dumps(extra_pnginfo[x]))
+
+      file = f"{filename}_{counter:05}_.png"
+      img.save(os.path.join(full_output_folder, file), pnginfo=metadata)
+      results.append({
+        "filename": file,
+        "subfolder": subfolder,
+        "type": self.type
+      })
+      counter += 1
+
+    return { "ui": { "images": results } }
+# 图像批次合并
+class JoinImageBatch:
+  """Turns an image batch into one big image."""
+
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+        "mode": (("horizontal", "vertical"), {"default": "horizontal"}),
+      },
+    }
+
+  RETURN_TYPES = ("IMAGE",)
+  RETURN_NAMES = ("image",)
+  FUNCTION = "join"
+  CATEGORY = "EasyUse/Image"
+
+  def join(self, images, mode):
+    n, h, w, c = images.shape
+    image = None
+    if mode == "vertical":
+      # for vertical we can just reshape
+      image = images.reshape(1, n * h, w, c)
+    elif mode == "horizontal":
+      # for horizontal we have to swap axes
+      image = torch.transpose(torch.transpose(images, 1, 2).reshape(1, n * w, h, c), 1, 2)
+    return (image,)
 
 # 姿势编辑器
 class poseEditor:
@@ -345,7 +556,12 @@ NODE_CLASS_MAPPINGS = {
   "easy imageSizeBySide": imageSizeBySide,
   "easy imageSizeByLongerSide": imageSizeByLongerSide,
   "easy imagePixelPerfect": imagePixelPerfect,
+  "easy imageScaleDown": imageScaleDown,
+  "easy imageScaleDownBy": imageScaleDownBy,
+  "easy imageScaleDownToSize": imageScaleDownToSize,
   "easy imageToMask": imageToMask,
+  "easy imageSave": imageSaveSimple,
+  "easy joinImageBatch": JoinImageBatch,
   "easy poseEditor": poseEditor
 }
 
@@ -355,7 +571,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageSizeBySide": "ImageSize (Side)",
   "easy imageSizeByLongerSide": "ImageSize (LongerSide)",
   "easy imagePixelPerfect": "ImagePixelPerfect",
+  "easy imageScaleDown": "Image Scale Down",
+  "easy imageScaleDownBy": "Image Scale Down By",
+  "easy imageScaleDownToSize": "Image Scale Down To Size",
   "easy imageToMask": "ImageToMask",
   "easy imageHSVMask": "ImageHSVMask",
+  "easy imageSave": "SaveImage (Simple)",
+  "easy joinImageBatch": "JoinImageBatch",
   "easy poseEditor": "PoseEditor"
 }

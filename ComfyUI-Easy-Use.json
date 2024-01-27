@@ -127,6 +127,7 @@
     "inputs": {
       "optional_lora_stack": "Lora堆（可选）",
       "model_override": "模型（可选）",
+      "vae_override": "VAE（可选）",
       "clip_override": "CLIP（可选）"
     },
     "outputs": {
@@ -265,7 +266,9 @@
     "widgets": {
       "control_net_name": "ControlNet",
       "strength": "强度",
-      "start_percent": "开始时间"
+      "start_percent": "开始时间",
+      "end_percent": "结束时间",
+      "scale_soft_weights": "缩放柔和权重"
     },
     "inputs": {
       "pipe": "节点束",
@@ -1112,6 +1115,45 @@
       "image": "图像"
     }
   },
+  "easy imageScaleDown": {
+    "title": "图像缩小",
+    "inputs": {
+     "images": "图像"
+    },
+    "widgets": {
+      "width": "宽度",
+      "height": "高度",
+      "crop": "裁切"
+    },
+    "outputs": {
+     "IMAGE": "图像"
+    }
+  },
+  "easy imageScaleDownBy": {
+    "title": "图像缩小（按比例）",
+    "inputs": {
+     "images": "图像"
+    },
+    "widgets": {
+      "scale_by": "缩小比例"
+    },
+    "outputs": {
+     "IMAGE": "图像"
+    }
+  },
+  "easy imageScaleDownToSize": {
+    "title": "图像缩小（按边）",
+    "inputs": {
+     "images": "图像"
+    },
+    "widgets": {
+      "size": "尺寸",
+      "mode": "模式"
+    },
+    "outputs": {
+     "IMAGE": "图像"
+    }
+  },
   "easy imagePixelPerfect": {
     "title": "图像完美像素",
     "widgets": {
@@ -1124,7 +1166,28 @@
       "image": "图像"
     },
     "outputs": {
-      "resolution": "分辨率(整数)"
+      "resolution": "分辨率（整数）"
+    }
+  },
+  "easy imageSave": {
+    "title": "图像保存",
+    "inputs":{
+      "images": "图像"
+    },
+    "widgets": {
+      "filename_prefix": "图片名前缀"
+    }
+  },
+  "easy joinImageBatch": {
+    "title": "合并图像批次",
+    "inputs": {
+      "images": "图像"
+    },
+    "widgets": {
+      "mode": "合并模式"
+    },
+    "outputs": {
+      "image": "图像"
     }
   },
   "easy poseEditor": {
@@ -1142,6 +1205,84 @@
     "title": "显示推理时间",
     "inputs": {
       "pipe": "节点束"
+    }
+  },
+  "easy string": {
+    "title": "字符串",
+    "widgets": {
+      "value": "值"
+    }
+  },
+  "easy int": {
+    "title": "整数",
+    "widgets": {
+      "value": "值"
+    }
+  },
+  "easy rangeInt": {
+    "title": "整数（范围）",
+    "widgets": {
+      "range_mode": "范围模式",
+      "start": "开始",
+      "stop": "终止",
+      "step": "步进",
+      "end_mode": "结束模式",
+      "num_steps": "步进数量"
+    }
+  },
+  "easy float": {
+    "title": "浮点数",
+    "widgets": {
+      "value": "值"
+    }
+  },
+  "easy rangeFloat": {
+    "title": "浮点数（范围）",
+    "widgets": {
+      "range_mode": "范围模式",
+      "start": "开始",
+      "stop": "终止",
+      "step": "步进",
+      "end_mode": "结束模式",
+      "num_steps": "步进数量"
+    }
+  },
+  "easy boolean": {
+    "title": "布尔",
+    "widgets": {
+      "value": "值"
+    }
+  },
+  "easy compare": {
+    "title": "比较",
+    "widgets": {
+      "comparison": "比较方式"
+    }
+  },
+  "easy if": {
+    "title": "If判断",
+    "inputs": {
+      "any": "输入任何"
+    }
+  },
+  "easy xyAny": {
+    "widgets": {
+      "direction": "方向"
+    }
+  },
+  "easy convertAnything": {
+    "title": "转换任何",
+    "inputs": {
+      "anything": "输入任何"
+    },
+    "widgets": {
+      "output_type": "输出类型"
+    }
+  },
+  "easy showAnything": {
+    "title": "展示任何",
+    "inputs": {
+      "anything": "输入任何"
     }
   }
 }

@@ -18,11 +18,6 @@ import latent_preview
 import comfy.model_base
 import comfy.model_management
 from comfy.sd import CLIP, VAE
-import comfy.clip_vision
-from comfy.clip_vision import ClipVisionModel
-import comfy.clip_model
-import comfy.sd1_clip
-from comfy.sd1_clip import escape_important, token_weights, unescape_important
 from pathlib import Path
 from urllib.request import urlopen
 from collections import defaultdict
@@ -31,9 +26,6 @@ from PIL import Image, ImageDraw, ImageFont
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
 from typing import Dict, List, Optional, Tuple, Union, Any
-from transformers import CLIPImageProcessor
-from transformers.image_utils import PILImageResampling
-from itertools import zip_longest
 from .adv_encode import advanced_encode, advanced_encode_XL
 
 from server import PromptServer
@@ -496,9 +488,7 @@ class easyXYPlot:
             value_label = f"{value_type}: {value}"
 
         if "ControlNet" in value_type:
-            if "," in value:
-                line = value.split(',')
-                value_label = f"{value_type}: {line[2]}"
+            value_label = f"ControlNet {index + 1}"
 
         if value_type in ["ModelMergeBlocks"]:
             if ":" in value:
@@ -757,6 +747,9 @@ class easyXYPlot:
                                                                 w_max=1.0,
                                                                 apply_to_pooled="enable")
                     positive = [[positive, {"pooled_output": positive_pooled}]]
+                    if "positive_cond" in plot_image_vars:
+                        positive = positive + plot_image_vars["positive_cond"]
+
             if "Negative" in self.x_type or "Negative" in self.y_type:
                 if self.x_type == 'Negative Prompt S/R' or self.y_type == 'Negative Prompt S/R':
                     negative = x_value if self.x_type == "Negative Prompt S/R" else y_value
@@ -779,6 +772,8 @@ class easyXYPlot:
                                                                 w_max=1.0,
                                                                 apply_to_pooled="enable")
                     negative = [[negative, {"pooled_output": negative_pooled}]]
+                    if "negative_cond" in plot_image_vars:
+                        positive = positive + plot_image_vars["negative_cond"]
 
             # ControlNet
             if "ControlNet" in self.x_type or "ControlNet" in self.y_type:
@@ -794,20 +789,15 @@ class easyXYPlot:
                 }
                 cnet = plot_image_vars["cnet"] if "cnet" in plot_image_vars else None
                 if cnet:
-                    strength, start_percent, end_percent = x_value.split(',') if "ControlNet" in self.x_type else y_value.split(',')
-                    strength = float(strength)
-                    start_percent = float(start_percent)
-                    end_percent = float(end_percent)
-                    for index, item in enumerate(cnet):
-                        control_net_names = item[0]
+                    index = x_value if "ControlNet" in self.x_type else y_value
+                    controlnet = cnet[index]
+                    for index, item in enumerate(controlnet):
+                        control_net_name = item[0]
                         image = item[1]
-                        for idx, control_net_name in enumerate(control_net_names):
-                            # print(control_net_name)
-                            _pipe, = controlnetAdvanced().controlnetApply(_pipe, image, control_net_name, None, strength, start_percent,
-                                        end_percent)
-
-                            positive = _pipe['positive']
-                            negative = _pipe['negative']
+                        strength = item[2]
+                        start_percent = item[3]
+                        end_percent = item[4]
+                        _pipe, positive, negative = controlnetAdvanced().controlnetApply(_pipe, image, control_net_name, None, strength, start_percent, end_percent, 1)
 
                 del _pipe
 
@@ -1382,7 +1372,7 @@ class stylesPromptSelector:
 
     CATEGORY = 'EasyUse/Prompt'
     FUNCTION = 'run'
-    OUTPUT_MODE = True
+    OUTPUT_NODE = True
 
 
     def replace_repeat(self, prompt):
@@ -1727,7 +1717,7 @@ class latentCompositeMaskedWithCond:
     RETURN_TYPES = ("PIPE_LINE", "LATENT", "CONDITIONING")
     RETURN_NAMES = ("pipe", "latent", "conditioning",)
     FUNCTION = "run"
-    OUTPUT_MODE = True
+    OUTPUT_NODE = True
 
     CATEGORY = "EasyUse/Latent"
 
@@ -2363,7 +2353,7 @@ class loraStackLoader:
 
     def stack(self, toggle, mode, num_loras, lora_stack=None, **kwargs):
         if (toggle in [False, None, "False"]) or not kwargs:
-            return None
+            return (None,)
 
         loras = []
 
@@ -2387,12 +2377,45 @@ class loraStackLoader:
                 loras.append((lora_name, model_strength, clip_strength))
         return (loras,)
 
+class controlnetNameStack:
+
+    def get_file_list(filenames):
+        return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
+
+    controlnets = ["None"] + get_file_list(folder_paths.get_filename_list("controlnet"))
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {},
+            "optional": {
+                "switch_1": (["Off", "On"],),
+                "controlnet_1": (s.controlnets,),
+                "controlnet_strength_1": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+                "start_percent_1": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_percent_1": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "switch_2": (["Off", "On"],),
+                "controlnet_2": (s.controlnets,),
+                "controlnet_strength_2": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+                "start_percent_2": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_percent_2": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "switch_3": (["Off", "On"],),
+                "controlnet_3": (s.controlnets,),
+                "controlnet_strength_3": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+                "start_percent_3": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_percent_3": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "image_1": ("IMAGE",),
+                "image_2": ("IMAGE",),
+                "image_3": ("IMAGE",),
+                "controlnet_stack": ("CONTROL_NET_STACK",)
+            },
+        }
 # controlnet
 class controlnetSimple:
     @classmethod
     def INPUT_TYPES(s):
         def get_file_list(filenames):
             return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
+
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
@@ -2516,7 +2539,7 @@ class controlnetAdvanced:
     CATEGORY = "EasyUse/Loaders"
 
 
-    def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=0):
+    def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=1):
         if control_net is None:
             if scale_soft_weights < 1:
                 if "ScaledSoftControlNetWeights" in ALL_NODE_CLASS_MAPPINGS:
@@ -4615,9 +4638,8 @@ class pipeXYPlotAdvanced:
                 x_values = []
                 cnet = []
                 for index, value in enumerate(x_value):
-                    cnet_stack, image, strength, start_percent, end_percent = value
-                    cnet.append((cnet_stack, image,), )
-                    x_values.append((",".join((str(strength), str(start_percent), str(end_percent),))),)
+                    cnet.append(value)
+                    x_values.append(str(index))
                 x_values = "; ".join(x_values)
                 new_pipe['loader_settings'] = {
                     **pipe['loader_settings'],
@@ -4629,9 +4651,8 @@ class pipeXYPlotAdvanced:
                 y_values = []
                 cnet = []
                 for index, value in enumerate(y_value):
-                    cnet_stack, image, strength, start_percent, end_percent = value
-                    cnet.append((cnet_stack, image,),)
-                    y_values.append((",".join((str(strength), str(start_percent), str(end_percent),))),)
+                    cnet.append(value)
+                    y_values.append(str(index))
                 y_values = "; ".join(y_values)
                 new_pipe['loader_settings'] = {
                     **pipe['loader_settings'],
@@ -5021,49 +5042,43 @@ class XYplot_Control_Net:
 
         axis, = None,
 
-        # If cnet_stack is provided, extend each inner array with its content
-        # if cnet_stack:
-        #     for inner_list in values:
-        #         inner_list.extend(cnet_stack)
-        cnet_stack = [control_net_name]
-
         values = []
 
         if target_parameter == "strength":
             axis = "advanced: ControlNetStrength"
 
-            values.append((cnet_stack, image, first_strength, start_percent, end_percent))
+            values.append([(control_net_name, image, first_strength, start_percent, end_percent)])
             strength_increment = (last_strength - first_strength) / (batch_count - 1) if batch_count > 1 else 0
             for i in range(1, batch_count - 1):
-                values.append((cnet_stack, image, first_strength + i * strength_increment, start_percent,
-                                end_percent))
+                values.append([(control_net_name, image, first_strength + i * strength_increment, start_percent,
+                                end_percent)])
             if batch_count > 1:
-                values.append((cnet_stack, image, last_strength, start_percent, end_percent))
+                values.append([(control_net_name, image, last_strength, start_percent, end_percent)])
 
         elif target_parameter == "start_percent":
             axis = "advanced: ControlNetStart%"
 
             percent_increment = (last_start_percent - first_start_percent) / (batch_count - 1) if batch_count > 1 else 0
-            values.append((cnet_stack, image, strength, first_start_percent, end_percent))
+            values.append([(control_net_name, image, strength, first_start_percent, end_percent)])
             for i in range(1, batch_count - 1):
-                values.append((cnet_stack, image, strength, first_start_percent + i * percent_increment,
-                                  end_percent))
+                values.append([(control_net_name, image, strength, first_start_percent + i * percent_increment,
+                                  end_percent)])
 
             # Always add the last start_percent if batch_count is more than 1.
             if batch_count > 1:
-                values.append((cnet_stack, image, strength, last_start_percent, end_percent))
+                values.append((control_net_name, image, strength, last_start_percent, end_percent))
 
         elif target_parameter == "end_percent":
             axis = "advanced: ControlNetEnd%"
 
             percent_increment = (last_end_percent - first_end_percent) / (batch_count - 1) if batch_count > 1 else 0
-            values.append((cnet_stack, image, strength, start_percent, first_end_percent))
+            values.append([(control_net_name, image, image, strength, start_percent, first_end_percent)])
             for i in range(1, batch_count - 1):
-                values.append((cnet_stack, image, strength, start_percent,
-                                  first_end_percent + i * percent_increment))
+                values.append([(control_net_name, image, strength, start_percent,
+                                  first_end_percent + i * percent_increment)])
 
             if batch_count > 1:
-                values.append((cnet_stack, image, strength, start_percent, last_end_percent))
+                values.append([(control_net_name, image, strength, start_percent, last_end_percent)])
 
 
         return ({"axis": axis, "values": values},)

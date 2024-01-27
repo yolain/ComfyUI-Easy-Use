@@ -37,17 +37,27 @@
 
 ## 更新日志
 
+**v1.0.4（2024-01-28）**
+
+- 增加 **Logic** 逻辑类节点 
+- 增加 `easy imageSave` - 带日期转换和宽高格式化的图像保存节点
+- 增加 `easy joinImageBatch` - 合并图像批次
+- 修复 `easy XYInputs: ControlNet` 报错
+- 修复 `easy loraStack` **toggle** 为 disabled 时报错
+
 **2024-01-22**
 
 - 修复 `easy XYInputs: Sampler/Scheduler` 报错
 - 修复 右侧菜单 点击按钮时老是跑位的问题 
 - 调整UI主题，分为官方默认背景和深黑色背景两套样式，可在设置里调色板里切换（调整原因：深黑色背景对亮度较暗的用户和UP主不太友好）
 
-**2024-01-21**
+<details>
+<summary>2024-01-21</summary>>
 
 - 修改 styles 路径以兼容其他环境
 - 修复 `easy comfyLoader` 读取错误
 - 修复 xyPlot 在连接 zero123 时报错
+</details>
 
 **v1.0.3（2024-01-19）**
 
@@ -215,6 +225,7 @@
 | dynamicThresholdingFull    | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull | 
 | easy imageInsetCrop        | [rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | ImageInsetCrop          | 
 | easy poseEditor            | [ComfyUI_Custom_Nodes_AlekPet](https://github.com/AlekPet/ComfyUI_Custom_Nodes_AlekPet) | poseNode                | 
+| easy if                    | [ComfyUI-Logic](https://github.com/theUpsider/ComfyUI-Logic) | IfExecute                    | 
 
 ## 示例
 
@@ -240,9 +251,10 @@
 
 [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes) - 管道节点（节点束）让用户减少了不必要的连接
 
-[ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) - diffus3的获取与设置点让用户可以分离工作流构成 
-
+[ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) - diffus3的获取与设置点让用户可以分离工作流构成
 
 [ComfyUI-Impact-Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack) - 常规整合包1
 
 [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) - 常规整合包2
+
+[ComfyUI-Logic](https://github.com/theUpsider/ComfyUI-Logic) -  ComfyUI逻辑运算

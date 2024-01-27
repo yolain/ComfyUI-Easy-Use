@@ -54,15 +54,16 @@ app.registerExtension({
 	name: 'comfy.easyUse.quick',
 	init() {
         const keybindListener = async function (event) {
-			const modifierPressed = event.altKey;
+			let modifierPressed = event.altKey;
             const isEnabled = getEnableNodeTemplateShortcut()
             if(isEnabled){
                 const mac_alt_nums = ['¡','™','£','¢','∞','§','¶','•','ª']
                 const nums = ['1','2','3','4','5','6','7','8','9']
                 let key = event.key
                 if(mac_alt_nums.includes(key)){
-                    const idx = mac_alt_nums.findIndex(key)
+                    const idx = mac_alt_nums.findIndex(cate=> cate == key)
                     key = nums[idx]
+                    modifierPressed = true
                 }
                 if(['1','2','3','4','5','6','7','8','9'].includes(key) && modifierPressed) {
                     const template = loadTemplate()

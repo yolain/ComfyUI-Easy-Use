@@ -1,5 +1,7 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
+import { ComfyWidgets } from "/scripts/widgets.js";
+
 
 let origProps = {};
 
@@ -146,6 +148,17 @@ function widgetLogic(node, widget) {
 		if (widget.value === "None") widget_names.map(name=> toggleWidget(node, findWidgetByName(node, name)))
 		else if(widget.value == 'Auto') widget_names.map(name =>toggleWidget(node, findWidgetByName(node, name),name == 'block_number' ? true : false))
 		else widget_names.map(name=> toggleWidget(node, findWidgetByName(node, name), true))
+		updateNodeHeight(node)
+	}
+
+	if (widget.name == 'range_mode'){
+		if(widget.value == 'step'){
+			toggleWidget(node, findWidgetByName(node, 'step'), true)
+			toggleWidget(node, findWidgetByName(node, 'num_steps'))
+		}else if(widget.value == 'num_steps'){
+			toggleWidget(node, findWidgetByName(node, 'step'))
+			toggleWidget(node, findWidgetByName(node, 'num_steps'), true)
+		}
 		updateNodeHeight(node)
 	}
 
@@ -329,6 +342,8 @@ app.registerExtension({
 			case "easy XYInputs: Sampler/Scheduler":
 			case "easy XYInputs: PromptSR":
 			case "easy XYInputs: ControlNet":
+			case "easy rangeInt":
+			case "easy rangeFloat":
 				getSetters(node)
 				break
 			case "easy wildcards":
@@ -509,7 +524,6 @@ app.registerExtension({
 					accept: "text/csv",
 					style: "display: none",
 					onchange: async (event) => {
-
 						if (fileInput.files.length) {
 							await uploadFile(fileInput.files[0], true);
 							event.target.value = ''
@@ -646,6 +660,68 @@ app.registerExtension({
 				},1)
 			}
 		}
+
+		if(nodeData.name == 'easy showAnything'){
+			function populate(text) {
+				if (this.widgets) {
+					const pos = this.widgets.findIndex((w) => w.name === "text");
+					if (pos !== -1) {
+						for (let i = pos; i < this.widgets.length; i++) {
+							this.widgets[i].onRemove?.();
+						}
+						this.widgets.length = pos;
+					}
+				}
+
+				for (const list of text) {
+					const w = ComfyWidgets["STRING"](this, "text", ["STRING", { multiline: true }], app).widget;
+					w.inputEl.readOnly = true;
+					w.inputEl.style.opacity = 0.6;
+					w.value = list;
+				}
+
+				requestAnimationFrame(() => {
+					const sz = this.computeSize();
+					if (sz[0] < this.size[0]) {
+						sz[0] = this.size[0];
+					}
+					if (sz[1] < this.size[1]) {
+						sz[1] = this.size[1];
+					}
+					this.onResize?.(sz);
+					app.graph.setDirtyCanvas(true, false);
+				});
+			}
+
+			// When the node is executed we will be sent the input text, display this in the widget
+			const onExecuted = nodeType.prototype.onExecuted;
+			nodeType.prototype.onExecuted = function (message) {
+				onExecuted?.apply(this, arguments);
+				populate.call(this, message.text);
+			};
+
+			const onConfigure = nodeType.prototype.onConfigure;
+			nodeType.prototype.onConfigure = function () {
+				onConfigure?.apply(this, arguments);
+				if (this.widgets_values?.length) {
+					populate.call(this, this.widgets_values);
+				}
+			};
+		}
+
+		if(nodeData.name == 'easy convertAnything'){
+			const onNodeCreated = nodeType.prototype.onNodeCreated;
+			nodeType.prototype.onNodeCreated = async function () {
+				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
+				const type_control = this.widgets[this.widgets.findIndex((w) => w.name === "output_type")]
+				let _this = this
+				type_control.callback = _ => {
+					_this.outputs[0].type = (type_control.value).toUpperCase()
+					_this.outputs[0].name = type_control.value
+				}
+
+			}
+		}
 	}
 });
 
@@ -655,7 +731,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale', 'image_output',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', "downscale_mode"]
+						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode']
 
 function getSetters(node) {
 	if (node.widgets)

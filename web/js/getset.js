@@ -210,7 +210,7 @@ app.registerExtension({
 
 				this.addOutput("*", '*');
 
-				
+
 				this.onConnectionsChange = function(
 					slotType,	//0 = output, 1 = input
 					slot,	//self-explanatory
@@ -224,13 +224,13 @@ app.registerExtension({
 					},1)
 				}
 
-				
+
 				this.setName = function(name) {
 					node.widgets[0].value = name;
 					node.onRename();
 					node.serialize();
 				}
-				
+
 
 				this.onRename = function() {
 					const setter = this.findSetter(node.graph);
@@ -256,7 +256,7 @@ app.registerExtension({
 								node.graph.removeLink(linkId)
 							}
 						})
-					} 
+					}
 				}
 
 				this.setType = function(type) {

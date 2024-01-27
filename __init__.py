@@ -10,7 +10,8 @@ node_list = [
     "api",
     "easyNodes",
     "image",
-    "lllite"
+    "lllite",
+    "logic"
 ]
 
 NODE_CLASS_MAPPINGS = {}

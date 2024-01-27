@@ -384,7 +384,9 @@ app.registerExtension({
                                     e.currentTarget.parentNode.draggable = 'true';
                                 })
                                 text_group_title.addEventListener('mouseleave',e=>{
-                                    isGroupMapcanMove = true
+                                    setTimeout(_=>{
+                                        isGroupMapcanMove = true
+                                    },150)
                                 })
                                 group_item.append(text_group_title)
                                 // 按钮组

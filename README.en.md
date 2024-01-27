@@ -29,6 +29,14 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**v1.0.4（2024-01-28）**
+
+- Added **Logic** nodes
+- Added `easy imageSave` - Image saving node with date conversion and aspect and height formatting
+- Added `easy joinImageBatch`
+- Fixed `easy XYInputs: ControlNet` Error
+- Fixed `easy loraStack` error when **toggle** is disabled
+
 **2024-01-22**
 
 - Fixed `easy XYInputs: Sampler/Scheduler` Error
