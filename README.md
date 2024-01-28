@@ -39,7 +39,9 @@
 
 **v1.0.4（2024-01-28）**
 
-- 增加 **Logic** 逻辑类节点 
+- `easy kSamplerInpainting` 增加 **patch** 传入值，配合Fooocus内补节点使用
+- 增加 `easy fooocusInpaintLoader` - Fooocus内补节点（仅支持XL模型的流程）
+- 增加 **Logic** 逻辑类节点 - 包含类型、计算、判断和转换类型等
 - 增加 `easy imageSave` - 带日期转换和宽高格式化的图像保存节点
 - 增加 `easy joinImageBatch` - 合并图像批次
 - 修复 `easy XYInputs: ControlNet` 报错

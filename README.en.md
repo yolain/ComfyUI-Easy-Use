@@ -31,6 +31,8 @@ After installing the node package, the UI interface will be automatically switch
 
 **v1.0.4（2024-01-28）**
 
+- `easy kSamplerInpainting` Added the **patch** input value to be used with the FooocusInpaintLoader node
+- Added `easy fooocusInpaintLoader` （only the process of SDXLModel is supported）
 - Added **Logic** nodes
 - Added `easy imageSave` - Image saving node with date conversion and aspect and height formatting
 - Added `easy joinImageBatch`

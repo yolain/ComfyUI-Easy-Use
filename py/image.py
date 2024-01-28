@@ -479,6 +479,7 @@ class imageSaveSimple:
       counter += 1
 
     return { "ui": { "images": results } }
+
 # 图像批次合并
 class JoinImageBatch:
   """Turns an image batch into one big image."""

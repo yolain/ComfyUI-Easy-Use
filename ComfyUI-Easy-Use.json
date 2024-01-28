@@ -281,6 +281,9 @@
       "negative": "反向条件"
     }
   },
+  "easy fooocusInpaintLoader": {
+     "title": "Fooocus内补加载器"
+  },
   "easy LLLiteLoader": {
     "title": "简易LLLite",
     "widgets": {

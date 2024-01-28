@@ -6,7 +6,6 @@ import time
 import math
 import torch
 import psutil
-import random
 import datetime
 import comfy.sd
 import comfy.utils
@@ -31,7 +30,7 @@ from .adv_encode import advanced_encode, advanced_encode_XL
 from server import PromptServer
 from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask
 from comfy_extras.nodes_mask import LatentCompositeMasked
-from .config import BASE_RESOLUTIONS
+from .config import BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn, log_node_success
 from .wildcards import process_with_loras, get_wildcard_list
 
@@ -522,7 +521,7 @@ class easyXYPlot:
 
     @staticmethod
     def get_font(font_size):
-        return ImageFont.truetype(str(Path(os.path.join(Path(__file__).parent.parent, 'resources/OpenSans-Medium.ttf'))), font_size)
+        return ImageFont.truetype(str(Path(os.path.join(RESOURCES_DIR, 'OpenSans-Medium.ttf'))), font_size)
 
     @staticmethod
     def update_label(label, value, num_items):
@@ -1156,24 +1155,6 @@ class easySave:
             return f"{filename}_({group_id}).{ext}" if number_padding is None else f"{filename}_{counter:0{number_padding}}_({group_id}).{ext}"
 
     @staticmethod
-    def filename_parser(output_dir: str, filename_prefix: str, prompt: Dict[str, dict], my_unique_id: str,
-                        number_padding: int, group_id: int, ext: str) -> str:
-        """Parse the filename using provided patterns and replace them with actual values."""
-        subfolder = os.path.dirname(os.path.normpath(filename_prefix))
-        filename = os.path.basename(os.path.normpath(filename_prefix))
-
-        filename = re.sub(r'%date:(.*?)%', lambda m: easySave._format_date(m.group(1), datetime.datetime.now()),
-                          filename_prefix)
-        all_inputs = easySave._gather_all_inputs(prompt, my_unique_id)
-
-        filename = re.sub(r'%(.*?)%', lambda m: str(all_inputs.get(m.group(1), '')), filename)
-        filename = re.sub(r'[/\\]+', '-', filename)
-
-        filename = easySave._get_filename_with_padding(output_dir, filename, number_padding, group_id, ext)
-
-        return filename, subfolder
-
-    @staticmethod
     def folder_parser(output_dir: str, prompt: Dict[str, dict], my_unique_id: str):
         output_dir = re.sub(r'%date:(.*?)%', lambda m: easySave._format_date(m.group(1), datetime.datetime.now()),
                             output_dir)
@@ -1203,13 +1184,14 @@ class easySave:
             output_dir = self.output_dir
             filename_prefix = 'easyPreview'
         results = list()
+
+        filename_prefix = re.sub(r'%date:(.*?)%', lambda m: easySave._format_date(m.group(1), datetime.datetime.now()),
+                          filename_prefix)
         full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
             filename_prefix, output_dir, images[0].shape[1], images[0].shape[0])
         for image in images:
             img = Image.fromarray(np.clip(255. * image.cpu().numpy(), 0, 255).astype(np.uint8))
             filename = filename.replace("%width%", str(img.size[0])).replace("%height%", str(img.size[1]))
-            filename = re.sub(r'%date:(.*?)%', lambda m: easySave._format_date(m.group(1), datetime.datetime.now()),
-                              filename)
             metadata = None
             if embed_workflow in (True, "True"):
                 metadata = PngInfo()
@@ -1229,25 +1211,6 @@ class easySave:
             counter += 1
 
         return results
-
-    def textfile(self, text, filename_prefix, output_type, group_id=0, ext='txt'):
-        if output_type == "Hide":
-            return []
-        if output_type in ("Save", "Hide/Save"):
-            output_dir = self.output_dir if self.output_dir != folder_paths.get_temp_directory() else folder_paths.get_output_directory()
-        if output_type == "Preview":
-            filename_prefix = 'easyPreview'
-
-        filename = easySave.filename_parser(output_dir, filename_prefix, self.prompt, self.my_unique_id,
-                                           self.number_padding, group_id, ext)
-
-        file_path = os.path.join(output_dir, filename)
-
-        if self.overwrite_existing or not os.path.isfile(file_path):
-            with open(file_path, 'w') as f:
-                f.write(text)
-        else:
-            log_node_error("", f"File {file_path} already exists... Skipping")
 
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 
@@ -1351,7 +1314,7 @@ class stylesPromptSelector:
     @classmethod
     def INPUT_TYPES(s):
         styles = ["fooocus_styles"]
-        styles_dir = os.path.join(Path(__file__).parent.parent, "styles")
+        styles_dir = FOOOCUS_STYLES_DIR
         for file_name in os.listdir(styles_dir):
             file = os.path.join(styles_dir, file_name)
             if os.path.isfile(file) and file_name.endswith(".json") and "styles" in file_name.split(".")[0]:
@@ -1399,9 +1362,9 @@ class stylesPromptSelector:
         all_styles = {}
         positive_prompt, negative_prompt = '', negative
         if styles == "fooocus_styles":
-            file = Path(os.path.join(Path(__file__).parent.parent, 'resources/' + styles + '.json'))
+            file = os.path.join(RESOURCES_DIR,  styles + '.json')
         else:
-            file = Path(os.path.join(Path(__file__).parent.parent, 'styles/' + styles + '.json'))
+            file = os.path.join(RESOURCES_DIR, styles + '.json')
         f = open(file, 'r', encoding='utf-8')
         data = json.load(f)
         f.close()
@@ -1441,7 +1404,7 @@ class portraitMaster:
     @classmethod
     def INPUT_TYPES(s):
         max_float_value = 1.95
-        prompt_path = Path(os.path.join(Path(__file__).parent.parent, 'resources/portrait_prompt.json'))
+        prompt_path = os.path.join(RESOURCES_DIR, 'portrait_prompt.json')
         if not os.path.exists(prompt_path):
             response = urlopen('https://raw.githubusercontent.com/yolain/ComfyUI-Easy-Use/main/resources/portrait_prompt.json')
             temp_prompt = json.loads(response.read())
@@ -2612,6 +2575,37 @@ class controlnetAdvanced:
 
         return (new_pipe, positive, negative)
 
+# FooocusInpaint (Testing)
+from .fooocus import InpaintHead, InpaintWorker, get_local_filepath
+inpaint_head_model = None
+class fooocusInpaintLoader:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "head": (list(FOOOCUS_INPAINT_HEAD.keys()),),
+                "patch": (list(FOOOCUS_INPAINT_PATCH.keys()),),
+            }
+        }
+
+    RETURN_TYPES = ("INPAINT_PATCH",)
+    RETURN_NAMES = ("patch",)
+    CATEGORY = "EasyUse/__for_testing"
+    FUNCTION = "apply"
+
+    def apply(self, head, patch):
+        global inpaint_head_model
+
+        head_file = get_local_filepath(FOOOCUS_INPAINT_HEAD[head]["model_url"], INPAINT_DIR)
+        if inpaint_head_model is None:
+            inpaint_head_model = InpaintHead()
+            sd = torch.load(head_file, map_location='cpu')
+            inpaint_head_model.load_state_dict(sd)
+
+        patch_file = get_local_filepath(FOOOCUS_INPAINT_PATCH[patch]["model_url"], INPAINT_DIR)
+        inpaint_lora = comfy.utils.load_torch_file(patch_file, safe_load=True)
+
+        return ((inpaint_head_model, inpaint_lora),)
 #---------------------------------------------------------------预采样 开始----------------------------------------------------------------------#
 
 # 预采样设置（基础）
@@ -2647,16 +2641,6 @@ class samplerSettings:
     CATEGORY = "EasyUse/PreSampling"
 
     def settings(self, pipe, steps, cfg, sampler_name, scheduler, denoise, seed_num, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
-
-        # if my_unique_id:
-        #     workflow = extra_pnginfo["workflow"]
-        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-        #     if node:
-        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
-        #             'inputs'] else 0
-        #         length = len(node["widgets_values"])
-        #         node["widgets_values"][length - 2] = seed_num
-
         # 图生图转换
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
@@ -2732,16 +2716,6 @@ class samplerSettingsAdvanced:
     CATEGORY = "EasyUse/PreSampling"
 
     def settings(self, pipe, steps, cfg, sampler_name, scheduler, start_at_step, end_at_step, add_noise, seed_num, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
-
-        # if my_unique_id:
-        #     workflow = extra_pnginfo["workflow"]
-        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-        #     if node:
-        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
-        #             'inputs'] else 0
-        #         length = len(node["widgets_values"])
-        #         node["widgets_values"][length - 2] = seed_num
-
         # 图生图转换
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
@@ -2854,15 +2828,6 @@ class sdTurboSettings:
         else:
             _sampler = comfy.samplers.sampler_object(sampler_name)
             extra_options = None
-
-        # if my_unique_id:
-        #     workflow = extra_pnginfo["workflow"]
-        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-        #     if node:
-        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
-        #             'inputs'] else 0
-        #         length = len(node["widgets_values"])
-        #         node["widgets_values"][length - 2] = seed_num
 
         new_pipe = {
             "model": pipe['model'],
@@ -3481,6 +3446,7 @@ class samplerSimpleInpainting:
                 "optional": {
                     "model": ("MODEL",),
                     "mask": ("MASK",),
+                    "patch": ("INPAINT_PATCH",),
                 },
                 "hidden":
                   {"tile_size": "INT", "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
@@ -3494,7 +3460,9 @@ class samplerSimpleInpainting:
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
-    def run(self, pipe, grow_mask_by, image_output, link_id, save_prefix, model=None, mask=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+    def run(self, pipe, grow_mask_by, image_output, link_id, save_prefix, model=None, mask=None, patch=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+        model = model if model is not None else pipe['model']
+
         if mask is not None:
             pixels = pipe["images"] if pipe and "images" in pipe else None
             if pixels is None:
@@ -3532,8 +3500,13 @@ class samplerSimpleInpainting:
 
             latent = {"samples": t, "noise_mask": (mask_erosion[:, :, :x, :y].round())}
 
+            # when patch was linked
+            if patch is not None:
+                worker = InpaintWorker(node_name="easy kSamplerInpainting")
+                model, = worker.patch(model, latent, patch)
+
             new_pipe = {
-                "model": pipe['model'],
+                "model": model,
                 "positive": pipe['positive'],
                 "negative": pipe['negative'],
                 "vae": pipe['vae'],
@@ -4696,7 +4669,7 @@ class pipeXYPlotAdvanced:
 #---------------------------------------------------------------XY Inputs 开始----------------------------------------------------------------------#
 
 def load_preset(filename):
-    path = os.path.join(os.path.dirname(__file__), "..", "resources", filename)
+    path = os.path.join(RESOURCES_DIR, filename)
     path = os.path.abspath(path)
     preset_list = []
 
@@ -5159,80 +5132,6 @@ class showSpentTime:
 
         return {"ui": {"text": spent_time}, "result": {}}
 
-# try:
-#   from rembg import remove
-#
-#   class imageREMBG:
-#
-#     def __init__(self):
-#       pass
-#
-#     @classmethod
-#     def INPUT_TYPES(s):
-#       return {"required": {
-#         "image": ("IMAGE",),
-#         "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
-#         "save_prefix": ("STRING", {"default": "ComfyUI"}),
-#       },
-#         "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
-#                   },
-#       }
-#
-#     RETURN_TYPES = ("IMAGE", "MASK")
-#     RETURN_NAMES = ("image", "mask")
-#     FUNCTION = "remove_background"
-#     CATEGORY = "EasyUse/Image"
-#     OUTPUT_NODE = True
-#
-#     def remove_background(self, image, image_output, save_prefix, prompt, extra_pnginfo, my_unique_id):
-#       image = remove(easySampler.tensor2pil(image))
-#       tensor = easySampler.pil2tensor(image)
-#
-#       # Get alpha mask
-#       if image.getbands() != ("R", "G", "B", "A"):
-#         image = image.convert("RGBA")
-#       mask = None
-#       if "A" in image.getbands():
-#         mask = np.array(image.getchannel("A")).astype(np.float32) / 255.0
-#         mask = torch.from_numpy(mask)
-#         mask = 1. - mask
-#       else:
-#         mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
-#
-#       if image_output == "Disabled":
-#         results = []
-#       else:
-#         easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
-#         results = easy_save.images(tensor, save_prefix, image_output)
-#
-#       if image_output in ("Hide", "Hide/Save"):
-#         return (tensor, mask)
-#
-#       # Output image results to ui and node outputs
-#       return {"ui": {"images": results},
-#               "result": (tensor, mask)}
-#
-# except:
-#   class imageREMBG:
-#
-#     def __init__(self):
-#       pass
-#
-#     @classmethod
-#     def INPUT_TYPES(s):
-#       return {"required": {
-#         "error": ("STRING", {"default": "RemBG is not installed", "multiline": False, 'readonly': True}),
-#         "link": ("STRING", {"default": "https://github.com/danielgatis/rembg", "multiline": False}),
-#       },
-#     }
-#
-#     RETURN_TYPES = ("")
-#     FUNCTION = "remove_background"
-#     CATEGORY = "EasyUse/Image"
-#
-#     def remove_background(error):
-#       return None
-
 NODE_CLASS_MAPPINGS = {
     # prompt 提示词
     "easy positive": positivePrompt,
@@ -5294,7 +5193,9 @@ NODE_CLASS_MAPPINGS = {
     # others 其他
     "easy showSpentTime": showSpentTime,
     # "easy imageRemoveBG": imageREMBG,
-    "dynamicThresholdingFull": dynamicThresholdingFull
+    "dynamicThresholdingFull": dynamicThresholdingFull,
+    # __for_testing 测试
+    "easy fooocusInpaintLoader": fooocusInpaintLoader
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     # prompt 提示词
@@ -5358,5 +5259,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # others 其他
     "easy showSpentTime": "ShowSpentTime",
     "easy imageRemoveBG": "ImageRemoveBG",
-    "dynamicThresholdingFull": "DynamicThresholdingFull"
+    "dynamicThresholdingFull": "DynamicThresholdingFull",
+    # __for_testing 测试
+    "easy fooocusInpaintLoader": "Load Fooocus Inpaint"
 }

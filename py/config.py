@@ -1,3 +1,7 @@
+import os
+import folder_paths
+from pathlib import Path
+
 BASE_RESOLUTIONS = [
     ("自定义", "自定义"),
     (512, 512),
@@ -29,3 +33,27 @@ BASE_RESOLUTIONS = [
     (2560, 1440),
 ]
 
+INPAINT_DIR = os.path.join(folder_paths.models_dir, "inpaint")
+
+RESOURCES_DIR = os.path.join(Path(__file__).parent.parent, "resources")
+FOOOCUS_STYLES_DIR = os.path.join(Path(__file__).parent.parent, "styles")
+
+
+FOOOCUS_STYLES_SAMPLES = 'https://raw.githubusercontent.com/lllyasviel/Fooocus/main/sdxl_styles/samples/'
+
+FOOOCUS_INPAINT_HEAD = {
+    "fooocus_inpaint_head": {
+        "model_url": "https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/fooocus_inpaint_head.pth"
+    }
+}
+FOOOCUS_INPAINT_PATCH = {
+    "inpaint_v26 (1.32GB)": {
+        "model_url": "https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint_v26.fooocus.patch"
+    },
+    "inpaint_v25 (2.58GB)": {
+        "model_url": "https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint_v25.fooocus.patch"
+    },
+    "inpaint (1.32GB)": {
+        "model_url": "https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint.fooocus.patch"
+    },
+}
