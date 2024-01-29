@@ -167,6 +167,14 @@ function widgetLogic(node, widget) {
 		widget.options = {on: 'Enabled', off: 'Disabled'}
 	}
 
+	if(widget.name == 'text_combine_mode'){
+		if(widget.value == 'replace'){
+			toggleWidget(node, findWidgetByName(node, 'replace_text'), true)
+		}else{
+			toggleWidget(node, findWidgetByName(node, 'replace_text'))
+		}
+		updateNodeHeight(node)
+	}
 }
 
 function widgetLogic2(node, widget) {
@@ -344,6 +352,7 @@ app.registerExtension({
 			case "easy XYInputs: ControlNet":
 			case "easy rangeInt":
 			case "easy rangeFloat":
+			case 'easy latentCompositeMaskedWithCond':
 				getSetters(node)
 				break
 			case "easy wildcards":
@@ -731,7 +740,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale', 'image_output',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode']
+						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode']
 
 function getSetters(node) {
 	if (node.widgets)

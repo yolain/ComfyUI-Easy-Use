@@ -1394,6 +1394,44 @@ class stylesPromptSelector:
 
         return (positive_prompt, negative_prompt)
 
+#promptList
+class promptList:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "prompt_1": ("STRING", {"multiline": True, "default": ""}),
+            "prompt_2": ("STRING", {"multiline": True, "default": ""}),
+            "prompt_3": ("STRING", {"multiline": True, "default": ""}),
+            "prompt_4": ("STRING", {"multiline": True, "default": ""}),
+            "prompt_5": ("STRING", {"multiline": True, "default": ""}),
+        },
+            "optional": {
+                "optional_prompt_list": ("LIST",)
+            }
+        }
+
+    RETURN_TYPES = ("LIST",)
+    RETURN_NAMES = ("prompt_list",)
+    FUNCTION = "run"
+    CATEGORY = "EasyUse/Prompt"
+
+    def run(self, **kwargs):
+        prompts = []
+
+        if "optional_prompt_list" in kwargs:
+            for l in kwargs["optional_prompt_list"]:
+                prompts.append(l)
+
+        # Iterate over the received inputs in sorted order.
+        for k in sorted(kwargs.keys()):
+            v = kwargs[k]
+
+            # Only process string input ports.
+            if isinstance(v, str) and v != '':
+                prompts.append(v)
+
+        return (prompts,)
+
 # 肖像大师
 # Created by AI Wiz Art (Stefano Flore)
 # Version: 2.2
@@ -1669,14 +1707,17 @@ class latentCompositeMaskedWithCond:
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
-                "text_combine": ("STRING", {"default": ""}),
+                "text_combine": ("LIST",),
                 "source_latent": ("LATENT",),
                 "source_mask": ("MASK",),
-                "new_mask": ("MASK",),
+                "destination_mask": ("MASK",),
+                "text_combine_mode": (["add", "replace", "cover"], {"default": "add"}),
+                "replace_text": ("STRING", {"default": ""})
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
 
+    OUTPUT_IS_LIST = (False, False, True)
     RETURN_TYPES = ("PIPE_LINE", "LATENT", "CONDITIONING")
     RETURN_NAMES = ("pipe", "latent", "conditioning",)
     FUNCTION = "run"
@@ -1684,43 +1725,53 @@ class latentCompositeMaskedWithCond:
 
     CATEGORY = "EasyUse/Latent"
 
-    def run(self, pipe, text_combine, source_latent, source_mask, new_mask, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def run(self, pipe, text_combine, source_latent, source_mask, destination_mask, text_combine_mode, replace_text, prompt=None, extra_pnginfo=None, my_unique_id=None):
+
         clip = pipe["clip"]
         destination_latent = pipe["samples"]
-        positive = pipe["loader_settings"]["positive"] + ',' + text_combine
-        positive_token_normalization = pipe["loader_settings"]["positive_token_normalization"]
-        positive_weight_interpretation = pipe["loader_settings"]["positive_weight_interpretation"]
-        a1111_prompt_style = pipe["loader_settings"]["a1111_prompt_style"]
-        positive_cond = pipe["positive"]
 
-        log_node_warn("正在处理提示词编码...")
-        # Use new clip text encode by smzNodes like same as webui, when if you installed the smzNodes
-        if a1111_prompt_style:
-            if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
-                cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-                steps = pipe["loader_settings"]["steps"] if "steps" in pipe["loader_settings"] else 5
-                positive_embeddings_final, = cls().encode(clip, positive, "A1111", True, True, False, False, 6, 1024,
-                                                          1024, 0, 0, 1024, 1024, '', '', steps)
+        conds = []
+
+        for text in text_combine:
+            if text_combine_mode == 'cover':
+                positive = text
+            elif text_combine_mode == 'replace' and replace_text != '':
+                positive = pipe["loader_settings"]["positive"].replace(replace_text, text)
             else:
-                raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
-        else:
-            positive_embeddings_final, positive_pooled = advanced_encode(clip, positive,
-                                                                         positive_token_normalization,
-                                                                         positive_weight_interpretation, w_max=1.0,
-                                                                         apply_to_pooled='enable')
-            positive_embeddings_final = [[positive_embeddings_final, {"pooled_output": positive_pooled}]]
+                positive = pipe["loader_settings"]["positive"] + ',' + text
+            positive_token_normalization = pipe["loader_settings"]["positive_token_normalization"]
+            positive_weight_interpretation = pipe["loader_settings"]["positive_weight_interpretation"]
+            a1111_prompt_style = pipe["loader_settings"]["a1111_prompt_style"]
+            positive_cond = pipe["positive"]
 
-        # source cond
-        (cond_1,) = ConditioningSetMask().append(positive_cond, source_mask, "default", 1)
-        (cond_2,) = ConditioningSetMask().append(positive_embeddings_final, new_mask, "default", 1)
-        positive_cond = cond_1 + cond_2
+            log_node_warn("正在处理提示词编码...")
+            # Use new clip text encode by smzNodes like same as webui, when if you installed the smzNodes
+            if a1111_prompt_style:
+                if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
+                    cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
+                    steps = pipe["loader_settings"]["steps"] if "steps" in pipe["loader_settings"] else 5
+                    positive_embeddings_final, = cls().encode(clip, positive, "A1111", True, True, False, False, 6, 1024,
+                                                              1024, 0, 0, 1024, 1024, '', '', steps)
+                else:
+                    raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
+            else:
+                positive_embeddings_final, positive_pooled = advanced_encode(clip, positive,
+                                                                             positive_token_normalization,
+                                                                             positive_weight_interpretation, w_max=1.0,
+                                                                             apply_to_pooled='enable')
+                positive_embeddings_final = [[positive_embeddings_final, {"pooled_output": positive_pooled}]]
 
+            # source cond
+            (cond_1,) = ConditioningSetMask().append(positive_cond, source_mask, "default", 1)
+            (cond_2,) = ConditioningSetMask().append(positive_embeddings_final, destination_mask, "default", 1)
+            positive_cond = cond_1 + cond_2
+
+            conds.append(positive_cond)
         # latent composite masked
         (samples,) = LatentCompositeMasked().composite(destination_latent, source_latent, 0, 0, False)
 
         new_pipe = {
             **pipe,
-            "positive": positive_cond,
             "samples": samples,
             "loader_settings": {
                 **pipe["loader_settings"],
@@ -1730,7 +1781,7 @@ class latentCompositeMaskedWithCond:
 
         del pipe
 
-        return (new_pipe, samples, positive_cond)
+        return (new_pipe, samples, conds)
 
 # 随机种
 class easySeed:
@@ -4979,6 +5030,58 @@ class XYplot_Negative_Cond:
 
         return ({"axis": axis, "values": values, "cond": cond},) if values is not None else (None,)
 
+# XYPlot Pos Condition List
+class XYplot_Positive_Cond_List:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "positive": ("CONDITIONING",),
+            }
+        }
+
+    INPUT_IS_LIST = True
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, positive):
+        axis = "advanced: Pos Condition"
+        values = []
+        cond = []
+        for index, c in enumerate(positive):
+            values.append(str(index))
+            cond.append(c)
+
+        return ({"axis": axis, "values": values, "cond": cond},) if values is not None else (None,)
+
+# XYPlot Neg Condition List
+class XYplot_Negative_Cond_List:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "negative": ("CONDITIONING",),
+            }
+        }
+
+    INPUT_IS_LIST = True
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, negative):
+        axis = "advanced: Neg Condition"
+        values = []
+        cond = []
+        for index, c in enumerate(negative):
+            values.append(index)
+            cond.append(c)
+
+        return ({"axis": axis, "values": values, "cond": cond},) if values is not None else (None,)
+
 # XY Plot: ControlNet
 class XYplot_Control_Net:
     parameters = ["strength", "start_percent", "end_percent"]
@@ -5137,6 +5240,7 @@ NODE_CLASS_MAPPINGS = {
     "easy positive": positivePrompt,
     "easy negative": negativePrompt,
     "easy wildcards": wildcardsPrompt,
+    "easy promptList": promptList,
     "easy stylesSelector": stylesPromptSelector,
     "easy portraitMaster": portraitMaster,
     # loaders 加载器
@@ -5189,7 +5293,9 @@ NODE_CLASS_MAPPINGS = {
     "easy XYInputs: PromptSR": XYplot_PromptSR,
     "easy XYInputs: ControlNet": XYplot_Control_Net,
     "easy XYInputs: PositiveCond": XYplot_Positive_Cond,
+    "easy XYInputs: PositiveCondList": XYplot_Positive_Cond_List,
     "easy XYInputs: NegativeCond": XYplot_Negative_Cond,
+    "easy XYInputs: NegativeCondList": XYplot_Negative_Cond_List,
     # others 其他
     "easy showSpentTime": showSpentTime,
     # "easy imageRemoveBG": imageREMBG,
@@ -5202,6 +5308,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy positive": "Positive",
     "easy negative": "Negative",
     "easy wildcards": "Wildcards",
+    "easy promptList": "PromptList",
     "easy stylesSelector": "Styles Selector",
     "easy portraitMaster": "Portrait Master",
     # loaders 加载器
@@ -5254,8 +5361,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy XYInputs: ModelMergeBlocks": "XY Inputs: ModelMergeBlocks //EasyUse",
     "easy XYInputs: PromptSR": "XY Inputs: PromptSR //EasyUse",
     "easy XYInputs: ControlNet": "XY Inputs: Controlnet //EasyUse",
-    "easy XYInputs: PositiveCond": "XY Inputs: PositiveCond //EasyUse",
-    "easy XYInputs: NegativeCond": "XY Inputs: NegativeCond //EasyUse",
+    "easy XYInputs: PositiveCond": "XY Inputs: PosCond //EasyUse",
+    "easy XYInputs: PositiveCondList": "XY Inputs: PosCondList //EasyUse",
+    "easy XYInputs: NegativeCond": "XY Inputs: NegCond //EasyUse",
+    "easy XYInputs: NegativeCondList": "XY Inputs: NegCondList //EasyUse",
     # others 其他
     "easy showSpentTime": "ShowSpentTime",
     "easy imageRemoveBG": "ImageRemoveBG",

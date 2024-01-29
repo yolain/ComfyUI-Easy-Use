@@ -42,6 +42,15 @@
       "text": "提示词"
     }
   },
+  "easy promptList": {
+    "title": "提示词列表",
+    "inputs": {
+      "optional_prompt_list": "列表（可选）"
+    },
+    "outputs": {
+      "prompt_list": "列表"
+    }
+  },
   "easy stylesSelector": {
     "title": "风格提示词选择器",
     "inputs": {
@@ -330,10 +339,12 @@
       "pipe": "节点束",
       "source_latent": "潜空间（源）",
       "source_mask": "遮罩（源）",
-      "new_mask": "遮罩（新）"
+      "destination_mask": "遮罩（目标）"
     },
     "widgets": {
-      "text_combine": "文字拼接"
+      "text_combine": "文字拼接",
+      "text_combine_mode": "文字拼接模式",
+      "replace_text": "替换文字"
     },
     "outputs": {
       "pipe": "节点束",
@@ -754,6 +765,18 @@
       "positive_2": "反向条件_2",
       "positive_3": "反向条件_3",
       "positive_4": "反向条件_4"
+    }
+  },
+  "easy XYInputs: PositiveCondList": {
+    "title": "XY输入: 正向条件列表",
+    "inputs": {
+      "positive": "正向条件列表"
+    }
+  },
+  "easy XYInputs: NegativeCondList": {
+    "title": "XY输入: 反向条件列表",
+    "inputs": {
+      "negative": "反向条件列表"
     }
   },
   "easy XYInputs: PromptSR": {
@@ -1178,7 +1201,8 @@
       "images": "图像"
     },
     "widgets": {
-      "filename_prefix": "图片名前缀"
+      "filename_prefix": "图片名前缀",
+      "only_preview": "仅预览"
     }
   },
   "easy joinImageBatch": {

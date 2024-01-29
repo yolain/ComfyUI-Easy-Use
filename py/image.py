@@ -2,6 +2,7 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from enum import Enum
 import datetime
+import random
 import re
 import json
 import os
@@ -410,12 +411,17 @@ class imageSaveSimple:
   def __init__(self):
     self.output_dir = folder_paths.get_output_directory()
     self.type = "output"
+    self.prefix_append = ""
+    self.compress_level = 4
 
   @classmethod
   def INPUT_TYPES(s):
     return {"required":
-              {"images": ("IMAGE",),
-               "filename_prefix": ("STRING", {"default": "ComfyUI"}),},
+              {
+                "images": ("IMAGE",),
+                "filename_prefix": ("STRING", {"default": "ComfyUI"}),
+                "only_preview": ("BOOLEAN", {"default": False}),
+              },
               "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
             }
 
@@ -450,10 +456,23 @@ class imageSaveSimple:
         text = text.replace(format_str, str(date_formats[format_str](date)))
     return text
 
-  def save(self, images, filename_prefix="ComfyUI", prompt=None, extra_pnginfo=None):
+  def save(self, images, filename_prefix="ComfyUI", only_preview=False, prompt=None, extra_pnginfo=None):
+
+    if only_preview:
+      self.output_dir = folder_paths.get_temp_directory()
+      self.prefix_append = "_temp_" + ''.join(random.choice("abcdefghijklmnopqrstupvxyz") for x in range(5))
+      self.type = 'temp'
+      self.compress_level = 1
+    else:
+      self.output_dir = folder_paths.get_output_directory()
+      self.type = "output"
+      self.prefix_append = ""
+      self.compress_level = 4
 
     filename_prefix = re.sub(r'%date:(.*?)%', lambda m: self._format_date(m.group(1), datetime.datetime.now()),
                       filename_prefix)
+
+    filename_prefix += self.prefix_append
     full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
 
     results = list()
@@ -470,7 +489,7 @@ class imageSaveSimple:
           metadata.add_text(x, json.dumps(extra_pnginfo[x]))
 
       file = f"{filename}_{counter:05}_.png"
-      img.save(os.path.join(full_output_folder, file), pnginfo=metadata)
+      img.save(os.path.join(full_output_folder, file), pnginfo=metadata, compress_level=self.compress_level)
       results.append({
         "filename": file,
         "subfolder": subfolder,

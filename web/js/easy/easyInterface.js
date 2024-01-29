@@ -106,7 +106,7 @@ try{
         ui2.colors.litegraph_base.CLEAR_BACKGROUND_COLOR = '#000'
         custom_theme[ui2.id] = ui2
         localStorage.setItem('Comfy.Settings.Comfy.CustomColorPalettes', JSON.stringify(custom_theme));
-        localStorage.setItem('Comfy.Settings.Comfy.ColorPalette',`"${custom_theme_name}"`)
+        // localStorage.setItem('Comfy.Settings.Comfy.ColorPalette',`"${custom_theme_name}"`)
     }
     const theme_name = localStorage.getItem('Comfy.Settings.Comfy.ColorPalette')
     // 兼容 ComfyUI Revision: 1887 [235727fe] 以上版本
@@ -834,6 +834,7 @@ const COLOR_THEMES = LGraphCanvas.node_colors
 const NODE_COLORS = {
     "easy positive":"green",
     "easy negative":"red",
+    "easy promptList":"cyan",
     "easy XYInputs: Seeds++ Batch": customXYLink,
     "easy XYInputs: ModelMergeBlocks": customXYLink,
 }

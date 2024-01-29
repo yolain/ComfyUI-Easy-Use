@@ -248,6 +248,33 @@ class Boolean:
     def execute(self, value):
         return (value,)
 
+# ---------------------------------------------------------------开关 开始----------------------------------------------------------------------#
+class imageSwitch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "image_a": ("IMAGE",),
+                "image_b": ("IMAGE",),
+                "boolean": ("BOOLEAN", {"default": False}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    FUNCTION = "image_switch"
+
+    CATEGORY = "EasyUse/Logic/Switch"
+
+    def image_switch(self, image_a, image_b, boolean):
+
+        if boolean:
+            return (image_a, )
+        else:
+            return (image_b, )
+
 # ---------------------------------------------------------------运算 开始----------------------------------------------------------------------#
 
 COMPARE_FUNCTIONS = {
@@ -404,6 +431,7 @@ NODE_CLASS_MAPPINGS = {
   "easy rangeFloat": RangeFloat,
   "easy boolean": Boolean,
   "easy compare": Compare,
+  "easy imageSwitch": imageSwitch,
   "easy if": If,
   "easy xyAny": xyAny,
   "easy convertAnything": ConvertAnything,
@@ -417,6 +445,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy rangeFloat": "Range(Float)",
   "easy boolean": "Boolean",
   "easy compare": "Compare",
+  "easy imageSwitch": "Image Switch",
   "easy if": "If",
   "easy xyAny": "XYAny",
   "easy convertAnything": "ConvertAnything",

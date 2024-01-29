@@ -29,6 +29,13 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-01-29**
+
+- Changing the first-time install node package no longer automatically replaces the theme, you need to manually adjust and refresh the page
+- `easy imageSave` added **only_preivew**
+- Added `easy promptList`
+- Adjust the `easy latentCompositeMaskedWithCond` node
+
 **v1.0.4（2024-01-28）**
 
 - `easy kSamplerInpainting` Added the **patch** input value to be used with the FooocusInpaintLoader node
@@ -39,19 +46,23 @@ After installing the node package, the UI interface will be automatically switch
 - Fixed `easy XYInputs: ControlNet` Error
 - Fixed `easy loraStack` error when **toggle** is disabled
 
-**2024-01-22**
+<details>
+<summary><b>2024-01-22</b></summary>
 
 - Fixed `easy XYInputs: Sampler/Scheduler` Error
 - Fixed the right menu has a problem when clicking the button
 - Adjust the UI theme, divided into two sets of styles: the official default background and the dark black background, which can be switched in the color palette in the settings
+</details>
 
-**2024-01-21**
+<details>
+<summary><b>22024-01-21</b></summary>
 
 - Modify the styles path to be compatible with other environments
 - Fixed `easy comfyLoader` error
 - Fixed xyPlot error when connecting to zero123
+</details>
 
-**v1.0.3（2024-01-19）**
+v1.0.3（2024-01-19）**
 
 - Fixed the error message in the loader when the prompt word was component
 - Added `easy stylesSelector`
@@ -60,25 +71,33 @@ After installing the node package, the UI interface will be automatically switch
 - Fixed `easy getNode` and `easy setNode` the title does not change when loading
 - Fixed all samplers using subdirectories to store images
 
-**2024-01-12**
+<details>
+<summary><b>2024-01-12</b></summary>
 
 - Fixed UI loading failure in the new version of ComfyUI
+</details>
 
-**2024-01-11**
+<details>
+<summary><b>2024-01-11</b></summary>
 
 - Replaced the font file used in the generation of XY diagrams
+</details>
 
-**2024-01-09**
+<details>
+<summary><b>2024-01-09</b></summary>
 
 - Fixed XYPlot is not working when `a1111_prompt_style` is True
 - An `autocomplete` folder has been added, If you have [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) installed, the txt files in that folder will be merged and overwritten to the autocomplete .txt file of the pyssss package at startup.
 - Added a `📜Groups Map(EasyUse)` to the context menu.
+</details>
 
-**2024-01-08**
+<details>
+<summary><b>2024-01-08</b></summary>
 
 - `easy XYInputs ModelMergeBlocks` Values can be imported from CSV files
 - Fixed `easy pipeToBasicPipe` Bug
 - Removed `easy imageRemBg`
+</details>
 
 **v1.0.2（2024-01-05）**
 
