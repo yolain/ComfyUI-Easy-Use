@@ -29,6 +29,12 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-01-31**
+
+- Fixed `easy wildcards` An error is reported when running with the PS extension
+- Added `easy showLoaderSettingsNames` can display the model and VAE name in the output loader assembly
+
+
 **2024-01-29**
 
 - Changing the first-time install node package no longer automatically replaces the theme, you need to manually adjust and refresh the page

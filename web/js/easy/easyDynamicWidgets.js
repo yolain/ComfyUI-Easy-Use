@@ -581,6 +581,26 @@ app.registerExtension({
 			};
 		}
 
+		if (["easy showLoaderSettingsNames"].includes(nodeData.name)) {
+			function populate(text) {
+				if (this.widgets) {
+					const pos = this.widgets.findIndex((w) => w.name === "names");
+					if (pos !== -1 && this.widgets[pos]) {
+						const w = this.widgets[pos]
+						w.value = text;
+					}
+				}
+			}
+
+			// When the node is executed we will be sent the input text, display this in the widget
+			const onExecuted = nodeType.prototype.onExecuted;
+			nodeType.prototype.onExecuted = function (message) {
+				onExecuted?.apply(this, arguments);
+				const text = addText(message.text)
+				populate.call(this, text);
+			};
+		}
+
 		if (["easy fullLoader", "easy a1111Loader", "easy comfyLoader"].includes(nodeData.name)) {
 			function populate(text, type = 'positive') {
 				if (this.widgets) {

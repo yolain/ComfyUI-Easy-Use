@@ -1234,6 +1234,17 @@
       "pipe": "节点束"
     }
   },
+  "easy showLoaderSettingsNames": {
+    "title": "显示加载器参数名称",
+    "inputs": {
+      "pipe": "节点束"
+    },
+    "outputs": {
+      "ckpt_name": "大模型名称",
+      "vae_name": "VAE名称",
+      "lora_name": "LORA名称"
+    }
+  },
   "easy string": {
     "title": "字符串",
     "widgets": {

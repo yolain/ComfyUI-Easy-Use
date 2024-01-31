@@ -1263,25 +1263,12 @@ class wildcardsPrompt:
 
     @staticmethod
     def main(*args, **kwargs):
-        my_unique_id = kwargs["my_unique_id"]
-        extra_pnginfo = kwargs["extra_pnginfo"]
-        prompt = kwargs["prompt"]
+        prompt = kwargs["prompt"] if "prompt" in kwargs else None
         seed_num = kwargs["seed_num"]
 
         # Clean loaded_objects
-        easyCache.update_loaded_objects(prompt)
-
-        my_unique_id = int(my_unique_id)
-
-        easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
-        # if my_unique_id:
-        #     workflow = extra_pnginfo["workflow"]
-        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-        #     if node:
-        #         seed_num = prompt[my_unique_id]['inputs']['seed_num'] if 'seed_num' in prompt[my_unique_id][
-        #             'inputs'] else 0
-        #         length = len(node["widgets_values"])
-        #         node["widgets_values"][length - 2] = seed_num
+        if prompt:
+            easyCache.update_loaded_objects(prompt)
 
         text = kwargs['text']
         return {"ui": {"value": [seed_num]}, "result": (text,)}
@@ -5235,6 +5222,52 @@ class showSpentTime:
 
         return {"ui": {"text": spent_time}, "result": {}}
 
+# 显示加载器参数中的各种名称
+class showLoaderSettingsNames:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "names": ("INFO", {"default": '', "forceInput": False}),
+            },
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+
+    RETURN_TYPES = ("STRING", "STRING", "STRING",)
+    RETURN_NAMES = ("ckpt_name", "vae_name", "lora_name")
+
+    FUNCTION = "notify"
+    OUTPUT_NODE = True
+
+    CATEGORY = "EasyUse/Util"
+
+    def notify(self, pipe, names=None, unique_id=None, extra_pnginfo=None):
+        if unique_id and extra_pnginfo and "workflow" in extra_pnginfo:
+            workflow = extra_pnginfo["workflow"]
+            node = next((x for x in workflow["nodes"] if str(x["id"]) == unique_id), None)
+            if node:
+                ckpt_name = pipe['loader_settings']['ckpt_name'] if 'ckpt_name' in pipe['loader_settings'] else ''
+                vae_name = pipe['loader_settings']['vae_name'] if 'vae_name' in pipe['loader_settings'] else ''
+                lora_name = pipe['loader_settings']['lora_name'] if 'lora_name' in pipe['loader_settings'] else ''
+
+                if ckpt_name:
+                    ckpt_name = os.path.basename(os.path.splitext(ckpt_name)[0])
+                if vae_name:
+                    vae_name = os.path.basename(os.path.splitext(vae_name)[0])
+                if lora_name:
+                    lora_name = os.path.basename(os.path.splitext(lora_name)[0])
+
+
+                names = "ckpt_name: " + ckpt_name + '\n' + "vae_name: " + vae_name + '\n' + "lora_name: " + lora_name
+                node["widgets_values"] = names
+
+        return {"ui": {"text": names}, "result": (ckpt_name, vae_name, lora_name)}
+
+
 NODE_CLASS_MAPPINGS = {
     # prompt 提示词
     "easy positive": positivePrompt,
@@ -5298,6 +5331,7 @@ NODE_CLASS_MAPPINGS = {
     "easy XYInputs: NegativeCondList": XYplot_Negative_Cond_List,
     # others 其他
     "easy showSpentTime": showSpentTime,
+    "easy showLoaderSettingsNames": showLoaderSettingsNames,
     # "easy imageRemoveBG": imageREMBG,
     "dynamicThresholdingFull": dynamicThresholdingFull,
     # __for_testing 测试
@@ -5367,6 +5401,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy XYInputs: NegativeCondList": "XY Inputs: NegCondList //EasyUse",
     # others 其他
     "easy showSpentTime": "ShowSpentTime",
+    "easy showLoaderSettingsNames": "ShowLoaderSettingsNames",
     "easy imageRemoveBG": "ImageRemoveBG",
     "dynamicThresholdingFull": "DynamicThresholdingFull",
     # __for_testing 测试
