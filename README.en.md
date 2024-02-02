@@ -29,11 +29,14 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-02-02**
+
+- Fixed xyplot replace getfont with getbbox to be compatible with Pillow>9.5
+
 **2024-01-31**
 
 - Fixed `easy wildcards` An error is reported when running with the PS extension
 - Added `easy showLoaderSettingsNames` can display the model and VAE name in the output loader assembly
-
 
 **2024-01-29**
 

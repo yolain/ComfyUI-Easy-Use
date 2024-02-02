@@ -4,6 +4,7 @@ import sys
 import json
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
+from .easyNodes import easyCache
 
 try:
     import aiohttp
@@ -26,7 +27,6 @@ async def parse_csv(request):
             line = line.replace("'", "").replace("b",'')
             text += line + '; \n'
         return web.json_response(text)
-
 
 #get style list
 @PromptServer.instance.routes.get("/easyuse/prompt/styles")

@@ -156,7 +156,9 @@ class easyLoader:
         """
         Evicts objects from cache based on memory usage and priority.
         """
+
         current_memory = self.get_memory_usage()
+
 
         if current_memory < self.memory_threshold:
             return
@@ -164,12 +166,14 @@ class easyLoader:
         eviction_order = ["vae", "lora", "bvae", "clip", "ckpt"]
 
         for obj_type in eviction_order:
+
             if current_memory < self.memory_threshold:
                 break
 
             # Sort items based on age (using the timestamp)
             items = list(self.loaded_objects[obj_type].items())
             items.sort(key=lambda x: x[1][1])  # Sorting by timestamp
+
 
             for item in items:
                 if current_memory < self.memory_threshold:
@@ -552,7 +556,9 @@ class easyXYPlot:
 
     def adjust_font_size(self, text, initial_font_size, label_width):
         font = self.get_font(initial_font_size)
-        text_width, _ = font.getsize(text)
+        text_width = font.getbbox(text)
+        if text_width and text_width[2]:
+            text_width = text_width[2]
 
         scaling_factor = 0.9
         if text_width > (label_width * scaling_factor):

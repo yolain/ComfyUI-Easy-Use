@@ -417,7 +417,7 @@ app.registerExtension({
 							const stackTrace = new Error().stack;
 							if(stackTrace.includes('inner_value_change')) {
 								if(value != "Preset") {
-									if(!value.startsWith('@') && valuesWidget.value != "")
+									if(!value.startsWith('@') && valuesWidget.value)
 										valuesWidget.value += "\n";
 									if(value.startsWith('@')) {
 										let spec = value.split(':')[1];
@@ -486,9 +486,9 @@ app.registerExtension({
 									else {
 										valuesWidget.value += `${value}; `;
 									}
-									if(node.widgets_values) {
-										valuesWidget = node.widgets[preset_i].value+ `; `;
-									}
+									// if(node.widgets_values) {
+									// 	valuesWidget.value = node.widgets[preset_i].value+ `; `;
+									// }
 								}
 							}
 

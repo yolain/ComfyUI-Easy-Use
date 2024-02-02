@@ -37,6 +37,10 @@
 
 ## 更新日志
 
+**2024-02-02**
+
+- 修改 xyplot 中 getsize 方法为 getbbox 以兼容 pillow>9.5
+
 **2024-01-31**
 
 - 修复 `easy wildcards` 在使用PS扩展插件运行时报错
