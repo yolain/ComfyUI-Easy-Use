@@ -2,6 +2,7 @@ from typing import Iterator, List, Tuple, Dict, Any, Union, Optional
 from _decimal import Context, getcontext
 from decimal import Decimal
 import numpy as np
+import json
 
 def validate_list_args(args: Dict[str, List[Any]]) -> Tuple[bool, Optional[str], Optional[str]]:
     """
@@ -401,7 +402,7 @@ class ConvertAnything:
         return (params,)
 
 # 将所有类型的内容都转成字符串输出
-class ShowAnything:
+class showAnything:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {}, "optional": {"anything": (AlwaysEqualProxy("*"), {}), },
@@ -415,13 +416,27 @@ class ShowAnything:
     CATEGORY = "EasyUse/Logic"
 
     def log_input(self, unique_id=None, extra_pnginfo=None, **kwargs):
-        print(kwargs['anything'])
+
+        values = []
+        if "anything" in kwargs:
+            for val in kwargs['anything']:
+                try:
+                    if type(val) is str:
+                        values.append(val)
+                    else:
+                        val = json.dumps(val)
+                        values.append(str(val))
+                except Exception:
+                    values.append(str(val))
+                    pass
+
         if unique_id and extra_pnginfo and "workflow" in extra_pnginfo[0]:
             workflow = extra_pnginfo[0]["workflow"]
             node = next((x for x in workflow["nodes"] if str(x["id"]) == unique_id[0]), None)
             if node:
-                node["widgets_values"] = [kwargs['anything']]
-        return {"ui": {"text": kwargs['anything']}}
+                node["widgets_values"] = [values]
+
+        return {"ui": {"text": values}}
 
 NODE_CLASS_MAPPINGS = {
   "easy string": String,
@@ -435,7 +450,7 @@ NODE_CLASS_MAPPINGS = {
   "easy if": If,
   "easy xyAny": xyAny,
   "easy convertAnything": ConvertAnything,
-  "easy showAnything": ShowAnything,
+  "easy showAnything": showAnything,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy string": "String",
@@ -448,6 +463,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageSwitch": "Image Switch",
   "easy if": "If",
   "easy xyAny": "XYAny",
-  "easy convertAnything": "ConvertAnything",
-  "easy showAnything": "ShowAnything"
+  "easy convertAnything": "Convert Any",
+  "easy showAnything": "Show Any",
 }

@@ -1748,11 +1748,10 @@ class latentCompositeMaskedWithCond:
                 else:
                     raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
             else:
-                positive_embeddings_final, positive_pooled = advanced_encode(clip, positive,
+                positive_embeddings_final = advanced_encode(clip, positive,
                                                                              positive_token_normalization,
                                                                              positive_weight_interpretation, w_max=1.0,
                                                                              apply_to_pooled='enable')
-                positive_embeddings_final = [[positive_embeddings_final, {"pooled_output": positive_pooled}]]
 
             # source cond
             (cond_1,) = ConditioningSetMask().append(positive_cond, source_mask, "default", 1)
@@ -1974,15 +1973,13 @@ class fullLoader:
             else:
                 raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
         else:
-            positive_embeddings_final, positive_pooled = advanced_encode(clipped, positive, positive_token_normalization,
+            positive_embeddings_final = advanced_encode(clipped, positive, positive_token_normalization,
                                                                          positive_weight_interpretation, w_max=1.0,
                                                                          apply_to_pooled='enable')
-            positive_embeddings_final = [[positive_embeddings_final, {"pooled_output": positive_pooled}]]
 
-            negative_embeddings_final, negative_pooled = advanced_encode(clipped, negative, negative_token_normalization,
+            negative_embeddings_final = advanced_encode(clipped, negative, negative_token_normalization,
                                                                          negative_weight_interpretation, w_max=1.0,
                                                                          apply_to_pooled='enable')
-            negative_embeddings_final = [[negative_embeddings_final, {"pooled_output": negative_pooled}]]
         image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
 
         log_node_warn("处理结束...")
@@ -1990,7 +1987,7 @@ class fullLoader:
                 "positive": positive_embeddings_final,
                 "negative": negative_embeddings_final,
                 "vae": vae,
-                "clip": clip,
+                "clip": clipped,
 
                 "samples": samples,
                 "images": image,
@@ -5406,8 +5403,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy XYInputs: NegativeCond": "XY Inputs: NegCond //EasyUse",
     "easy XYInputs: NegativeCondList": "XY Inputs: NegCondList //EasyUse",
     # others 其他
-    "easy showSpentTime": "ShowSpentTime",
-    "easy showLoaderSettingsNames": "ShowLoaderSettingsNames",
+    "easy showSpentTime": "Show Spent Time",
+    "easy showLoaderSettingsNames": "Show Loader Settings Names",
     "easy imageRemoveBG": "ImageRemoveBG",
     "dynamicThresholdingFull": "DynamicThresholdingFull",
     # __for_testing 测试

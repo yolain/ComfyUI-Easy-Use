@@ -31,6 +31,10 @@ After installing the node package, the UI interface will be automatically switch
 
 **2024-02-02**
 
+- `easy showAnything` Added support for converting other types (e.g., tensor conditions, images, etc.)
+
+**2024-02-02**
+
 - Fixed xyplot replace getfont with getbbox to be compatible with Pillow>9.5
 
 **2024-01-31**

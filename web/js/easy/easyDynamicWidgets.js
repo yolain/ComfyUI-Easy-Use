@@ -531,7 +531,7 @@ app.registerExtension({
 				Object.assign(fileInput, {
 					type: "file",
 					accept: "text/csv",
-					style: "display: none",
+					style: "show: none",
 					onchange: async (event) => {
 						if (fileInput.files.length) {
 							await uploadFile(fileInput.files[0], true);
@@ -572,7 +572,7 @@ app.registerExtension({
 				}
 			}
 
-			// When the node is executed we will be sent the input text, display this in the widget
+			// When the node is executed we will be sent the input text, show this in the widget
 			const onExecuted = nodeType.prototype.onExecuted;
 			nodeType.prototype.onExecuted = function (message) {
 				onExecuted?.apply(this, arguments);
@@ -592,7 +592,7 @@ app.registerExtension({
 				}
 			}
 
-			// When the node is executed we will be sent the input text, display this in the widget
+			// When the node is executed we will be sent the input text, show this in the widget
 			const onExecuted = nodeType.prototype.onExecuted;
 			nodeType.prototype.onExecuted = function (message) {
 				onExecuted?.apply(this, arguments);

@@ -37,6 +37,10 @@
 
 ## 更新日志
 
+**2024-02-03**
+
+- `easy showAnything` 增加支持转换其他类型（如：tensor类型的条件、图像等）
+
 **2024-02-02**
 
 - 修改 xyplot 中 getsize 方法为 getbbox 以兼容 pillow>9.5

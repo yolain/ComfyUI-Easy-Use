@@ -258,7 +258,7 @@ def prepareXL(embs_l, embs_g, pooled, clip_balance):
 
 
 def advanced_encode(clip, text, token_normalization, weight_interpretation, w_max=1.0, clip_balance=.5,
-                    apply_to_pooled=True):
+                    apply_to_pooled=True, width=1024, height=1024, crop_w=0, crop_h=0, target_width=1024, target_height=1024):
     tokenized = clip.tokenize(text, return_word_ids=True)
     if isinstance(clip.cond_stage_model, (SDXLClipModel, SDXLRefinerClipModel, SDXLClipG)):
         embs_l = None
@@ -280,17 +280,21 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
                                                          w_max=w_max,
                                                          return_pooled=True,
                                                          apply_to_pooled=apply_to_pooled)
-        return prepareXL(embs_l, embs_g, pooled, clip_balance)
+
+        embeddings_final, pooled = prepareXL(embs_l, embs_g, pooled, clip_balance)
+
+        return [[embeddings_final, {"pooled_output": pooled, "width": width, "height": height, "crop_w": crop_w, "crop_h": crop_h, "target_width": target_width, "target_height": target_height}]]
     else:
-        return advanced_encode_from_tokens(tokenized['l'],
+        embeddings_final, pooled = advanced_encode_from_tokens(tokenized['l'],
                                            token_normalization,
                                            weight_interpretation,
                                            lambda x: (clip.encode_from_tokens({'l': x}), None),
                                            w_max=w_max)
+        return [[embeddings_final, {"pooled_output": pooled}]]
 
 
 def advanced_encode_XL(clip, text1, text2, token_normalization, weight_interpretation, w_max=1.0, clip_balance=.5,
-                       apply_to_pooled=True):
+                       apply_to_pooled=True,width=1024, height=1024, crop_w=0, crop_h=0, target_width=1024, target_height=1024):
     tokenized1 = clip.tokenize(text1, return_word_ids=True)
     tokenized2 = clip.tokenize(text2, return_word_ids=True)
 
@@ -313,4 +317,8 @@ def advanced_encode_XL(clip, text1, text2, token_normalization, weight_interpret
     repeat_l = int((embs_g.shape[1] / gcd_num) * embs_l.shape[1])
     repeat_g = int((embs_l.shape[1] / gcd_num) * embs_g.shape[1])
 
-    return prepareXL(embs_l.expand((-1, repeat_l, -1)), embs_g.expand((-1, repeat_g, -1)), pooled, clip_balance)
+    embeddings_final, pooled = prepareXL(embs_l.expand((-1, repeat_l, -1)), embs_g.expand((-1, repeat_g, -1)), pooled, clip_balance)
+
+    return [[embeddings_final,
+             {"pooled_output": pooled, "width": width, "height": height, "crop_w": crop_w, "crop_h": crop_h,
+              "target_width": target_width, "target_height": target_height}]]
