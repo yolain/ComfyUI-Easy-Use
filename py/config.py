@@ -57,3 +57,7 @@ FOOOCUS_INPAINT_PATCH = {
         "model_url": "https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint.fooocus.patch"
     },
 }
+
+OPEN_CLIP = {
+
+}

@@ -1,5 +1,6 @@
 import re
 import os
+import torch
 import sys
 import json
 from server import PromptServer

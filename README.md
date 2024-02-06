@@ -37,151 +37,101 @@
 
 ## 更新日志
 
-**2024-02-03**
+**v1.0.5 (2024-02-07)**
 
-- `easy showAnything` 增加支持转换其他类型（如：tensor类型的条件、图像等）
+- 增加 `easy isSDXL` 
+- `easy svdLoader` 增加提示词控制, 可配合open_clip模型进行使用
 
-**2024-02-02**
+**v1.0.4**
 
-- 修改 xyplot 中 getsize 方法为 getbbox 以兼容 pillow>9.5
-
-**2024-01-31**
-
-- 修复 `easy wildcards` 在使用PS扩展插件运行时报错
 - 增加 `easy showLoaderSettingsNames` 可显示与输出加载器部件中的 模型与VAE名称
-
-**2024-01-29**
-
-- 更改首次安装节点包不再自动替换主题，需手动调整并刷新页面
-- `easy imageSave` 增加 **only_preivew**
 - 增加 `easy promptList` - 提示词列表
-- 修改 `easy latentCompositeMaskedWithCond`
-
-**v1.0.4（2024-01-28）**
-
-- `easy kSamplerInpainting` 增加 **patch** 传入值，配合Fooocus内补节点使用
 - 增加 `easy fooocusInpaintLoader` - Fooocus内补节点（仅支持XL模型的流程）
 - 增加 **Logic** 逻辑类节点 - 包含类型、计算、判断和转换类型等
 - 增加 `easy imageSave` - 带日期转换和宽高格式化的图像保存节点
 - 增加 `easy joinImageBatch` - 合并图像批次
+- `easy showAnything` 增加支持转换其他类型（如：tensor类型的条件、图像等）
+- `easy kSamplerInpainting` 增加 **patch** 传入值，配合Fooocus内补节点使用
+- `easy imageSave` 增加 **only_preivew**
+
+- 修复 xyplot在pillow>9.5中报错
+- 修复 `easy wildcards` 在使用PS扩展插件运行时报错
+- 修复 `easy latentCompositeMaskedWithCond`
 - 修复 `easy XYInputs: ControlNet` 报错
 - 修复 `easy loraStack` **toggle** 为 disabled 时报错
 
-**2024-01-22**
+- 修改首次安装节点包不再自动替换主题，需手动调整并刷新页面
+
+**v1.0.3**
+
+- 增加 `easy stylesSelector` 风格化提示词选择器
+- 增加队列进度条设置项，默认为未启用状态
+- `easy controlnetLoader` 和 `easy controlnetLoaderADV` 增加参数 **scale_soft_weights**
+
 
 - 修复 `easy XYInputs: Sampler/Scheduler` 报错
-- 修复 右侧菜单 点击按钮时老是跑位的问题 
-- 调整UI主题，分为官方默认背景和深黑色背景两套样式，可在设置里调色板里切换（调整原因：深黑色背景对亮度较暗的用户和UP主不太友好）
-
-<details>
-<summary>2024-01-21</summary>>
-
-- 修改 styles 路径以兼容其他环境
+- 修复 右侧菜单 点击按钮时老是跑位的问题
+- 修复 styles 路径在其他环境报错
 - 修复 `easy comfyLoader` 读取错误
 - 修复 xyPlot 在连接 zero123 时报错
-</details>
-
-**v1.0.3（2024-01-19）**
-
 - 修复加载器中提示词为组件时报错
-- 增加 `easy stylesSelector` 风格化提示词选择器
-- `easy controlnetLoader` 和 `easy controlnetLoaderADV` 增加参数 **scale_soft_weights** 
-- 增加队列进度条设置项，默认为未启用状态
 - 修复 `easy getNode` 和 `easy setNode` 加载时标题未更改
 - 修复所有采样器中存储图片使用子目录前缀不生效的问题
 
-<details>
-<summary>2024-01-12</summary>
 
-- 修复在Comfy新版本中UI加载失败
-</details>
+- 调整UI主题
+
 
 <details>
-<summary>2024-01-11</summary>
+<summary><b>v1.0.2</b></summary>
 
-- 替换了XY图生成时的字体文件
-</details>
-
-<details>
-<summary><b>2024-01-09</b></summary>
+- 增加 **autocomplete** 文件夹，如果您安装了 [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts), 将在启动时合并该文件夹下的所有txt文件并覆盖到pyssss包里的autocomplete.txt文件。
+- 增加 `easy XYPlotAdvanced` 和 `easy XYInputs` 等相关节点
+- 增加 **Alt+1到9** 快捷键，可快速粘贴 Node templates 的节点预设 （对应 1到9 顺序）
 
 - 修复 `easy imageInsetCrop` 测量值为百分比时步进为1
 - 修复 开启 `a1111_prompt_style` 时XY图表无法使用的问题
-- 增加了一个 **autocomplete** 文件夹，如果您安装了 [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts), 将在启动时合并该文件夹下的所有txt文件并覆盖到pyssss包里的autocomplete.txt文件。
 - 右键菜单中增加了一个 `📜Groups Map(EasyUse)` 
-</details>
 
-<details>
-<summary><b>2024-01-08</b></summary>
-
+- 修复在Comfy新版本中UI加载失败
+- 修复 `easy pipeToBasicPipe` 报错
 - 修改 `easy fullLoader` 和 `easy a1111Loader` 中的 **a1111_prompt_style** 默认值为 False
 - `easy XYInputs ModelMergeBlocks` 支持csv文件导入数值
-- 修复 `easy pipeToBasicPipe` 报错
-- 移除了 `easy imageRemBg` (很多包中都有移除背景的节点，由于比较占用ComfyUI启动加载时间，这次更新中注释掉了其相关代码)
-</details>
 
-**v1.0.2（2024-01-05）**
+- 替换了XY图生成时的字体文件
 
-- 增加 `easy XYPlotAdvanced` 和 `easy XYInputs` 等相关节点
-- 增加 **Alt+1到9** 快捷键，可快速粘贴 Node templates 的节点预设 （对应 1到9 顺序）
+- 移除 `easy imageRemBg`
 - 移除包中的介绍图和工作流文件，减少包体积
 
+</details>
+
 <details>
-<summary><b>2024-01-03</b></summary>
+<summary><b>v1.0.1</b></summary>
+
+- 新增 `easy seed` - 简易随机种
+- `easy preDetailerFix` 新增了 `optional_image` 传入图像可选，如未传默认取值为pipe里的图像
+- 新增 `easy kSamplerInpainting` 用于内补潜空间的采样器
+- 新增 `easy pipeToBasicPipe` 用于转换到Impact的某些节点上
 
 - 修复 `easy comfyLoader` 报错
 - 修复所有包含输出图片尺寸的节点取值方式无法批处理的问题
-- 增加 `easy kSamplerInpainting` 用于内补潜空间的采样器
-- 增加 `easy pipeToBasicPipe` 用于转换到Impact的某些节点上
-</details>
-
-<details>
-<summary><b>2024-01-02</b></summary>
-
 - 修复 `width` 和 `height` 无法在 `easy svdLoader` 自定义的报错问题
 - 修复所有采样器预览图片的地址链接 (解决在 MACOS 系统中图片无法在采样器中预览的问题）
-</details>
-
-<details>
-<summary><b>2023-12-31</b></summary>
-
 - 修复 `vae_name` 在 `easy fullLoader` 和 `easy a1111Loader` 和 `easy comfyLoader` 中选择但未替换原始vae问题
 - 修复 `easy fullkSampler` 除pipe外其他输出值的报错
-</details>
-
-<details>
-<summary><b>2023-12-29</b></summary>
-
 - 修复 `easy hiresFix` 输入连接pipe和image、vae同时存在时报错
 - 修复 `easy fullLoader` 中 `model_override` 连接后未执行 
-</details>
-
-<details>
-<summary><b>2023-12-27</b></summary>
-
 - 修复 因新增`easy seed` 导致action错误
 - 修复 `easy xyplot` 的字体文件路径读取错误
 - 修复 convert 到 `easy seed` 随机种无法固定的问题
 - 修复 `easy pipeIn` 值传入的报错问题
-- `easy preDetailerFix` 新增了 `optional_image` 传入图像可选，如未传默认取值为pipe里的图像
-</details>
-
-**v1.0.1（2023-12-26）**
-
 - 修复 `easy zero123Loader` 和 `easy svdLoader` 读取模型时将模型加入到缓存中
-- 新增 `easy seed` - 简易随机种
 - 修复 `easy kSampler` `easy kSamplerTiled` `easy detailerFix` 的 `image_output` 默认值为 Preview
 - `easy fullLoader` 和 `easy a1111Loader` 新增了 `a1111_prompt_style` 参数可以重现和webui生成相同的图像，当前您需要安装 [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes) 才能使用此功能
-
-<details>
-<summary><b>2023-12-25</b></summary>
-
-- 修复 `easy globalSeed` 不生效问题
-- 修复所有的`seed_num` 因 [cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) 实时更新图表导致值错乱的问题
 </details>
 
 <details>
-<summary><b>v1.0.0（2023-12-24）</b></summary>
+<summary><b>v1.0.0</b></summary>
 
 - 新增`easy positive` - 简易正面提示词文本
 - 新增`easy negative`  - 简易负面提示词文本
@@ -202,33 +152,26 @@
 - 新增`easy poseEditor` - 姿势编辑器
 - 新增UI主题（黑曜石）- 默认自动加载UI, 也可在设置中自行更替 
 
-
+- 修复 `easy globalSeed` 不生效问题
+- 修复所有的`seed_num` 因 [cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) 实时更新图表导致值错乱的问题
 - 修复`easy imageSize` `easy imageSizeBySide` `easy imageSizeByLongerSide` 可作为终节点
 - 修复 `seed_num` (随机种子值) 在历史记录中读取无法一致的Bug
 </details>
 
-<details>
-<summary><b>2023-12-14</b></summary>
 
-- `easy a1111Loader` 和 `easy comfyLoader` 新增 `batch_size` 传入参数
+<details>
+<summary><b>v0.5</b></summary>
+
 - 新增 `easy controlnetLoaderADV` 节点
+-  新增 `easy imageSizeBySide` 节点，可选输出为长边或短边
+-  新增 `easy LLLiteLoader` 节点，如果您预先安装过 kohya-ss/ControlNet-LLLite-ComfyUI 包，请将 models 里的模型文件移动至 ComfyUI\models\controlnet\ (即comfy默认的controlnet路径里，请勿修改模型的文件名，不然会读取不到)。
+-  新增 `easy imageSize` 和 `easy imageSizeByLongerSize` 输出的尺寸显示。
+-  新增 `easy showSpentTime` 节点用于展示图片推理花费时间与VAE解码花费时间。
 - `easy controlnetLoaderADV` 和 `easy controlnetLoader` 新增 `control_net` 可选传入参数
 - `easy preSampling` 和 `easy preSamplingAdvanced` 新增 `image_to_latent` 可选传入参数
-- 新增 `easy imageSizeBySide` 节点，可选输出为长边或短边
-</details>
+- `easy a1111Loader` 和 `easy comfyLoader` 新增 `batch_size` 传入参数
 
-<details>
-<summary><b>2023-12-13</b></summary>
-
--  新增 `easy LLLiteLoader` 节点，如果您预先安装过 kohya-ss/ControlNet-LLLite-ComfyUI 包，请将 models 里的模型文件移动至 ComfyUI\models\controlnet\ (即comfy默认的controlnet路径里，请勿修改模型的文件名，不然会读取不到)。
 -  修改 `easy controlnetLoader` 到 loader 分类底下。
--  新增 `easy imageSize` 和 `easy imageSizeByLongerSize` 输出的尺寸显示。
-</details>
-
-<details>
-<summary><b>2023-12-11</b></summary>
-
--  新增 `easy showSpentTime` 节点用于展示图片推理花费时间与VAE解码花费时间。
 </details>
 
 ## 涉及到的相关节点包

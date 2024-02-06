@@ -39,6 +39,7 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'lora_model_strength'), true)
 			toggleWidget(node, findWidgetByName(node, 'lora_clip_strength'), true)
 		}
+		updateNodeHeight(node)
 	}
 	if (widget.name === 'rescale') {
 		let rescale_after_model = findWidgetByName(node, 'rescale_after_model').value
@@ -58,6 +59,7 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'height'))
 			toggleWidget(node, findWidgetByName(node, 'percent'))
 		}
+		updateNodeHeight(node)
 	}
 	if (widget.name === 'upscale_method') {
 		if (widget.value === "None") {
@@ -67,6 +69,7 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'factor'), true)
 			toggleWidget(node, findWidgetByName(node, 'crop'), true)
 		}
+		updateNodeHeight(node)
 	}
 	if (widget.name === 'image_output') {
 	    if (widget.value === 'Sender' || widget.value === 'Sender/Save'){
@@ -96,6 +99,7 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'seed_num'), true)
 			toggleWidget(node, findWidgetByName(node, 'control_before_generate'), true)
 		}
+		updateNodeHeight(node)
 	}
 	if (widget.name === 'num_loras') {
 		let number_to_show = widget.value + 1
@@ -755,7 +759,7 @@ app.registerExtension({
 });
 
 
-const getSetWidgets = ['rescale_after_model', 'rescale', 'image_output', 
+const getSetWidgets = ['rescale_after_model', 'rescale', 'image_output',
 						'lora_name', 'lora1_name', 'lora2_name', 'lora3_name', 
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',

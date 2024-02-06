@@ -1,6 +1,7 @@
 from typing import Iterator, List, Tuple, Dict, Any, Union, Optional
 from _decimal import Context, getcontext
 from decimal import Decimal
+import torch
 import numpy as np
 import json
 
@@ -334,6 +335,34 @@ class If:
     def execute(self, *args, **kwargs):
         return (kwargs['if'] if kwargs['any'] else kwargs['else'],)
 
+
+#是否为SDXL
+from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
+class isSDXL:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {},
+            "optional": {
+                "optional_pipe": ("PIPE_LINE",),
+                "optional_clip": ("CLIP",),
+            }
+        }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    RETURN_NAMES = ("boolean",)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic"
+
+    def execute(self, optional_pipe=None, optional_clip=None):
+        if optional_pipe is None and optional_clip is None:
+            raise Exception(f"[ERROR] optional_pipe or optional_clip is missing")
+        clip = optional_clip if optional_clip is not None else optional_pipe['clip']
+        if isinstance(clip.cond_stage_model, (SDXLClipModel, SDXLRefinerClipModel, SDXLClipG)):
+            return (True,)
+        else:
+            return (False,)
+
 #xy矩阵
 class xyAny:
 
@@ -438,6 +467,26 @@ class showAnything:
 
         return {"ui": {"text": values}}
 
+# cleanGpuUsed
+class cleanGPUUsed:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"anything": (AlwaysEqualProxy("*"), {})}, "optional": {},
+                "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",
+                           }}
+
+    RETURN_TYPES = ()
+    RETURN_NAMES = ()
+    OUTPUT_NODE = True
+    FUNCTION = "empty_cache"
+    CATEGORY = "EasyUse/Logic"
+
+    def empty_cache(self, anything, unique_id=None, extra_pnginfo=None):
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        return ()
+
 NODE_CLASS_MAPPINGS = {
   "easy string": String,
   "easy int": Int,
@@ -448,9 +497,11 @@ NODE_CLASS_MAPPINGS = {
   "easy compare": Compare,
   "easy imageSwitch": imageSwitch,
   "easy if": If,
+  "easy isSDXL": isSDXL,
   "easy xyAny": xyAny,
   "easy convertAnything": ConvertAnything,
   "easy showAnything": showAnything,
+  "easy cleanGpuUsed": cleanGPUUsed
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy string": "String",
@@ -462,7 +513,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy compare": "Compare",
   "easy imageSwitch": "Image Switch",
   "easy if": "If",
+  "easy isSDXL": "Is SDXL",
   "easy xyAny": "XYAny",
   "easy convertAnything": "Convert Any",
   "easy showAnything": "Show Any",
+  "easy cleanGpuUsed": "Clean GPU Used"
 }

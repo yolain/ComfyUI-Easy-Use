@@ -28,7 +28,7 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 from .adv_encode import advanced_encode, advanced_encode_XL
 
 from server import PromptServer
-from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask
+from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat
 from comfy_extras.nodes_mask import LatentCompositeMasked
 from .config import BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn, log_node_success
@@ -2227,20 +2227,26 @@ class svdLoader:
             return [file for file in filenames if file != "put_models_here.txt" and "svd" in file]
 
         return {"required": {
-            "ckpt_name": (get_file_list(folder_paths.get_filename_list("checkpoints")),),
-            "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
+                "ckpt_name": (get_file_list(folder_paths.get_filename_list("checkpoints")),),
+                "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
+                "clip_name": (["None"] + folder_paths.get_filename_list("clip"),),
 
-            "init_image": ("IMAGE",),
-            "resolution": (resolution_strings, {"default": "1024 x 576"}),
-            "empty_latent_width": ("INT", {"default": 256, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
-            "empty_latent_height": ("INT", {"default": 256, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
+                "init_image": ("IMAGE",),
+                "resolution": (resolution_strings, {"default": "1024 x 576"}),
+                "empty_latent_width": ("INT", {"default": 256, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
+                "empty_latent_height": ("INT", {"default": 256, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
 
-            "video_frames": ("INT", {"default": 14, "min": 1, "max": 4096}),
-            "motion_bucket_id": ("INT", {"default": 127, "min": 1, "max": 1023}),
-            "fps": ("INT", {"default": 6, "min": 1, "max": 1024}),
-            "augmentation_level": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.01})
-        },
-            "hidden": {"prompt": "PROMPT"}, "my_unique_id": "UNIQUE_ID"}
+                "video_frames": ("INT", {"default": 14, "min": 1, "max": 4096}),
+                "motion_bucket_id": ("INT", {"default": 127, "min": 1, "max": 1023}),
+                "fps": ("INT", {"default": 6, "min": 1, "max": 1024}),
+                "augmentation_level": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.01})
+            },
+            "optional": {
+                "optional_positive": ("STRING", {"default": "", "multiline": True}),
+                "optional_negative": ("STRING", {"default": "", "multiline": True}),
+            },
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
     RETURN_NAMES = ("pipe", "model", "vae")
@@ -2248,7 +2254,7 @@ class svdLoader:
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
 
-    def adv_pipeloader(self, ckpt_name, vae_name, init_image, resolution, empty_latent_width, empty_latent_height, video_frames, motion_bucket_id, fps, augmentation_level, prompt=None, my_unique_id=None):
+    def adv_pipeloader(self, ckpt_name, vae_name, clip_name, init_image, resolution, empty_latent_width, empty_latent_height, video_frames, motion_bucket_id, fps, augmentation_level, optional_positive=None, optional_negative=None, prompt=None, my_unique_id=None):
         model: ModelPatcher | None = None
         vae: VAE | None = None
         clip: CLIP | None = None
@@ -2282,6 +2288,22 @@ class svdLoader:
         negative = [[torch.zeros_like(pooled),
                      {"motion_bucket_id": motion_bucket_id, "fps": fps, "augmentation_level": augmentation_level,
                       "concat_latent_image": torch.zeros_like(t)}]]
+        if clip_name != 'None':
+            clip_path = folder_paths.get_full_path("clip", clip_name)
+            clip = comfy.sd.load_clip(ckpt_paths=[clip_path],
+                                      embedding_directory=folder_paths.get_folder_paths("embeddings"))
+            if optional_positive is not None:
+                tokens = clip.tokenize(optional_positive)
+                cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
+                positive_embeddings_final = [[cond, {"pooled_output": pooled}]]
+                positive, = ConditioningConcat().concat(positive, positive_embeddings_final)
+            if optional_negative is not None:
+                tokens = clip.tokenize(optional_negative)
+                cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
+                negative_embeddings_final = [[cond, {"pooled_output": pooled}]]
+                negative, = ConditioningConcat().concat(negative, negative_embeddings_final)
+
+
         latent = torch.zeros([video_frames, 4, empty_latent_height // 8, empty_latent_width // 8])
         samples = {"samples": latent}
 
