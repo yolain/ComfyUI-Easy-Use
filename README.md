@@ -41,6 +41,7 @@
 
 - 增加 `easy isSDXL` 
 - `easy svdLoader` 增加提示词控制, 可配合open_clip模型进行使用
+- `easy wildcards` 增加 **populated_text** 可输出通配填充后文本
 
 **v1.0.4**
 

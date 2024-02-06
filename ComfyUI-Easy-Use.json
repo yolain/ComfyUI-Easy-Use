@@ -39,7 +39,8 @@
       "control_before_generate": "运行前操作"
     },
     "outputs": {
-      "text": "提示词"
+      "text": "提示词",
+      "populated_text": "通配填充词"
     }
   },
   "easy promptList": {

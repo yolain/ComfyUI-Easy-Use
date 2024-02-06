@@ -32,11 +32,12 @@ After installing the node package, the UI interface will be automatically switch
 **v1.0.5 (2024-02-07)**
 
 - Added `easy isSDXL` 
-- `easy svdLoader` add prompt word control, which can be used with open_clip model
+- Added prompt word control on `easy svdLoader`, which can be used with open_clip model
+- Added **populated_text** on `easy wildcards`, wildcard populated text can be output
 
 **v1.0.4**
 
-- `easy showAnything` Added support for converting other types (e.g., tensor conditions, images, etc.)
+- `easy showAnything` added support for converting other types (e.g., tensor conditions, images, etc.)
 - Added `easy showLoaderSettingsNames` can display the model and VAE name in the output loader assembly
 - Added `easy promptList`
 - Added `easy fooocusInpaintLoader` （only the process of SDXLModel is supported）

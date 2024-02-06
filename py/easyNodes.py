@@ -32,7 +32,7 @@ from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPI
 from comfy_extras.nodes_mask import LatentCompositeMasked
 from .config import BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn, log_node_success
-from .wildcards import process_with_loras, get_wildcard_list
+from .wildcards import process_with_loras, get_wildcard_list, process
 
 # 加载器
 class easyLoader:
@@ -1260,8 +1260,8 @@ class wildcardsPrompt:
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("text",)
+    RETURN_TYPES = ("STRING", "STRING")
+    RETURN_NAMES = ("text", "populated_text")
     OUTPUT_NODE = True
     FUNCTION = "main"
 
@@ -1277,7 +1277,8 @@ class wildcardsPrompt:
             easyCache.update_loaded_objects(prompt)
 
         text = kwargs['text']
-        return {"ui": {"value": [seed_num]}, "result": (text,)}
+        populated_text = process(text, seed_num)
+        return {"ui": {"value": [seed_num]}, "result": (text, populated_text)}
 
 # 负面提示词
 class negativePrompt:
