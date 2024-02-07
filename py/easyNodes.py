@@ -566,6 +566,10 @@ class easyXYPlot:
         else:
             return initial_font_size
 
+    def textsize(self, d, text, font):
+        _, _, width, height = d.textbbox((0, 0), text=text, font=font)
+        return width, height
+
     def create_label(self, img, text, initial_font_size, is_x_label=True, max_font_size=70, min_font_size=10):
         label_width = img.width if is_x_label else img.height
 
@@ -582,14 +586,14 @@ class easyXYPlot:
         font = self.get_font(font_size)
 
         # Check if text will fit, if not insert ellipsis and reduce text
-        if d.textsize(text, font=font)[0] > label_width:
-            while d.textsize(text + '...', font=font)[0] > label_width and len(text) > 0:
+        if self.textsize(d, text, font=font)[0] > label_width:
+            while self.textsize(d, text + '...', font=font)[0] > label_width and len(text) > 0:
                 text = text[:-1]
             text = text + '...'
 
         # Compute text width and height for multi-line text
         text_lines = text.split('\n')
-        text_widths, text_heights = zip(*[d.textsize(line, font=font) for line in text_lines])
+        text_widths, text_heights = zip(*[self.textsize(d, line, font=font) for line in text_lines])
         max_text_width = max(text_widths)
         total_text_height = sum(text_heights)
 
@@ -745,13 +749,12 @@ class easyXYPlot:
                             f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
                 else:
                     clip = clip if clip is not None else plot_image_vars["clip"]
-                    positive, positive_pooled = advanced_encode(clip, positive,
+                    positive = advanced_encode(clip, positive,
                                                                 plot_image_vars['positive_token_normalization'],
                                                                 plot_image_vars[
                                                                     'positive_weight_interpretation'],
                                                                 w_max=1.0,
                                                                 apply_to_pooled="enable")
-                    positive = [[positive, {"pooled_output": positive_pooled}]]
                     if "positive_cond" in plot_image_vars:
                         positive = positive + plot_image_vars["positive_cond"]
 
@@ -770,13 +773,12 @@ class easyXYPlot:
                             f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
                 else:
                     clip = clip if clip is not None else plot_image_vars["clip"]
-                    negative, negative_pooled = advanced_encode(clip, negative,
+                    negative = advanced_encode(clip, negative,
                                                                 plot_image_vars['negative_token_normalization'],
                                                                 plot_image_vars[
                                                                     'negative_weight_interpretation'],
                                                                 w_max=1.0,
                                                                 apply_to_pooled="enable")
-                    negative = [[negative, {"pooled_output": negative_pooled}]]
                     if "negative_cond" in plot_image_vars:
                         positive = positive + plot_image_vars["negative_cond"]
 
@@ -834,17 +836,15 @@ class easyXYPlot:
                 else:
                     raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
             else:
-                positive, positive_pooled = advanced_encode(clip, plot_image_vars['positive'],
+                positive = advanced_encode(clip, plot_image_vars['positive'],
                                                             plot_image_vars['positive_token_normalization'],
                                                             plot_image_vars['positive_weight_interpretation'], w_max=1.0,
                                                             apply_to_pooled="enable")
-                positive = [[positive, {"pooled_output": positive_pooled}]]
 
-                negative, negative_pooled = advanced_encode(clip, plot_image_vars['negative'],
+                negative = advanced_encode(clip, plot_image_vars['negative'],
                                                             plot_image_vars['negative_token_normalization'],
                                                             plot_image_vars['negative_weight_interpretation'], w_max=1.0,
                                                             apply_to_pooled="enable")
-                negative = [[negative, {"pooled_output": negative_pooled}]]
 
         model = model if model is not None else plot_image_vars["model"]
         clip = clip if clip is not None else plot_image_vars["clip"]
