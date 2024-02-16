@@ -29,7 +29,15 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
-**v1.0.5 (2024-02-07)**
+**v1.0.6 (2024-02-16)**
+
+- Added `easy XYInputs: Checkpoint`
+- Added `easy XYInputs: Lora`
+- `easy seed` can manually switch the random seed when increasing the fixed seed value
+- Fixed `easy fullLoader` and all loaders to automatically adjust the node size when switching LoRa
+- Removed the original ttn image saving logic and adapted to the default image saving format extension of ComfyUI
+
+- **v1.0.5**
 
 - Added `easy isSDXL` 
 - Added prompt word control on `easy svdLoader`, which can be used with open_clip model

@@ -405,7 +405,7 @@ class imageToMask:
     return (image.squeeze().mean(2),)
 
 # 图像保存 (简易)
-from comfy.cli_args import args
+from nodes import PreviewImage, SaveImage
 class imageSaveSimple:
 
   def __init__(self):
@@ -430,74 +430,13 @@ class imageSaveSimple:
   OUTPUT_NODE = True
   CATEGORY = "EasyUse/Image"
 
-  @staticmethod
-  def _format_date(text: str, date: datetime.datetime) -> str:
-    """Format the date according to specific patterns."""
-    date_formats = {
-      'd': lambda d: d.day,
-      'dd': lambda d: '{:02d}'.format(d.day),
-      'M': lambda d: d.month,
-      'MM': lambda d: '{:02d}'.format(d.month),
-      'h': lambda d: d.hour,
-      'hh': lambda d: '{:02d}'.format(d.hour),
-      'm': lambda d: d.minute,
-      'mm': lambda d: '{:02d}'.format(d.minute),
-      's': lambda d: d.second,
-      'ss': lambda d: '{:02d}'.format(d.second),
-      'y': lambda d: d.year,
-      'yy': lambda d: str(d.year)[2:],
-      'yyy': lambda d: str(d.year)[1:],
-      'yyyy': lambda d: d.year,
-    }
-
-    # We need to sort the keys in reverse order to ensure we match the longest formats first
-    for format_str in sorted(date_formats.keys(), key=len, reverse=True):
-      if format_str in text:
-        text = text.replace(format_str, str(date_formats[format_str](date)))
-    return text
-
   def save(self, images, filename_prefix="ComfyUI", only_preview=False, prompt=None, extra_pnginfo=None):
-
     if only_preview:
-      self.output_dir = folder_paths.get_temp_directory()
-      self.prefix_append = "_temp_" + ''.join(random.choice("abcdefghijklmnopqrstupvxyz") for x in range(5))
-      self.type = 'temp'
-      self.compress_level = 1
+      PreviewImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
+      return ()
     else:
-      self.output_dir = folder_paths.get_output_directory()
-      self.type = "output"
-      self.prefix_append = ""
-      self.compress_level = 4
+      return SaveImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
 
-    filename_prefix = re.sub(r'%date:(.*?)%', lambda m: self._format_date(m.group(1), datetime.datetime.now()),
-                      filename_prefix)
-
-    filename_prefix += self.prefix_append
-    full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
-
-    results = list()
-    for image in images:
-      img = Image.fromarray(np.clip(255. * image.cpu().numpy(), 0, 255).astype(np.uint8))
-      filename = filename.replace("%width%", str(img.size[0])).replace("%height%", str(img.size[1]))
-
-      metadata = None
-      metadata = PngInfo()
-      if prompt is not None:
-        metadata.add_text("prompt", json.dumps(prompt))
-      if extra_pnginfo is not None:
-        for x in extra_pnginfo:
-          metadata.add_text(x, json.dumps(extra_pnginfo[x]))
-
-      file = f"{filename}_{counter:05}_.png"
-      img.save(os.path.join(full_output_folder, file), pnginfo=metadata, compress_level=self.compress_level)
-      results.append({
-        "filename": file,
-        "subfolder": subfolder,
-        "type": self.type
-      })
-      counter += 1
-
-    return { "ui": { "images": results } }
 
 # 图像批次合并
 class JoinImageBatch:

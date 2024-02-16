@@ -46,7 +46,7 @@ class SeedGenerator:
 
 
 def control_seed(v, action, seed_is_global):
-    action = action or v['inputs']['action']
+    action = v['inputs']['action'] if seed_is_global else action
     value = v['inputs']['value'] if seed_is_global else v['inputs']['seed_num']
 
     if action == 'increment' or action == 'increment for each node':
@@ -147,16 +147,35 @@ def prompt_seed_update(json_data):
                         else:
                             action = widgets_value[widgets_length - 1]
                     else:
-                        action = widgets_value[widgets_length - 1]
+                        control_index = widgets_length - 2 if cls == 'easy seed' else widgets_length - 1
+                        action = widgets_value[control_index]
 
+                    # print(action)
                     node = k, v
                     value = control_seed(node[1], action, False)
+
                     if k not in seed_widget_map:
                         continue
 
                     if 'seed_num' in v['inputs']:
                         if isinstance(v['inputs']['seed_num'], int):
                             v['inputs']['seed_num'] = value
+
+                    # 修改和seed节点连接的节点 (没有作用,不生效)
+                    # if cls == 'easy seed':
+                    #     outputs = extra_data.get('outputs')
+                    #     if outputs and outputs[0] and 'links' in outputs[0]:
+                    #         for id in outputs[0]['links']:
+                    #             for x in workflow["nodes"]:
+                    #                 if "inputs" in x and x['inputs'] != []:
+                    #                     x_seed_num = next((i for i in x['inputs'] if i['name'] == 'seed_num' and i['type'] == 'INT'), None)
+                    #                     if x_seed_num is not None and "link" in x_seed_num and id == x_seed_num['link']:
+                    #                         widgets_values = x['widgets_values']
+                    #                         if widgets_values:
+                    #                             widgets_values[len(widgets_values)-1] = action
+                    #                             widgets_values[len(widgets_values)-2] = value
+                    #                         print(x)
+
 
     return value is not None
 

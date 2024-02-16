@@ -28,7 +28,7 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 from .adv_encode import advanced_encode, advanced_encode_XL
 
 from server import PromptServer
-from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat
+from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, PreviewImage, SaveImage
 from comfy_extras.nodes_mask import LatentCompositeMasked
 from .config import BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn, log_node_success
@@ -196,8 +196,7 @@ class easyLoader:
         output_clipvision = True if load_vision else False
         if config_name not in [None, "Default"]:
             config_path = folder_paths.get_full_path("configs", config_name)
-            loaded_ckpt = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision,
-                                                   embedding_directory=folder_paths.get_folder_paths("embeddings"))
+            loaded_ckpt = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=output_clip, embedding_directory=folder_paths.get_folder_paths("embeddings"))
         else:
             loaded_ckpt = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"))
 
@@ -493,6 +492,9 @@ class easyXYPlot:
         if "ControlNet" in value_type:
             value_label = f"ControlNet {index + 1}"
 
+        if value_type in ['Lora', 'Checkpoint']:
+            value_label = f"{os.path.basename(os.path.splitext(value.split(',')[0])[0])}"
+
         if value_type in ["ModelMergeBlocks"]:
             if ":" in value:
                 line = value.split(':')
@@ -733,6 +735,101 @@ class easyXYPlot:
                 if plot_image_vars['clip_skip'] != 0:
                     clip.clip_layer(plot_image_vars['clip_skip'])
 
+            # CheckPoint
+            if self.x_type == "Checkpoint" or self.y_type == "Checkpoint":
+                xy_values = x_value if self.x_type == "Checkpoint" else y_value
+                ckpt_name, clip_skip, vae_name = xy_values.split(",")
+                ckpt_name = ckpt_name.replace('*', ',')
+                vae_name = vae_name.replace('*', ',')
+                model, clip, vae = easyCache.load_checkpoint(ckpt_name)
+                if vae_name != 'None':
+                    vae = easyCache.load_vae(vae_name)
+
+                # 如果存在lora_stack叠加lora
+                optional_lora_stack = plot_image_vars['lora_stack']
+                if optional_lora_stack is not None and optional_lora_stack != []:
+                    for lora in optional_lora_stack:
+                        lora_name = lora["lora_name"]
+                        model = model if model is not None else lora["model"]
+                        clip = clip if clip is not None else lora["clip"]
+                        lora_model_strength = lora["lora_model_strength"]
+                        lora_clip_strength = lora["lora_clip_strength"]
+                        if "lbw" in lora:
+                            lbw = lora["lbw"]
+                            lbw_a = lora["lbw_a"]
+                            lbw_b = lora["lbw_b"]
+                            cls = ALL_NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
+                            model, clip, _ = cls().doit(model, clip, lora_name, lora_model_strength,
+                                                        lora_clip_strength, False, 0,
+                                                        lbw_a, lbw_b, "", lbw)
+                        model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength,
+                                                          lora_clip_strength)
+                # 处理clip
+                clip = clip.clone()
+                if clip_skip != 'None':
+                    clip.clip_layer(int(clip_skip))
+                    positive = plot_image_vars['positive']
+                    negative = plot_image_vars['negative']
+                    if plot_image_vars['a1111_prompt_style']:
+                        if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
+                            cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
+                            steps = plot_image_vars['steps']
+                            positive, = cls().encode(clip, positive, "A1111", True, True, False, False, 6,
+                                                     1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+                            negative, = cls().encode(clip, negative, "A1111", True, True, False, False, 6,
+                                                     1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+                        else:
+                            raise Exception(
+                                f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
+                    else:
+                        clip = clip if clip is not None else plot_image_vars["clip"]
+                        positive = advanced_encode(clip, positive,
+                                                   plot_image_vars['positive_token_normalization'],
+                                                   plot_image_vars[
+                                                       'positive_weight_interpretation'],
+                                                   w_max=1.0,
+                                                   apply_to_pooled="enable")
+
+                        negative = advanced_encode(clip, negative,
+                                                   plot_image_vars['negative_token_normalization'],
+                                                   plot_image_vars[
+                                                       'negative_weight_interpretation'],
+                                                   w_max=1.0,
+                                                   apply_to_pooled="enable")
+                        if "positive_cond" in plot_image_vars:
+                            positive = positive + plot_image_vars["positive_cond"]
+                        if "negative_cond" in plot_image_vars:
+                            negative = negative + plot_image_vars["negative_cond"]
+
+            # Lora
+            if self.x_type == "Lora" or self.y_type == "Lora":
+                model = model if model is not None else plot_image_vars["model"]
+                clip = clip if clip is not None else plot_image_vars["clip"]
+
+                xy_values = x_value if self.x_type == "Lora" else y_value
+                lora_name, lora_model_strength, lora_clip_strength = xy_values.split(",")
+                lora_stack = [{"lora_name": lora_name, "model": model, "clip" :clip, "lora_model_strength": float(lora_model_strength), "lora_clip_strength": float(lora_clip_strength)}]
+                if 'lora_stack' in plot_image_vars:
+                    lora_stack = lora_stack + plot_image_vars['lora_stack']
+
+                if lora_stack is not None and lora_stack != []:
+                    for lora in lora_stack:
+                        lora_name = lora["lora_name"]
+                        model = model if model is not None else lora["model"]
+                        clip = clip if clip is not None else lora["clip"]
+                        lora_model_strength = lora["lora_model_strength"]
+                        lora_clip_strength = lora["lora_clip_strength"]
+                        if "lbw" in lora:
+                            lbw = lora["lbw"]
+                            lbw_a = lora["lbw_a"]
+                            lbw_b = lora["lbw_b"]
+                            cls = ALL_NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
+                            model, clip, _ = cls().doit(model, clip, lora_name, lora_model_strength, lora_clip_strength,
+                                                        False, 0,
+                                                        lbw_a, lbw_b, "", lbw)
+                        model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength,
+                                                          lora_clip_strength)
+
             # 提示词
             if "Positive" in self.x_type or "Positive" in self.y_type:
                 if self.x_type == 'Positive Prompt S/R' or self.y_type == 'Positive Prompt S/R':
@@ -847,7 +944,6 @@ class easyXYPlot:
                                                             apply_to_pooled="enable")
 
         model = model if model is not None else plot_image_vars["model"]
-        clip = clip if clip is not None else plot_image_vars["clip"]
         vae = vae if vae is not None else plot_image_vars["vae"]
         positive = positive if positive is not None else plot_image_vars["positive_cond"]
         negative = negative if negative is not None else plot_image_vars["negative_cond"]
@@ -874,8 +970,7 @@ class easyXYPlot:
         image = vae.decode(latent).cpu()
 
         if self.output_individuals in [True, "True"]:
-            easy_save = easySave(self.my_unique_id, self.prompt, self.extra_pnginfo)
-            easy_save.images(image, self.save_prefix, self.image_output, group_id=self.num)
+            easySave(image, self.save_prefix, self.image_output)
 
         # Convert the image from tensor to PIL Image and add it to the list
         pil_image = easySampler.tensor2pil(image)
@@ -989,6 +1084,17 @@ class easyXYPlot:
 easyCache = easyLoader()
 sampler = easySampler()
 
+def easySave(images, filename_prefix, output_type, prompt=None, extra_pnginfo=None):
+
+    if output_type == "Hide":
+        return list()
+    if output_type == "Preview":
+        filename_prefix = 'easyPreview'
+        results = PreviewImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
+        return results['ui']['images']
+    else:
+        results = SaveImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
+        return results['ui']['images']
 
 def check_link_to_clip(node_id, clip_id, visited=None, node=None):
     """Check if a given node links directly or indirectly to a loader node."""
@@ -1043,180 +1149,6 @@ def find_wildcards_seed(clip_id, text, prompt):
         return seed
     else:
         return None
-
-class easySave:
-    def __init__(self, my_unique_id=0, prompt=None, extra_pnginfo=None, number_padding=5, overwrite_existing=False,
-                 output_dir=folder_paths.get_temp_directory()):
-        self.number_padding = int(number_padding) if number_padding not in [None, "None", 0] else None
-        self.overwrite_existing = overwrite_existing
-        self.my_unique_id = my_unique_id
-        self.prompt = prompt
-        self.extra_pnginfo = extra_pnginfo
-        self.type = 'temp'
-        self.output_dir = output_dir
-        if self.output_dir != folder_paths.get_temp_directory():
-            self.output_dir = self.folder_parser(self.output_dir, self.prompt, self.my_unique_id)
-            if not os.path.exists(self.output_dir):
-                self._create_directory(self.output_dir)
-
-    @staticmethod
-    def _create_directory(folder: str):
-        """Try to create the directory and log the status."""
-        log_node_warn(f"Folder {folder} does not exist. Attempting to create...")
-        if not os.path.exists(folder):
-            try:
-                os.makedirs(folder)
-                log_node_success(f"{folder} Created Successfully")
-            except OSError:
-                log_node_error(f"Failed to create folder {folder}")
-                pass
-
-    @staticmethod
-    def _map_filename(filename: str, filename_prefix: str) -> Tuple[int, str, Optional[int]]:
-        """Utility function to map filename to its parts."""
-
-        # Get the prefix length and extract the prefix
-        prefix_len = len(os.path.basename(filename_prefix))
-        prefix = filename[:prefix_len]
-
-        # Search for the primary digits
-        digits = re.search(r'(\d+)', filename[prefix_len:])
-
-        # Search for the number in brackets after the primary digits
-        group_id = re.search(r'\((\d+)\)', filename[prefix_len:])
-
-        return (int(digits.group()) if digits else 0, prefix, int(group_id.group(1)) if group_id else 0)
-
-    @staticmethod
-    def _format_date(text: str, date: datetime.datetime) -> str:
-        """Format the date according to specific patterns."""
-        date_formats = {
-            'd': lambda d: d.day,
-            'dd': lambda d: '{:02d}'.format(d.day),
-            'M': lambda d: d.month,
-            'MM': lambda d: '{:02d}'.format(d.month),
-            'h': lambda d: d.hour,
-            'hh': lambda d: '{:02d}'.format(d.hour),
-            'm': lambda d: d.minute,
-            'mm': lambda d: '{:02d}'.format(d.minute),
-            's': lambda d: d.second,
-            'ss': lambda d: '{:02d}'.format(d.second),
-            'y': lambda d: d.year,
-            'yy': lambda d: str(d.year)[2:],
-            'yyy': lambda d: str(d.year)[1:],
-            'yyyy': lambda d: d.year,
-        }
-
-        # We need to sort the keys in reverse order to ensure we match the longest formats first
-        for format_str in sorted(date_formats.keys(), key=len, reverse=True):
-            if format_str in text:
-                text = text.replace(format_str, str(date_formats[format_str](date)))
-        return text
-
-    @staticmethod
-    def _gather_all_inputs(prompt: Dict[str, dict], unique_id: str, linkInput: str = '',
-                           collected_inputs: Optional[Dict[str, Union[str, List[str]]]] = None) -> Dict[
-        str, Union[str, List[str]]]:
-        """Recursively gather all inputs from the prompt dictionary."""
-        if prompt == None:
-            return None
-
-        collected_inputs = collected_inputs or {}
-        prompt_inputs = prompt[str(unique_id)]["inputs"]
-
-        for p_input, p_input_value in prompt_inputs.items():
-            a_input = f"{linkInput}>{p_input}" if linkInput else p_input
-
-            if isinstance(p_input_value, list):
-                easySave._gather_all_inputs(prompt, p_input_value[0], a_input, collected_inputs)
-            else:
-                existing_value = collected_inputs.get(a_input)
-                if existing_value is None:
-                    collected_inputs[a_input] = p_input_value
-                elif p_input_value not in existing_value:
-                    collected_inputs[a_input] = existing_value + "; " + p_input_value
-
-        return collected_inputs
-
-    @staticmethod
-    def _get_filename_with_padding(output_dir, filename, number_padding, group_id, ext):
-        """Return filename with proper padding."""
-        try:
-            filtered = list(filter(lambda a: a[1] == filename,
-                                   map(lambda x: easySave._map_filename(x, filename), os.listdir(output_dir))))
-            last = max(filtered)[0]
-
-            for f in filtered:
-                if f[0] == last:
-                    if f[2] == 0 or f[2] == group_id:
-                        last += 1
-            counter = last
-        except (ValueError, FileNotFoundError):
-            os.makedirs(output_dir, exist_ok=True)
-            counter = 1
-
-        if group_id == 0:
-            return f"{filename}.{ext}" if number_padding is None else f"{filename}_{counter:0{number_padding}}.{ext}"
-        else:
-            return f"{filename}_({group_id}).{ext}" if number_padding is None else f"{filename}_{counter:0{number_padding}}_({group_id}).{ext}"
-
-    @staticmethod
-    def folder_parser(output_dir: str, prompt: Dict[str, dict], my_unique_id: str):
-        output_dir = re.sub(r'%date:(.*?)%', lambda m: easySave._format_date(m.group(1), datetime.datetime.now()),
-                            output_dir)
-        all_inputs = easySave._gather_all_inputs(prompt, my_unique_id)
-
-        return re.sub(r'%(.*?)%', lambda m: str(all_inputs.get(m.group(1), '')), output_dir)
-
-    def images(self, images, filename_prefix, output_type, embed_workflow=True, ext="png", group_id=0):
-        FORMAT_MAP = {
-            "png": "PNG",
-            "jpg": "JPEG",
-            "jpeg": "JPEG",
-            "bmp": "BMP",
-            "tif": "TIFF",
-            "tiff": "TIFF"
-        }
-
-        if ext not in FORMAT_MAP:
-            raise ValueError(f"Unsupported file extension {ext}")
-
-        if output_type == "Hide":
-            return list()
-        if output_type in ("Save", "Hide/Save"):
-            output_dir = self.output_dir if self.output_dir != folder_paths.get_temp_directory() else folder_paths.get_output_directory()
-            self.type = "output"
-        if output_type == "Preview":
-            output_dir = self.output_dir
-            filename_prefix = 'easyPreview'
-        results = list()
-
-        filename_prefix = re.sub(r'%date:(.*?)%', lambda m: easySave._format_date(m.group(1), datetime.datetime.now()),
-                          filename_prefix)
-        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
-            filename_prefix, output_dir, images[0].shape[1], images[0].shape[0])
-        for image in images:
-            img = Image.fromarray(np.clip(255. * image.cpu().numpy(), 0, 255).astype(np.uint8))
-            filename = filename.replace("%width%", str(img.size[0])).replace("%height%", str(img.size[1]))
-            metadata = None
-            if embed_workflow in (True, "True"):
-                metadata = PngInfo()
-                if self.prompt is not None:
-                    metadata.add_text("prompt", json.dumps(self.prompt))
-                if hasattr(self, 'extra_pnginfo') and self.extra_pnginfo is not None:
-                    for key, value in self.extra_pnginfo.items():
-                        metadata.add_text(key, json.dumps(value))
-
-            file = f"{filename}_{counter:05}_.png"
-            img.save(os.path.join(full_output_folder, file), pnginfo=metadata)
-            results.append({
-                "filename": file,
-                "subfolder": subfolder,
-                "type": self.type
-            })
-            counter += 1
-
-        return results
 
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 
@@ -1898,15 +1830,17 @@ class fullLoader:
         easyCache.update_loaded_objects(prompt)
 
         log_node_warn("正在处理模型...")
-        # 判断是否存在 模型叠加xyplot, 若存在优先缓存第一个模型
-        xyinputs_id = next((x for x in prompt if str(prompt[x]["class_type"]) == "easy XYInputs: ModelMergeBlocks"), None)
-        if xyinputs_id is not None:
-            node = prompt[xyinputs_id]
+        # 判断是否存在 模型或Lora叠加xyplot, 若存在优先缓存第一个模型
+        xy_model_id = next((x for x in prompt if str(prompt[x]["class_type"]) in ["easy XYInputs: ModelMergeBlocks", "easy XYInputs: Checkpoint"]), None)
+        xy_lora_id = next((x for x in prompt if str(prompt[x]["class_type"]) == "easy XYInputs: Lora"), None)
+        if xy_lora_id is not None:
+            can_load_lora = False
+        if xy_model_id is not None:
+            node = prompt[xy_model_id]
             if "ckpt_name_1" in node["inputs"]:
                 ckpt_name_1 = node["inputs"]["ckpt_name_1"]
                 model, clip, vae = easyCache.load_checkpoint(ckpt_name_1)
                 can_load_lora = False
-
         # Load models
         elif model_override is not None and clip_override is not None and vae_override is not None:
             model = model_override
@@ -3106,18 +3040,6 @@ class samplerFull:
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        # my_unique_id = int(my_unique_id)
-
-        # if my_unique_id:
-        #     workflow = extra_pnginfo["workflow"]
-        #     node = next((x for x in workflow["nodes"] if str(x["id"]) == my_unique_id), None)
-        #     if node and 'seed_num' in prompt[my_unique_id]['inputs']:
-        #         seed_num = prompt[my_unique_id]['inputs']['seed_num']
-        #         length = len(node["widgets_values"])
-        #         node["widgets_values"][length - 2] = seed_num
-
-        easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
-
         samp_model = model if model is not None else pipe["model"]
         samp_positive = positive if positive is not None else pipe["positive"]
         samp_negative = negative if negative is not None else pipe["negative"]
@@ -3204,7 +3126,7 @@ class samplerFull:
             end_decode_time = int(time.time() * 1000)
             spent_time = '扩散:' + str((end_time-start_time)/1000)+'秒, 解码:' + str((end_decode_time-end_time)/1000)+'秒'
 
-            results = easy_save.images(samp_images, save_prefix, image_output)
+            results = easySave(samp_images, save_prefix, image_output, prompt, extra_pnginfo)
             sampler.update_value_by_id("results", my_unique_id, results)
 
             # Clean loaded_objects
@@ -3306,13 +3228,10 @@ class samplerFull:
 
             images, image_list = sampleXYplot.plot_images_and_labels()
 
-            samp_images = images
-
-            results = easy_save.images(images, save_prefix, image_output)
-
             # Generate output_images
             output_images = torch.stack([tensor.squeeze() for tensor in image_list])
 
+            results = easySave(images, save_prefix, image_output, prompt, extra_pnginfo)
             sampler.update_value_by_id("results", my_unique_id, results)
 
             # Clean loaded_objects
@@ -3626,8 +3545,6 @@ class samplerSDTurbo:
 
         my_unique_id = int(my_unique_id)
 
-        easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
-
         samp_model = pipe["model"] if model is None else model
         samp_positive = pipe["positive"]
         samp_negative = pipe["negative"]
@@ -3673,7 +3590,7 @@ class samplerSDTurbo:
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        results = easy_save.images(samp_images, save_prefix, image_output)
+        results = easySave(samp_images, save_prefix, image_output, prompt, extra_pnginfo)
         sampler.update_value_by_id("results", my_unique_id, results)
 
         new_pipe = {
@@ -3931,8 +3848,7 @@ class hiresFix:
         else:
             new_pipe = {}
 
-        easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
-        results = easy_save.images(s, save_prefix, image_output)
+        results = easySave(s, save_prefix, image_output, prompt, extra_pnginfo)
 
         if image_output in ("Sender", "Sender/Save"):
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
@@ -4089,8 +4005,6 @@ class detailerFix:
 
         my_unique_id = int(my_unique_id)
 
-        easy_save = easySave(my_unique_id, prompt, extra_pnginfo)
-
         model = model or (pipe["model"] if "model" in pipe else None)
         if model is None:
             raise Exception(f"[ERROR] model or pipe['model'] is missing")
@@ -4150,7 +4064,7 @@ class detailerFix:
 
         spent_time = '细节修复:' + str((end_time - start_time) / 1000) + '秒'
 
-        results = easy_save.images(enhanced_img, save_prefix, image_output)
+        results = easySave(enhanced_img, save_prefix, image_output, prompt, extra_pnginfo)
         sampler.update_value_by_id("results", my_unique_id, results)
 
         # Clean loaded_objects
@@ -4599,6 +4513,38 @@ class pipeXYPlotAdvanced:
                     **pipe['loader_settings'],
                     "models": models,
                     "vae_use": vae_use
+                }
+
+            if x_axis in ['advanced: Lora', 'advanced: Checkpoint']:
+                lora_stack = X.get('lora_stack')
+                _lora_stack = []
+                if lora_stack is not None:
+                    for lora in lora_stack:
+                        _lora_stack.append(
+                            {"lora_name": lora[0], "model": pipe['model'], "clip": pipe['clip'], "lora_model_strength": lora[1],
+                             "lora_clip_strength": lora[2]})
+                del lora_stack
+                x_values = "; ".join(x_values)
+                lora_stack = pipe['lora_stack'] + _lora_stack if 'lora_stack' in pipe else _lora_stack
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "lora_stack": lora_stack,
+                }
+
+            if y_axis in ['advanced: Lora', 'advanced: Checkpoint']:
+                lora_stack = Y.get('lora_stack')
+                _lora_stack = []
+                if lora_stack is not None:
+                    for lora in lora_stack:
+                        _lora_stack.append(
+                            {"lora_name": lora[0], "model": pipe['model'], "clip": pipe['clip'], "lora_model_strength": lora[1],
+                             "lora_clip_strength": lora[2]})
+                del lora_stack
+                y_values = "; ".join(y_values)
+                lora_stack = pipe['lora_stack'] + _lora_stack if 'lora_stack' in pipe else _lora_stack
+                new_pipe['loader_settings'] = {
+                    **pipe['loader_settings'],
+                    "lora_stack": lora_stack,
                 }
 
             if x_axis == 'advanced: Seeds++ Batch':
@@ -5173,6 +5119,121 @@ class XYplot_Control_Net:
         return ({"axis": axis, "values": values},)
 
 
+#Checkpoints
+class XYplot_Checkpoint:
+
+    modes = ["Ckpt Names", "Ckpt Names+ClipSkip", "Ckpt Names+ClipSkip+VAE"]
+
+    @classmethod
+    def INPUT_TYPES(cls):
+
+        checkpoints = ["None"] + folder_paths.get_filename_list("checkpoints")
+        vaes = ["Baked VAE"] + folder_paths.get_filename_list("vae")
+
+        inputs = {
+            "required": {
+                "input_mode": (cls.modes,),
+                "ckpt_count": ("INT", {"default": 3, "min": 0, "max": 10, "step": 1}),
+            }
+        }
+
+        for i in range(1, 10 + 1):
+            inputs["required"][f"ckpt_name_{i}"] = (checkpoints,)
+            inputs["required"][f"clip_skip_{i}"] = ("INT", {"default": -1, "min": -24, "max": -1, "step": 1})
+            inputs["required"][f"vae_name_{i}"] = (vaes,)
+
+        inputs["optional"] = {
+            "optional_lora_stack": ("LORA_STACK",)
+        }
+        return inputs
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, input_mode, ckpt_count, **kwargs):
+
+        axis = "advanced: Checkpoint"
+
+        checkpoints = [kwargs.get(f"ckpt_name_{i}") for i in range(1, ckpt_count + 1)]
+        clip_skips = [kwargs.get(f"clip_skip_{i}") for i in range(1, ckpt_count + 1)]
+        vaes = [kwargs.get(f"vae_name_{i}") for i in range(1, ckpt_count + 1)]
+
+        # Set None for Clip Skip and/or VAE if not correct modes
+        for i in range(ckpt_count):
+            if "ClipSkip" not in input_mode:
+                clip_skips[i] = 'None'
+            if "VAE" not in input_mode:
+                vaes[i] = 'None'
+
+        # Extend each sub-array with lora_stack if it's not None
+        values = [checkpoint.replace(',', '*')+','+str(clip_skip)+','+vae.replace(',', '*') for checkpoint, clip_skip, vae in zip(checkpoints, clip_skips, vaes) if
+                        checkpoint != "None"]
+
+        optional_lora_stack = kwargs.get("optional_lora_stack") if "optional_lora_stack" in kwargs else []
+
+        xy_values = {"axis": axis, "values": values, "lora_stack": optional_lora_stack}
+        return (xy_values,)
+
+#Loras
+class XYplot_Lora:
+
+    modes = ["Lora Names", "Lora Names+Weights"]
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        loras = ["None"] + folder_paths.get_filename_list("loras")
+
+        inputs = {
+            "required": {
+                "input_mode": (cls.modes,),
+                "lora_count": ("INT", {"default": 3, "min": 0, "max": 10, "step": 1}),
+                "model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+                "clip_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+            }
+        }
+
+        for i in range(1, 10 + 1):
+            inputs["required"][f"lora_name_{i}"] = (loras,)
+            inputs["required"][f"model_str_{i}"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
+            inputs["required"][f"clip_str_{i}"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
+
+        inputs["optional"] = {
+            "optional_lora_stack": ("LORA_STACK",)
+        }
+        return inputs
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, input_mode, lora_count, model_strength, clip_strength, **kwargs):
+
+        axis = "advanced: Lora"
+        # Extract values from kwargs
+        loras = [kwargs.get(f"lora_name_{i}") for i in range(1, lora_count + 1)]
+        model_strs = [kwargs.get(f"model_str_{i}", model_strength) for i in range(1, lora_count + 1)]
+        clip_strs = [kwargs.get(f"clip_str_{i}", clip_strength) for i in range(1, lora_count + 1)]
+
+        # Use model_strength and clip_strength for the loras where values are not provided
+        if "Weights" not in input_mode:
+            for i in range(lora_count):
+                model_strs[i] = model_strength
+                clip_strs[i] = clip_strength
+
+        # Extend each sub-array with lora_stack if it's not None
+        values = [lora.replace(',', '*')+','+str(model_str)+','+str(clip_str) for lora, model_str, clip_str
+                    in zip(loras, model_strs, clip_strs) if lora != "None"]
+
+        optional_lora_stack = kwargs.get("optional_lora_stack") if "optional_lora_stack" in kwargs else []
+
+        xy_values = {"axis": axis, "values": values, "lora_stack": optional_lora_stack}
+        return (xy_values,)
+
 # 模型叠加
 class XYplot_ModelMergeBlocks:
 
@@ -5348,6 +5409,8 @@ NODE_CLASS_MAPPINGS = {
     "easy XYInputs: CFG Scale": XYplot_CFG,
     "easy XYInputs: Sampler/Scheduler": XYplot_Sampler_Scheduler,
     "easy XYInputs: Denoise": XYplot_Denoise,
+    "easy XYInputs: Checkpoint": XYplot_Checkpoint,
+    "easy XYInputs: Lora": XYplot_Lora,
     "easy XYInputs: ModelMergeBlocks": XYplot_ModelMergeBlocks,
     "easy XYInputs: PromptSR": XYplot_PromptSR,
     "easy XYInputs: ControlNet": XYplot_Control_Net,
@@ -5418,6 +5481,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy XYInputs: CFG Scale": "XY Inputs: CFG Scale //EasyUse",
     "easy XYInputs: Sampler/Scheduler": "XY Inputs: Sampler/Scheduler //EasyUse",
     "easy XYInputs: Denoise": "XY Inputs: Denoise //EasyUse",
+    "easy XYInputs: Checkpoint": "XY Inputs: Checkpoint //EasyUse",
+    "easy XYInputs: Lora": "XY Inputs: Lora //EasyUse",
     "easy XYInputs: ModelMergeBlocks": "XY Inputs: ModelMergeBlocks //EasyUse",
     "easy XYInputs: PromptSR": "XY Inputs: PromptSR //EasyUse",
     "easy XYInputs: ControlNet": "XY Inputs: Controlnet //EasyUse",

@@ -2,7 +2,6 @@ import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 import { ComfyWidgets } from "/scripts/widgets.js";
 
-
 let origProps = {};
 
 const findWidgetByName = (node, name) => node.widgets.find((w) => w.name === name);
@@ -39,7 +38,6 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'lora_model_strength'), true)
 			toggleWidget(node, findWidgetByName(node, 'lora_clip_strength'), true)
 		}
-		updateNodeHeight(node)
 	}
 	if (widget.name === 'rescale') {
 		let rescale_after_model = findWidgetByName(node, 'rescale_after_model').value
@@ -137,6 +135,7 @@ function widgetLogic(node, widget) {
 		}
 		updateNodeHeight(node)
 	}
+
 	if (widget.name === 'resolution') {
 		if (widget.value === "自定义 x 自定义") {
 			toggleWidget(node, findWidgetByName(node, 'empty_latent_width'), true)
@@ -315,6 +314,96 @@ function widgetLogic3(node, widget){
 		}
 		updateNodeHeight(node)
 	}
+	if (widget.name === 'lora_count') {
+		let number_to_show = widget.value + 1
+		const isWeight = findWidgetByName(node, 'input_mode').value.indexOf("Weights") == -1
+		for (let i = 0; i < number_to_show; i++) {
+			toggleWidget(node, findWidgetByName(node, 'lora_name_'+i), true)
+			if (isWeight) {
+				toggleWidget(node, findWidgetByName(node, 'lora_name_'+i), true)
+				toggleWidget(node, findWidgetByName(node, 'model_str_'+i))
+				toggleWidget(node, findWidgetByName(node, 'clip_str_'+i))
+			} else {
+				toggleWidget(node, findWidgetByName(node, 'lora_name_'+i), true)
+				toggleWidget(node, findWidgetByName(node, 'model_str_'+i),true)
+				toggleWidget(node, findWidgetByName(node, 'clip_str_'+i), true)
+			}
+		}
+		for (let i = number_to_show; i < 11; i++) {
+			toggleWidget(node, findWidgetByName(node, 'lora_name_'+i))
+			toggleWidget(node, findWidgetByName(node, 'model_str_'+i))
+			toggleWidget(node, findWidgetByName(node, 'clip_str_'+i))
+		}
+		updateNodeHeight(node)
+	}
+	if (widget.name === 'ckpt_count') {
+		let number_to_show = widget.value + 1
+		const hasClipSkip = findWidgetByName(node, 'input_mode').value.indexOf("ClipSkip") != -1
+		const hasVae = findWidgetByName(node, 'input_mode').value.indexOf("VAE") != -1
+		for (let i = 0; i < number_to_show; i++) {
+			toggleWidget(node, findWidgetByName(node, 'ckpt_name_'+i), true)
+			if (hasClipSkip && hasVae) {
+				toggleWidget(node, findWidgetByName(node, 'clip_skip_'+i), true)
+				toggleWidget(node, findWidgetByName(node, 'vae_name_'+i), true)
+			} else if (hasVae){
+				toggleWidget(node, findWidgetByName(node, 'clip_skip_' + i))
+				toggleWidget(node, findWidgetByName(node, 'vae_name_' + i), true)
+			}else{
+				toggleWidget(node, findWidgetByName(node, 'clip_skip_' + i))
+				toggleWidget(node, findWidgetByName(node, 'vae_name_' + i))
+			}
+		}
+		for (let i = number_to_show; i < 11; i++) {
+			toggleWidget(node, findWidgetByName(node, 'ckpt_name_'+i))
+			toggleWidget(node, findWidgetByName(node, 'clip_skip_'+i))
+			toggleWidget(node, findWidgetByName(node, 'vae_name_'+i))
+		}
+		updateNodeHeight(node)
+	}
+
+	if (widget.name === 'input_mode') {
+		if(node.comfyClass == 'easy XYInputs: Lora'){
+			let number_to_show = findWidgetByName(node, 'lora_count').value + 1
+			const hasWeight = widget.value.indexOf("Weights") != -1
+			for (let i = 0; i < number_to_show; i++) {
+				toggleWidget(node, findWidgetByName(node, 'lora_name_'+i), true)
+				if (hasWeight) {
+					toggleWidget(node, findWidgetByName(node, 'model_str_'+i), true)
+					toggleWidget(node, findWidgetByName(node, 'clip_str_'+i), true)
+				} else {
+					toggleWidget(node, findWidgetByName(node, 'model_str_' + i))
+					toggleWidget(node, findWidgetByName(node, 'clip_str_' + i))
+				}
+			}
+			if(hasWeight){
+				toggleWidget(node, findWidgetByName(node, 'model_strength'))
+				toggleWidget(node, findWidgetByName(node, 'clip_strength'))
+			}else{
+				toggleWidget(node, findWidgetByName(node, 'model_strength'), true)
+				toggleWidget(node, findWidgetByName(node, 'clip_strength'),true)
+			}
+		}
+		else if(node.comfyClass == 'easy XYInputs: Checkpoint'){
+			let number_to_show = findWidgetByName(node, 'ckpt_count').value + 1
+			const hasClipSkip = widget.value.indexOf("ClipSkip") != -1
+			const hasVae = widget.value.indexOf("VAE") != -1
+			for (let i = 0; i < number_to_show; i++) {
+				toggleWidget(node, findWidgetByName(node, 'ckpt_name_'+i), true)
+				if (hasClipSkip && hasVae) {
+					toggleWidget(node, findWidgetByName(node, 'clip_skip_'+i), true)
+					toggleWidget(node, findWidgetByName(node, 'vae_name_'+i), true)
+				} else if (hasClipSkip){
+					toggleWidget(node, findWidgetByName(node, 'clip_skip_' + i), true)
+					toggleWidget(node, findWidgetByName(node, 'vae_name_' + i))
+				}else{
+					toggleWidget(node, findWidgetByName(node, 'clip_skip_' + i))
+					toggleWidget(node, findWidgetByName(node, 'vae_name_' + i))
+				}
+			}
+		}
+
+		updateNodeHeight(node)
+	}
 
 	// if(widget.name == 'replace_count'){
 	// 	let number_to_show = widget.value + 1
@@ -352,6 +441,8 @@ app.registerExtension({
 			case "easy imageRemoveBG":
 			case "easy XYInputs: Steps":
 			case "easy XYInputs: Sampler/Scheduler":
+			case 'easy XYInputs: Checkpoint':
+			case "easy XYInputs: Lora":
 			case "easy XYInputs: PromptSR":
 			case "easy XYInputs: ControlNet":
 			case "easy rangeInt":
@@ -664,6 +755,14 @@ app.registerExtension({
 					serialize: false
 				})
 				seed_widget.linkedWidgets = [seed_control]
+				if(nodeData.name == 'easy seed'){
+					this.addWidget("button", "🎲 Manual Random Seed", null, _=>{
+						if(seed_control.value != 'fixed'){
+							seed_control.value = 'fixed'
+						}
+						seed_widget.value = Math.floor(Math.random() * 1125899906842624)
+					})
+				}
 			}
 		}
 
@@ -764,7 +863,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale', 'image_output',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode']
+						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode','lora_count','ckpt_count']
 
 function getSetters(node) {
 	if (node.widgets)

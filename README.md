@@ -37,7 +37,15 @@
 
 ## 更新日志
 
-**v1.0.5 (2024-02-07)**
+**v1.0.6 (2024-02-16)**
+
+- 增加 `easy XYInputs: Checkpoint`
+- 增加 `easy XYInputs: Lora`
+- `easy seed` 增加固定种子值时可手动切换随机种
+- 修复 `easy fullLoader`等加载器切换lora时自动调整节点大小的问题
+- 去除原有ttn的图片保存逻辑并适配ComfyUI默认的图片保存格式化扩展
+
+**v1.0.5**
 
 - 增加 `easy isSDXL` 
 - `easy svdLoader` 增加提示词控制, 可配合open_clip模型进行使用
