@@ -425,6 +425,7 @@ app.registerExtension({
 			case "easy fullLoader":
 			case "easy a1111Loader":
 			case "easy comfyLoader":
+			case "easy cascadeLoader":
 			case "easy svdLoader":
 			case "easy loraStack":
 			case "easy latentNoisy":
@@ -743,7 +744,7 @@ app.registerExtension({
 			};
 		}
 
-		if (["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingDynamicCFG", "easy fullkSampler"].includes(nodeData.name)) {
+		if (["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy fullkSampler"].includes(nodeData.name)) {
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
 			nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;

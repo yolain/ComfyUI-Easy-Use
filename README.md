@@ -37,6 +37,15 @@
 
 ## 更新日志
 
+**v1.0.7 (2024-02-18)**
+
+- 增加 `easy cascadeLoader` - stable cascade 加载器
+- 增加 `easy preSamplingCascade` - stabled cascade stage C采样
+
+[SC示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
+目前还未支持Controlnet
+
+
 **v1.0.6 (2024-02-16)**
 
 - 增加 `easy XYInputs: Checkpoint`
@@ -216,6 +225,10 @@
 ### SDTurbo+高清修复+SVD
 
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/sdturbo_hiresfix_svd.png">
+
+### StableCascade
+
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/stable_cascade.png">
 
 ## Credits
 

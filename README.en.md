@@ -29,7 +29,14 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
-**v1.0.6 (2024-02-16)**
+**v1.0.7 (2024-02-18)**
+
+- Added `easy cascadeLoader` - stable cascade Loader
+- Added `easy preSamplingCascade` - stable cascade kSampler for stage-c 
+
+[SC Example](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
+
+**v1.0.6**
 
 - Added `easy XYInputs: Checkpoint`
 - Added `easy XYInputs: Lora`
@@ -209,6 +216,9 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/sdturbo_hiresfix_svd.png">
 
+### StableCascade
+
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/stable_cascade.png">
 
 ## Credits
 

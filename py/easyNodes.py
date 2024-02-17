@@ -28,7 +28,7 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 from .adv_encode import advanced_encode, advanced_encode_XL
 
 from server import PromptServer
-from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, PreviewImage, SaveImage
+from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, PreviewImage, SaveImage, common_ksampler
 from comfy_extras.nodes_mask import LatentCompositeMasked
 from .config import BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn, log_node_success
@@ -39,6 +39,7 @@ class easyLoader:
     def __init__(self):
         self.loaded_objects = {
             "ckpt": defaultdict(tuple),  # {ckpt_name: (model, ...)}
+            "unet": defaultdict(tuple),
             "clip": defaultdict(tuple),
             "clip_vision": defaultdict(tuple),
             "bvae": defaultdict(tuple),
@@ -92,6 +93,8 @@ class easyLoader:
 
     def update_loaded_objects(self, prompt):
         desired_ckpt_names = set()
+        desired_unet_names = set()
+        desired_clip_names = set()
         desired_vae_names = set()
         desired_lora_names = set()
         desired_lora_settings = set()
@@ -111,6 +114,12 @@ class easyLoader:
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name"))
                 desired_vae_names.add(self.get_input_value(entry, "vae_name"))
 
+            elif class_type == "easy cascadeLoader":
+                desired_unet_names.add(self.get_input_value(entry, "stage_c"))
+                desired_unet_names.add(self.get_input_value(entry, "stage_b"))
+                desired_clip_names.add(self.get_input_value(entry, "clip_name"))
+                desired_vae_names.add(self.get_input_value(entry, "stage_a"))
+
             elif class_type == "easy XYInputs: ModelMergeBlocks":
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name_1"))
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name_2"))
@@ -118,9 +127,16 @@ class easyLoader:
                 if vae_use != 'Use Model 1' and vae_use != 'Use Model 2':
                     desired_vae_names.add(vae_use)
 
-        object_types = ["ckpt", "clip", "bvae", "vae", "lora"]
+        object_types = ["ckpt", "unet", "clip", "bvae", "vae", "lora"]
         for object_type in object_types:
-            desired_names = desired_ckpt_names if object_type in ["ckpt", "clip", "bvae"] else desired_vae_names if object_type == "vae" else desired_lora_names
+            if object_type == 'unet':
+                desired_names = desired_unet_names
+            elif object_type in ["ckpt", "bvae"]:
+                desired_names = desired_ckpt_names
+            elif object_type == "vae":
+                desired_names = desired_vae_names
+            else:
+                desired_names = desired_lora_names
             self.clear_unused_objects(desired_names, object_type)
 
     def add_to_cache(self, obj_type, key, value):
@@ -224,6 +240,30 @@ class easyLoader:
         self.eviction_based_on_memory()
 
         return loaded_vae
+
+    def load_unet(self, unet_name):
+        if unet_name in self.loaded_objects["unet"]:
+            return self.loaded_objects["unet"][unet_name][0]
+
+        unet_path = folder_paths.get_full_path("unet", unet_name)
+        model = comfy.sd.load_unet(unet_path)
+        self.add_to_cache("unet", unet_name, model)
+        self.eviction_based_on_memory()
+
+        return model
+
+    def load_clip(self, clip_name, type='stable_diffusion'):
+        if type == 'stable_diffusion':
+            clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION
+        else:
+            clip_type = comfy.sd.CLIPType.STABLE_CASCADE
+        clip_path = folder_paths.get_full_path("clip", clip_name)
+        load_clip = comfy.sd.load_clip(ckpt_paths=[clip_path],
+                                  embedding_directory=folder_paths.get_folder_paths("embeddings"), clip_type=clip_type)
+        self.add_to_cache("clip", clip_name, load_clip)
+        self.eviction_based_on_memory()
+
+        return load_clip
 
     def load_lora(self, lora_name, model, clip, strength_model, strength_clip):
         model_hash = str(model)[44:-1]
@@ -2062,6 +2102,177 @@ class comfyLoader:
              my_unique_id
          )
 
+
+# stable Cascade
+class cascadeLoader:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
+
+        return {"required": {
+            "stage_c": (folder_paths.get_filename_list("unet"),),
+            "stage_b": (folder_paths.get_filename_list("unet"),),
+            "stage_a": (folder_paths.get_filename_list("vae"),),
+            "clip_name": (["None"] + folder_paths.get_filename_list("clip"),),
+
+            "resolution": (resolution_strings, {"default": "1024 x 1024"}),
+            "empty_latent_width": ("INT", {"default": 1024, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
+            "empty_latent_height": ("INT", {"default": 1024, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
+            "compression": ("INT", {"default": 42, "min": 32, "max": 64, "step": 1}),
+
+            "positive": ("STRING", {"default": "Positive", "multiline": True}),
+            "negative": ("STRING", {"default": "", "multiline": True}),
+
+            "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+        },
+            "optional": {},
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "MODEL", "VAE")
+    RETURN_NAMES = ("pipe", "model_c", "model_b", "vae")
+
+    FUNCTION = "adv_pipeloader"
+    CATEGORY = "EasyUse/Loaders"
+
+    def adv_pipeloader(self, stage_c, stage_b, stage_a, clip_name,
+                       resolution, empty_latent_width, empty_latent_height, compression,
+                       positive, negative, batch_size, prompt=None,
+                       my_unique_id=None):
+
+
+        vae: VAE | None = None
+        model_c: ModelPatcher | None = None
+        model_b: ModelPatcher | None = None
+        clip: CLIP | None = None
+        can_load_lora = True
+        pipe_lora_stack = []
+
+        # resolution
+        if resolution != "自定义 x 自定义":
+            try:
+                width, height = map(int, resolution.split(' x '))
+                empty_latent_width = width
+                empty_latent_height = height
+            except ValueError:
+                raise ValueError("Invalid base_resolution format.")
+
+        # Create Empty Latent
+        c_latent = torch.zeros([batch_size, 16, empty_latent_height // compression, empty_latent_width // compression])
+        b_latent = torch.zeros([batch_size, 4, empty_latent_height // 4, empty_latent_width // 4])
+
+        samples = ({"samples": c_latent},{"samples": b_latent})
+
+        # Clean models from loaded_objects
+        easyCache.update_loaded_objects(prompt)
+
+        # Load unet
+        model_c = easyCache.load_unet(stage_c)
+        model_b = easyCache.load_unet(stage_b)
+        model = (model_c, model_b)
+
+        # Load clip
+        clip = easyCache.load_clip(clip_name, "stable_cascade")
+
+        # clipped = clip.clone()
+        # if clip_skip != 0 and can_load_lora:
+        #     clipped.clip_layer(clip_skip)
+
+        # Load vae
+        vae = easyCache.load_vae(stage_a)
+
+        # 判断是否连接 styles selector
+        is_positive_linked_styles_selector = False
+        inputs_positive_values = prompt[my_unique_id]['inputs']['positive'] if "positive" in prompt[my_unique_id][
+            'inputs'] else None
+        if type(inputs_positive_values) == list and inputs_positive_values != 'undefined' and inputs_positive_values[0]:
+            is_positive_linked_styles_selector = True if prompt[inputs_positive_values[0]] and \
+                                                         prompt[inputs_positive_values[0]][
+                                                             'class_type'] == 'easy stylesSelector' else False
+        is_negative_linked_styles_selector = False
+        inputs_negative_values = prompt[my_unique_id]['inputs']['negative'] if "negative" in prompt[my_unique_id][
+            'inputs'] else None
+        if type(inputs_negative_values) == list and inputs_negative_values != 'undefined' and inputs_negative_values[0]:
+            is_negative_linked_styles_selector = True if prompt[inputs_negative_values[0]] and \
+                                                         prompt[inputs_negative_values[0]][
+                                                             'class_type'] == 'easy stylesSelector' else False
+
+        log_node_warn("正在处理提示词...")
+        positive_seed = find_wildcards_seed(my_unique_id, positive, prompt)
+        model_c, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(positive,
+                                                                                                           model_c, clip,
+                                                                                                           "Positive",
+                                                                                                           positive_seed,
+                                                                                                           can_load_lora,
+                                                                                                           pipe_lora_stack)
+        positive_wildcard_prompt = positive_decode if show_positive_prompt or is_positive_linked_styles_selector else ""
+        negative_seed = find_wildcards_seed(my_unique_id, negative, prompt)
+        model_c, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(negative,
+                                                                                                           model_c, clip,
+                                                                                                           "Negative",
+                                                                                                           negative_seed,
+                                                                                                           can_load_lora,
+                                                                                                           pipe_lora_stack)
+        negative_wildcard_prompt = negative_decode if show_negative_prompt or is_negative_linked_styles_selector else ""
+
+        tokens = clip.tokenize(positive)
+        cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
+        positive_embeddings_final = [[cond, {"pooled_output": pooled}]]
+
+        tokens = clip.tokenize(negative)
+        cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
+        negative_embeddings_final = [[cond, {"pooled_output": pooled}]]
+
+        image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
+
+        log_node_warn("处理结束...")
+        pipe = {
+                "model": model,
+                "positive": positive_embeddings_final,
+                "negative": negative_embeddings_final,
+                "vae": vae,
+                "clip": clip,
+
+                "samples": samples,
+                "images": image,
+                "seed": 0,
+
+                "loader_settings": {
+                                    "vae_name": stage_a,
+
+                                    "lora_stack": pipe_lora_stack,
+
+                                    "refiner_ckpt_name": None,
+                                    "refiner_vae_name": None,
+                                    "refiner_lora_name": None,
+                                    "refiner_lora_model_strength": None,
+                                    "refiner_lora_clip_strength": None,
+
+                                    "positive": positive,
+                                    "positive_l": None,
+                                    "positive_g": None,
+                                    "positive_token_normalization": 'none',
+                                    "positive_weight_interpretation": 'comfy',
+                                    "positive_balance": None,
+                                    "negative": negative,
+                                    "negative_l": None,
+                                    "negative_g": None,
+                                    "negative_token_normalization": 'none',
+                                    "negative_weight_interpretation": 'comfy',
+                                    "negative_balance": None,
+                                    "empty_latent_width": empty_latent_width,
+                                    "empty_latent_height": empty_latent_height,
+                                    "batch_size": batch_size,
+                                    "seed": 0,
+                                    "empty_samples": samples, }
+                }
+
+        return {"ui": {"positive": positive_wildcard_prompt, "negative": negative_wildcard_prompt},
+                "result": (pipe, model_c, model_b, vae)}
+
 # Zero123简易加载器 (3D)
 try:
     from comfy_extras.nodes_stable3d import camera_embeddings
@@ -2088,7 +2299,8 @@ class zero123Loader:
             "elevation": ("FLOAT", {"default": 0.0, "min": -180.0, "max": 180.0}),
             "azimuth": ("FLOAT", {"default": 0.0, "min": -180.0, "max": 180.0}),
         },
-            "hidden": {"prompt": "PROMPT"}, "my_unique_id": "UNIQUE_ID"}
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
     RETURN_NAMES = ("pipe", "model", "vae")
@@ -2273,7 +2485,6 @@ class svdLoader:
                 }
 
         return (pipe, model, vae)
-
 
 # lora
 class loraStackLoader:
@@ -2853,6 +3064,122 @@ class sdTurboSettings:
 
         return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
 
+
+# cascade采样器
+class cascadeSettings:
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required":
+                    {"pipe": ("PIPE_LINE",),
+                     "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+                     "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+                     "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+                     "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                     "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+                     },
+
+                "optional": {
+                    # "image_to_latent": ("IMAGE",),
+                    # "latent": ("LATENT",)
+                },
+                "hidden":
+                    {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+                }
+
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
+    OUTPUT_NODE = True
+
+    FUNCTION = "settings"
+    CATEGORY = "EasyUse/PreSampling"
+
+    def settings(self, pipe, steps, cfg, sampler_name, scheduler, denoise, seed_num, prompt=None, extra_pnginfo=None, my_unique_id=None):
+        # 图生图转换
+        vae = pipe["vae"]
+        batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+        # if image_to_latent is not None:
+        #     samples = {"samples": vae.encode(image_to_latent)}
+        #     samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+        #     images = image_to_latent
+        # elif latent is not None:
+        #     samples = RepeatLatentBatch().repeat(latent, batch_size)[0]
+        #     images = pipe["images"]
+        # else:
+        samples = pipe["samples"][0]
+        images = pipe["images"]
+
+        # Clean loaded_objects
+        easyCache.update_loaded_objects(prompt)
+        samp_model = pipe["model"][0]
+        samp_positive = pipe["positive"]
+        samp_negative = pipe["negative"]
+        samp_samples = samples
+        samp_vae = pipe["vae"]
+        samp_clip = pipe["clip"]
+
+        samp_seed = seed_num if seed_num is not None else pipe['seed']
+
+        steps = steps if steps is not None else pipe['loader_settings']['steps']
+        start_step = pipe['loader_settings']['start_step'] if 'start_step' in pipe['loader_settings'] else 0
+        last_step = pipe['loader_settings']['last_step'] if 'last_step' in pipe['loader_settings'] else 10000
+        cfg = cfg if cfg is not None else pipe['loader_settings']['cfg']
+        sampler_name = sampler_name if sampler_name is not None else pipe['loader_settings']['sampler_name']
+        scheduler = scheduler if scheduler is not None else pipe['loader_settings']['scheduler']
+        denoise = denoise if denoise is not None else pipe['loader_settings']['denoise']
+        # 推理初始时间
+        start_time = int(time.time() * 1000)
+        # 开始推理
+        samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler,
+                                               samp_positive, samp_negative, samp_samples, denoise=denoise,
+                                               preview_latent=False, start_step=start_step,
+                                               last_step=last_step, force_full_denoise=False,
+                                               disable_noise=False)
+        # 推理结束时间
+        end_time = int(time.time() * 1000)
+        stage_c = samp_samples["samples"]
+
+        # zero_out
+        c1 = []
+        for t in samp_positive:
+            d = t[1].copy()
+            if "pooled_output" in d:
+                d["pooled_output"] = torch.zeros_like(d["pooled_output"])
+            n = [torch.zeros_like(t[0]), d]
+            c1.append(n)
+        # stage_b_conditioning
+        c2 = []
+        for t in c1:
+            d = t[1].copy()
+            d['stable_cascade_prior'] = stage_c
+            n = [t[0], d]
+            c2.append(n)
+
+        new_pipe = {
+            "model": pipe['model'][1],
+            "positive": c2,
+            "negative": c1,
+            "vae": pipe['vae'],
+            "clip": pipe['clip'],
+
+            "samples": pipe["samples"][1],
+            "images": pipe["images"],
+            "seed": seed_num,
+
+            "loader_settings": {
+                **pipe["loader_settings"]
+            }
+        }
+
+        del pipe
+
+        return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
+
+
 # 预采样设置（动态CFG）
 from .dynthres_core import DynThresh
 class dynamicCFGSettings:
@@ -3113,7 +3440,6 @@ class samplerFull:
             samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler, samp_positive, samp_negative, samp_samples, denoise=denoise, preview_latent=preview_latent, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, disable_noise=disable_noise)
             # 推理结束时间
             end_time = int(time.time() * 1000)
-            # 解码图片
             latent = samp_samples["samples"]
 
             # 解码图片
@@ -3624,6 +3950,7 @@ class samplerSDTurbo:
 
         return {"ui": {"images": results},
                 "result": sampler.get_output(new_pipe, )}
+
 
 
 class unsampler:
@@ -5367,6 +5694,7 @@ NODE_CLASS_MAPPINGS = {
     "easy fullLoader": fullLoader,
     "easy a1111Loader": a1111Loader,
     "easy comfyLoader": comfyLoader,
+    "easy cascadeLoader": cascadeLoader,
     "easy zero123Loader": zero123Loader,
     "easy svdLoader": svdLoader,
     "easy loraStack": loraStackLoader,
@@ -5383,6 +5711,7 @@ NODE_CLASS_MAPPINGS = {
     "easy preSamplingAdvanced": samplerSettingsAdvanced,
     "easy preSamplingSdTurbo": sdTurboSettings,
     "easy preSamplingDynamicCFG": dynamicCFGSettings,
+    "easy preSamplingCascade": cascadeSettings,
     # kSampler k采样器
     "easy kSampler": samplerSimple,
     "easy fullkSampler": samplerFull,
@@ -5438,6 +5767,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy fullLoader": "EasyLoader (Full)",
     "easy a1111Loader": "EasyLoader (A1111)",
     "easy comfyLoader": "EasyLoader (Comfy)",
+    "easy cascadeLoader": "EasyLoader (Cascade)",
     "easy zero123Loader": "EasyLoader (Zero123)",
     "easy svdLoader": "EasyLoader (SVD)",
     "easy loraStack": "EasyLoraStack",
@@ -5455,6 +5785,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy preSamplingAdvanced": "PreSampling (Advanced)",
     "easy preSamplingSdTurbo": "PreSampling (SDTurbo)",
     "easy preSamplingDynamicCFG": "PreSampling (DynamicCFG)",
+    "easy preSamplingCascade": "PreSampling (Cascade)",
     # kSampler k采样器
     "easy kSampler": "EasyKSampler",
     "easy fullkSampler": "EasyKSampler (Full)",
