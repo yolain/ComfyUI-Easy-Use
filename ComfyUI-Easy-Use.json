@@ -212,7 +212,7 @@
     "outputs": {
       "pipe": "节点束",
       "model_c": "模型C",
-      "model_b": "模型B"
+      "latent_c": "潜空间C"
     }
   },
   "easy zero123Loader": {
@@ -469,11 +469,14 @@
     },
     "inputs": {
       "pipe": "节点束",
+      "optional_model": "模型C（可选）",
       "image_to_latent": "图像（可选）",
-      "latent": "潜空间（可选）"
+      "optional_latent": "潜空间C（可选）"
     },
     "outputs": {
-      "pipe": "节点束"
+      "pipe": "节点束",
+      "model_b": "模型B",
+      "latent_b": "潜空间B"
     }
   },
   "easy preSamplingDynamicCFG": {

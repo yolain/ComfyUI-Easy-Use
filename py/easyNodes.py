@@ -132,7 +132,10 @@ class easyLoader:
             if object_type == 'unet':
                 desired_names = desired_unet_names
             elif object_type in ["ckpt", "clip", "bvae"]:
-                desired_names = desired_ckpt_names
+                if object_type == 'clip':
+                    desired_names = desired_ckpt_names.union(desired_clip_names)
+                else:
+                    desired_names = desired_ckpt_names
             elif object_type == "vae":
                 desired_names = desired_vae_names
             else:
@@ -2132,8 +2135,8 @@ class cascadeLoader:
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
-    RETURN_TYPES = ("PIPE_LINE", "MODEL", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model_c", "model_b", "vae")
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "LATENT", "VAE")
+    RETURN_NAMES = ("pipe", "model_c", "latent_c", "vae")
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
@@ -2142,7 +2145,6 @@ class cascadeLoader:
                        resolution, empty_latent_width, empty_latent_height, compression,
                        positive, negative, batch_size, prompt=None,
                        my_unique_id=None):
-
 
         vae: VAE | None = None
         model_c: ModelPatcher | None = None
@@ -3084,38 +3086,30 @@ class cascadeSettings:
                      },
 
                 "optional": {
-                    # "image_to_latent": ("IMAGE",),
-                    # "latent": ("LATENT",)
+                    "optional_model": ("MODEL",),
+                    "optional_latent": ("LATENT",),
                 },
                 "hidden":
                     {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
                 }
 
-    RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "LATENT")
+    RETURN_NAMES = ("pipe", "model_b", "latent_b")
     OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, steps, cfg, sampler_name, scheduler, denoise, seed_num, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, steps, cfg, sampler_name, scheduler, denoise, seed_num, optional_model=None, optional_latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         # 图生图转换
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
-        # if image_to_latent is not None:
-        #     samples = {"samples": vae.encode(image_to_latent)}
-        #     samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
-        #     images = image_to_latent
-        # elif latent is not None:
-        #     samples = RepeatLatentBatch().repeat(latent, batch_size)[0]
-        #     images = pipe["images"]
-        # else:
-        samples = pipe["samples"][0]
+        samples = optional_latent if optional_latent else pipe["samples"][0]
         images = pipe["images"]
 
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
-        samp_model = pipe["model"][0]
+        samp_model = optional_model if optional_model else pipe["model"][0]
         samp_positive = pipe["positive"]
         samp_negative = pipe["negative"]
         samp_samples = samples
@@ -3167,7 +3161,7 @@ class cascadeSettings:
             "clip": pipe['clip'],
 
             "samples": pipe["samples"][1],
-            "images": pipe["images"],
+            "images": images,
             "seed": seed_num,
 
             "loader_settings": {
@@ -3177,7 +3171,7 @@ class cascadeSettings:
 
         del pipe
 
-        return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
+        return {"ui": {"value": [seed_num]}, "result": (new_pipe, new_pipe['model'], new_pipe['samples'])}
 
 
 # 预采样设置（动态CFG）
@@ -5785,7 +5779,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy preSamplingAdvanced": "PreSampling (Advanced)",
     "easy preSamplingSdTurbo": "PreSampling (SDTurbo)",
     "easy preSamplingDynamicCFG": "PreSampling (DynamicCFG)",
-    "easy preSamplingCascade": "PreSampling (Cascade)",
+    "easy preSamplingCascade": "PreSampler (Cascade)",
     # kSampler k采样器
     "easy kSampler": "EasyKSampler",
     "easy fullkSampler": "EasyKSampler (Full)",
