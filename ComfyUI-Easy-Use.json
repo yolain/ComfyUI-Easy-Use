@@ -194,6 +194,27 @@
       "model": "模型"
     }
   },
+  "easy cascadeLoader": {
+    "title": "简易加载器（Cascade）",
+    "widgets": {
+      "clip_name": "CLIP模型",
+      "resolution": "分辨率",
+      "compression": "压缩比",
+      "empty_latent_width": "宽",
+      "empty_latent_height": "高",
+      "batch_size": "每批生成数量",
+      "positive": "正面提示词",
+      "negative": "负面提示词",
+      "a1111_prompt_style": "A1111提示词风格"
+    },
+    "inputs": {
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "model_c": "模型C",
+      "model_b": "模型B"
+    }
+  },
   "easy zero123Loader": {
     "title": "简易加载器（Zero123）",
     "widgets": {
@@ -417,6 +438,26 @@
   },
   "easy preSamplingSdTurbo": {
     "title": "预采样参数（SdTurbo）",
+    "widgets": {
+      "steps": "步数",
+      "cfg": "CFG",
+      "sampler_name": "采样器",
+      "scheduler": "调度器",
+      "denoise": "降噪",
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "image_to_latent": "图像（可选）",
+      "latent": "潜空间（可选）"
+    },
+    "outputs": {
+      "pipe": "节点束"
+    }
+  },
+  "easy preSamplingCascade": {
+    "title": "预采样（Cascade）",
     "widgets": {
       "steps": "步数",
       "cfg": "CFG",
@@ -748,6 +789,88 @@
       "preset": "预置参数",
       "choose .csv file to input values": "选择.csv文件覆盖到数值中",
       "choose .csv file into values": "选择.csv文件覆盖到数值中"
+    }
+  },
+  "easy XYInputs: Checkpoint": {
+    "title": "XY输入: 大模型",
+    "inputs": {
+      "optional_lora_stack": "Lora堆"
+    },
+    "widgets": {
+      "input_mode": "输入模式",
+      "ckpt_count": "大模型数量",
+      "ckpt_name_1": "大模型名称1",
+      "ckpt_name_2": "大模型名称2",
+      "ckpt_name_3": "大模型名称3",
+      "ckpt_name_4": "大模型名称4",
+      "ckpt_name_5": "大模型名称5",
+      "ckpt_name_6": "大模型名称6",
+      "ckpt_name_7": "大模型名称7",
+      "ckpt_name_8": "大模型名称8",
+      "ckpt_name_9": "大模型名称9",
+      "ckpt_name_10": "大模型名称10",
+      "clip_skip_1": "Clip停止层1",
+      "clip_skip_2": "Clip停止层2",
+      "clip_skip_3": "Clip停止层3",
+      "clip_skip_4": "Clip停止层4",
+      "clip_skip_5": "Clip停止层5",
+      "clip_skip_6": "Clip停止层6",
+      "clip_skip_7": "Clip停止层7",
+      "clip_skip_8": "Clip停止层8",
+      "clip_skip_9": "Clip停止层9",
+      "clip_skip_10": "Clip停止层10",
+      "vae_name_1": "VAE名称1",
+      "vae_name_2": "VAE名称2",
+      "vae_name_3": "VAE名称3",
+      "vae_name_4": "VAE名称4",
+      "vae_name_5": "VAE名称5",
+      "vae_name_6": "VAE名称6",
+      "vae_name_7": "VAE名称7",
+      "vae_name_8": "VAE名称8",
+      "vae_name_9": "VAE名称9",
+      "vae_name_10": "VAE名称10"
+    }
+  },
+  "easy XYInputs: Lora": {
+    "title": "XY输入: Lora",
+    "inputs": {
+      "optional_lora_stack": "Lora堆"
+    },
+    "widgets": {
+      "input_mode": "输入模式",
+      "lora_count": "Lora数量",
+      "model_strength": "模型强度",
+      "clip_strength": "CLIP强度",
+      "lora_name_1": "Lora名称1",
+      "lora_name_2": "Lora名称2",
+      "lora_name_3": "Lora名称3",
+      "lora_name_4": "Lora名称4",
+      "lora_name_5": "Lora名称5",
+      "lora_name_6": "Lora名称6",
+      "lora_name_7": "Lora名称7",
+      "lora_name_8": "Lora名称8",
+      "lora_name_9": "Lora名称9",
+      "lora_name_10": "Lora名称10",
+      "model_str_1": "模型强度1",
+      "model_str_2": "模型强度2",
+      "model_str_3": "模型强度3",
+      "model_str_4": "模型强度4",
+      "model_str_5": "模型强度5",
+      "model_str_6": "模型强度6",
+      "model_str_7": "模型强度7",
+      "model_str_8": "模型强度8",
+      "model_str_9": "模型强度9",
+      "model_str_10": "模型强度10",
+      "clip_str_1": "CLIP强度1",
+      "clip_str_2": "CLIP强度2",
+      "clip_str_3": "CLIP强度3",
+      "clip_str_4": "CLIP强度4",
+      "clip_str_5": "CLIP强度5",
+      "clip_str_6": "CLIP强度6",
+      "clip_str_7": "CLIP强度7",
+      "clip_str_8": "CLIP强度8",
+      "clip_str_9": "CLIP强度9",
+      "clip_str_10": "CLIP强度10"
     }
   },
   "easy XYInputs: PositiveCond": {

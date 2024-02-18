@@ -28,7 +28,7 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 from .adv_encode import advanced_encode, advanced_encode_XL
 
 from server import PromptServer
-from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, PreviewImage, SaveImage, common_ksampler
+from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, PreviewImage, SaveImage
 from comfy_extras.nodes_mask import LatentCompositeMasked
 from .config import BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn, log_node_success
@@ -131,7 +131,7 @@ class easyLoader:
         for object_type in object_types:
             if object_type == 'unet':
                 desired_names = desired_unet_names
-            elif object_type in ["ckpt", "bvae"]:
+            elif object_type in ["ckpt", "clip", "bvae"]:
                 desired_names = desired_ckpt_names
             elif object_type == "vae":
                 desired_names = desired_vae_names
