@@ -199,7 +199,7 @@
     "widgets": {
       "clip_name": "CLIP模型",
       "resolution": "分辨率",
-      "compression": "压缩比",
+      "compression": "压缩系数",
       "empty_latent_width": "宽",
       "empty_latent_height": "高",
       "batch_size": "每批生成数量",
@@ -457,7 +457,7 @@
     }
   },
   "easy preSamplingCascade": {
-    "title": "预采样（Cascade）",
+    "title": "预采样参数（Cascade）",
     "widgets": {
       "steps": "步数",
       "cfg": "CFG",
@@ -469,9 +469,9 @@
     },
     "inputs": {
       "pipe": "节点束",
-      "optional_model": "模型C（可选）",
-      "image_to_latent": "图像（可选）",
-      "optional_latent": "潜空间C（可选）"
+      "model_c": "模型C（可选）",
+      "image_to_latent_c": "图像（可选）",
+      "latent_c": "潜空间C（可选）"
     },
     "outputs": {
       "pipe": "节点束",
@@ -604,6 +604,44 @@
     "inputs": {
       "pipe": "节点束",
       "model": "模型（可选）"
+    },
+     "outputs": {
+      "pipe": "节点束",
+      "image": "图像"
+    }
+  },
+  "easy fullCascadeKSampler": {
+    "title": "简易级联k采样器 (完整版)",
+    "widgets": {
+      "steps": "步数",
+      "cfg": "CFG",
+      "sampler_name": "采样器",
+      "scheduler": "调度器",
+      "denoise": "降噪",
+      "seed_num": "种子值",
+      "control_before_generate": "运行前操作",
+      "image_output": "图像输出"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "model_c": "模型C（可选）",
+      "image_to_latent_c": "图像（可选）",
+      "latent_c": "潜空间C（可选）"
+    },
+    "outputs": {
+      "pipe": "节点束",
+      "model_b": "模型B",
+      "latent_b": "潜空间B"
+    }
+  },
+   "easy cascadeKSampler": {
+    "title": "简易级联k采样器",
+    "widgets": {
+      "image_output": "图像输出"
+    },
+    "inputs": {
+      "pipe": "节点束",
+      "model_c": "模型C（可选）"
     },
      "outputs": {
       "pipe": "节点束",

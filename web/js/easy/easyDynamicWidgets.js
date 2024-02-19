@@ -88,6 +88,12 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'number_padding'), true)
 			toggleWidget(node, findWidgetByName(node, 'overwrite_existing'), true)
 		}
+
+		if(widget.value === 'Hide' || widget.value === 'Hide/Save'){
+			toggleWidget(node, findWidgetByName(node, 'decode_vae_name'))
+		}else{
+			toggleWidget(node, findWidgetByName(node, 'decode_vae_name'), true)
+		}
 	}
 	if (widget.name === 'add_noise') {
 		if (widget.value === "disable") {
@@ -431,12 +437,15 @@ app.registerExtension({
 			case "easy latentNoisy":
 			case "easy preSamplingAdvanced":
 			case "easy preSamplingSdTurbo":
+			case "easy preSamplingCascade":
 			case "easy fullkSampler":
 			case "easy kSampler":
 			case "easy kSamplerSDTurbo":
 			case "easy kSamplerTiled":
 			case "easy kSamplerInpainting":
 			case "easy kSamplerDownscaleUnet":
+			case "easy fullCascadeKSampler":
+			case "easy cascadeKSampler":
 			case "easy hiresFix":
 			case "easy detailerFix":
 			case "easy imageRemoveBG":
@@ -744,7 +753,7 @@ app.registerExtension({
 			};
 		}
 
-		if (["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy fullkSampler"].includes(nodeData.name)) {
+		if (["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy fullkSampler", "easy fullCascadeKSampler"].includes(nodeData.name)) {
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
 			nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;

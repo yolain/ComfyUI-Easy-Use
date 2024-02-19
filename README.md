@@ -40,11 +40,13 @@
 **v1.0.7 (2024-02-18)**
 
 - 增加 `easy cascadeLoader` - stable cascade 加载器
-- 增加 `easy preSamplingCascade` - stabled cascade stage C采样
+- 增加 `easy preSamplingCascade` - stabled cascade stage_c 预采样参数
+- 增加 `easy fullCascadeKSampler` - stable cascade stage_c 完整版采样器
+- 增加 `easy cascadeKSampler` - stable cascade stage-c ksampler simple
 
-[SC示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
-目前还未支持Controlnet
-
+[Stable Cascade](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
+目前支持 文生图与图生图，还未支持Lora和Controlnet，敬请期待
+02-17 前更新的用户，需将原工程中的`easy preSamplingCascade`更换成`easy cascadeKSampler` 重新连接进行使用。
 
 **v1.0.6 (2024-02-16)**
 
@@ -214,21 +216,25 @@
 
 导入后请自行更换您目录里的大模型
 
-### 文生图
+### StableDiffusion
+#### 文生图
 
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/text_to_image.png">
 
-### 图生图+controlnet
+#### 图生图+controlnet
 
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/image_to_image_controlnet.png">
 
-### SDTurbo+高清修复+SVD
+#### SDTurbo+高清修复+SVD
 
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/sdturbo_hiresfix_svd.png">
 
 ### StableCascade
+#### 文生图
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/StableCascade/text_to_image.png">
 
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/stable_cascade.png">
+#### 图生图
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/StableCascade/image_to_image.png">
 
 ## Credits
 
