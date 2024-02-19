@@ -45,8 +45,8 @@
 - 增加 `easy cascadeKSampler` - stable cascade stage-c ksampler simple
 
 [Stable Cascade](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
-目前支持 文生图与图生图，还未支持Lora和Controlnet，敬请期待
-02-17 前更新的用户，需将原工程中的`easy preSamplingCascade`更换成`easy cascadeKSampler` 重新连接进行使用。
+目前支持 文生图与图生图，还未支持Lora和Controlnet，敬请期待!<br>
+02-17 前更新的用户，需将原工程中的`easy preSamplingCascade`更换成`easy fullCascadeKSampler` 重新连接进行使用。
 
 **v1.0.6 (2024-02-16)**
 
