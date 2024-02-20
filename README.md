@@ -37,6 +37,10 @@
 
 ## 更新日志
 
+**2024-02-20**
+
+- 优化图生图流程[示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#图生图)
+
 **v1.0.7 (2024-02-18)**
 
 - 增加 `easy cascadeLoader` - stable cascade 加载器

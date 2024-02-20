@@ -2184,10 +2184,10 @@ class cascadeLoader:
                 raise ValueError("Invalid base_resolution format.")
 
         # Create Empty Latent
-        c_latent = torch.zeros([batch_size, 16, empty_latent_height // compression, empty_latent_width // compression])
-        b_latent = torch.zeros([batch_size, 4, empty_latent_height // 4, empty_latent_width // 4])
+        latent_c = torch.zeros([batch_size, 16, empty_latent_height // compression, empty_latent_width // compression])
+        latent_b = torch.zeros([batch_size, 4, empty_latent_height // 4, empty_latent_width // 4])
 
-        samples = ({"samples": c_latent}, {"samples": b_latent})
+        samples = ({"samples": latent_c}, {"samples": latent_b})
 
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
@@ -2248,45 +2248,47 @@ class cascadeLoader:
 
         log_node_warn("处理结束...")
         pipe = {
-                "model": model,
-                "positive": positive_embeddings_final,
-                "negative": negative_embeddings_final,
-                "vae": vae,
-                "clip": clip,
+            "model": model,
+            "positive": positive_embeddings_final,
+            "negative": negative_embeddings_final,
+            "vae": vae,
+            "clip": clip,
 
-                "samples": samples,
-                "images": image,
+            "samples": samples,
+            "images": image,
+            "seed": 0,
+
+            "loader_settings": {
+                "vae_name": stage_a,
+
+                "lora_stack": pipe_lora_stack,
+
+                "refiner_ckpt_name": None,
+                "refiner_vae_name": None,
+                "refiner_lora_name": None,
+                "refiner_lora_model_strength": None,
+                "refiner_lora_clip_strength": None,
+
+                "positive": positive,
+                "positive_l": None,
+                "positive_g": None,
+                "positive_token_normalization": 'none',
+                "positive_weight_interpretation": 'comfy',
+                "positive_balance": None,
+                "negative": negative,
+                "negative_l": None,
+                "negative_g": None,
+                "negative_token_normalization": 'none',
+                "negative_weight_interpretation": 'comfy',
+                "negative_balance": None,
+                "empty_latent_width": empty_latent_width,
+                "empty_latent_height": empty_latent_height,
+                "batch_size": batch_size,
                 "seed": 0,
-
-                "loader_settings": {
-                                    "vae_name": stage_a,
-
-                                    "lora_stack": pipe_lora_stack,
-
-                                    "refiner_ckpt_name": None,
-                                    "refiner_vae_name": None,
-                                    "refiner_lora_name": None,
-                                    "refiner_lora_model_strength": None,
-                                    "refiner_lora_clip_strength": None,
-
-                                    "positive": positive,
-                                    "positive_l": None,
-                                    "positive_g": None,
-                                    "positive_token_normalization": 'none',
-                                    "positive_weight_interpretation": 'comfy',
-                                    "positive_balance": None,
-                                    "negative": negative,
-                                    "negative_l": None,
-                                    "negative_g": None,
-                                    "negative_token_normalization": 'none',
-                                    "negative_weight_interpretation": 'comfy',
-                                    "negative_balance": None,
-                                    "empty_latent_width": empty_latent_width,
-                                    "empty_latent_height": empty_latent_height,
-                                    "batch_size": batch_size,
-                                    "seed": 0,
-                                    "empty_samples": samples, }
-                }
+                "empty_samples": samples,
+                "compression": compression
+            }
+        }
 
         return {"ui": {"positive": positive_wildcard_prompt, "negative": negative_wildcard_prompt},
                 "result": (pipe, model_c, model_b, vae)}
@@ -3120,13 +3122,36 @@ class cascadeSettings:
         images, samples_c = None, None
         samples = pipe['samples']
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+
+        encode_vae_name = encode_vae_name if encode_vae_name is not None else pipe['loader_settings']['encode_vae_name']
+        decode_vae_name = decode_vae_name if decode_vae_name is not None else pipe['loader_settings']['decode_vae_name']
+
         if image_to_latent_c is not None and encode_vae_name != 'None':
             encode_vae = easyCache.load_vae(encode_vae_name)
-            samples_c = {"samples": encode_vae.encode(image_to_latent_c)}
+            if "compression" not in pipe["loader_settings"]:
+                raise Exception("compression is not found")
+            compression = pipe["loader_settings"]['compression']
+            width = image_to_latent_c.shape[-2]
+            height = image_to_latent_c.shape[-3]
+            out_width = (width // compression) * encode_vae.downscale_ratio
+            out_height = (height // compression) * encode_vae.downscale_ratio
+
+            s = comfy.utils.common_upscale(image_to_latent_c.movedim(-1, 1), out_width, out_height, "bicubic",
+                                           "center").movedim(1,
+                                                             -1)
+            c_latent = encode_vae.encode(s[:, :, :, :3])
+            b_latent = torch.zeros([c_latent.shape[0], 4, height // 4, width // 4])
+
+            samples_c = {"samples": c_latent}
             samples_c = RepeatLatentBatch().repeat(samples_c, batch_size)[0]
+
+            samples_b = {"samples": b_latent}
+            samples_b = RepeatLatentBatch().repeat(samples_b, batch_size)[0]
+            samples = (samples_c, samples_b)
             images = image_to_latent_c
         elif latent_c is not None:
             samples_c = RepeatLatentBatch().repeat(latent_c, batch_size)[0]
+            samples = (samples_c, samples[1])
             images = pipe["images"]
         if samples_c is not None:
             samples = (samples_c, samples[1])
@@ -3982,14 +4007,34 @@ class samplerCascadeFull:
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         if image_to_latent_c is not None and encode_vae_name != 'None':
             encode_vae = easyCache.load_vae(encode_vae_name)
-            samples = {"samples": encode_vae.encode(image_to_latent_c)}
-            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+            if "compression" not in pipe["loader_settings"]:
+                raise Exception("compression is not found")
+
+            compression = pipe["loader_settings"]['compression']
+            width = image_to_latent_c.shape[-2]
+            height = image_to_latent_c.shape[-3]
+            out_width = (width // compression) * encode_vae.downscale_ratio
+            out_height = (height // compression) * encode_vae.downscale_ratio
+
+            s = comfy.utils.common_upscale(image_to_latent_c.movedim(-1, 1), out_width, out_height, "bicubic",
+                                           "center").movedim(1,
+                                                             -1)
+            latent_c = encode_vae.encode(s[:, :, :, :3])
+            latent_b = torch.zeros([latent_c.shape[0], 4, height // 4, width // 4])
+
+            samples_c = {"samples": latent_c}
+            samples_c = RepeatLatentBatch().repeat(samples_c, batch_size)[0]
+
+            samples_b = {"samples": latent_b}
+            samples_b = RepeatLatentBatch().repeat(samples_b, batch_size)[0]
             images = image_to_latent_c
         elif latent_c is not None:
-            samples = RepeatLatentBatch().repeat(latent_c, batch_size)[0]
+            samples_c = RepeatLatentBatch().repeat(latent_c, batch_size)[0]
+            samples_b = pipe["samples"][1]
             images = pipe["images"]
         else:
-            samples = pipe["samples"][0]
+            samples_c = pipe["samples"][0]
+            samples_b = pipe["samples"][1]
             images = pipe["images"]
 
         # Clean loaded_objects
@@ -3997,9 +4042,7 @@ class samplerCascadeFull:
         samp_model = model_c if model_c else pipe["model"][0]
         samp_positive = pipe["positive"]
         samp_negative = pipe["negative"]
-        samp_samples = samples
-        samp_vae = pipe["vae"]
-        samp_clip = pipe["clip"]
+        samp_samples = samples_c
 
         samp_seed = seed_num if seed_num is not None else pipe['seed']
 
@@ -4061,7 +4104,7 @@ class samplerCascadeFull:
             "vae": pipe['vae'],
             "clip": pipe['clip'],
 
-            "samples": pipe["samples"][1],
+            "samples": samples_b,
             "images": images,
             "seed": seed_num,
 

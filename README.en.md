@@ -29,6 +29,10 @@ After installing the node package, the UI interface will be automatically switch
 
 ## Changelog
 
+**2024-02-20**
+
+- Optimize the image to image[Example](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#image-to-image)
+
 **v1.0.7 (2024-02-19)**
 
 - Added `easy cascadeLoader` - stable cascade Loader
