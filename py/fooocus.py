@@ -1,23 +1,9 @@
-import os
 import torch
 import comfy
 from comfy.model_patcher import ModelPatcher
 from comfy.model_management import cast_to_device
-from urllib.parse import urlparse
-from torch.hub import download_url_to_file
-from .log import log_node_warn, log_node_error, log_node_info
 
-def get_local_filepath(url, dirname, local_file_name=None):
-    if not os.path.exists(dirname):
-        os.makedirs(dirname)
-    if not local_file_name:
-        parsed_url = urlparse(url)
-        local_file_name = os.path.basename(parsed_url.path)
-    destination = os.path.join(dirname, local_file_name)
-    if not os.path.exists(destination):
-        log_node_warn(f'downloading {url} to {destination}')
-        download_url_to_file(url, destination)
-    return destination
+from .log import log_node_warn, log_node_error, log_node_info
 
 # Inpaint
 class InpaintHead(torch.nn.Module):

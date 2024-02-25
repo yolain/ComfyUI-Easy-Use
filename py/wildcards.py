@@ -1,11 +1,10 @@
 import re
 import random
 import os
-import nodes
 import folder_paths
 import yaml
 import json
-from pathlib import Path
+from .log import log_node_info
 
 easy_wildcard_dict = {}
 
@@ -274,22 +273,7 @@ def remove_lora_tags(string):
 
     return result
 
-
-def resolve_lora_name(lora_name_cache, name):
-    if os.path.exists(name):
-        return name
-    else:
-        if len(lora_name_cache) == 0:
-            lora_name_cache.extend(folder_paths.get_filename_list("loras"))
-
-        for x in lora_name_cache:
-            if x.endswith(name):
-                return x
-
-
-def process_with_loras(wildcard_opt, model, clip, title="Positive", seed=None, can_load_lora=True, pipe_lora_stack=[]):
-    lora_name_cache = []
-
+def process_with_loras(wildcard_opt, model, clip, title="Positive", seed=None, can_load_lora=True, pipe_lora_stack=[], easyCache=None):
     pass1 = process(wildcard_opt, seed)
     loras = extract_lora_values(pass1)
     pass2 = remove_lora_tags(pass1)
@@ -298,39 +282,23 @@ def process_with_loras(wildcard_opt, model, clip, title="Positive", seed=None, c
     has_loras = True if loras != [] else False
     show_wildcard_prompt = True if has_noodle_key or has_loras else False
 
-    for lora_name, model_weight, clip_weight, lbw, lbw_a, lbw_b in loras:
-        if (lora_name.split('.')[-1]) not in folder_paths.supported_pt_extensions:
-            lora_name = lora_name+".safetensors"
+    if can_load_lora:
+        for lora_name, model_weight, clip_weight, lbw, lbw_a, lbw_b in loras:
+            if (lora_name.split('.')[-1]) not in folder_paths.supported_pt_extensions:
+                lora_name = lora_name+".safetensors"
+            lora = {
+                "lora_name": lora_name, "model": model, "clip": clip, "model_strength": model_weight,
+                "clip_strength": clip_weight,
+                "lbw_a": lbw_a,
+                "lbw_b": lbw_b,
+                "lbw": lbw
+            }
+            model, clip = easyCache.load_lora(lora)
+            lora["model"] = model
+            lora["clip"] = clip
+            pipe_lora_stack.append(lora)
 
-        lora_name = resolve_lora_name(lora_name_cache, lora_name)
-
-        path = folder_paths.get_full_path("loras", lora_name)
-
-        if path is not None:
-            print(f"LORA: {lora_name}: {model_weight}, {clip_weight}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
-
-            def default_lora():
-                return nodes.LoraLoader().load_lora(model, clip, lora_name, model_weight, clip_weight)
-
-            if lbw is not None:
-                    cls = nodes.NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
-                    if can_load_lora:
-                        model, clip, _ = cls().doit(model, clip, lora_name, model_weight, clip_weight, False, 0, lbw_a, lbw_b, "", lbw)
-                    pipe_lora_stack.append({
-                        "lora_name": lora_name, "model": model, "clip": clip, "lora_model_strength": model_weight,
-                        "lora_clip_strength": clip_weight,
-                        "lbw_a": lbw_a,
-                        "lbw_b": lbw_b,
-                        "lbw": lbw
-                    })
-            else:
-                pipe_lora_stack.append({"lora_name": lora_name, "model": model, "clip": clip, "lora_model_strength": model_weight, "lora_clip_strength": clip_weight})
-                if can_load_lora:
-                    model, clip = default_lora()
-        else:
-            print(f"LORA NOT FOUND: {lora_name}")
-
-    # print(f"{title}: {pass2}")
-    # print(f'{title}_decode:', pass1)
+    log_node_info("easy wildcards",f"{title}: {pass2}")
+    log_node_info("easy wildcards",f'{title}_decode: {pass1}')
 
     return model, clip, pass2, pass1, show_wildcard_prompt, pipe_lora_stack

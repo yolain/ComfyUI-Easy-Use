@@ -32,6 +32,7 @@ BASE_RESOLUTIONS = [
     (1920, 1080),
     (2560, 1440),
 ]
+MAX_SEED_NUM = 1125899906842624
 
 INPAINT_DIR = os.path.join(folder_paths.models_dir, "inpaint")
 
@@ -56,8 +57,4 @@ FOOOCUS_INPAINT_PATCH = {
     "inpaint (1.32GB)": {
         "model_url": "https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint.fooocus.patch"
     },
-}
-
-OPEN_CLIP = {
-
 }

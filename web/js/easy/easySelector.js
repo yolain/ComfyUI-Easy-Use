@@ -250,7 +250,10 @@ app.registerExtension({
                             oninput:(e)=>{
                                 let value = e.target.value
                                 selector.element.children[1].querySelectorAll(".easyuse-prompt-styles-tag").forEach(el => {
-                                    if(el.dataset.name.indexOf(value) != -1 || el.dataset.tag.indexOf(value) != -1  || el.classList.value.indexOf("easyuse-prompt-styles-tag-selected")!=-1){
+                                    const name = el.dataset.name.toLowerCase()
+                                    const tag = el.dataset.tag.toLowerCase()
+                                    const lower_value = value.toLowerCase()
+                                    if(name.indexOf(lower_value) != -1 || tag.indexOf(lower_value) != -1  || el.classList.value.indexOf("easyuse-prompt-styles-tag-selected")!=-1){
                                         el.classList.remove('hide')
                                     }
                                     else{

@@ -106,21 +106,26 @@ try{
         ui2.colors.litegraph_base.CLEAR_BACKGROUND_COLOR = '#000'
         custom_theme[ui2.id] = ui2
         localStorage.setItem('Comfy.Settings.Comfy.CustomColorPalettes', JSON.stringify(custom_theme));
-        // localStorage.setItem('Comfy.Settings.Comfy.ColorPalette',`"${custom_theme_name}"`)
     }
-    const theme_name = localStorage.getItem('Comfy.Settings.Comfy.ColorPalette')
+    let theme_name = localStorage.getItem('Comfy.Settings.Comfy.ColorPalette')
     // 兼容 ComfyUI Revision: 1887 [235727fe] 以上版本
     if(api.storeSettings){
+        const _settings = await api.getSettings()
+        if(!theme_name && _settings['Comfy.ColorPalette']) {
+            theme_name = _settings['Comfy.ColorPalette']
+            localStorage.setItem('Comfy.Settings.Comfy.ColorPalette',`"${theme_name}"`)
+        }
         const settings = {
             "Comfy.CustomColorPalettes": localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes') ? JSON.parse(localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes')) : {},
         }
         if(['"custom_obsidian"','"custom_obsidian_dark"'].includes(theme_name)) settings["Comfy.ColorPalette"] = custom_theme_name
-        const _settings = await api.getSettings()
+
         if(!_settings || !_settings["Comfy.CustomColorPalettes"] || !_settings["Comfy.CustomColorPalettes"]["obsidian"] || _settings["Comfy.CustomColorPalettes"]["obsidian"]['version']<ui.version){
             await api.storeSettings(settings);
             app.ui.settings.load()
         }
     }
+    console.log(theme_name)
     // 判断主题为黑曜石时改变扩展UI
     if(['"custom_obsidian"','"custom_obsidian_dark"'].includes(theme_name)){
         // canvas

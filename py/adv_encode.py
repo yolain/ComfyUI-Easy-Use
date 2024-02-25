@@ -1,10 +1,11 @@
 import torch
 import numpy as np
 import itertools
-from math import gcd
 
 from comfy import model_management
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
+
+from nodes import NODE_CLASS_MAPPINGS
 
 
 def _grouper(n, iterable):
@@ -258,7 +259,17 @@ def prepareXL(embs_l, embs_g, pooled, clip_balance):
 
 
 def advanced_encode(clip, text, token_normalization, weight_interpretation, w_max=1.0, clip_balance=.5,
-                    apply_to_pooled=True, width=1024, height=1024, crop_w=0, crop_h=0, target_width=1024, target_height=1024):
+                    apply_to_pooled=True, width=1024, height=1024, crop_w=0, crop_h=0, target_width=1024, target_height=1024, a1111_prompt_style=False, steps=1):
+
+    # Use clip text encode by smzNodes like same as a1111, when if you need installed the smzNodes
+    if a1111_prompt_style:
+        if "smZ CLIPTextEncode" in NODE_CLASS_MAPPINGS:
+            cls = NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
+            embeddings_final, = cls().encode(clip, text,weight_interpretation, True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+            return embeddings_final
+        else:
+            raise Exception(f"[smzNodes Not Found] you need to install 'ComfyUI-smzNodes'")
+
     tokenized = clip.tokenize(text, return_word_ids=True)
     if isinstance(clip.cond_stage_model, (SDXLClipModel, SDXLRefinerClipModel, SDXLClipG)):
         embs_l = None
@@ -293,32 +304,3 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
         return [[embeddings_final, {"pooled_output": pooled}]]
 
 
-def advanced_encode_XL(clip, text1, text2, token_normalization, weight_interpretation, w_max=1.0, clip_balance=.5,
-                       apply_to_pooled=True,width=1024, height=1024, crop_w=0, crop_h=0, target_width=1024, target_height=1024):
-    tokenized1 = clip.tokenize(text1, return_word_ids=True)
-    tokenized2 = clip.tokenize(text2, return_word_ids=True)
-
-    embs_l, _ = advanced_encode_from_tokens(tokenized1['l'],
-                                            token_normalization,
-                                            weight_interpretation,
-                                            lambda x: encode_token_weights(clip, x, encode_token_weights_l),
-                                            w_max=w_max,
-                                            return_pooled=False)
-
-    embs_g, pooled = advanced_encode_from_tokens(tokenized2['g'],
-                                                 token_normalization,
-                                                 weight_interpretation,
-                                                 lambda x: encode_token_weights(clip, x, encode_token_weights_g),
-                                                 w_max=w_max,
-                                                 return_pooled=True,
-                                                 apply_to_pooled=apply_to_pooled)
-
-    gcd_num = gcd(embs_l.shape[1], embs_g.shape[1])
-    repeat_l = int((embs_g.shape[1] / gcd_num) * embs_l.shape[1])
-    repeat_g = int((embs_l.shape[1] / gcd_num) * embs_g.shape[1])
-
-    embeddings_final, pooled = prepareXL(embs_l.expand((-1, repeat_l, -1)), embs_g.expand((-1, repeat_g, -1)), pooled, clip_balance)
-
-    return [[embeddings_final,
-             {"pooled_output": pooled, "width": width, "height": height, "crop_w": crop_w, "crop_h": crop_h,
-              "target_width": target_width, "target_height": target_height}]]

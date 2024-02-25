@@ -1,1206 +1,29 @@
-import sys
-import os
-import re
-import json
-import time
-import math
+import sys, os, re, json, time, math
 import torch
-import torchvision
-import psutil
-import datetime
-import comfy.sd
-import comfy.utils
-import numpy as np
 import folder_paths
-import comfy.samplers
-import comfy.controlnet
-import latent_preview
-import comfy.model_base
-import comfy.model_management
+import comfy.utils, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
 from comfy.sd import CLIP, VAE
-from pathlib import Path
-from urllib.request import urlopen
-from collections import defaultdict
-from PIL.PngImagePlugin import PngInfo
-from PIL import Image, ImageDraw, ImageFont
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
-from typing import Dict, List, Optional, Tuple, Union, Any
-from .adv_encode import advanced_encode, advanced_encode_XL
+from comfy_extras.nodes_mask import LatentCompositeMasked
+from urllib.request import urlopen
+from PIL import Image
 
 from server import PromptServer
-from nodes import VAELoader, MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, PreviewImage, SaveImage
-from comfy_extras.nodes_mask import LatentCompositeMasked
-from .config import BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
-from .log import log_node_info, log_node_error, log_node_warn, log_node_success
+from nodes import MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode
+from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
+from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
+from .adv_encode import advanced_encode
 
-# 加载器
-class easyLoader:
-    def __init__(self):
-        self.loaded_objects = {
-            "ckpt": defaultdict(tuple),  # {ckpt_name: (model, ...)}
-            "unet": defaultdict(tuple),
-            "clip": defaultdict(tuple),
-            "clip_vision": defaultdict(tuple),
-            "bvae": defaultdict(tuple),
-            "vae": defaultdict(object),
-            "lora": defaultdict(dict),  # {lora_name: {UID: (model_lora, clip_lora)}}
-        }
-        self.memory_threshold = self.determine_memory_threshold(0.7)
+from .libs.utils import find_nearest_steps, find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath
+from .libs.loader import easyLoader
+from .libs.sampler import easySampler
+from .libs.xyplot import easyXYPlot
+from .libs.controlnet import easyControlnet
 
-    def clean_values(self, values: str):
-        original_values = values.split("; ")
-        cleaned_values = []
-
-        for value in original_values:
-            cleaned_value = value.strip(';').strip()
-
-            if cleaned_value == "":
-                continue
-
-            try:
-                cleaned_value = int(cleaned_value)
-            except ValueError:
-                try:
-                    cleaned_value = float(cleaned_value)
-                except ValueError:
-                    pass
-
-            cleaned_values.append(cleaned_value)
-
-        return cleaned_values
-
-    def clear_unused_objects(self, desired_names: set, object_type: str):
-        keys = set(self.loaded_objects[object_type].keys())
-        for key in keys - desired_names:
-            del self.loaded_objects[object_type][key]
-
-    def get_input_value(self, entry, key):
-        val = entry["inputs"][key]
-        return val if isinstance(val, str) else val[0]
-
-    def process_pipe_loader(self, entry,
-                            desired_ckpt_names, desired_vae_names,
-                            desired_lora_names, desired_lora_settings, num_loras=3, suffix=""):
-        for idx in range(1, num_loras + 1):
-            lora_name_key = f"{suffix}lora{idx}_name"
-            desired_lora_names.add(self.get_input_value(entry, lora_name_key))
-            setting = f'{self.get_input_value(entry, lora_name_key)};{entry["inputs"][f"{suffix}lora{idx}_model_strength"]};{entry["inputs"][f"{suffix}lora{idx}_clip_strength"]}'
-            desired_lora_settings.add(setting)
-
-        desired_ckpt_names.add(self.get_input_value(entry, f"{suffix}ckpt_name"))
-        desired_vae_names.add(self.get_input_value(entry, f"{suffix}vae_name"))
-
-    def update_loaded_objects(self, prompt):
-        desired_ckpt_names = set()
-        desired_unet_names = set()
-        desired_clip_names = set()
-        desired_vae_names = set()
-        desired_lora_names = set()
-        desired_lora_settings = set()
-
-        for entry in prompt.values():
-            class_type = entry["class_type"]
-
-            if class_type == "easy a1111Loader" or class_type == "easy comfyLoader":
-                lora_name = self.get_input_value(entry, "lora_name")
-                desired_lora_names.add(lora_name)
-                setting = f'{lora_name};{entry["inputs"]["lora_model_strength"]};{entry["inputs"]["lora_clip_strength"]}'
-                desired_lora_settings.add(setting)
-
-                desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name"))
-                desired_vae_names.add(self.get_input_value(entry, "vae_name"))
-            elif class_type == "easy zero123Loader" or class_type == 'easy svdLoader':
-                desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name"))
-                desired_vae_names.add(self.get_input_value(entry, "vae_name"))
-
-            elif class_type == "easy cascadeLoader":
-                desired_unet_names.add(self.get_input_value(entry, "stage_c"))
-                desired_unet_names.add(self.get_input_value(entry, "stage_b"))
-                desired_clip_names.add(self.get_input_value(entry, "clip_name"))
-                desired_vae_names.add(self.get_input_value(entry, "stage_a"))
-
-            elif class_type == "easy preSamplingCascade" or class_type == 'easy fullCascadeKSampler':
-                encode_vae_name = self.get_input_value(entry, "encode_vae_name")
-                decode_vae_name = self.get_input_value(entry, "decode_vae_name")
-                if encode_vae_name and encode_vae_name != 'None':
-                    desired_vae_names.add(encode_vae_name)
-                if decode_vae_name and decode_vae_name != 'None':
-                    desired_vae_names.add(decode_vae_name)
-
-            elif class_type == "easy XYInputs: ModelMergeBlocks":
-                desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name_1"))
-                desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name_2"))
-                vae_use = self.get_input_value(entry, "vae_use")
-                if vae_use != 'Use Model 1' and vae_use != 'Use Model 2':
-                    desired_vae_names.add(vae_use)
-
-        object_types = ["ckpt", "unet", "clip", "bvae", "vae", "lora"]
-        for object_type in object_types:
-            if object_type == 'unet':
-                desired_names = desired_unet_names
-            elif object_type in ["ckpt", "clip", "bvae"]:
-                if object_type == 'clip':
-                    desired_names = desired_ckpt_names.union(desired_clip_names)
-                else:
-                    desired_names = desired_ckpt_names
-            elif object_type == "vae":
-                desired_names = desired_vae_names
-            else:
-                desired_names = desired_lora_names
-            self.clear_unused_objects(desired_names, object_type)
-
-    def add_to_cache(self, obj_type, key, value):
-        """
-        Add an item to the cache with the current timestamp.
-        """
-        timestamped_value = (value, time.time())
-        self.loaded_objects[obj_type][key] = timestamped_value
-
-    def determine_memory_threshold(self, percentage=0.8):
-        """
-        Determines the memory threshold as a percentage of the total available memory.
-
-        Args:
-        - percentage (float): The fraction of total memory to use as the threshold.
-                              Should be a value between 0 and 1. Default is 0.8 (80%).
-
-        Returns:
-        - memory_threshold (int): Memory threshold in bytes.
-        """
-        total_memory = psutil.virtual_memory().total
-        memory_threshold = total_memory * percentage
-        return memory_threshold
-
-    def get_memory_usage(self):
-        """
-        Returns the memory usage of the current process in bytes.
-        """
-        process = psutil.Process(os.getpid())
-        return process.memory_info().rss
-
-    def eviction_based_on_memory(self):
-        """
-        Evicts objects from cache based on memory usage and priority.
-        """
-
-        current_memory = self.get_memory_usage()
-
-
-        if current_memory < self.memory_threshold:
-            return
-
-        eviction_order = ["vae", "lora", "bvae", "clip", "ckpt"]
-
-        for obj_type in eviction_order:
-
-            if current_memory < self.memory_threshold:
-                break
-
-            # Sort items based on age (using the timestamp)
-            items = list(self.loaded_objects[obj_type].items())
-            items.sort(key=lambda x: x[1][1])  # Sorting by timestamp
-
-
-            for item in items:
-                if current_memory < self.memory_threshold:
-                    break
-
-                del self.loaded_objects[obj_type][item[0]]
-                current_memory = self.get_memory_usage()
-
-    def load_checkpoint(self, ckpt_name, config_name=None, load_vision=False):
-        cache_name = ckpt_name
-        if config_name not in [None, "Default"]:
-            cache_name = ckpt_name + "_" + config_name
-        if cache_name in self.loaded_objects["ckpt"]:
-            cache_out = self.loaded_objects["clip_vision"][cache_name][0] if load_vision else  self.loaded_objects["clip"][cache_name][0]
-            return self.loaded_objects["ckpt"][cache_name][0], cache_out, self.loaded_objects["bvae"][cache_name][0]
-
-        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
-
-        output_clip = False if load_vision else True
-        output_clipvision = True if load_vision else False
-        if config_name not in [None, "Default"]:
-            config_path = folder_paths.get_full_path("configs", config_name)
-            loaded_ckpt = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=output_clip, embedding_directory=folder_paths.get_folder_paths("embeddings"))
-        else:
-            loaded_ckpt = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"))
-
-        self.add_to_cache("ckpt", cache_name, loaded_ckpt[0])
-        self.add_to_cache("bvae", cache_name, loaded_ckpt[2])
-        if load_vision:
-            out = loaded_ckpt[3]
-            self.add_to_cache("clip_vision", cache_name, out)
-        else:
-            out = loaded_ckpt[1]
-            self.add_to_cache("clip", cache_name, loaded_ckpt[1])
-
-        self.eviction_based_on_memory()
-
-        return loaded_ckpt[0], out, loaded_ckpt[2]
-
-    def load_vae(self, vae_name):
-        if vae_name in self.loaded_objects["vae"]:
-            return self.loaded_objects["vae"][vae_name][0]
-
-        vae_path = folder_paths.get_full_path("vae", vae_name)
-        sd = comfy.utils.load_torch_file(vae_path)
-        loaded_vae = comfy.sd.VAE(sd=sd)
-        self.add_to_cache("vae", vae_name, loaded_vae)
-        self.eviction_based_on_memory()
-
-        return loaded_vae
-
-    def load_unet(self, unet_name):
-        if unet_name in self.loaded_objects["unet"]:
-            return self.loaded_objects["unet"][unet_name][0]
-
-        unet_path = folder_paths.get_full_path("unet", unet_name)
-        model = comfy.sd.load_unet(unet_path)
-        self.add_to_cache("unet", unet_name, model)
-        self.eviction_based_on_memory()
-
-        return model
-
-    def load_clip(self, clip_name, type='stable_diffusion'):
-        if type == 'stable_diffusion':
-            clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION
-        else:
-            clip_type = comfy.sd.CLIPType.STABLE_CASCADE
-        clip_path = folder_paths.get_full_path("clip", clip_name)
-        load_clip = comfy.sd.load_clip(ckpt_paths=[clip_path],
-                                  embedding_directory=folder_paths.get_folder_paths("embeddings"), clip_type=clip_type)
-        self.add_to_cache("clip", clip_name, load_clip)
-        self.eviction_based_on_memory()
-
-        return load_clip
-
-    def load_lora(self, lora_name, model, clip, strength_model, strength_clip):
-        model_hash = str(model)[44:-1]
-        clip_hash = str(clip)[25:-1]
-
-        unique_id = f'{model_hash};{clip_hash};{lora_name};{strength_model};{strength_clip}'
-
-        if unique_id in self.loaded_objects["lora"] and unique_id in self.loaded_objects["lora"][lora_name]:
-            return self.loaded_objects["lora"][unique_id][0]
-
-        lora_path = folder_paths.get_full_path("loras", lora_name)
-        lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-        model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, strength_model, strength_clip)
-
-        self.add_to_cache("lora", unique_id, (model_lora, clip_lora))
-        self.eviction_based_on_memory()
-
-        return model_lora, clip_lora
-
-# 采样器
-class easySampler:
-    def __init__(self):
-        self.last_helds: dict[str, list] = {
-            "results": [],
-            "pipe_line": [],
-        }
-
-    @staticmethod
-    def tensor2pil(image: torch.Tensor) -> Image.Image:
-        """Convert a torch tensor to a PIL image."""
-        return Image.fromarray(np.clip(255. * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
-
-    @staticmethod
-    def pil2tensor(image: Image.Image) -> torch.Tensor:
-        """Convert a PIL image to a torch tensor."""
-        return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
-
-    @staticmethod
-    def enforce_mul_of_64(d):
-        d = int(d)
-        if d <= 7:
-            d = 8
-        leftover = d % 8  # 8 is the number of pixels per byte
-        if leftover != 0:  # if the number of pixels is not a multiple of 8
-            if (leftover < 4):  # if the number of pixels is less than 4
-                d -= leftover  # remove the leftover pixels
-            else:  # if the number of pixels is more than 4
-                d += 8 - leftover  # add the leftover pixels
-
-        return int(d)
-
-    @staticmethod
-    def safe_split(to_split: str, delimiter: str) -> List[str]:
-        """Split the input string and return a list of non-empty parts."""
-        parts = to_split.split(delimiter)
-        parts = [part for part in parts if part not in ('', ' ', '  ')]
-
-        while len(parts) < 2:
-            parts.append('None')
-        return parts
-
-    def common_ksampler(self, model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=1.0,
-                        disable_noise=False, start_step=None, last_step=None, force_full_denoise=False,
-                        preview_latent=True, disable_pbar=False):
-        device = comfy.model_management.get_torch_device()
-        latent_image = latent["samples"]
-
-        if disable_noise:
-            noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout, device="cpu")
-        else:
-            batch_inds = latent["batch_index"] if "batch_index" in latent else None
-            noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
-
-        noise_mask = None
-        if "noise_mask" in latent:
-            noise_mask = latent["noise_mask"]
-
-        preview_format = "JPEG"
-        if preview_format not in ["JPEG", "PNG"]:
-            preview_format = "JPEG"
-
-        previewer = False
-
-        if preview_latent:
-            previewer = latent_preview.get_previewer(device, model.model.latent_format)
-
-        pbar = comfy.utils.ProgressBar(steps)
-
-        def callback(step, x0, x, total_steps):
-            preview_bytes = None
-            if previewer:
-                preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
-            pbar.update_absolute(step + 1, total_steps, preview_bytes)
-
-        samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
-                                      latent_image,
-                                      denoise=denoise, disable_noise=disable_noise, start_step=start_step,
-                                      last_step=last_step,
-                                      force_full_denoise=force_full_denoise, noise_mask=noise_mask, callback=callback,
-                                      disable_pbar=disable_pbar, seed=seed)
-
-        out = latent.copy()
-        out["samples"] = samples
-        return out
-
-    def custom_ksampler(self, model, seed, steps, cfg, _sampler, sigmas, positive, negative, latent,
-                        disable_noise=False, preview_latent=True,  disable_pbar=False):
-
-        device = comfy.model_management.get_torch_device()
-        latent_image = latent["samples"]
-
-        if disable_noise:
-            noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout, device="cpu")
-        else:
-            batch_inds = latent["batch_index"] if "batch_index" in latent else None
-            noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
-
-        noise_mask = None
-        if "noise_mask" in latent:
-            noise_mask = latent["noise_mask"]
-
-        preview_format = "JPEG"
-        if preview_format not in ["JPEG", "PNG"]:
-            preview_format = "JPEG"
-
-        previewer = False
-
-        if preview_latent:
-            previewer = latent_preview.get_previewer(device, model.model.latent_format)
-
-        pbar = comfy.utils.ProgressBar(steps)
-
-        def callback(step, x0, x, total_steps):
-            preview_bytes = None
-            if previewer:
-                preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
-            pbar.update_absolute(step + 1, total_steps, preview_bytes)
-
-        samples = comfy.sample.sample_custom(model, noise, cfg, _sampler, sigmas, positive, negative, latent_image,
-                                             noise_mask=noise_mask, callback=callback, disable_pbar=disable_pbar,
-                                             seed=seed)
-
-        out = latent.copy()
-        out["samples"] = samples
-        return out
-
-    def get_value_by_id(self, key: str, my_unique_id: Any) -> Optional[Any]:
-        """Retrieve value by its associated ID."""
-        try:
-            for value, id_ in self.last_helds[key]:
-                if id_ == my_unique_id:
-                    return value
-        except KeyError:
-            return None
-
-    def update_value_by_id(self, key: str, my_unique_id: Any, new_value: Any) -> Union[bool, None]:
-        """Update the value associated with a given ID. Return True if updated, False if appended, None if key doesn't exist."""
-        try:
-            for i, (value, id_) in enumerate(self.last_helds[key]):
-                if id_ == my_unique_id:
-                    self.last_helds[key][i] = (new_value, id_)
-                    return True
-            self.last_helds[key].append((new_value, my_unique_id))
-            return False
-        except KeyError:
-            return False
-
-    def upscale(self, samples, upscale_method, scale_by, crop):
-        s = samples.copy()
-        width = self.enforce_mul_of_64(round(samples["samples"].shape[3] * scale_by))
-        height = self.enforce_mul_of_64(round(samples["samples"].shape[2] * scale_by))
-
-        if (width > MAX_RESOLUTION):
-            width = MAX_RESOLUTION
-        if (height > MAX_RESOLUTION):
-            height = MAX_RESOLUTION
-
-        s["samples"] = comfy.utils.common_upscale(samples["samples"], width, height, upscale_method, crop)
-        return (s,)
-
-    def handle_upscale(self, samples: dict, upscale_method: str, factor: float, crop: bool) -> dict:
-        """Upscale the samples if the upscale_method is not set to 'None'."""
-        if upscale_method != "None":
-            samples = self.upscale(samples, upscale_method, factor, crop)[0]
-        return samples
-
-    def init_state(self, my_unique_id: Any, key: str, default: Any) -> Any:
-        """Initialize the state by either fetching the stored value or setting a default."""
-        value = self.get_value_by_id(key, my_unique_id)
-        if value is not None:
-            return value
-        return default
-
-    def get_output(self, pipe: dict,) -> Tuple:
-        """Return a tuple of various elements fetched from the input pipe dictionary."""
-        return (
-            pipe,
-            pipe.get("images"),
-            pipe.get("model"),
-            pipe.get("positive"),
-            pipe.get("negative"),
-            pipe.get("samples"),
-            pipe.get("vae"),
-            pipe.get("clip"),
-            pipe.get("seed"),
-        )
-
-    def get_output_sdxl(self, sdxl_pipe: dict) -> Tuple:
-        """Return a tuple of various elements fetched from the input sdxl_pipe dictionary."""
-        return (
-            sdxl_pipe,
-            sdxl_pipe.get("model"),
-            sdxl_pipe.get("positive"),
-            sdxl_pipe.get("negative"),
-            sdxl_pipe.get("vae"),
-            sdxl_pipe.get("refiner_model"),
-            sdxl_pipe.get("refiner_positive"),
-            sdxl_pipe.get("refiner_negative"),
-            sdxl_pipe.get("refiner_vae"),
-            sdxl_pipe.get("samples"),
-            sdxl_pipe.get("clip"),
-            sdxl_pipe.get("images"),
-            sdxl_pipe.get("seed")
-        )
-
-# XY图表
-class easyXYPlot:
-    def __init__(self, xyPlotData, save_prefix, image_output, prompt, extra_pnginfo, my_unique_id):
-        self.x_node_type, self.x_type = easySampler.safe_split(xyPlotData.get("x_axis"), ': ')
-        self.y_node_type, self.y_type = easySampler.safe_split(xyPlotData.get("y_axis"), ': ')
-        self.x_values = xyPlotData.get("x_vals") if self.x_type != "None" else []
-        self.y_values = xyPlotData.get("y_vals") if self.y_type != "None" else []
-
-        self.grid_spacing = xyPlotData.get("grid_spacing")
-        self.latent_id = 0
-        self.output_individuals = xyPlotData.get("output_individuals")
-
-        self.x_label, self.y_label = [], []
-        self.max_width, self.max_height = 0, 0
-        self.latents_plot = []
-        self.image_list = []
-
-        self.num_cols = len(self.x_values) if len(self.x_values) > 0 else 1
-        self.num_rows = len(self.y_values) if len(self.y_values) > 0 else 1
-
-        self.total = self.num_cols * self.num_rows
-        self.num = 0
-
-        self.save_prefix = save_prefix
-        self.image_output = image_output
-        self.prompt = prompt
-        self.extra_pnginfo = extra_pnginfo
-        self.my_unique_id = my_unique_id
-
-    # Helper Functions
-    @staticmethod
-    def define_variable(plot_image_vars, value_type, value, index):
-
-
-        plot_image_vars[value_type] = value
-        if value_type in ["seed", "Seeds++ Batch"]:
-            value_label = f"{value}"
-        else:
-            value_label = f"{value_type}: {value}"
-
-        if "ControlNet" in value_type:
-            value_label = f"ControlNet {index + 1}"
-
-        if value_type in ['Lora', 'Checkpoint']:
-            value_label = f"{os.path.basename(os.path.splitext(value.split(',')[0])[0])}"
-
-        if value_type in ["ModelMergeBlocks"]:
-            if ":" in value:
-                line = value.split(':')
-                value_label = f"{line[0]}"
-            elif len(value) > 16:
-                value_label = f"ModelMergeBlocks {index + 1}"
-            else:
-                value_label = f"MMB: {value}"
-
-        if value_type in ["Pos Condition"]:
-            value_label = f"pos cond {index + 1}" if index>0 else f"pos cond"
-        if value_type in ["Neg Condition"]:
-            value_label = f"neg cond {index + 1}" if index>0 else f"neg cond"
-
-        if value_type in ["Positive Prompt S/R"]:
-            value_label = f"pos prompt {index + 1}" if index>0 else f"pos prompt"
-        if value_type in ["Negative Prompt S/R"]:
-            value_label = f"neg prompt {index + 1}" if index>0 else f"neg prompt"
-
-        if value_type in ["steps", "cfg", "denoise", "clip_skip",
-                          "lora_model_strength", "lora_clip_strength"]:
-            value_label = f"{value_type}: {value}"
-
-        if value_type == "positive":
-            value_label = f"pos prompt {index + 1}"
-        elif value_type == "negative":
-            value_label = f"neg prompt {index + 1}"
-
-        return plot_image_vars, value_label
-
-    @staticmethod
-    def get_font(font_size):
-        return ImageFont.truetype(str(Path(os.path.join(RESOURCES_DIR, 'OpenSans-Medium.ttf'))), font_size)
-
-    @staticmethod
-    def update_label(label, value, num_items):
-        if len(label) < num_items:
-            return [*label, value]
-        return label
-
-    @staticmethod
-    def rearrange_tensors(latent, num_cols, num_rows):
-        new_latent = []
-        for i in range(num_rows):
-            for j in range(num_cols):
-                index = j * num_rows + i
-                new_latent.append(latent[index])
-        return new_latent
-
-    def calculate_background_dimensions(self):
-        border_size = int((self.max_width // 8) * 1.5) if self.y_type != "None" or self.x_type != "None" else 0
-        bg_width = self.num_cols * (self.max_width + self.grid_spacing) - self.grid_spacing + border_size * (
-                    self.y_type != "None")
-        bg_height = self.num_rows * (self.max_height + self.grid_spacing) - self.grid_spacing + border_size * (
-                    self.x_type != "None")
-
-        x_offset_initial = border_size if self.y_type != "None" else 0
-        y_offset = border_size if self.x_type != "None" else 0
-
-        return bg_width, bg_height, x_offset_initial, y_offset
-
-    def adjust_font_size(self, text, initial_font_size, label_width):
-        font = self.get_font(initial_font_size)
-        text_width = font.getbbox(text)
-        if text_width and text_width[2]:
-            text_width = text_width[2]
-
-        scaling_factor = 0.9
-        if text_width > (label_width * scaling_factor):
-            return int(initial_font_size * (label_width / text_width) * scaling_factor)
-        else:
-            return initial_font_size
-
-    def textsize(self, d, text, font):
-        _, _, width, height = d.textbbox((0, 0), text=text, font=font)
-        return width, height
-
-    def create_label(self, img, text, initial_font_size, is_x_label=True, max_font_size=70, min_font_size=10):
-        label_width = img.width if is_x_label else img.height
-
-        # Adjust font size
-        font_size = self.adjust_font_size(text, initial_font_size, label_width)
-        font_size = min(max_font_size, font_size)  # Ensure font isn't too large
-        font_size = max(min_font_size, font_size)  # Ensure font isn't too small
-
-        label_height = int(font_size * 1.5) if is_x_label else font_size
-
-        label_bg = Image.new('RGBA', (label_width, label_height), color=(255, 255, 255, 0))
-        d = ImageDraw.Draw(label_bg)
-
-        font = self.get_font(font_size)
-
-        # Check if text will fit, if not insert ellipsis and reduce text
-        if self.textsize(d, text, font=font)[0] > label_width:
-            while self.textsize(d, text + '...', font=font)[0] > label_width and len(text) > 0:
-                text = text[:-1]
-            text = text + '...'
-
-        # Compute text width and height for multi-line text
-        text_lines = text.split('\n')
-        text_widths, text_heights = zip(*[self.textsize(d, line, font=font) for line in text_lines])
-        max_text_width = max(text_widths)
-        total_text_height = sum(text_heights)
-
-        # Compute position for each line of text
-        lines_positions = []
-        current_y = 0
-        for line, line_width, line_height in zip(text_lines, text_widths, text_heights):
-            text_x = (label_width - line_width) // 2
-            text_y = current_y + (label_height - total_text_height) // 2
-            current_y += line_height
-            lines_positions.append((line, (text_x, text_y)))
-
-        # Draw each line of text
-        for line, (text_x, text_y) in lines_positions:
-            d.text((text_x, text_y), line, fill='black', font=font)
-
-        return label_bg
-
-    def sample_plot_image(self, plot_image_vars, samples, preview_latent, latents_plot, image_list, disable_noise,
-                          start_step, last_step, force_full_denoise, x_value=None, y_value=None):
-        model, clip, vae, positive, negative, seed, steps, cfg = None, None, None, None, None, None, None, None
-        sampler_name, scheduler, denoise = None, None, None
-
-        # 高级用法
-        if plot_image_vars["x_node_type"] == "advanced" or plot_image_vars["y_node_type"] == "advanced":
-
-            if self.x_type == "Seeds++ Batch" or self.y_type == "Seeds++ Batch":
-                seed = int(x_value) if self.x_type == "Seeds++ Batch" else int(y_value)
-            if self.x_type == "Steps" or self.y_type == "Steps":
-                steps = int(x_value) if self.x_type == "Steps" else int(y_value)
-            if self.x_type == "StartStep" or self.y_type == "StartStep":
-                start_step = int(x_value) if self.x_type == "StartStep" else int(y_value)
-            if self.x_type == "EndStep" or self.y_type == "EndStep":
-                last_step = int(x_value) if self.x_type == "EndStep" else int(y_value)
-            if self.x_type == "CFG Scale" or self.y_type == "CFG Scale":
-                cfg = float(x_value) if self.x_type == "CFG Scale" else float(y_value)
-            if self.x_type == "Sampler" or self.y_type == "Sampler":
-                sampler_name = x_value if self.x_type == "Sampler" else y_value
-            if self.x_type == "Scheduler" or self.y_type == "Scheduler":
-                scheduler = x_value if self.x_type == "Scheduler" else y_value
-            if self.x_type == "Sampler&Scheduler" or self.y_type == "Sampler&Scheduler":
-                arr = x_value.split(',') if self.x_type == "Sampler&Scheduler" else y_value.split(',')
-                if arr[0] and arr[0]!= 'None':
-                    sampler_name = arr[0]
-                if arr[1] and arr[1]!= 'None':
-                    scheduler = arr[1]
-            if self.x_type == "Denoise" or self.y_type == "Denoise":
-                denoise = float(x_value) if self.x_type == "Denoise" else float(y_value)
-            if self.x_type == "Pos Condition" or self.y_type == "Pos Condition":
-                positive = plot_image_vars['positive_cond_stack'][int(x_value)] if self.x_type == "Pos Condition" else plot_image_vars['positive_cond_stack'][int(y_value)]
-            if self.x_type == "Neg Condition" or self.y_type == "Neg Condition":
-                negative = plot_image_vars['negative_cond_stack'][int(x_value)] if self.x_type == "Neg Condition" else plot_image_vars['negative_cond_stack'][int(y_value)]
-            # 模型叠加
-            if self.x_type == "ModelMergeBlocks" or self.y_type == "ModelMergeBlocks":
-                ckpt_name_1, ckpt_name_2 = plot_image_vars['models']
-                model1, clip1, vae1 = easyCache.load_checkpoint(ckpt_name_1)
-                model2, clip2, vae2 = easyCache.load_checkpoint(ckpt_name_2)
-                xy_values = x_value if self.x_type == "ModelMergeBlocks" else y_value
-                if ":" in xy_values:
-                    xy_line = xy_values.split(':')
-                    xy_values = xy_line[1]
-
-                xy_arrs = xy_values.split(',')
-                # ModelMergeBlocks
-                if len(xy_arrs) == 3:
-                    input, middle, out = xy_arrs
-                    kwargs = {
-                        "input": input,
-                        "middle": middle,
-                        "out": out
-                    }
-                elif len(xy_arrs) == 30:
-                    kwargs = {}
-                    kwargs["time_embed."] = xy_arrs[0]
-                    kwargs["label_emb."] = xy_arrs[1]
-
-                    for i in range(12):
-                        kwargs["input_blocks.{}.".format(i)] = xy_arrs[2+i]
-
-                    for i in range(3):
-                        kwargs["middle_block.{}.".format(i)] = xy_arrs[14+i]
-
-                    for i in range(12):
-                        kwargs["output_blocks.{}.".format(i)] = xy_arrs[17+i]
-
-                    kwargs["out."] = xy_arrs[29]
-                else:
-                    raise Exception("ModelMergeBlocks weight length error")
-                default_ratio = next(iter(kwargs.values()))
-
-                m = model1.clone()
-                kp = model2.get_key_patches("diffusion_model.")
-
-                for k in kp:
-                    ratio = float(default_ratio)
-                    k_unet = k[len("diffusion_model."):]
-
-                    last_arg_size = 0
-                    for arg in kwargs:
-                        if k_unet.startswith(arg) and last_arg_size < len(arg):
-                            ratio = float(kwargs[arg])
-                            last_arg_size = len(arg)
-
-                    m.add_patches({k: kp[k]}, 1.0 - ratio, ratio)
-
-                vae_use = plot_image_vars['vae_use']
-
-                clip = clip2 if vae_use == 'Use Model 2' else clip1
-                if vae_use == 'Use Model 2':
-                    vae = vae2
-                elif vae_use == 'Use Model 1':
-                    vae = vae1
-                else:
-                    (vae,) = VAELoader().load_vae(vae_use)
-                model = m
-
-                # 如果存在lora_stack叠加lora
-                optional_lora_stack = plot_image_vars['lora_stack']
-                if optional_lora_stack is not None and optional_lora_stack != []:
-                    for lora in optional_lora_stack:
-                        lora_name = lora["lora_name"]
-                        model = model if model is not None else lora["model"]
-                        clip = clip if clip is not None else lora["clip"]
-                        lora_model_strength = lora["lora_model_strength"]
-                        lora_clip_strength = lora["lora_clip_strength"]
-                        if "lbw" in lora:
-                            lbw = lora["lbw"]
-                            lbw_a = lora["lbw_a"]
-                            lbw_b = lora["lbw_b"]
-                            cls = ALL_NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
-                            model, clip, _ = cls().doit(model, clip, lora_name, lora_model_strength, lora_clip_strength, False, 0,
-                                                        lbw_a, lbw_b, "", lbw)
-                        model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength, lora_clip_strength)
-
-                # 处理clip
-                clip = clip.clone()
-                if plot_image_vars['clip_skip'] != 0:
-                    clip.clip_layer(plot_image_vars['clip_skip'])
-
-            # CheckPoint
-            if self.x_type == "Checkpoint" or self.y_type == "Checkpoint":
-                xy_values = x_value if self.x_type == "Checkpoint" else y_value
-                ckpt_name, clip_skip, vae_name = xy_values.split(",")
-                ckpt_name = ckpt_name.replace('*', ',')
-                vae_name = vae_name.replace('*', ',')
-                model, clip, vae = easyCache.load_checkpoint(ckpt_name)
-                if vae_name != 'None':
-                    vae = easyCache.load_vae(vae_name)
-
-                # 如果存在lora_stack叠加lora
-                optional_lora_stack = plot_image_vars['lora_stack']
-                if optional_lora_stack is not None and optional_lora_stack != []:
-                    for lora in optional_lora_stack:
-                        lora_name = lora["lora_name"]
-                        model = model if model is not None else lora["model"]
-                        clip = clip if clip is not None else lora["clip"]
-                        lora_model_strength = lora["lora_model_strength"]
-                        lora_clip_strength = lora["lora_clip_strength"]
-                        if "lbw" in lora:
-                            lbw = lora["lbw"]
-                            lbw_a = lora["lbw_a"]
-                            lbw_b = lora["lbw_b"]
-                            cls = ALL_NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
-                            model, clip, _ = cls().doit(model, clip, lora_name, lora_model_strength,
-                                                        lora_clip_strength, False, 0,
-                                                        lbw_a, lbw_b, "", lbw)
-                        model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength,
-                                                          lora_clip_strength)
-                # 处理clip
-                clip = clip.clone()
-                if clip_skip != 'None':
-                    clip.clip_layer(int(clip_skip))
-                    positive = plot_image_vars['positive']
-                    negative = plot_image_vars['negative']
-                    if plot_image_vars['a1111_prompt_style']:
-                        if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
-                            cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-                            steps = plot_image_vars['steps']
-                            positive, = cls().encode(clip, positive, "A1111", True, True, False, False, 6,
-                                                     1024, 1024, 0, 0, 1024, 1024, '', '', steps)
-                            negative, = cls().encode(clip, negative, "A1111", True, True, False, False, 6,
-                                                     1024, 1024, 0, 0, 1024, 1024, '', '', steps)
-                        else:
-                            raise Exception(
-                                f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
-                    else:
-                        clip = clip if clip is not None else plot_image_vars["clip"]
-                        positive = advanced_encode(clip, positive,
-                                                   plot_image_vars['positive_token_normalization'],
-                                                   plot_image_vars[
-                                                       'positive_weight_interpretation'],
-                                                   w_max=1.0,
-                                                   apply_to_pooled="enable")
-
-                        negative = advanced_encode(clip, negative,
-                                                   plot_image_vars['negative_token_normalization'],
-                                                   plot_image_vars[
-                                                       'negative_weight_interpretation'],
-                                                   w_max=1.0,
-                                                   apply_to_pooled="enable")
-                        if "positive_cond" in plot_image_vars:
-                            positive = positive + plot_image_vars["positive_cond"]
-                        if "negative_cond" in plot_image_vars:
-                            negative = negative + plot_image_vars["negative_cond"]
-
-            # Lora
-            if self.x_type == "Lora" or self.y_type == "Lora":
-                model = model if model is not None else plot_image_vars["model"]
-                clip = clip if clip is not None else plot_image_vars["clip"]
-
-                xy_values = x_value if self.x_type == "Lora" else y_value
-                lora_name, lora_model_strength, lora_clip_strength = xy_values.split(",")
-                lora_stack = [{"lora_name": lora_name, "model": model, "clip" :clip, "lora_model_strength": float(lora_model_strength), "lora_clip_strength": float(lora_clip_strength)}]
-                if 'lora_stack' in plot_image_vars:
-                    lora_stack = lora_stack + plot_image_vars['lora_stack']
-
-                if lora_stack is not None and lora_stack != []:
-                    for lora in lora_stack:
-                        lora_name = lora["lora_name"]
-                        model = model if model is not None else lora["model"]
-                        clip = clip if clip is not None else lora["clip"]
-                        lora_model_strength = lora["lora_model_strength"]
-                        lora_clip_strength = lora["lora_clip_strength"]
-                        if "lbw" in lora:
-                            lbw = lora["lbw"]
-                            lbw_a = lora["lbw_a"]
-                            lbw_b = lora["lbw_b"]
-                            cls = ALL_NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
-                            model, clip, _ = cls().doit(model, clip, lora_name, lora_model_strength, lora_clip_strength,
-                                                        False, 0,
-                                                        lbw_a, lbw_b, "", lbw)
-                        model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength,
-                                                          lora_clip_strength)
-
-            # 提示词
-            if "Positive" in self.x_type or "Positive" in self.y_type:
-                if self.x_type == 'Positive Prompt S/R' or self.y_type == 'Positive Prompt S/R':
-                    positive = x_value if self.x_type == "Positive Prompt S/R" else y_value
-                if plot_image_vars['a1111_prompt_style']:
-                    if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
-                        cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-                        steps = plot_image_vars['steps']
-                        clip = clip if clip is not None else plot_image_vars["clip"]
-                        positive, = cls().encode(clip, positive, "A1111", True, True, False, False, 6,
-                                                 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
-                    else:
-                        raise Exception(
-                            f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
-                else:
-                    clip = clip if clip is not None else plot_image_vars["clip"]
-                    positive = advanced_encode(clip, positive,
-                                                                plot_image_vars['positive_token_normalization'],
-                                                                plot_image_vars[
-                                                                    'positive_weight_interpretation'],
-                                                                w_max=1.0,
-                                                                apply_to_pooled="enable")
-                    if "positive_cond" in plot_image_vars:
-                        positive = positive + plot_image_vars["positive_cond"]
-
-            if "Negative" in self.x_type or "Negative" in self.y_type:
-                if self.x_type == 'Negative Prompt S/R' or self.y_type == 'Negative Prompt S/R':
-                    negative = x_value if self.x_type == "Negative Prompt S/R" else y_value
-                if plot_image_vars['a1111_prompt_style']:
-                    if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
-                        cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-                        steps = plot_image_vars['steps']
-                        clip = clip if clip is not None else plot_image_vars["clip"]
-                        negative, = cls().encode(clip, negative, "A1111", True, True, False, False, 6,
-                                                 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
-                    else:
-                        raise Exception(
-                            f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
-                else:
-                    clip = clip if clip is not None else plot_image_vars["clip"]
-                    negative = advanced_encode(clip, negative,
-                                                                plot_image_vars['negative_token_normalization'],
-                                                                plot_image_vars[
-                                                                    'negative_weight_interpretation'],
-                                                                w_max=1.0,
-                                                                apply_to_pooled="enable")
-                    if "negative_cond" in plot_image_vars:
-                        positive = positive + plot_image_vars["negative_cond"]
-
-            # ControlNet
-            if "ControlNet" in self.x_type or "ControlNet" in self.y_type:
-                _pipe = {
-                    "model": model if model is not None else plot_image_vars["model"],
-                    "positive": positive if positive is not None else plot_image_vars["positive_cond"],
-                    "negative": negative if negative is not None else plot_image_vars["negative_cond"],
-                    "vae": vae if vae is not None else plot_image_vars['vae'],
-                    "clip": clip if clip is not None else plot_image_vars['clip'],
-                    "samples": None,
-                    "images": None,
-                    "loader_settings": {}
-                }
-                cnet = plot_image_vars["cnet"] if "cnet" in plot_image_vars else None
-                if cnet:
-                    index = x_value if "ControlNet" in self.x_type else y_value
-                    controlnet = cnet[index]
-                    for index, item in enumerate(controlnet):
-                        control_net_name = item[0]
-                        image = item[1]
-                        strength = item[2]
-                        start_percent = item[3]
-                        end_percent = item[4]
-                        _pipe, positive, negative = controlnetAdvanced().controlnetApply(_pipe, image, control_net_name, None, strength, start_percent, end_percent, 1)
-
-                del _pipe
-
-        # 简单用法
-        if plot_image_vars["x_node_type"] == "loader" or plot_image_vars["y_node_type"] == "loader":
-            model, clip, vae = easyCache.load_checkpoint(plot_image_vars['ckpt_name'])
-
-            if plot_image_vars['lora_name'] != "None":
-                model, clip = easyCache.load_lora(plot_image_vars['lora_name'], model, clip,
-                                                 plot_image_vars['lora_model_strength'],
-                                                 plot_image_vars['lora_clip_strength'])
-
-            # Check for custom VAE
-            if plot_image_vars['vae_name'] not in ["Baked-VAE", "Baked VAE"]:
-                vae = easyCache.load_vae(plot_image_vars['vae_name'])
-
-            # CLIP skip
-            if not clip:
-                raise Exception("No CLIP found")
-            clip = clip.clone()
-            clip.clip_layer(plot_image_vars['clip_skip'])
-
-            if plot_image_vars['a1111_prompt_style']:
-                if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
-                    cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-                    steps = plot_image_vars['steps']
-                    positive, = cls().encode(clip, plot_image_vars['positive'], "A1111", True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
-                    negative, = cls().encode(clip, plot_image_vars['negative'], "A1111", True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
-                else:
-                    raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
-            else:
-                positive = advanced_encode(clip, plot_image_vars['positive'],
-                                                            plot_image_vars['positive_token_normalization'],
-                                                            plot_image_vars['positive_weight_interpretation'], w_max=1.0,
-                                                            apply_to_pooled="enable")
-
-                negative = advanced_encode(clip, plot_image_vars['negative'],
-                                                            plot_image_vars['negative_token_normalization'],
-                                                            plot_image_vars['negative_weight_interpretation'], w_max=1.0,
-                                                            apply_to_pooled="enable")
-
-        model = model if model is not None else plot_image_vars["model"]
-        vae = vae if vae is not None else plot_image_vars["vae"]
-        positive = positive if positive is not None else plot_image_vars["positive_cond"]
-        negative = negative if negative is not None else plot_image_vars["negative_cond"]
-
-        seed = seed if seed is not None else plot_image_vars["seed"]
-        steps = steps if steps is not None else plot_image_vars["steps"]
-        cfg = cfg if cfg is not None else plot_image_vars["cfg"]
-        sampler_name = sampler_name if sampler_name is not None else plot_image_vars["sampler_name"]
-        scheduler = scheduler if scheduler is not None else plot_image_vars["scheduler"]
-        denoise = denoise if denoise is not None else plot_image_vars["denoise"]
-        # Sample
-        samples = sampler.common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, samples,
-                                          denoise=denoise, disable_noise=disable_noise, preview_latent=preview_latent,
-                                          start_step=start_step, last_step=last_step,
-                                          force_full_denoise=force_full_denoise)
-
-        # Decode images and store
-        latent = samples["samples"]
-
-        # Add the latent tensor to the tensors list
-        latents_plot.append(latent)
-
-        # Decode the image
-        image = vae.decode(latent).cpu()
-
-        if self.output_individuals in [True, "True"]:
-            easySave(image, self.save_prefix, self.image_output)
-
-        # Convert the image from tensor to PIL Image and add it to the list
-        pil_image = easySampler.tensor2pil(image)
-        image_list.append(pil_image)
-
-        # Update max dimensions
-        self.max_width = max(self.max_width, pil_image.width)
-        self.max_height = max(self.max_height, pil_image.height)
-
-        # Return the touched variables
-        return image_list, self.max_width, self.max_height, latents_plot
-
-    # Process Functions
-    def validate_xy_plot(self):
-        if self.x_type == 'None' and self.y_type == 'None':
-            log_node_warn(f'easyKsampler[{self.my_unique_id}]','No Valid Plot Types - Reverting to default sampling...')
-            return False
-        else:
-            return True
-
-    def get_latent(self, samples):
-        # Extract the 'samples' tensor from the dictionary
-        latent_image_tensor = samples["samples"]
-
-        # Split the tensor into individual image tensors
-        image_tensors = torch.split(latent_image_tensor, 1, dim=0)
-
-        # Create a list of dictionaries containing the individual image tensors
-        latent_list = [{'samples': image} for image in image_tensors]
-
-        # Set latent only to the first latent of batch
-        if self.latent_id >= len(latent_list):
-            log_node_warn(f'easy kSampler[{self.my_unique_id}]',f'The selected latent_id ({self.latent_id}) is out of range.')
-            log_node_warn(f'easy kSampler[{self.my_unique_id}]', f'Automatically setting the latent_id to the last image in the list (index: {len(latent_list) - 1}).')
-
-            self.latent_id = len(latent_list) - 1
-
-        return latent_list[self.latent_id]
-
-    def get_labels_and_sample(self, plot_image_vars, latent_image, preview_latent, start_step, last_step,
-                              force_full_denoise, disable_noise):
-        for x_index, x_value in enumerate(self.x_values):
-            plot_image_vars, x_value_label = self.define_variable(plot_image_vars, self.x_type, x_value,
-                                                                  x_index)
-            self.x_label = self.update_label(self.x_label, x_value_label, len(self.x_values))
-            if self.y_type != 'None':
-                for y_index, y_value in enumerate(self.y_values):
-                    plot_image_vars, y_value_label = self.define_variable(plot_image_vars, self.y_type, y_value,
-                                                                          y_index)
-                    self.y_label = self.update_label(self.y_label, y_value_label, len(self.y_values))
-                    # ttNl(f'{CC.GREY}X: {x_value_label}, Y: {y_value_label}').t(
-                    #     f'Plot Values {self.num}/{self.total} ->').p()
-
-                    self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
-                        plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list,
-                        disable_noise, start_step, last_step, force_full_denoise, x_value, y_value)
-                    self.num += 1
-            else:
-                # ttNl(f'{CC.GREY}X: {x_value_label}').t(f'Plot Values {self.num}/{self.total} ->').p()
-                self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
-                    plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list, disable_noise,
-                    start_step, last_step, force_full_denoise, x_value)
-                self.num += 1
-
-        # Rearrange latent array to match preview image grid
-        self.latents_plot = self.rearrange_tensors(self.latents_plot, self.num_cols, self.num_rows)
-
-        # Concatenate the tensors along the first dimension (dim=0)
-        self.latents_plot = torch.cat(self.latents_plot, dim=0)
-
-        return self.latents_plot
-
-    def plot_images_and_labels(self):
-        # Calculate the background dimensions
-        bg_width, bg_height, x_offset_initial, y_offset = self.calculate_background_dimensions()
-
-        # Create the white background image
-        background = Image.new('RGBA', (int(bg_width), int(bg_height)), color=(255, 255, 255, 255))
-
-        output_image = []
-        for row_index in range(self.num_rows):
-            x_offset = x_offset_initial
-
-            for col_index in range(self.num_cols):
-                index = col_index * self.num_rows + row_index
-                img = self.image_list[index]
-                output_image.append(sampler.pil2tensor(img))
-                background.paste(img, (x_offset, y_offset))
-
-                # Handle X label
-                if row_index == 0 and self.x_type != "None":
-                    label_bg = self.create_label(img, self.x_label[col_index], int(48 * img.width / 512))
-                    label_y = (y_offset - label_bg.height) // 2
-                    background.alpha_composite(label_bg, (x_offset, label_y))
-
-                # Handle Y label
-                if col_index == 0 and self.y_type != "None":
-                    label_bg = self.create_label(img, self.y_label[row_index], int(48 * img.height / 512), False)
-                    label_bg = label_bg.rotate(90, expand=True)
-
-                    label_x = (x_offset - label_bg.width) // 2
-                    label_y = y_offset + (img.height - label_bg.height) // 2
-                    background.alpha_composite(label_bg, (label_x, label_y))
-
-                x_offset += img.width + self.grid_spacing
-
-            y_offset += img.height + self.grid_spacing
-
-        return (sampler.pil2tensor(background), output_image)
-
-easyCache = easyLoader()
 sampler = easySampler()
-
-def easySave(images, filename_prefix, output_type, prompt=None, extra_pnginfo=None):
-
-    if output_type == "Hide":
-        return list()
-    if output_type == "Preview":
-        filename_prefix = 'easyPreview'
-        results = PreviewImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
-        return results['ui']['images']
-    else:
-        results = SaveImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
-        return results['ui']['images']
-
-def check_link_to_clip(node_id, clip_id, visited=None, node=None):
-    """Check if a given node links directly or indirectly to a loader node."""
-    if visited is None:
-        visited = set()
-
-    if node_id in visited:
-        return False
-    visited.add(node_id)
-    if "pipe" in node["inputs"]:
-        link_ids = node["inputs"]["pipe"]
-        for id in link_ids:
-            if id != 0 and id == str(clip_id):
-                return True
-    return False
-
-def find_nearest_steps(clip_id, prompt):
-    """Find the nearest KSampler or preSampling node that references the given id."""
-    for id in prompt:
-        node = prompt[id]
-        if "Sampler" in node["class_type"] or "sampler" in node["class_type"] or "Sampling" in node["class_type"]:
-            # Check if this KSampler node directly or indirectly references the given CLIPTextEncode node
-            if check_link_to_clip(id, clip_id, None, node):
-                steps = node["inputs"]["steps"] if "steps" in node["inputs"] else 1
-                return steps
-    return 1
-def find_wildcards_seed(clip_id, text, prompt):
-    def find_link_clip_id(id, seed, wildcard_id):
-        node = prompt[id]
-        if "positive" in node['inputs']:
-            link_ids = node["inputs"]["positive"]
-            if type(link_ids) == list:
-                for id in link_ids:
-                    if id != 0:
-                        if id == wildcard_id:
-                            wildcard_node = prompt[wildcard_id]
-                            seed = wildcard_node["inputs"]["seed_num"] if "seed_num" in wildcard_node["inputs"] else None
-                            return seed
-                        else:
-                            return find_link_clip_id(id, seed, wildcard_id)
-            else:
-                return None
-        else:
-            return None
-    if "__" in text:
-        seed = None
-        for id in prompt:
-            node = prompt[id]
-            if "wildcards" in node["class_type"]:
-                wildcard_id = id
-                return find_link_clip_id(str(clip_id), seed, wildcard_id)
-        return seed
-    else:
-        return None
+easyCache = easyLoader()
 
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 
@@ -1239,7 +62,7 @@ class wildcardsPrompt:
             "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support Lora Block Weight and wildcard)"}),
             "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
             "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
-            "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+            "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
@@ -1704,7 +527,7 @@ class latentCompositeMaskedWithCond:
     CATEGORY = "EasyUse/Latent"
 
     def run(self, pipe, text_combine, source_latent, source_mask, destination_mask, text_combine_mode, replace_text, prompt=None, extra_pnginfo=None, my_unique_id=None):
-
+        positive = None
         clip = pipe["clip"]
         destination_latent = pipe["samples"]
 
@@ -1723,20 +546,11 @@ class latentCompositeMaskedWithCond:
             positive_cond = pipe["positive"]
 
             log_node_warn("正在处理提示词编码...")
-            # Use new clip text encode by smzNodes like same as webui, when if you installed the smzNodes
-            if a1111_prompt_style:
-                if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
-                    cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-                    steps = pipe["loader_settings"]["steps"] if "steps" in pipe["loader_settings"] else 5
-                    positive_embeddings_final, = cls().encode(clip, positive, "A1111", True, True, False, False, 6, 1024,
-                                                              1024, 0, 0, 1024, 1024, '', '', steps)
-                else:
-                    raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
-            else:
-                positive_embeddings_final = advanced_encode(clip, positive,
-                                                                             positive_token_normalization,
-                                                                             positive_weight_interpretation, w_max=1.0,
-                                                                             apply_to_pooled='enable')
+            steps = pipe["loader_settings"]["steps"] if "steps" in pipe["loader_settings"] else 1
+            positive_embeddings_final = advanced_encode(clip, positive,
+                                         positive_token_normalization,
+                                         positive_weight_interpretation, w_max=1.0,
+                                         apply_to_pooled='enable', a1111_prompt_style=a1111_prompt_style, steps=steps)
 
             # source cond
             (cond_1,) = ConditioningSetMask().append(positive_cond, source_mask, "default", 1)
@@ -1766,7 +580,7 @@ class easySeed:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+                "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
@@ -1781,13 +595,14 @@ class easySeed:
 
     def doit(self, seed_num=0, prompt=None, extra_pnginfo=None, my_unique_id=None):
         return seed_num,
+
 # 全局随机种
 class globalSeed:
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
-                "value": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+                "value": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                 "mode": ("BOOLEAN", {"default": True, "label_on": "control_before_generate", "label_off": "control_after_generate"}),
                 "action": (["fixed", "increment", "decrement", "randomize",
                             "increment for each node", "decrement for each node", "randomize for each node"], ),
@@ -1811,6 +626,7 @@ class globalSeed:
 
 # 简易加载器完整
 class fullLoader:
+
     @classmethod
     def INPUT_TYPES(cls):
         resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
@@ -1891,7 +707,7 @@ class fullLoader:
             node = prompt[xy_model_id]
             if "ckpt_name_1" in node["inputs"]:
                 ckpt_name_1 = node["inputs"]["ckpt_name_1"]
-                model, clip, vae = easyCache.load_checkpoint(ckpt_name_1)
+                model, clip, vae, clip_vision = easyCache.load_checkpoint(ckpt_name_1)
                 can_load_lora = False
         # Load models
         elif model_override is not None and clip_override is not None and vae_override is not None:
@@ -1905,19 +721,21 @@ class fullLoader:
         elif clip_override is not None:
             raise Exception(f"[ERROR] model or vae is missing")
         else:
-            model, clip, vae = easyCache.load_checkpoint(ckpt_name, config_name)
+            model, clip, vae, clip_vision = easyCache.load_checkpoint(ckpt_name, config_name)
 
-        if optional_lora_stack is not None:
+        if optional_lora_stack is not None and can_load_lora:
             for lora in optional_lora_stack:
-                if can_load_lora:
-                    model, clip = easyCache.load_lora(lora[0], model, clip, lora[1], lora[2])
-                pipe_lora_stack.append({"lora_name": lora[0], "model": model, "clip": clip, "lora_model_strength": lora[1], "lora_clip_strength": lora[2]})
+                lora = {"lora_name": lora[0], "model": model, "clip": clip, "model_strength": lora[1], "clip_strength": lora[2]}
+                model, clip = easyCache.load_lora(lora)
+                lora['model'] = model
+                lora['clip'] = clip
+                pipe_lora_stack.append(lora)
 
-        if lora_name != "None":
-            if can_load_lora:
-                model, clip = easyCache.load_lora(lora_name, model, clip, lora_model_strength, lora_clip_strength)
-            pipe_lora_stack.append({"lora_name": lora_name, "model": model, "clip": clip, "lora_model_strength": lora_model_strength,
-                                    "lora_clip_strength": lora_clip_strength})
+        if lora_name != "None" and can_load_lora:
+            lora = {"lora_name": lora_name, "model": model, "clip": clip, "model_strength": lora_model_strength,
+                    "clip_strength": lora_clip_strength}
+            model, clip = easyCache.load_lora(lora)
+            pipe_lora_stack.append(lora)
 
         # Check for custom VAE
         if vae_name not in ["Baked VAE", "Baked-VAE"]:
@@ -1927,22 +745,16 @@ class fullLoader:
             raise Exception("No CLIP found")
 
         # 判断是否连接 styles selector
-        is_positive_linked_styles_selector = False
-        inputs_positive_values = prompt[my_unique_id]['inputs']['positive'] if "positive" in prompt[my_unique_id]['inputs'] else None
-        if type(inputs_positive_values) == list and inputs_positive_values != 'undefined' and inputs_positive_values[0]:
-             is_positive_linked_styles_selector = True if prompt[inputs_positive_values[0]] and prompt[inputs_positive_values[0]]['class_type'] == 'easy stylesSelector' else False
-        is_negative_linked_styles_selector = False
-        inputs_negative_values = prompt[my_unique_id]['inputs']['negative'] if "negative" in prompt[my_unique_id]['inputs'] else None
-        if type(inputs_negative_values) == list and inputs_negative_values != 'undefined' and inputs_negative_values[0]:
-            is_negative_linked_styles_selector = True if prompt[inputs_negative_values[0]] and prompt[inputs_negative_values[0]]['class_type'] == 'easy stylesSelector' else False
+        is_positive_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'positive')
+        is_negative_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'negative')
 
         log_node_warn("正在处理提示词...")
         positive_seed = find_wildcards_seed(my_unique_id, positive, prompt)
-        model, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(positive, model, clip, "Positive", positive_seed, can_load_lora, pipe_lora_stack)
+        model, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(positive, model, clip, "Positive", positive_seed, can_load_lora, pipe_lora_stack, easyCache)
         positive_wildcard_prompt = positive_decode if show_positive_prompt or is_positive_linked_styles_selector else ""
         negative_seed = find_wildcards_seed(my_unique_id, negative, prompt)
         model, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(negative, model, clip,
-                                                                                          "Negative", negative_seed, can_load_lora, pipe_lora_stack)
+                                                                                          "Negative", negative_seed, can_load_lora, pipe_lora_stack, easyCache)
         negative_wildcard_prompt = negative_decode if show_negative_prompt or is_negative_linked_styles_selector else ""
 
         clipped = clip.clone()
@@ -1950,23 +762,14 @@ class fullLoader:
             clipped.clip_layer(clip_skip)
 
         log_node_warn("正在处理提示词编码...")
-        # Use new clip text encode by smzNodes like same as webui, when if you installed the smzNodes
-        if a1111_prompt_style:
-            if "smZ CLIPTextEncode" in ALL_NODE_CLASS_MAPPINGS:
-                cls = ALL_NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-                steps = find_nearest_steps(my_unique_id, prompt)
-                positive_embeddings_final, = cls().encode(clipped, positive, "A1111", True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
-                negative_embeddings_final, = cls().encode(clipped, negative, "A1111", True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
-            else:
-                raise Exception(f"[ERROR] To use clip text encode same as webui, you need to install 'smzNodes'")
-        else:
-            positive_embeddings_final = advanced_encode(clipped, positive, positive_token_normalization,
-                                                                         positive_weight_interpretation, w_max=1.0,
-                                                                         apply_to_pooled='enable')
+        steps = find_nearest_steps(my_unique_id, prompt)
+        positive_embeddings_final = advanced_encode(clipped, positive, positive_token_normalization,
+                                                                     positive_weight_interpretation, w_max=1.0,
+                                                                     apply_to_pooled='enable', a1111_prompt_style=a1111_prompt_style, steps=steps)
 
-            negative_embeddings_final = advanced_encode(clipped, negative, negative_token_normalization,
-                                                                         negative_weight_interpretation, w_max=1.0,
-                                                                         apply_to_pooled='enable')
+        negative_embeddings_final = advanced_encode(clipped, negative, negative_token_normalization,
+                                                                     negative_weight_interpretation, w_max=1.0,
+                                                                     apply_to_pooled='enable', a1111_prompt_style=a1111_prompt_style, steps=steps)
         image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
 
         log_node_warn("处理结束...")
@@ -2114,19 +917,6 @@ class comfyLoader:
              my_unique_id
          )
 
-
-class effientNetEncoder(torch.nn.Module):
-    def __init__(self, c_latent=16):
-        super().__init__()
-        self.backbone = torchvision.models.efficientnet_v2_s(weights='DEFAULT').features.eval()
-        self.mapper = torch.nn.Sequential(
-            torch.nn.Conv2d(1280, c_latent, kernel_size=1, bias=False),
-            torch.nn.BatchNorm2d(c_latent, affine=False),  # then normalize them to have mean 0 and std 1
-        )
-
-    def forward(self, x):
-        return self.mapper(self.backbone(x))
-
 # stable Cascade
 class cascadeLoader:
     def __init__(self):
@@ -2137,9 +927,9 @@ class cascadeLoader:
         resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
 
         return {"required": {
-            "stage_c": (folder_paths.get_filename_list("unet"),),
-            "stage_b": (folder_paths.get_filename_list("unet"),),
-            "stage_a": (folder_paths.get_filename_list("vae"),),
+            "stage_c": (folder_paths.get_filename_list("unet") + folder_paths.get_filename_list("checkpoints"),),
+            "stage_b": (folder_paths.get_filename_list("unet") + folder_paths.get_filename_list("checkpoints"),),
+            "stage_a": (["Baked VAE"]+folder_paths.get_filename_list("vae"),),
             "clip_name": (["None"] + folder_paths.get_filename_list("clip"),),
 
             "resolution": (resolution_strings, {"default": "1024 x 1024"}),
@@ -2161,6 +951,13 @@ class cascadeLoader:
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
+
+    def is_ckpt(self, name):
+        is_ckpt = False
+        path = folder_paths.get_full_path("checkpoints", name)
+        if path is not None:
+            is_ckpt = True
+        return is_ckpt
 
     def adv_pipeloader(self, stage_c, stage_b, stage_a, clip_name,
                        resolution, empty_latent_width, empty_latent_height, compression,
@@ -2192,31 +989,30 @@ class cascadeLoader:
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        # Load unet
-        model_c = easyCache.load_unet(stage_c)
-        model_b = easyCache.load_unet(stage_b)
+        print(self.is_ckpt(stage_c))
+        if self.is_ckpt(stage_c):
+            model_c, clip, vae_c, clip_vision = easyCache.load_checkpoint(stage_c)
+        else:
+            model_c = easyCache.load_unet(stage_c)
+            vae_c = None
+        if self.is_ckpt(stage_b):
+            model_b, clip, vae_b, clip_vision = easyCache.load_checkpoint(stage_b)
+        else:
+            model_b = easyCache.load_unet(stage_b)
+            vae_b = None
+
         model = (model_c, model_b)
         # Load clip
-        clip = easyCache.load_clip(clip_name, "stable_cascade")
-
+        if clip_name != 'None':
+            clip = easyCache.load_clip(clip_name, "stable_cascade")
         # Load vae
-        vae = easyCache.load_vae(stage_a)
+        if stage_a not in ["Baked VAE", "Baked-VAE"]:
+            vae_b = easyCache.load_vae(stage_a)
 
+        vae = (vae_c, vae_b)
         # 判断是否连接 styles selector
-        is_positive_linked_styles_selector = False
-        inputs_positive_values = prompt[my_unique_id]['inputs']['positive'] if "positive" in prompt[my_unique_id][
-            'inputs'] else None
-        if type(inputs_positive_values) == list and inputs_positive_values != 'undefined' and inputs_positive_values[0]:
-            is_positive_linked_styles_selector = True if prompt[inputs_positive_values[0]] and \
-                                                         prompt[inputs_positive_values[0]][
-                                                             'class_type'] == 'easy stylesSelector' else False
-        is_negative_linked_styles_selector = False
-        inputs_negative_values = prompt[my_unique_id]['inputs']['negative'] if "negative" in prompt[my_unique_id][
-            'inputs'] else None
-        if type(inputs_negative_values) == list and inputs_negative_values != 'undefined' and inputs_negative_values[0]:
-            is_negative_linked_styles_selector = True if prompt[inputs_negative_values[0]] and \
-                                                         prompt[inputs_negative_values[0]][
-                                                             'class_type'] == 'easy stylesSelector' else False
+        is_positive_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'positive')
+        is_negative_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'negative')
 
         log_node_warn("正在处理提示词...")
         positive_seed = find_wildcards_seed(my_unique_id, positive, prompt)
@@ -2225,7 +1021,8 @@ class cascadeLoader:
                                                                                                            "Positive",
                                                                                                            positive_seed,
                                                                                                            can_load_lora,
-                                                                                                           pipe_lora_stack)
+                                                                                                           pipe_lora_stack,
+                                                                                                           easyCache)
         positive_wildcard_prompt = positive_decode if show_positive_prompt or is_positive_linked_styles_selector else ""
         negative_seed = find_wildcards_seed(my_unique_id, negative, prompt)
         model_c, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(negative,
@@ -2233,7 +1030,8 @@ class cascadeLoader:
                                                                                                            "Negative",
                                                                                                            negative_seed,
                                                                                                            can_load_lora,
-                                                                                                           pipe_lora_stack)
+                                                                                                           pipe_lora_stack,
+                                                                                                           easyCache)
         negative_wildcard_prompt = negative_decode if show_negative_prompt or is_negative_linked_styles_selector else ""
 
         tokens = clip.tokenize(positive)
@@ -2337,7 +1135,7 @@ class zero123Loader:
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        model, clip_vision, vae = easyCache.load_checkpoint(ckpt_name, "Default", True)
+        model, clip, vae, clip_vision = easyCache.load_checkpoint(ckpt_name, "Default", True)
 
         output = clip_vision.encode_image(init_image)
         pooled = output.image_embeds.unsqueeze(0)
@@ -2391,7 +1189,7 @@ class svdLoader:
     def INPUT_TYPES(cls):
         resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         def get_file_list(filenames):
-            return [file for file in filenames if file != "put_models_here.txt" and "svd" in file]
+            return [file for file in filenames if file != "put_models_here.txt" and "svd" in file.lower()]
 
         return {"required": {
                 "ckpt_name": (get_file_list(folder_paths.get_filename_list("checkpoints")),),
@@ -2439,12 +1237,13 @@ class svdLoader:
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        model, clip_vision, vae = easyCache.load_checkpoint(ckpt_name, "Default", True)
+        print(ckpt_name)
+
+        model, clip, vae, clip_vision = easyCache.load_checkpoint(ckpt_name, "Default", True)
 
         output = clip_vision.encode_image(init_image)
         pooled = output.image_embeds.unsqueeze(0)
-        pixels = comfy.utils.common_upscale(init_image.movedim(-1, 1), empty_latent_width, empty_latent_height, "bilinear", "center").movedim(1,
-                                                                                                                    -1)
+        pixels = comfy.utils.common_upscale(init_image.movedim(-1, 1), empty_latent_width, empty_latent_height, "bilinear", "center").movedim(1, -1)
         encode_pixels = pixels[:, :, :, :3]
         if augmentation_level > 0:
             encode_pixels += torch.randn_like(pixels) * augmentation_level
@@ -2455,21 +1254,17 @@ class svdLoader:
         negative = [[torch.zeros_like(pooled),
                      {"motion_bucket_id": motion_bucket_id, "fps": fps, "augmentation_level": augmentation_level,
                       "concat_latent_image": torch.zeros_like(t)}]]
-        if clip_name != 'None':
-            clip_path = folder_paths.get_full_path("clip", clip_name)
-            clip = comfy.sd.load_clip(ckpt_paths=[clip_path],
-                                      embedding_directory=folder_paths.get_folder_paths("embeddings"))
-            if optional_positive is not None:
-                tokens = clip.tokenize(optional_positive)
-                cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
-                positive_embeddings_final = [[cond, {"pooled_output": pooled}]]
-                positive, = ConditioningConcat().concat(positive, positive_embeddings_final)
-            if optional_negative is not None:
-                tokens = clip.tokenize(optional_negative)
-                cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
-                negative_embeddings_final = [[cond, {"pooled_output": pooled}]]
-                negative, = ConditioningConcat().concat(negative, negative_embeddings_final)
-
+        if optional_positive is not None:
+            if clip_name == 'None':
+                raise Exception("You need choose a open_clip model when positive is not empty")
+            clip = easyCache.load_clip(clip_name)
+            positive_embeddings_final, = CLIPTextEncode().encode(clip, optional_positive)
+            positive, = ConditioningConcat().concat(positive, positive_embeddings_final)
+        if optional_negative is not None:
+            if clip_name == 'None':
+                raise Exception("You need choose a open_clip model when negative is not empty")
+            negative_embeddings_final, = CLIPTextEncode().encode(clip, optional_negative)
+            negative, = ConditioningConcat().concat(negative, negative_embeddings_final)
 
         latent = torch.zeros([video_frames, 4, empty_latent_height // 8, empty_latent_width // 8])
         samples = {"samples": latent}
@@ -2629,59 +1424,8 @@ class controlnetSimple:
     CATEGORY = "EasyUse/Loaders"
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, scale_soft_weights=1):
-        if control_net is None:
-            if scale_soft_weights < 1:
-                if "ScaledSoftControlNetWeights" in ALL_NODE_CLASS_MAPPINGS:
-                    soft_weight_cls = ALL_NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
-                    (weights, timestep_keyframe) = soft_weight_cls().load_weights(scale_soft_weights, False)
-                    cn_adv_cls = ALL_NODE_CLASS_MAPPINGS['ControlNetLoaderAdvanced']
-                    control_net, = cn_adv_cls().load_controlnet(control_net_name, timestep_keyframe)
-                else:
-                    raise Exception(f"[ERROR] To use Scale soft weight, you need to install 'COMFYUI-Advanced-ControlNet'")
-            else:
-                controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
-                control_net = comfy.controlnet.load_controlnet(controlnet_path)
 
-        control_hint = image.movedim(-1, 1)
-
-        positive = pipe["positive"]
-        negative = pipe["negative"]
-
-        if strength != 0:
-            if negative is None:
-                p = []
-                for t in positive:
-                    n = [t[0], t[1].copy()]
-                    c_net = control_net.copy().set_cond_hint(control_hint, strength)
-                    if 'control' in t[1]:
-                        c_net.set_previous_controlnet(t[1]['control'])
-                    n[1]['control'] = c_net
-                    n[1]['control_apply_to_uncond'] = True
-                    p.append(n)
-                positive = p
-            else:
-                cnets = {}
-                out = []
-                for conditioning in [positive, negative]:
-                    c = []
-                    for t in conditioning:
-                        d = t[1].copy()
-
-                        prev_cnet = d.get('control', None)
-                        if prev_cnet in cnets:
-                            c_net = cnets[prev_cnet]
-                        else:
-                            c_net = control_net.copy().set_cond_hint(control_hint, strength)
-                            c_net.set_previous_controlnet(prev_cnet)
-                            cnets[prev_cnet] = c_net
-
-                        d['control'] = c_net
-                        d['control_apply_to_uncond'] = False
-                        n = [t[0], d]
-                        c.append(n)
-                    out.append(c)
-                positive = out[0]
-                negative = out[1]
+        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"], strength, 0, 1, control_net, scale_soft_weights)
 
         new_pipe = {
             "model": pipe['model'],
@@ -2696,7 +1440,6 @@ class controlnetSimple:
 
             "loader_settings": pipe["loader_settings"]
         }
-
 
         return (new_pipe, positive, negative)
 
@@ -2732,59 +1475,8 @@ class controlnetAdvanced:
 
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=1):
-        if control_net is None:
-            if scale_soft_weights < 1:
-                if "ScaledSoftControlNetWeights" in ALL_NODE_CLASS_MAPPINGS:
-                    soft_weight_cls = ALL_NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
-                    (weights, timestep_keyframe) = soft_weight_cls().load_weights(scale_soft_weights, False)
-                    cn_adv_cls = ALL_NODE_CLASS_MAPPINGS['ControlNetLoaderAdvanced']
-                    control_net, = cn_adv_cls().load_controlnet(control_net_name, timestep_keyframe)
-                else:
-                    raise Exception(
-                        f"[ERROR] To use Scale soft weight, you need to install 'COMFYUI-Advanced-ControlNet'")
-            else:
-                controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
-                control_net = comfy.controlnet.load_controlnet(controlnet_path)
-
-        control_hint = image.movedim(-1, 1)
-        positive = pipe["positive"]
-        negative = pipe["negative"]
-
-        if strength != 0:
-            if negative is None:
-                p = []
-                for t in positive:
-                    n = [t[0], t[1].copy()]
-                    c_net = control_net.copy().set_cond_hint(control_hint, strength)
-                    if 'control' in t[1]:
-                        c_net.set_previous_controlnet(t[1]['control'])
-                    n[1]['control'] = c_net
-                    n[1]['control_apply_to_uncond'] = True
-                    p.append(n)
-                positive = p
-            else:
-                cnets = {}
-                out = []
-                for conditioning in [positive, negative]:
-                    c = []
-                    for t in conditioning:
-                        d = t[1].copy()
-
-                        prev_cnet = d.get('control', None)
-                        if prev_cnet in cnets:
-                            c_net = cnets[prev_cnet]
-                        else:
-                            c_net = control_net.copy().set_cond_hint(control_hint, strength, (start_percent, end_percent))
-                            c_net.set_previous_controlnet(prev_cnet)
-                            cnets[prev_cnet] = c_net
-
-                        d['control'] = c_net
-                        d['control_apply_to_uncond'] = False
-                        n = [t[0], d]
-                        c.append(n)
-                    out.append(c)
-                positive = out[0]
-                negative = out[1]
+        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"],
+                                                    strength, start_percent, end_percent, control_net, scale_soft_weights)
 
         new_pipe = {
             "model": pipe['model'],
@@ -2804,8 +1496,47 @@ class controlnetAdvanced:
 
         return (new_pipe, positive, negative)
 
+# LLLiteLoader
+from .lllite import load_control_net_lllite_patch
+class LLLiteLoader:
+    def __init__(self):
+        pass
+    @classmethod
+    def INPUT_TYPES(s):
+        def get_file_list(filenames):
+            return [file for file in filenames if file != "put_models_here.txt" and "lllite" in file]
+
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "model_name": (get_file_list(folder_paths.get_filename_list("controlnet")),),
+                "cond_image": ("IMAGE",),
+                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                "steps": ("INT", {"default": 0, "min": 0, "max": 200, "step": 1}),
+                "start_percent": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 100.0, "step": 0.1}),
+                "end_percent": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 100.0, "step": 0.1}),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL",)
+    FUNCTION = "load_lllite"
+    CATEGORY = "EasyUse/Loaders"
+
+    def load_lllite(self, model, model_name, cond_image, strength, steps, start_percent, end_percent):
+        # cond_image is b,h,w,3, 0-1
+
+        model_path = os.path.join(folder_paths.get_full_path("controlnet", model_name))
+
+        model_lllite = model.clone()
+        patch = load_control_net_lllite_patch(model_path, cond_image, strength, steps, start_percent, end_percent)
+        if patch is not None:
+            model_lllite.set_model_attn1_patch(patch)
+            model_lllite.set_model_attn2_patch(patch)
+
+        return (model_lllite,)
+
 # FooocusInpaint (Testing)
-from .fooocus import InpaintHead, InpaintWorker, get_local_filepath
+from .fooocus import InpaintHead, InpaintWorker
 inpaint_head_model = None
 class fooocusInpaintLoader:
     @classmethod
@@ -2835,6 +1566,7 @@ class fooocusInpaintLoader:
         inpaint_lora = comfy.utils.load_torch_file(patch_file, safe_load=True)
 
         return ((inpaint_head_model, inpaint_lora),)
+
 #---------------------------------------------------------------预采样 开始----------------------------------------------------------------------#
 
 # 预采样设置（基础）
@@ -2852,7 +1584,7 @@ class samplerSettings:
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+                     "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
                     "image_to_latent": ("IMAGE",),
@@ -2927,7 +1659,7 @@ class samplerSettingsAdvanced:
                      "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
                      "end_at_step": ("INT", {"default": 10000, "min": 0, "max": 10000}),
                      "add_noise": (["enable", "disable"],),
-                     "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+                     "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
                     "image_to_latent": ("IMAGE",),
@@ -3009,7 +1741,7 @@ class sdTurboSettings:
                     "unsharp_kernel_size": ("INT", {"default": 3, "min": 1, "max": 21, "step": 1}),
                     "unsharp_sigma": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 10.0, "step": 0.01, "round": False}),
                     "unsharp_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.01, "round": False}),
-                    "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+                    "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                },
                 "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
                 }
@@ -3095,14 +1827,14 @@ class cascadeSettings:
     def INPUT_TYPES(cls):
         return {"required":
             {"pipe": ("PIPE_LINE",),
-             "encode_vae_name": (["None"] + folder_paths.get_filename_list("vae"), {"default": "effnet_encoder.safetensors"}),
-             "decode_vae_name": (["None"] + folder_paths.get_filename_list("vae"), {"default": "previewer.safetensors"}),
+             "encode_vae_name": (["None"] + folder_paths.get_filename_list("vae"),),
+             "decode_vae_name": (["None"] + folder_paths.get_filename_list("vae"),),
              "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
              "cfg": ("FLOAT", {"default": 4.0, "min": 0.0, "max": 100.0}),
              "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default":"euler_ancestral"}),
              "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default":"simple"}),
              "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-             "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+             "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
              },
             "optional": {
                 "image_to_latent_c": ("IMAGE",),
@@ -3126,8 +1858,11 @@ class cascadeSettings:
         encode_vae_name = encode_vae_name if encode_vae_name is not None else pipe['loader_settings']['encode_vae_name']
         decode_vae_name = decode_vae_name if decode_vae_name is not None else pipe['loader_settings']['decode_vae_name']
 
-        if image_to_latent_c is not None and encode_vae_name != 'None':
-            encode_vae = easyCache.load_vae(encode_vae_name)
+        if image_to_latent_c is not None:
+            if encode_vae_name != 'None':
+                encode_vae = easyCache.load_vae(encode_vae_name)
+            else:
+                encode_vae = pipe['vae'][0]
             if "compression" not in pipe["loader_settings"]:
                 raise Exception("compression is not found")
             compression = pipe["loader_settings"]['compression']
@@ -3204,7 +1939,7 @@ class dynamicCFGSettings:
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+                     "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional":{
                     "image_to_latent": ("IMAGE",),
@@ -3348,7 +2083,7 @@ class samplerFull:
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
                 "optional": {
-                    "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+                    "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                     "model": ("MODEL",),
                     "positive": ("CONDITIONING",),
                     "negative": ("CONDITIONING",),
@@ -3500,7 +2235,7 @@ class samplerFull:
                            steps, cfg, sampler_name, scheduler, denoise,
                            image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot):
 
-            sampleXYplot = easyXYPlot(xyPlot, save_prefix, image_output, prompt, extra_pnginfo, my_unique_id)
+            sampleXYplot = easyXYPlot(xyPlot, save_prefix, image_output, prompt, extra_pnginfo, my_unique_id, sampler, easyCache)
 
             if not sampleXYplot.validate_xy_plot():
                 return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
@@ -3515,8 +2250,8 @@ class samplerFull:
             plot_image_vars = {
                 "x_node_type": sampleXYplot.x_node_type, "y_node_type": sampleXYplot.y_node_type,
                 "lora_name": pipe["loader_settings"]["lora_name"] if "lora_name" in pipe["loader_settings"] else None,
-                "lora_model_strength": pipe["loader_settings"]["lora_model_strength"] if "lora_model_strength" in pipe["loader_settings"] else None,
-                "lora_clip_strength": pipe["loader_settings"]["lora_clip_strength"] if "lora_clip_strength" in pipe["loader_settings"] else None,
+                "lora_model_strength": pipe["loader_settings"]["lora_model_strength"] if "model_strength" in pipe["loader_settings"] else None,
+                "lora_clip_strength": pipe["loader_settings"]["lora_clip_strength"] if "clip_strength" in pipe["loader_settings"] else None,
                 "lora_stack":  pipe["loader_settings"]["lora_stack"] if "lora_stack" in pipe["loader_settings"] else None,
                 "steps": steps,
                 "cfg": cfg,
@@ -3969,8 +2704,8 @@ class samplerCascadeFull:
     def INPUT_TYPES(cls):
         return {"required":
                     {"pipe": ("PIPE_LINE",),
-                     "encode_vae_name": (["None"] + folder_paths.get_filename_list("vae"), {"default": "effnet_encoder.safetensors"}),
-                     "decode_vae_name": (["None"] + folder_paths.get_filename_list("vae"), {"default": "previewer.safetensors"}),
+                     "encode_vae_name": (["None"] + folder_paths.get_filename_list("vae"),),
+                     "decode_vae_name": (["None"] + folder_paths.get_filename_list("vae"),),
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "cfg": ("FLOAT", {"default": 4.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default":"euler_ancestral"}),
@@ -3979,7 +2714,7 @@ class samplerCascadeFull:
                      "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
                      "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                      "save_prefix": ("STRING", {"default": "ComfyUI"}),
-                     "seed_num": ("INT", {"default": 0, "min": 0, "max": 1125899906842624}),
+                     "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                  },
 
                 "optional": {
@@ -4005,8 +2740,11 @@ class samplerCascadeFull:
         decode_vae_name = decode_vae_name if decode_vae_name is not None else pipe['loader_settings']['decode_vae_name']
 
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
-        if image_to_latent_c is not None and encode_vae_name != 'None':
-            encode_vae = easyCache.load_vae(encode_vae_name)
+        if image_to_latent_c is not None:
+            if encode_vae_name != 'None':
+                encode_vae = easyCache.load_vae(encode_vae_name)
+            else:
+                encode_vae = pipe['vae'][0]
             if "compression" not in pipe["loader_settings"]:
                 raise Exception("compression is not found")
 
@@ -4017,8 +2755,7 @@ class samplerCascadeFull:
             out_height = (height // compression) * encode_vae.downscale_ratio
 
             s = comfy.utils.common_upscale(image_to_latent_c.movedim(-1, 1), out_width, out_height, "bicubic",
-                                           "center").movedim(1,
-                                                             -1)
+                                           "center").movedim(1, -1)
             latent_c = encode_vae.encode(s[:, :, :, :3])
             latent_b = torch.zeros([latent_c.shape[0], 4, height // 4, width // 4])
 
@@ -4066,8 +2803,11 @@ class samplerCascadeFull:
         stage_c = samp_samples["samples"]
         results = None
 
-        if image_output not in ['Hide', 'Hide/Save'] and decode_vae_name != 'None':
-            decode_vae = easyCache.load_vae(decode_vae_name)
+        if image_output not in ['Hide', 'Hide/Save']:
+            if decode_vae_name != 'None':
+                decode_vae = easyCache.load_vae(decode_vae_name)
+            else:
+                decode_vae = pipe['vae'][0]
             samp_images = decode_vae.decode(stage_c).cpu()
 
             results = easySave(samp_images, save_prefix, image_output, prompt, extra_pnginfo)
@@ -4101,7 +2841,7 @@ class samplerCascadeFull:
             "model": pipe['model'][1],
             "positive": c2,
             "negative": c1,
-            "vae": pipe['vae'],
+            "vae": pipe['vae'][1],
             "clip": pipe['clip'],
 
             "samples": samples_b,
@@ -4881,7 +3621,7 @@ class pipeXYPlot:
         "sampler_name": comfy.samplers.KSampler.SAMPLERS,
         "scheduler": comfy.samplers.KSampler.SCHEDULERS,
         "denoise": {"min": 0.0, "max": 1.0, "step": 0.01},
-        "seed": {"min": 0, "max": 1125899906842624},
+        "seed": {"min": 0, "max": MAX_SEED_NUM},
     }
 
     plot_dict = {**sampler_dict, **loader_dict}
@@ -5056,8 +3796,8 @@ class pipeXYPlotAdvanced:
                 if lora_stack is not None:
                     for lora in lora_stack:
                         _lora_stack.append(
-                            {"lora_name": lora[0], "model": pipe['model'], "clip": pipe['clip'], "lora_model_strength": lora[1],
-                             "lora_clip_strength": lora[2]})
+                            {"lora_name": lora[0], "model": pipe['model'], "clip": pipe['clip'], "model_strength": lora[1],
+                             "clip_strength": lora[2]})
                 del lora_stack
                 x_values = "; ".join(x_values)
                 lora_stack = pipe['lora_stack'] + _lora_stack if 'lora_stack' in pipe else _lora_stack
@@ -5072,8 +3812,8 @@ class pipeXYPlotAdvanced:
                 if lora_stack is not None:
                     for lora in lora_stack:
                         _lora_stack.append(
-                            {"lora_name": lora[0], "model": pipe['model'], "clip": pipe['clip'], "lora_model_strength": lora[1],
-                             "lora_clip_strength": lora[2]})
+                            {"lora_name": lora[0], "model": pipe['model'], "clip": pipe['clip'], "model_strength": lora[1],
+                             "clip_strength": lora[2]})
                 del lora_stack
                 y_values = "; ".join(y_values)
                 lora_stack = pipe['lora_stack'] + _lora_stack if 'lora_stack' in pipe else _lora_stack
@@ -5212,7 +3952,6 @@ class pipeXYPlotAdvanced:
         return pipeXYPlot().plot(grid_spacing, output_individuals, flip_xy, x_axis, x_values, y_axis, y_values, new_pipe)
 
 #---------------------------------------------------------------XY Inputs 开始----------------------------------------------------------------------#
-
 def load_preset(filename):
     path = os.path.join(RESOURCES_DIR, filename)
     path = os.path.abspath(path)
@@ -5766,6 +4505,7 @@ class XYplot_Lora:
 
         optional_lora_stack = kwargs.get("optional_lora_stack") if "optional_lora_stack" in kwargs else []
 
+        print(values)
         xy_values = {"axis": axis, "values": values, "lora_stack": optional_lora_stack}
         return (xy_values,)
 
@@ -5883,7 +4623,6 @@ class showLoaderSettingsNames:
                 if lora_name:
                     lora_name = os.path.basename(os.path.splitext(lora_name)[0])
 
-
                 names = "ckpt_name: " + ckpt_name + '\n' + "vae_name: " + vae_name + '\n' + "lora_name: " + lora_name
                 node["widgets_values"] = names
 
@@ -5902,12 +4641,13 @@ NODE_CLASS_MAPPINGS = {
     "easy fullLoader": fullLoader,
     "easy a1111Loader": a1111Loader,
     "easy comfyLoader": comfyLoader,
-    "easy cascadeLoader": cascadeLoader,
     "easy zero123Loader": zero123Loader,
     "easy svdLoader": svdLoader,
+    "easy cascadeLoader": cascadeLoader,
     "easy loraStack": loraStackLoader,
     "easy controlnetLoader": controlnetSimple,
     "easy controlnetLoaderADV": controlnetAdvanced,
+    "easy LLLiteLoader": LLLiteLoader,
     # latent 潜空间
     "easy latentNoisy": latentNoisy,
     "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
@@ -5983,7 +4723,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy loraStack": "EasyLoraStack",
     "easy controlnetLoader": "EasyControlnet",
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
-    "easy photoMakerApply": "Apply PhotoMaker",
+    "easy LLLiteLoader": "EasyLLLite",
     # latent 潜空间
     "easy latentNoisy": "LatentNoisy",
     "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",

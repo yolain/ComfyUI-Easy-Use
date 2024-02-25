@@ -27,11 +27,23 @@ To use the Lora Block Weight usage, make sure that [ComfyUI-Inspire-Pack](https:
 
 After installing the node package, the UI interface will be automatically switched, if you need to change other themes, please switch and refresh the page in Settings -> Color Palette.
 
+### Stable Cascade
+
+[WorkFlow Example](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade) <br><br>
+Currently, txt2img and img2img are supported，Lora and Controlnet are comming soon!<br><br>
+
+Usage：<br>
+1.There is no need to load the rest of the VAE and clips when you are choose [checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints) models.<br> 
+2.You need to load it extra [stage_a](https://huggingface.co/stabilityai/stable-cascade/blob/main/stage_a.safetensors)、[clip](https://huggingface.co/stabilityai/stable-cascade/resolve/main/text_encoder/model.safetensors) and [effnet_encoder](https://huggingface.co/stabilityai/stable-cascade/resolve/main/effnet_encoder.safetensors?download=true)、[previewer](https://huggingface.co/stabilityai/stable-cascade/resolve/main/previewer.safetensors) for img2img when you are choose unet models.<br>
+<br>
+
 ## Changelog
 
-**2024-02-20**
+**v1.0.8(2024-02-25)**
 
-- Optimize the image to image[Example](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#image-to-image)
+- `easy cascadeLoader` stage_c and stage_b support the checkpoint model (Download [checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints) models) 
+- `easy styleSelector` The search box is modified to be case-insensitive
+- Optimize the code, reduce a lot of redundant code and improve the running speed
 
 **v1.0.7 (2024-02-19)**
 
@@ -39,8 +51,8 @@ After installing the node package, the UI interface will be automatically switch
 - Added `easy preSamplingCascade` - stable cascade preSampling Settings
 - Added `easy fullCascadeKSampler` - stable cascade stage-c ksampler full
 - Added `easy cascadeKSampler` - stable cascade stage-c ksampler simple
-
-[SC Example](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
+- 
+- Optimize the image to image[Example](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#image-to-image)
 
 **v1.0.6**
 

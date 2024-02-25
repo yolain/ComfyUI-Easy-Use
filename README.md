@@ -35,22 +35,31 @@
 如果您下载了 [AIGODLIKE-COMFYUI-TRANSLATION](https://github.com/AIGODLIKE/AIGODLIKE-ComfyUI-Translation)
 , 程序将在启动时拷贝中文对照文件至该节点包目录下，当您选择语言为中文时即可看到已更改后的简体中文节点。
 
+### Stable Cascade
+
+[工作流示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade) <br><br>
+目前支持文生图与图生图，还未支持Lora和Controlnet，敬请期待!<br>
+stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)模型或原来的unet模型 <br><br>
+
+使用方式：<br>
+1.选择[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)模型无需额外加载其余的VAE及clip<br> 
+2.选择Unet模型的话需要额外加载[stage_a](https://huggingface.co/stabilityai/stable-cascade/blob/main/stage_a.safetensors)、[clip](https://huggingface.co/stabilityai/stable-cascade/resolve/main/text_encoder/model.safetensors)及图生图需要用到的[effnet_encoder](https://huggingface.co/stabilityai/stable-cascade/resolve/main/effnet_encoder.safetensors?download=true)和[previewer](https://huggingface.co/stabilityai/stable-cascade/resolve/main/previewer.safetensors)。<br>
+
 ## 更新日志
 
-**2024-02-20**
+**v1.0.8(2024-02-25)**
 
-- 优化图生图流程[示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#图生图)
+- `easy cascadeLoader` stage_c 与 stage_b 支持checkpoint模型 (需要下载[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)) 
+- `easy styleSelector` 搜索框修改为不区分大小写匹配
+- 优化代码，减少了诸多冗余，提升运行速度
 
-**v1.0.7 (2024-02-18)**
+**v1.0.7**
 
 - 增加 `easy cascadeLoader` - stable cascade 加载器
 - 增加 `easy preSamplingCascade` - stabled cascade stage_c 预采样参数
 - 增加 `easy fullCascadeKSampler` - stable cascade stage_c 完整版采样器
 - 增加 `easy cascadeKSampler` - stable cascade stage-c ksampler simple
-
-[Stable Cascade](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
-目前支持 文生图与图生图，还未支持Lora和Controlnet，敬请期待!<br>
-02-17 前更新的用户，需将原工程中的`easy preSamplingCascade`更换成`easy fullCascadeKSampler` 重新连接进行使用。
+- 优化图生图流程[示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#图生图)
 
 **v1.0.6 (2024-02-16)**
 
@@ -86,7 +95,8 @@
 
 - 修改首次安装节点包不再自动替换主题，需手动调整并刷新页面
 
-**v1.0.3**
+<details>
+<summary><b>v1.0.3</b></summary>
 
 - 增加 `easy stylesSelector` 风格化提示词选择器
 - 增加队列进度条设置项，默认为未启用状态
@@ -104,7 +114,7 @@
 
 
 - 调整UI主题
-
+</details>
 
 <details>
 <summary><b>v1.0.2</b></summary>
