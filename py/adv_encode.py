@@ -252,7 +252,6 @@ def encode_token_weights(model, token_weight_pairs, encode_func):
     model_management.load_model_gpu(model.patcher)
     return encode_func(model.cond_stage_model, token_weight_pairs)
 
-
 def prepareXL(embs_l, embs_g, pooled, clip_balance):
     l_w = 1 - max(0, clip_balance - .5) * 2
     g_w = 1 - max(0, .5 - clip_balance) * 2

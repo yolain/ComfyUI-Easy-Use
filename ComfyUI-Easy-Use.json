@@ -142,7 +142,10 @@
     },
     "outputs": {
       "pipe": "节点束",
-      "model": "模型"
+      "model": "模型",
+      "positive": "正向条件",
+      "negative": "反向条件",
+      "latent": "潜空间"
     }
   },
   "easy a1111Loader": {

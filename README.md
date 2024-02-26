@@ -49,6 +49,7 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 **2024-02-26**
 
+- `easy fullLoader` 增加 **positive**、**negative**、**latent** 输出项
 - 修复 SDXLClipModel 在 ComfyUI 修订版本号 2016[c2cb8e88] 及以上的报错（判断了版本号可兼容老版本）
 - 修复 `easy detailerFix` 批次大小大于1时生成出错
 

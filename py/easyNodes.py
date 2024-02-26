@@ -660,8 +660,8 @@ class fullLoader:
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
-    RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE", "CLIP")
-    RETURN_NAMES = ("pipe", "model", "vae", "clip")
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE", "CLIP", "CONDITIONING", "CONDITIONING", "LATENT")
+    RETURN_NAMES = ("pipe", "model", "vae", "clip", "positive", "negative", "latent")
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
@@ -819,7 +819,7 @@ class fullLoader:
                                     "empty_samples": samples, }
                 }
 
-        return {"ui": {"positive": positive_wildcard_prompt, "negative": negative_wildcard_prompt}, "result": (pipe, model, vae, clip)}
+        return {"ui": {"positive": positive_wildcard_prompt, "negative": negative_wildcard_prompt}, "result": (pipe, model, vae, clip, positive, negative, samples)}
 
 # A1111简易加载器
 class a1111Loader:

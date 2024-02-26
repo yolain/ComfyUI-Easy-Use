@@ -39,9 +39,9 @@ Usage：<br>
 
 ## Changelog
 
-
 **2024-02-26**
 
+- `easy fullLoader` **positive**、**negative**、**latent** added to the output items
 - Fixed the error of SDXLClipModel in ComfyUI revision 2016[c2cb8e88] and above (the revision number was judged to be compatible with the old revision)
 - Fixed `easy detailerFix` generation error when batch size is greater than 1
 
