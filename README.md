@@ -47,6 +47,11 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 ## 更新日志
 
+**2024-02-26**
+
+- 修复 SDXLClipModel 在 ComfyUI 修订版本号 2016[c2cb8e88] 及以上的报错（判断了版本号可兼容老版本）
+- 修复 `easy detailerFix` 批次大小大于1时生成出错
+
 **v1.0.8(2024-02-25)**
 
 - `easy cascadeLoader` stage_c 与 stage_b 支持checkpoint模型 (需要下载[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)) 
@@ -59,7 +64,6 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 - 增加 `easy preSamplingCascade` - stabled cascade stage_c 预采样参数
 - 增加 `easy fullCascadeKSampler` - stable cascade stage_c 完整版采样器
 - 增加 `easy cascadeKSampler` - stable cascade stage-c ksampler simple
-- 优化图生图流程[示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#图生图)
 
 **v1.0.6 (2024-02-16)**
 

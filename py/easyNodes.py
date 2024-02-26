@@ -3182,16 +3182,10 @@ class preDetailerFix:
         if vae is None:
             raise Exception(f"[ERROR] pipe['vae'] is missing")
         if optional_image is not None:
-            batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
-            samples = {"samples": vae.encode(optional_image)}
-            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
-            image = optional_image
+            images = optional_image
         else:
-            samples = pipe["samples"] if "samples" in pipe else None
-            if samples is None:
-                raise Exception(f"[ERROR] pipe['samples'] is missing")
-            image = pipe["images"] if "images" in pipe else None
-            if image is None:
+            images = pipe["images"] if "images" in pipe else None
+            if images is None:
                 raise Exception(f"[ERROR] pipe['image'] is missing")
         positive = pipe["positive"] if "positive" in pipe else None
         if positive is None:
@@ -3209,8 +3203,7 @@ class preDetailerFix:
         loader_settings = pipe["loader_settings"] if "loader_settings" in pipe else {}
 
         new_pipe = {
-            "samples": samples,
-            "images": image,
+            "images": images,
             "model": model,
             "clip": clip,
             "vae": vae,
@@ -3325,21 +3318,22 @@ class detailerFix:
         start_time = int(time.time() * 1000)
 
         cls = ALL_NODE_CLASS_MAPPINGS["FaceDetailer"]
-        enhanced_img, cropped_enhanced, cropped_enhanced_alpha, mask, cnet_pil_list = cls().enhance_face(
+
+        result_img, result_cropped_enhanced, result_cropped_enhanced_alpha, result_mask, pipe, result_cnet_images = cls().doit(
             image, model, clip, vae, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name,
             scheduler,
             positive, negative, denoise, feather, noise_mask, force_inpaint,
             bbox_threshold, bbox_dilation, bbox_crop_factor,
             sam_detection_hint, sam_dilation, sam_threshold, sam_bbox_expansion, sam_mask_hint_threshold,
-            sam_mask_hint_use_negative, drop_size, bbox_detector_opt, segm_detector_opt, sam_model_opt, wildcard,
-            detailer_hook=None, cycle=cycle)
+            sam_mask_hint_use_negative, drop_size, bbox_detector_opt, wildcard, cycle, sam_model_opt, segm_detector_opt,
+            detailer_hook=None)
 
         # 细节修复结束时间
         end_time = int(time.time() * 1000)
 
         spent_time = '细节修复:' + str((end_time - start_time) / 1000) + '秒'
 
-        results = easySave(enhanced_img, save_prefix, image_output, prompt, extra_pnginfo)
+        results = easySave(result_img, save_prefix, image_output, prompt, extra_pnginfo)
         sampler.update_value_by_id("results", my_unique_id, results)
 
         # Clean loaded_objects
@@ -3347,7 +3341,7 @@ class detailerFix:
 
         new_pipe = {
             "samples": None,
-            "images": enhanced_img,
+            "images": result_img,
             "model": model,
             "clip": clip,
             "vae": vae,
@@ -3372,12 +3366,12 @@ class detailerFix:
 
         if image_output in ("Hide", "Hide/Save"):
             return {"ui": {},
-                    "result": (new_pipe, enhanced_img, cropped_enhanced, cropped_enhanced_alpha, mask, cnet_pil_list)}
+                    "result": (new_pipe, result_img, result_cropped_enhanced, result_cropped_enhanced_alpha, result_mask, result_cnet_images )}
 
         if image_output in ("Sender", "Sender/Save"):
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
-        return {"ui": {"images": results}, "result": (new_pipe, enhanced_img, cropped_enhanced, cropped_enhanced_alpha, mask, cnet_pil_list)}
+        return {"ui": {"images": results}, "result": (new_pipe, result_img, result_cropped_enhanced, result_cropped_enhanced_alpha, result_mask, result_cnet_images )}
 
 def add_folder_path_and_extensions(folder_name, full_folder_paths, extensions):
     for full_folder_path in full_folder_paths:
