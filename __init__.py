@@ -1,9 +1,7 @@
 import os
 import glob
-import json
 import folder_paths
 import importlib
-import shutil
 
 node_list = [
     "server",
@@ -24,16 +22,6 @@ for module_name in node_list:
 # 复制翻译文本到多语言节点
 cwd_path = os.path.dirname(os.path.realpath(__file__))
 comfy_path = folder_paths.base_path
-translate_path = os.path.join(comfy_path, "custom_nodes", "AIGODLIKE-COMFYUI-TRANSLATION", "zh-CN")
-translate_path_old = os.path.join(comfy_path, "custom_nodes", "AIGODLIKE-COMFYUI-TRANSLATION-main", "zh-CN")
-translate_file = os.path.join(cwd_path, "ComfyUI-Easy-Use.json")
-def copy_file_to_nodes(path):
-    nodes_path = os.path.join(path, "Nodes")
-    shutil.copy(translate_file, nodes_path)
-if os.path.exists(translate_path):
-    copy_file_to_nodes(translate_path)
-elif os.path.exists(translate_path_old):
-    copy_file_to_nodes(translate_path_old)
 
 #Wildcards读取
 from .py.wildcards import read_wildcard_dict

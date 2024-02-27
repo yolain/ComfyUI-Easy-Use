@@ -30,10 +30,6 @@
 
 首次安装的用户，如需使用本节点包UI主题，请在安装节点包在 Settings -> Color Palette 中自行切换并**刷新页面**即可。
 
-### 简体中文节点
-
-如果您下载了 [AIGODLIKE-COMFYUI-TRANSLATION](https://github.com/AIGODLIKE/AIGODLIKE-ComfyUI-Translation)
-, 程序将在启动时拷贝中文对照文件至该节点包目录下，当您选择语言为中文时即可看到已更改后的简体中文节点。
 
 ### Stable Cascade
 
@@ -46,6 +42,13 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 2.选择Unet模型的话需要额外加载[stage_a](https://huggingface.co/stabilityai/stable-cascade/blob/main/stage_a.safetensors)、[clip](https://huggingface.co/stabilityai/stable-cascade/resolve/main/text_encoder/model.safetensors)及图生图需要用到的[effnet_encoder](https://huggingface.co/stabilityai/stable-cascade/resolve/main/effnet_encoder.safetensors?download=true)和[previewer](https://huggingface.co/stabilityai/stable-cascade/resolve/main/previewer.safetensors)。<br>
 
 ## 更新日志
+
+**2024-02-27**
+
+- 去除中文翻译对照文本
+
+（翻译对照已由 [AIGODLIKE-COMFYUI-TRANSLATION](https://github.com/AIGODLIKE/AIGODLIKE-ComfyUI-Translation) 统一维护啦！
+首次下载或者版本较早的朋友请更新 AIGODLIKE-COMFYUI-TRANSLATION 和本节点包至最新版本。）
 
 **2024-02-26**
 
