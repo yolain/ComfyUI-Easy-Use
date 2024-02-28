@@ -39,6 +39,10 @@ Usage：<br>
 
 ## Changelog
 
+**2024-02-28**
+
+- Fixed the issue that 'easy preSampling' and other similar node, latent could not be generated based on the batch index after passing in
+
 **2024-02-26**
 
 - `easy fullLoader` **positive**、**negative**、**latent** added to the output items

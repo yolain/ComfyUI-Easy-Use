@@ -1610,7 +1610,7 @@ class samplerSettings:
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
             images = image_to_latent
         elif latent is not None:
-            samples = RepeatLatentBatch().repeat(latent, batch_size)[0]
+            samples = latent
             images = pipe["images"]
         else:
             samples = pipe["samples"]
@@ -1685,7 +1685,7 @@ class samplerSettingsAdvanced:
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
             images = image_to_latent
         elif latent is not None:
-            samples = RepeatLatentBatch().repeat(latent, batch_size)[0]
+            samples = latent
             images = pipe["images"]
         else:
             samples = pipe["samples"]
@@ -1885,7 +1885,7 @@ class cascadeSettings:
             samples = (samples_c, samples_b)
             images = image_to_latent_c
         elif latent_c is not None:
-            samples_c = RepeatLatentBatch().repeat(latent_c, batch_size)[0]
+            samples_c = latent_c
             samples = (samples_c, samples[1])
             images = pipe["images"]
         if samples_c is not None:
@@ -2766,7 +2766,7 @@ class samplerCascadeFull:
             samples_b = RepeatLatentBatch().repeat(samples_b, batch_size)[0]
             images = image_to_latent_c
         elif latent_c is not None:
-            samples_c = RepeatLatentBatch().repeat(latent_c, batch_size)[0]
+            samples_c = latent_c
             samples_b = pipe["samples"][1]
             images = pipe["images"]
         else:
