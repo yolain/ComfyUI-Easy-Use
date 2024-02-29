@@ -43,6 +43,10 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 ## 更新日志
 
+**2024-02-29**
+
+- 修复 `easy svdLoader` 报错
+
 **2024-02-28**
 
 - 修复`easy preSampling`等 latent传入后无法根据批次索引生成的问题

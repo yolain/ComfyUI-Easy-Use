@@ -1254,13 +1254,13 @@ class svdLoader:
         negative = [[torch.zeros_like(pooled),
                      {"motion_bucket_id": motion_bucket_id, "fps": fps, "augmentation_level": augmentation_level,
                       "concat_latent_image": torch.zeros_like(t)}]]
-        if optional_positive is not None:
+        if optional_positive is not None and optional_positive != '':
             if clip_name == 'None':
                 raise Exception("You need choose a open_clip model when positive is not empty")
             clip = easyCache.load_clip(clip_name)
             positive_embeddings_final, = CLIPTextEncode().encode(clip, optional_positive)
             positive, = ConditioningConcat().concat(positive, positive_embeddings_final)
-        if optional_negative is not None:
+        if optional_negative is not None and optional_negative != '':
             if clip_name == 'None':
                 raise Exception("You need choose a open_clip model when negative is not empty")
             negative_embeddings_final, = CLIPTextEncode().encode(clip, optional_negative)

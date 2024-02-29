@@ -39,6 +39,10 @@ Usage：<br>
 
 ## Changelog
 
+**2024-02-29**
+
+- Fixed `easy svdLoader` error when the positive or negative is empty
+
 **2024-02-28**
 
 - Fixed the issue that 'easy preSampling' and other similar node, latent could not be generated based on the batch index after passing in

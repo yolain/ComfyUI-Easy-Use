@@ -174,7 +174,7 @@ class easyLoader:
             cache_name = ckpt_name + "_" + config_name
         if cache_name in self.loaded_objects["ckpt"]:
             clip_vision = self.loaded_objects["clip_vision"][cache_name][0] if load_vision else None
-            clip = self.loaded_objects["clip"][cache_name][0]
+            clip = self.loaded_objects["clip"][cache_name][0] if not load_vision else None
             return self.loaded_objects["ckpt"][cache_name][0], clip, self.loaded_objects["bvae"][cache_name][0], clip_vision
 
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
