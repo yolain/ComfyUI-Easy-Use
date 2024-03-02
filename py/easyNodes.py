@@ -1441,6 +1441,7 @@ class controlnetSimple:
             "loader_settings": pipe["loader_settings"]
         }
 
+        del pipe
         return (new_pipe, positive, negative)
 
 # controlnetADV
@@ -1535,6 +1536,8 @@ class LLLiteLoader:
 
         return (model_lllite,)
 
+#---------------------------------------------------------------测试 开始----------------------------------------------------------------------#
+
 # FooocusInpaint (Testing)
 from .fooocus import InpaintHead, InpaintWorker
 inpaint_head_model = None
@@ -1567,6 +1570,90 @@ class fooocusInpaintLoader:
 
         return ((inpaint_head_model, inpaint_lora),)
 
+#Apply InstantID
+class instantIDApply:
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+                "required":{
+                     "pipe": ("PIPE_LINE",),
+                     "image": ("IMAGE",),
+                     "instantid_file": (folder_paths.get_filename_list("instantid"),),
+                     "insightface": (["CPU", "CUDA", "ROCM"],),
+                     "control_net_name": (folder_paths.get_filename_list("controlnet"),),
+                     "cn_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                     "cn_soft_weights": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},),
+                     "weight": ("FLOAT", {"default": .8, "min": 0.0, "max": 5.0, "step": 0.01, }),
+                     "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
+                     "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
+                     "noise": ("FLOAT", {"default": 0.35, "min": 0.0, "max": 1.0, "step": 0.05, }),
+                },
+                "optional": {
+                    "image_kps": ("IMAGE",),
+                    "mask": ("MASK",),
+                    "control_net": ("CONTROL_NET",),
+                },
+                "hidden": {
+                    "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"
+                },
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING")
+    RETURN_NAMES = ("pipe", "model", "positive", "negative")
+    OUTPUT_NODE = True
+
+    FUNCTION = "apply"
+    CATEGORY = "EasyUse/__for_testing"
+
+    def error(self):
+        raise Exception(f"[ERROR] To use instantIDApply, you need to install 'ComfyUI_InstantID'")
+
+    def apply(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+        instantid_model, insightface_model, face_embeds = None, None, None
+        model = pipe['model']
+        positive = pipe['positive']
+        negative = pipe['negative']
+        # Load InstantID
+        if "InstantIDModelLoader" in ALL_NODE_CLASS_MAPPINGS:
+            load_instant_cls = ALL_NODE_CLASS_MAPPINGS["InstantIDModelLoader"]
+            instantid_model, = load_instant_cls().load_model(instantid_file)
+        else:
+            self.error()
+        if "InstantIDFaceAnalysis" in ALL_NODE_CLASS_MAPPINGS:
+            load_insightface_cls = ALL_NODE_CLASS_MAPPINGS["InstantIDFaceAnalysis"]
+            insightface_model, = load_insightface_cls().load_insight_face(insightface)
+        else:
+            self.error()
+
+        # Apply InstantID
+        if "ApplyInstantID" in ALL_NODE_CLASS_MAPPINGS:
+            instantid_apply = ALL_NODE_CLASS_MAPPINGS['ApplyInstantID']
+            control_net = easyControlnet().load_controlnet(control_net_name, control_net, cn_soft_weights)
+            model, positive, negative = instantid_apply().apply_instantid(instantid_model, insightface_model, control_net, image, model, positive, negative, start_at, end_at, weight=weight, ip_weight=None, cn_strength=cn_strength, noise=noise, image_kps=image_kps, mask=None)
+        else:
+            self.error()
+
+        new_pipe = {
+            "model": model,
+            "positive": positive,
+            "negative": negative,
+            "vae": pipe['vae'],
+            "clip": pipe['clip'],
+
+            "samples": pipe["samples"],
+            "images": pipe["images"],
+            "seed": 0,
+
+            "loader_settings": pipe["loader_settings"]
+        }
+
+        del pipe
+
+        return (new_pipe, model, positive, negative)
 #---------------------------------------------------------------预采样 开始----------------------------------------------------------------------#
 
 # 预采样设置（基础）
@@ -3373,26 +3460,6 @@ class detailerFix:
 
         return {"ui": {"images": results}, "result": (new_pipe, result_img, result_cropped_enhanced, result_cropped_enhanced_alpha, result_mask, result_cnet_images )}
 
-def add_folder_path_and_extensions(folder_name, full_folder_paths, extensions):
-    for full_folder_path in full_folder_paths:
-        folder_paths.add_model_folder_path(folder_name, full_folder_path)
-    if folder_name in folder_paths.folder_names_and_paths:
-        current_paths, current_extensions = folder_paths.folder_names_and_paths[folder_name]
-        updated_extensions = current_extensions | extensions
-        folder_paths.folder_names_and_paths[folder_name] = (current_paths, updated_extensions)
-    else:
-        folder_paths.folder_names_and_paths[folder_name] = (full_folder_paths, extensions)
-
-model_path = folder_paths.models_dir
-add_folder_path_and_extensions("ultralytics_bbox", [os.path.join(model_path, "ultralytics", "bbox")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("ultralytics_segm", [os.path.join(model_path, "ultralytics", "segm")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("ultralytics", [os.path.join(model_path, "ultralytics")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("mmdets_bbox", [os.path.join(model_path, "mmdets", "bbox")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("mmdets_segm", [os.path.join(model_path, "mmdets", "segm")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("mmdets", [os.path.join(model_path, "mmdets")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("sams", [os.path.join(model_path, "sams")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("onnx", [os.path.join(model_path, "onnx")], {'.onnx'})
-
 class ultralyticsDetectorForDetailerFix:
     @classmethod
     def INPUT_TYPES(s):
@@ -4697,7 +4764,8 @@ NODE_CLASS_MAPPINGS = {
     # "easy imageRemoveBG": imageREMBG,
     "dynamicThresholdingFull": dynamicThresholdingFull,
     # __for_testing 测试
-    "easy fooocusInpaintLoader": fooocusInpaintLoader
+    "easy fooocusInpaintLoader": fooocusInpaintLoader,
+    "easy instantIDApply": instantIDApply,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
     # prompt 提示词
@@ -4773,5 +4841,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy imageRemoveBG": "ImageRemoveBG",
     "dynamicThresholdingFull": "DynamicThresholdingFull",
     # __for_testing 测试
-    "easy fooocusInpaintLoader": "Load Fooocus Inpaint"
+    "easy fooocusInpaintLoader": "Load Fooocus Inpaint",
+    "easy instantIDApply": "Easy Apply InstantID"
 }

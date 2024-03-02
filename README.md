@@ -43,32 +43,27 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 ## 更新日志
 
-**2024-02-29**
 
-- 修复 `easy svdLoader` 报错
+**v1.0.9 [2024-3-2]**
 
-**2024-02-28**
+- 新增 `easy instantIDApply` - 需要先安装 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID), 工作流参考[示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#InstantID)
+- 修复 `easy detailerFix` 未添加到保存图片格式化扩展名可用节点列表
+- 修复 `easy XYInputs: PromptSR` 在替换负面提示词时报错
 
+**v1.0.8 (f28cbf7)**
+
+- `easy cascadeLoader` stage_c 与 stage_b 支持checkpoint模型 (需要下载[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)) 
+- `easy styleSelector` 搜索框修改为不区分大小写匹配
+- `easy fullLoader` 增加 **positive**、**negative**、**latent** 输出项
+- 修复 SDXLClipModel 在 ComfyUI 修订版本号 2016[c2cb8e88] 及以上的报错（判断了版本号可兼容老版本）
+- 修复 `easy detailerFix` 批次大小大于1时生成出错
 - 修复`easy preSampling`等 latent传入后无法根据批次索引生成的问题
-
-**2024-02-27**
-
+- 修复 `easy svdLoader` 报错
+- 优化代码，减少了诸多冗余，提升运行速度
 - 去除中文翻译对照文本
 
 （翻译对照已由 [AIGODLIKE-COMFYUI-TRANSLATION](https://github.com/AIGODLIKE/AIGODLIKE-ComfyUI-Translation) 统一维护啦！
 首次下载或者版本较早的朋友请更新 AIGODLIKE-COMFYUI-TRANSLATION 和本节点包至最新版本。）
-
-**2024-02-26**
-
-- `easy fullLoader` 增加 **positive**、**negative**、**latent** 输出项
-- 修复 SDXLClipModel 在 ComfyUI 修订版本号 2016[c2cb8e88] 及以上的报错（判断了版本号可兼容老版本）
-- 修复 `easy detailerFix` 批次大小大于1时生成出错
-
-**v1.0.8(2024-02-25)**
-
-- `easy cascadeLoader` stage_c 与 stage_b 支持checkpoint模型 (需要下载[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)) 
-- `easy styleSelector` 搜索框修改为不区分大小写匹配
-- 优化代码，减少了诸多冗余，提升运行速度
 
 **v1.0.7**
 
@@ -255,9 +250,9 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/image_to_image_controlnet.png">
 
-#### SDTurbo+高清修复+SVD
+#### InstantID
 
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/sdturbo_hiresfix_svd.png">
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/instantID.png">
 
 ### StableCascade
 #### 文生图
@@ -265,6 +260,7 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 #### 图生图
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/StableCascade/image_to_image.png">
+
 
 ## Credits
 

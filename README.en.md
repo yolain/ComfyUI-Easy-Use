@@ -29,7 +29,7 @@ After installing the node package, the UI interface will be automatically switch
 
 ### Stable Cascade
 
-[WorkFlow Example](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade) <br><br>
+[WorkFlow Example](https://github.com/yolain/ComfyUI-Easy-Use/blob/main/README.en.md#StableCascade) <br><br>
 Currently, txt2img and img2img are supported，Lora and Controlnet are comming soon!<br><br>
 
 Usage：<br>
@@ -39,24 +39,21 @@ Usage：<br>
 
 ## Changelog
 
-**2024-02-29**
+**v1.0.9 [2024-3-2]**
 
-- Fixed `easy svdLoader` error when the positive or negative is empty
+- Added `easy instantIDApply` - you need installed [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID) fisrt, Workflow[Example](https://github.com/yolain/ComfyUI-Easy-Use/blob/main/README.en.md#InstantID)
+- Fixed `easy detailerFix` not added to the list of nodes available for saving images formatting extensions
+- Fixed `easy XYInputs: PromptSR` errors are reported when replacing negative prompts
 
-**2024-02-28**
-
-- Fixed the issue that 'easy preSampling' and other similar node, latent could not be generated based on the batch index after passing in
-
-**2024-02-26**
-
-- `easy fullLoader` **positive**、**negative**、**latent** added to the output items
-- Fixed the error of SDXLClipModel in ComfyUI revision 2016[c2cb8e88] and above (the revision number was judged to be compatible with the old revision)
-- Fixed `easy detailerFix` generation error when batch size is greater than 1
-
-**v1.0.8(2024-02-25)**
+**v1.0.8 (f28cbf7)**
 
 - `easy cascadeLoader` stage_c and stage_b support the checkpoint model (Download [checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints) models) 
 - `easy styleSelector` The search box is modified to be case-insensitive
+- `easy fullLoader` **positive**、**negative**、**latent** added to the output items
+- Fixed the issue that 'easy preSampling' and other similar node, latent could not be generated based on the batch index after passing in
+- Fixed `easy svdLoader` error when the positive or negative is empty
+- Fixed the error of SDXLClipModel in ComfyUI revision 2016[c2cb8e88] and above (the revision number was judged to be compatible with the old revision)
+- Fixed `easy detailerFix` generation error when batch size is greater than 1
 - Optimize the code, reduce a lot of redundant code and improve the running speed
 
 **v1.0.7 (2024-02-19)**
@@ -66,7 +63,7 @@ Usage：<br>
 - Added `easy fullCascadeKSampler` - stable cascade stage-c ksampler full
 - Added `easy cascadeKSampler` - stable cascade stage-c ksampler simple
 - 
-- Optimize the image to image[Example](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#image-to-image)
+- Optimize the image to image[Example](https://github.com/yolain/ComfyUI-Easy-Use/blob/main/README.en.md#image-to-image)
 
 **v1.0.6**
 

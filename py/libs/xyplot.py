@@ -367,7 +367,7 @@ class easyXYPlot():
                                             w_max=1.0,
                                             apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
                 if "negative_cond" in plot_image_vars:
-                    positive = positive + plot_image_vars["negative_cond"]
+                    negative = negative + plot_image_vars["negative_cond"]
 
             # ControlNet
             if "ControlNet" in self.x_type or "ControlNet" in self.y_type:
