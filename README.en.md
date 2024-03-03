@@ -39,12 +39,17 @@ Usage：<br>
 
 ## Changelog
 
-**v1.0.9 [2024-3-2]**
+**v1.1.0 (2024/3/4)**
+
+- Added `easy preSamplingLayerDiffusion` and `easy kSamplerLayerDiffusion`
+- Added a convenient menu to right-click on nodes such as Loader, Presampler, Sampler, Controlnet, etc. to quickly replace nodes of the same type
+- Added `easy instantIDApplyADV` can link positive and negative
+- Fixed `easy instantIDApply` mask not input right
+- 
+**v1.0.9 (ff1add1)**
 
 - Fixed the error when ComfyUI-Impack-Pack and ComfyUI_InstantID were not installed
 - Fixed `easy pipeIn`
-- 
-(f9d01ff)
 - Added `easy instantIDApply` - you need installed [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID) fisrt, Workflow[Example](https://github.com/yolain/ComfyUI-Easy-Use/blob/main/README.en.md#InstantID)
 - Fixed `easy detailerFix` not added to the list of nodes available for saving images formatting extensions
 - Fixed `easy XYInputs: PromptSR` errors are reported when replacing negative prompts

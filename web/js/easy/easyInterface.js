@@ -125,7 +125,6 @@ try{
             app.ui.settings.load()
         }
     }
-    console.log(theme_name)
     // 判断主题为黑曜石时改变扩展UI
     if(['"custom_obsidian"','"custom_obsidian_dark"'].includes(theme_name)){
         // canvas

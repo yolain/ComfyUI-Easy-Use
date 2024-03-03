@@ -282,7 +282,7 @@ def process_with_loras(wildcard_opt, model, clip, title="Positive", seed=None, c
     has_loras = True if loras != [] else False
     show_wildcard_prompt = True if has_noodle_key or has_loras else False
 
-    if can_load_lora:
+    if can_load_lora and has_loras:
         for lora_name, model_weight, clip_weight, lbw, lbw_a, lbw_b in loras:
             if (lora_name.split('.')[-1]) not in folder_paths.supported_pt_extensions:
                 lora_name = lora_name+".safetensors"

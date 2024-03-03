@@ -107,6 +107,25 @@ def get_local_filepath(url, dirname, local_file_name=None):
         download_url_to_file(url, destination)
     return destination
 
+def to_lora_patch_dict(state_dict: dict) -> dict:
+    """ Convert raw lora state_dict to patch_dict that can be applied on
+    modelpatcher."""
+    patch_dict = {}
+    for k, w in state_dict.items():
+        model_key, patch_type, weight_index = k.split('::')
+        if model_key not in patch_dict:
+            patch_dict[model_key] = {}
+        if patch_type not in patch_dict[model_key]:
+            patch_dict[model_key][patch_type] = [None] * 16
+        patch_dict[model_key][patch_type][int(weight_index)] = w
+
+    patch_flat = {}
+    for model_key, v in patch_dict.items():
+        for patch_type, weight_list in v.items():
+            patch_flat[model_key] = (patch_type, weight_list)
+
+    return patch_flat
+
 def easySave(images, filename_prefix, output_type, prompt=None, extra_pnginfo=None):
     """Save or Preview Image"""
     from nodes import PreviewImage, SaveImage

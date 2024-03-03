@@ -38,7 +38,7 @@ INPAINT_DIR = os.path.join(folder_paths.models_dir, "inpaint")
 
 RESOURCES_DIR = os.path.join(Path(__file__).parent.parent, "resources")
 FOOOCUS_STYLES_DIR = os.path.join(Path(__file__).parent.parent, "styles")
-
+LAYER_DIFFUSION_DIR = os.path.join(folder_paths.models_dir, "layer_model")
 
 FOOOCUS_STYLES_SAMPLES = 'https://raw.githubusercontent.com/lllyasviel/Fooocus/main/sdxl_styles/samples/'
 
@@ -56,5 +56,35 @@ FOOOCUS_INPAINT_PATCH = {
     },
     "inpaint (1.32GB)": {
         "model_url": "https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint.fooocus.patch"
+    },
+}
+
+LAYER_DIFFUSION_VAE = {
+    "encode": {
+       "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/vae_transparent_encoder.safetensors"
+    },
+    "decode": {
+        "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/vae_transparent_decoder.safetensors"
+    }
+}
+
+LAYER_DIFFUSION = {
+    "Only Transparent (Attention Injection)": {
+        "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_transparent_attn.safetensors"
+    },
+    "Only Transparent (Conv Injection)": {
+        "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_transparent_conv.safetensors"
+    },
+    "Foreground to Blending": {
+        "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_fg2ble.safetensors"
+    },
+    "Foreground blending to Background": {
+        "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_fgble2bg.safetensors"
+    },
+    "Background to Blending": {
+        "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_bg2ble.safetensors"
+    },
+    "Background blending to Foreground": {
+        "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_bgble2fg.safetensors"
     },
 }

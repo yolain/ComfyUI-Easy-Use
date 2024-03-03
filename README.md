@@ -43,13 +43,18 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 ## 更新日志
 
-**v1.0.9 [2024-3-3]**
+**v1.1.0 (2024/3/4)**
+
+- 增加 `easy preSamplingLayerDiffusion` 与 `easy kSamplerLayerDiffusion` （连接 `easy kSampler` 也能通）
+- 增加 在 加载器、预采样、采样器、Controlnet等节点上右键可快速替换同类型节点的便捷菜单
+- 增加 `easy instantIDApplyADV` 可连入 positive 与 negative
+- 修复 `easy instantIDApply` mask 未传入正确值
+
+**v1.0.9 (ff1add1)**
 
 - 修复未安装 ComfyUI-Impack-Pack 和 ComfyUI_InstantID 时报错
 - 修复 `easy pipeIn` - pipe设为可不必选
-
-(f9d01ff)
-- 新增 `easy instantIDApply` - 需要先安装 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID), 工作流参考[示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#InstantID)
+- 增加 `easy instantIDApply` - 需要先安装 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID), 工作流参考[示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#InstantID)
 - 修复 `easy detailerFix` 未添加到保存图片格式化扩展名可用节点列表
 - 修复 `easy XYInputs: PromptSR` 在替换负面提示词时报错
 

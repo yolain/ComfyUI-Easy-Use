@@ -19,7 +19,7 @@ function toggleWidget(node, widget, show = false, suffix = "") {
 	}
 	const origSize = node.size;
 
-	widget.type = show ? origProps[widget.name].origType : "esayHidden" + suffix;
+	widget.type = show ? origProps[widget.name].origType : "easyHidden" + suffix;
 	widget.computeSize = show ? origProps[widget.name].origComputeSize : () => [0, -4];
 
 	widget.linkedWidgets?.forEach(w => toggleWidget(node, w, ":" + widget.name, show));	
@@ -438,10 +438,12 @@ app.registerExtension({
 			case "easy preSamplingAdvanced":
 			case "easy preSamplingSdTurbo":
 			case "easy preSamplingCascade":
+			case "easy preSamplingLayerDiffusion":
 			case "easy fullkSampler":
 			case "easy kSampler":
 			case "easy kSamplerSDTurbo":
 			case "easy kSamplerTiled":
+			case "easy kSamplerLayerDiffusion":
 			case "easy kSamplerInpainting":
 			case "easy kSamplerDownscaleUnet":
 			case "easy fullCascadeKSampler":
@@ -753,7 +755,7 @@ app.registerExtension({
 			};
 		}
 
-		if (["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy fullkSampler", "easy fullCascadeKSampler"].includes(nodeData.name)) {
+		if (["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy preSamplingLayerDiffusion", "easy fullkSampler", "easy fullCascadeKSampler"].includes(nodeData.name)) {
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
 			nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;

@@ -1,10 +1,12 @@
 import { app } from "/scripts/app.js";
 import { applyTextReplacements } from "/scripts/utils.js";
 
+const extraNodes = ["easy imageSave", "easy fullkSampler", "easy kSampler", "easy kSamplerTiled","easy kSamplerInpainting", "easy kSamplerDownscaleUnet", "easy kSamplerSDTurbo","easy detailerFix"]
+
 app.registerExtension({
 	name: "Comfy.Easy.SaveImageExtraOutput",
 	async beforeRegisterNodeDef(nodeType, nodeData, app) {
-		if (["easy imageSave", "easy fullkSampler", "easy kSampler", "easy kSamplerTiled","easy kSamplerInpainting", "easy kSamplerDownscaleUnet", "easy kSamplerSDTurbo","easy detailerFix"].includes(nodeData.name)) {
+		if (extraNodes.includes(nodeData.name)) {
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
 			// When the SaveImage node is created we want to override the serialization of the output name widget to run our S&R
 			nodeType.prototype.onNodeCreated = function () {

@@ -2,6 +2,7 @@ import sys, os, re, json, time, math
 import torch
 import folder_paths
 import comfy.utils, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
+from comfy.utils import load_torch_file
 from comfy.sd import CLIP, VAE
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
@@ -11,12 +12,13 @@ from PIL import Image
 
 from server import PromptServer
 from nodes import MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode
-from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
+from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, LAYER_DIFFUSION_DIR, LAYER_DIFFUSION_VAE, LAYER_DIFFUSION
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
+from .layer_diffusion import LayerMethod, TransparentVAEDecoder
 
-from .libs.utils import find_nearest_steps, find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions
+from .libs.utils import find_nearest_steps, find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, to_lora_patch_dict, add_folder_path_and_extensions
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler
 from .libs.xyplot import easyXYPlot
@@ -35,6 +37,7 @@ add_folder_path_and_extensions("mmdets", [os.path.join(model_path, "mmdets")], f
 add_folder_path_and_extensions("sams", [os.path.join(model_path, "sams")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("onnx", [os.path.join(model_path, "onnx")], {'.onnx'})
 add_folder_path_and_extensions("instantid", [os.path.join(model_path, "instantid")], {'.bin'})
+add_folder_path_and_extensions("layer_model", [os.path.join(model_path, "layer_model")], {'.safetensors'})
 
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 
@@ -1609,6 +1612,7 @@ class instantIDApply:
                     "control_net": ("CONTROL_NET",),
                 },
                 "hidden": {
+                    "positive": None, "negative": None,
                     "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"
                 },
         }
@@ -1623,11 +1627,11 @@ class instantIDApply:
     def error(self):
         raise Exception(f"[ERROR] To use instantIDApply, you need to install 'ComfyUI_InstantID'")
 
-    def apply(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def apply(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, positive=None, negative=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         instantid_model, insightface_model, face_embeds = None, None, None
         model = pipe['model']
-        positive = pipe['positive']
-        negative = pipe['negative']
+        positive = positive if positive is not None else pipe['positive']
+        negative = negative if negative is not None else pipe['negative']
         # Load InstantID
         if "InstantIDModelLoader" in ALL_NODE_CLASS_MAPPINGS:
             load_instant_cls = ALL_NODE_CLASS_MAPPINGS["InstantIDModelLoader"]
@@ -1644,7 +1648,7 @@ class instantIDApply:
         if "ApplyInstantID" in ALL_NODE_CLASS_MAPPINGS:
             instantid_apply = ALL_NODE_CLASS_MAPPINGS['ApplyInstantID']
             control_net = easyControlnet().load_controlnet(control_net_name, control_net, cn_soft_weights)
-            model, positive, negative = instantid_apply().apply_instantid(instantid_model, insightface_model, control_net, image, model, positive, negative, start_at, end_at, weight=weight, ip_weight=None, cn_strength=cn_strength, noise=noise, image_kps=image_kps, mask=None)
+            model, positive, negative = instantid_apply().apply_instantid(instantid_model, insightface_model, control_net, image, model, positive, negative, start_at, end_at, weight=weight, ip_weight=None, cn_strength=cn_strength, noise=noise, image_kps=image_kps, mask=mask)
         else:
             self.error()
 
@@ -1665,6 +1669,52 @@ class instantIDApply:
         del pipe
 
         return (new_pipe, model, positive, negative)
+
+#Apply InstantID Advanced
+
+class instantIDApplyAdvanced:
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+                "required":{
+                     "pipe": ("PIPE_LINE",),
+                     "image": ("IMAGE",),
+                     "instantid_file": (folder_paths.get_filename_list("instantid"),),
+                     "insightface": (["CPU", "CUDA", "ROCM"],),
+                     "control_net_name": (folder_paths.get_filename_list("controlnet"),),
+                     "cn_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                     "cn_soft_weights": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},),
+                     "weight": ("FLOAT", {"default": .8, "min": 0.0, "max": 5.0, "step": 0.01, }),
+                     "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
+                     "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
+                     "noise": ("FLOAT", {"default": 0.35, "min": 0.0, "max": 1.0, "step": 0.05, }),
+                },
+                "optional": {
+                    "image_kps": ("IMAGE",),
+                    "mask": ("MASK",),
+                    "control_net": ("CONTROL_NET",),
+                    "positive": ("CONDITIONING",),
+                    "negative": ("CONDITIONING",),
+                },
+                "hidden": {
+                    "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"
+                },
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING")
+    RETURN_NAMES = ("pipe", "model", "positive", "negative")
+    OUTPUT_NODE = True
+
+    FUNCTION = "apply"
+    CATEGORY = "EasyUse/__for_testing"
+
+    def apply(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, positive=None, negative=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+
+        return instantIDApply().apply(pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps, mask, control_net, positive, negative, prompt, extra_pnginfo, my_unique_id)
 #---------------------------------------------------------------预采样 开始----------------------------------------------------------------------#
 
 # 预采样设置（基础）
@@ -2019,6 +2069,70 @@ class cascadeSettings:
 
         return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
 
+# layerDiffusion预采样参数
+class layerDiffusionSettings:
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required":
+            {
+             "pipe": ("PIPE_LINE",),
+             "method": ([LayerMethod.FG_ONLY_ATTN.value, LayerMethod.FG_ONLY_CONV.value],),
+             "weight": ("FLOAT",{"default": 1.0, "min": -1, "max": 3, "step": 0.05},),
+             "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+             "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+             "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler_ancestral"}),
+             "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "simple"}),
+             "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+             "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+             },
+            "optional": {
+                # "image_to_latent": ("IMAGE",),
+                # "latent": ("LATENT",),
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
+    OUTPUT_NODE = True
+
+    FUNCTION = "settings"
+    CATEGORY = "EasyUse/PreSampling"
+
+
+    def settings(self, pipe, method, weight, steps, cfg, sampler_name, scheduler, denoise, seed_num, prompt=None, extra_pnginfo=None, my_unique_id=None):
+
+        new_pipe = {
+            "model": pipe['model'],
+            "positive": pipe['positive'],
+            "negative": pipe['negative'],
+            "vae": pipe['vae'],
+            "clip": pipe['clip'],
+
+            "samples": pipe['samples'],
+            "images":  pipe['images'],
+            "seed": seed_num,
+
+            "loader_settings": {
+                **pipe["loader_settings"],
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler_name,
+                "scheduler": scheduler,
+                "denoise": denoise,
+                "add_noise": "enabled",
+                "layer_diffusion_method": method,
+                "layer_diffusion_weight": weight,
+            }
+        }
+
+        del pipe
+
+        return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
 
 # 预采样设置（动态CFG）
 from .dynthres_core import DynThresh
@@ -2164,8 +2278,9 @@ class dynamicThresholdingFull:
 # 完整采样器
 class samplerFull:
 
-    def __init__(self):
-        pass
+    def __init__(self) -> None:
+        self.vae_transparent_decoder = None
+        self.vae_transparent_encoder = None
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -2231,6 +2346,17 @@ class samplerFull:
         if add_noise == "disable":
             disable_noise = True
 
+        # LayerDiffusion
+        if "layer_diffusion_method" in pipe['loader_settings']:
+            method = LayerMethod(pipe['loader_settings']['layer_diffusion_method'])
+            weight = pipe['loader_settings']['layer_diffusion_weight'] if 'layer_diffusion_weight' in pipe['loader_settings'] else 1.0
+            model_file = get_local_filepath(LAYER_DIFFUSION[method.value]["model_url"], LAYER_DIFFUSION_DIR)
+            layer_lora_state_dict = load_torch_file(model_file)
+            layer_lora_patch_dict = to_lora_patch_dict(layer_lora_state_dict)
+            work_model = samp_model.clone()
+            work_model.add_patches(layer_lora_patch_dict, weight)
+            samp_model = work_model
+
         def downscale_model_unet(samp_model):
             if downscale_options is None:
                 return  samp_model
@@ -2271,6 +2397,10 @@ class samplerFull:
                                  image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id,
                                  preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise):
 
+            alpha = None
+            layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
+            # LayerDiffusion Decode
+
             # Downscale Model Unet
             if samp_model is not None:
                 samp_model = downscale_model_unet(samp_model)
@@ -2288,11 +2418,39 @@ class samplerFull:
             else:
                 samp_images = samp_vae.decode(latent).cpu()
 
+            # LayerDiffusion Decode
+            if layer_diffusion_method is not None:
+                if self.vae_transparent_decoder is None:
+                    decoder_file = get_local_filepath(LAYER_DIFFUSION_VAE['decode']["model_url"], LAYER_DIFFUSION_DIR)
+                    self.vae_transparent_decoder = TransparentVAEDecoder(
+                        load_torch_file(decoder_file),
+                        device=comfy.model_management.get_torch_device(),
+                        dtype=(torch.float16 if comfy.model_management.should_use_fp16() else torch.float32),
+                    )
+
+                pixel = samp_images.movedim(-1, 1)  # [B, H, W, C] => [B, C, H, W]
+                pixel_with_alpha = self.vae_transparent_decoder.decode_pixel(pixel, latent)
+                # [B, C, H, W] => [B, H, W, C]
+                pixel_with_alpha = pixel_with_alpha.movedim(1, -1)
+                image = pixel_with_alpha[..., 1:]
+                alpha = pixel_with_alpha[..., 0]
+
+                # mask to image
+                out = image.movedim(-1, 1)
+                if out.shape[1] == 3:  # RGB
+                    out = torch.cat([out, torch.ones_like(out[:, :1, :, :])], dim=1)
+                for i in range(out.shape[0]):
+                    out[i, 3, :, :] = alpha
+
+                new_images = out.movedim(1, -1)
+            else:
+                new_images = samp_images
+
             # 推理总耗时（包含解码）
             end_decode_time = int(time.time() * 1000)
             spent_time = '扩散:' + str((end_time-start_time)/1000)+'秒, 解码:' + str((end_decode_time-end_time)/1000)+'秒'
 
-            results = easySave(samp_images, save_prefix, image_output, prompt, extra_pnginfo)
+            results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
             sampler.update_value_by_id("results", my_unique_id, results)
 
             # Clean loaded_objects
@@ -2306,7 +2464,7 @@ class samplerFull:
                 "clip": samp_clip,
 
                 "samples": samp_samples,
-                "images": samp_images,
+                "images": new_images,
                 "seed": samp_seed,
 
                 "loader_settings": {
@@ -2317,17 +2475,19 @@ class samplerFull:
 
             sampler.update_value_by_id("pipe_line", my_unique_id, new_pipe)
 
+            result = (new_pipe, new_images, samp_images, alpha) if layer_diffusion_method is not None else sampler.get_output(new_pipe,)
+
             del pipe
 
             if image_output in ("Hide", "Hide/Save"):
                 return {"ui": {},
-                    "result": sampler.get_output(new_pipe, )}
+                    "result": result}
 
             if image_output in ("Sender", "Sender/Save"):
                 PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
             return {"ui": {"images": results},
-                    "result": sampler.get_output(new_pipe, )}
+                    "result": result}
 
         def process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative,
                            steps, cfg, sampler_name, scheduler, denoise,
@@ -2472,9 +2632,9 @@ class samplerSimple:
 
     def run(self, pipe, image_output, link_id, save_prefix, model=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
 
-        return samplerFull.run(self, pipe, None, None,None,None,None, image_output, link_id, save_prefix,
-                               None, model, None, None, None, None, None, None,
-                               tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
+        return samplerFull().run(pipe, None, None, None, None, None, image_output, link_id, save_prefix,
+                                 None, model, None, None, None, None, None, None,
+                                 None, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
 # 简易采样器 (Tiled)
 class samplerSimpleTiled:
@@ -2507,9 +2667,43 @@ class samplerSimpleTiled:
     CATEGORY = "EasyUse/Sampler"
 
     def run(self, pipe, tile_size=512, image_output='preview', link_id=0, save_prefix='ComfyUI', model=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
-        return samplerFull.run(self, pipe, None, None,None,None,None, image_output, link_id, save_prefix,
+        return samplerFull().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
                                None, model, None, None, None, None, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
+
+# 简易采样器 (LayerDiffusion)
+class samplerSimpleLayerDiffusion:
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required":
+                {"pipe": ("PIPE_LINE",),
+                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
+                 "save_prefix": ("STRING", {"default": "ComfyUI"})
+                 },
+                "optional": {
+                    "model": ("MODEL",),
+                },
+                "hidden": {
+                    "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
+                    "embeddingsList": (folder_paths.get_filename_list("embeddings"),)
+                  }
+                }
+
+    RETURN_TYPES = ("PIPE_LINE", "IMAGE", "IMAGE", "MASK")
+    RETURN_NAMES = ("pipe", "alpha_image", "original_image", "alpha")
+    OUTPUT_NODE = True
+    FUNCTION = "run"
+    CATEGORY = "EasyUse/Sampler"
+
+    def run(self, pipe, image_output='preview', link_id=0, save_prefix='ComfyUI', model=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+        return samplerFull().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
+                               None, model, None, None, None, None, None, None,
+                               None, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
 # 简易采样器(收缩Unet)
 class samplerSimpleDownscaleUnet:
@@ -2574,7 +2768,7 @@ class samplerSimpleDownscaleUnet:
                 "upscale_method": upscale_method
             }
 
-        return samplerFull.run(self, pipe, None, None,None,None,None, image_output, link_id, save_prefix,
+        return samplerFull().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
                                None, model, None, None, None, None, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise, downscale_options)
 # 简易采样器 (内补)
@@ -2670,7 +2864,8 @@ class samplerSimpleInpainting:
         else:
             new_pipe = pipe
         del pipe
-        return samplerFull.run(self, new_pipe, None, None,None,None,None, image_output, link_id, save_prefix,
+
+        return samplerFull().run(new_pipe, None, None,None,None,None, image_output, link_id, save_prefix,
                                None, model, None, None, None, None, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
@@ -2996,7 +3191,7 @@ class samplerCascadeSimple:
 
     def run(self, pipe, image_output, link_id, save_prefix, model_c=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
 
-        return samplerCascadeFull.run(self, pipe, None, None,None, None,None,None,None, image_output, link_id, save_prefix,
+        return samplerCascadeFull().run(pipe, None, None,None, None,None,None,None, image_output, link_id, save_prefix,
                                None, None, None, model_c, tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
 class unsampler:
@@ -4730,10 +4925,12 @@ NODE_CLASS_MAPPINGS = {
     "easy preSamplingSdTurbo": sdTurboSettings,
     "easy preSamplingDynamicCFG": dynamicCFGSettings,
     "easy preSamplingCascade": cascadeSettings,
+    "easy preSamplingLayerDiffusion": layerDiffusionSettings,
     # kSampler k采样器
     "easy fullkSampler": samplerFull,
     "easy kSampler": samplerSimple,
     "easy kSamplerTiled": samplerSimpleTiled,
+    "easy kSamplerLayerDiffusion": samplerSimpleLayerDiffusion,
     "easy kSamplerInpainting": samplerSimpleInpainting,
     "easy kSamplerDownscaleUnet": samplerSimpleDownscaleUnet,
     "easy kSamplerSDTurbo": samplerSDTurbo,
@@ -4775,7 +4972,9 @@ NODE_CLASS_MAPPINGS = {
     # __for_testing 测试
     "easy fooocusInpaintLoader": fooocusInpaintLoader,
     "easy instantIDApply": instantIDApply,
+    "easy instantIDApplyADV": instantIDApplyAdvanced,
 }
+
 NODE_DISPLAY_NAME_MAPPINGS = {
     # prompt 提示词
     "easy positive": "Positive",
@@ -4807,10 +5006,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy preSamplingSdTurbo": "PreSampling (SDTurbo)",
     "easy preSamplingDynamicCFG": "PreSampling (DynamicCFG)",
     "easy preSamplingCascade": "PreSampling (Cascade)",
+    "easy preSamplingLayerDiffusion": "PreSampling (LayerDiffusion)",
     # kSampler k采样器
     "easy kSampler": "EasyKSampler",
     "easy fullkSampler": "EasyKSampler (Full)",
     "easy kSamplerTiled": "EasyKSampler (Tiled Decode)",
+    "easy kSamplerLayerDiffusion": "EasyKSampler (LayerDiffusion)",
     "easy kSamplerInpainting": "EasyKSampler (Inpainting)",
     "easy kSamplerDownscaleUnet": "EasyKsampler (Downscale Unet)",
     "easy kSamplerSDTurbo": "EasyKSampler (SDTurbo)",
@@ -4851,5 +5052,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "dynamicThresholdingFull": "DynamicThresholdingFull",
     # __for_testing 测试
     "easy fooocusInpaintLoader": "Load Fooocus Inpaint",
-    "easy instantIDApply": "Easy Apply InstantID"
+    "easy instantIDApply": "Easy Apply InstantID",
+    "easy instantIDApplyADV": "Easy Apply InstantID (Advanced)",
 }
