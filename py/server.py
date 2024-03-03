@@ -156,21 +156,6 @@ def prompt_seed_update(json_data):
                         if isinstance(v['inputs']['seed_num'], int):
                             v['inputs']['seed_num'] = value
 
-                    # 修改和seed节点连接的节点 (没有作用,不生效)
-                    # if cls == 'easy seed':
-                    #     outputs = extra_data.get('outputs')
-                    #     if outputs and outputs[0] and 'links' in outputs[0]:
-                    #         for id in outputs[0]['links']:
-                    #             for x in workflow["nodes"]:
-                    #                 if "inputs" in x and x['inputs'] != []:
-                    #                     x_seed_num = next((i for i in x['inputs'] if i['name'] == 'seed_num' and i['type'] == 'INT'), None)
-                    #                     if x_seed_num is not None and "link" in x_seed_num and id == x_seed_num['link']:
-                    #                         widgets_values = x['widgets_values']
-                    #                         if widgets_values:
-                    #                             widgets_values[len(widgets_values)-1] = action
-                    #                             widgets_values[len(widgets_values)-2] = value
-                    #                         print(x)
-
 
     return value is not None
 

@@ -16,7 +16,7 @@ from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
 
-from .libs.utils import find_nearest_steps, find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath
+from .libs.utils import find_nearest_steps, find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler
 from .libs.xyplot import easyXYPlot
@@ -24,6 +24,17 @@ from .libs.controlnet import easyControlnet
 
 sampler = easySampler()
 easyCache = easyLoader()
+
+model_path = folder_paths.models_dir
+add_folder_path_and_extensions("ultralytics_bbox", [os.path.join(model_path, "ultralytics", "bbox")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("ultralytics_segm", [os.path.join(model_path, "ultralytics", "segm")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("ultralytics", [os.path.join(model_path, "ultralytics")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("mmdets_bbox", [os.path.join(model_path, "mmdets", "bbox")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("mmdets_segm", [os.path.join(model_path, "mmdets", "segm")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("mmdets", [os.path.join(model_path, "mmdets")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("sams", [os.path.join(model_path, "sams")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("onnx", [os.path.join(model_path, "onnx")], {'.onnx'})
+add_folder_path_and_extensions("instantid", [os.path.join(model_path, "instantid")], {'.bin'})
 
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 
@@ -819,7 +830,7 @@ class fullLoader:
                                     "empty_samples": samples, }
                 }
 
-        return {"ui": {"positive": positive_wildcard_prompt, "negative": negative_wildcard_prompt}, "result": (pipe, model, vae, clip, positive, negative, samples)}
+        return {"ui": {"positive": positive_wildcard_prompt, "negative": negative_wildcard_prompt}, "result": (pipe, model, vae, clip, positive_embeddings_final, negative_embeddings_final, samples)}
 
 # A1111简易加载器
 class a1111Loader:
@@ -3529,10 +3540,9 @@ class pipeIn:
     @classmethod
     def INPUT_TYPES(s):
         return {
-             "required":{
-                 "pipe": ("PIPE_LINE",),
-             },
+             "required": {},
              "optional": {
+                "pipe": ("PIPE_LINE",),
                 "model": ("MODEL",),
                 "pos": ("CONDITIONING",),
                 "neg": ("CONDITIONING",),
@@ -3551,7 +3561,7 @@ class pipeIn:
 
     CATEGORY = "EasyUse/Pipe"
 
-    def flush(self, pipe, model=None, pos=None, neg=None, latent=None, vae=None, clip=None, image=None, xyplot=None, my_unique_id=None):
+    def flush(self, pipe=None, model=None, pos=None, neg=None, latent=None, vae=None, clip=None, image=None, xyplot=None, my_unique_id=None):
 
         model = model if model is not None else pipe.get("model")
         if model is None:
@@ -3572,15 +3582,16 @@ class pipeIn:
         if clip is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Clip missing from pipeLine")
         if image is None:
-            image = pipe.get("images")
+            image = pipe.get("images") if pipe is not None else None
         else:
             batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
             samples = {"samples": vae.encode(image)}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
-        seed = pipe.get("seed")
-        if seed is None:
-            log_node_warn(f'pipeIn[{my_unique_id}]', "Seed missing from pipeLine")
-        xyplot = xyplot or pipe['loader_settings']['xyplot'] if 'xyplot' in pipe['loader_settings'] else None
+
+        if pipe is None:
+            pipe = {"loader_settings": {"positive": "", "negative": "", "xyplot": None}}
+
+        xyplot = xyplot if xyplot is not None else  pipe['loader_settings']['xyplot'] if xyplot in pipe['loader_settings'] else None
 
         new_pipe = {
             "model": model,
@@ -3591,12 +3602,10 @@ class pipeIn:
 
             "samples": samples,
             "images": image,
-            "seed": seed,
+            "seed": pipe.get('seed') if pipe is not None and "seed" in pipe else None,
 
             "loader_settings": {
                 **pipe["loader_settings"],
-                "positive": "",
-                "negative": "",
                 "xyplot": xyplot
             }
         }

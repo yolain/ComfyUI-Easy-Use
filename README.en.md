@@ -41,6 +41,10 @@ Usage：<br>
 
 **v1.0.9 [2024-3-2]**
 
+- Fixed the error when ComfyUI-Impack-Pack and ComfyUI_InstantID were not installed
+- Fixed `easy pipeIn`
+- 
+(f9d01ff)
 - Added `easy instantIDApply` - you need installed [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID) fisrt, Workflow[Example](https://github.com/yolain/ComfyUI-Easy-Use/blob/main/README.en.md#InstantID)
 - Fixed `easy detailerFix` not added to the list of nodes available for saving images formatting extensions
 - Fixed `easy XYInputs: PromptSR` errors are reported when replacing negative prompts

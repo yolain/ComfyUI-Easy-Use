@@ -16,6 +16,17 @@ def compare_revision(num):
         comfy_ui_revision = get_comfyui_revision()
     return True if comfy_ui_revision == 'Unknown' or int(comfy_ui_revision) >= num else False
 
+import folder_paths
+def add_folder_path_and_extensions(folder_name, full_folder_paths, extensions):
+    for full_folder_path in full_folder_paths:
+        folder_paths.add_model_folder_path(folder_name, full_folder_path)
+    if folder_name in folder_paths.folder_names_and_paths:
+        current_paths, current_extensions = folder_paths.folder_names_and_paths[folder_name]
+        updated_extensions = current_extensions | extensions
+        folder_paths.folder_names_and_paths[folder_name] = (current_paths, updated_extensions)
+    else:
+        folder_paths.folder_names_and_paths[folder_name] = (full_folder_paths, extensions)
+
 def find_nearest_steps(clip_id, prompt):
     """Find the nearest KSampler or preSampling node that references the given id."""
     def check_link_to_clip(node_id, clip_id, visited=None, node=None):
