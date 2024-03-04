@@ -4,6 +4,7 @@ import folder_paths
 import comfy.utils, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
 from comfy.utils import load_torch_file
 from comfy.sd import CLIP, VAE
+from comfy.conds import CONDRegular
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
 from comfy_extras.nodes_mask import LatentCompositeMasked
@@ -1003,7 +1004,6 @@ class cascadeLoader:
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        print(self.is_ckpt(stage_c))
         if self.is_ckpt(stage_c):
             model_c, clip, vae_c, clip_vision = easyCache.load_checkpoint(stage_c)
         else:
@@ -1250,8 +1250,6 @@ class svdLoader:
 
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
-
-        print(ckpt_name)
 
         model, clip, vae, clip_vision = easyCache.load_checkpoint(ckpt_name, "Default", True)
 
@@ -2080,7 +2078,7 @@ class layerDiffusionSettings:
         return {"required":
             {
              "pipe": ("PIPE_LINE",),
-             "method": ([LayerMethod.FG_ONLY_ATTN.value, LayerMethod.FG_ONLY_CONV.value],),
+             "method": ([LayerMethod.FG_ONLY_ATTN.value, LayerMethod.FG_ONLY_CONV.value, LayerMethod.FG_TO_BLEND.value, LayerMethod.BG_TO_BLEND.value],),
              "weight": ("FLOAT",{"default": 1.0, "min": -1, "max": 3, "step": 0.05},),
              "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
              "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
@@ -2090,8 +2088,10 @@ class layerDiffusionSettings:
              "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
              },
             "optional": {
-                # "image_to_latent": ("IMAGE",),
+                "image": ("IMAGE",),
+                "blended_image": ("IMAGE",),
                 # "latent": ("LATENT",),
+                # "blended_latent": ("LATENT",),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
@@ -2103,8 +2103,44 @@ class layerDiffusionSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
+    def get_layer_diffusion_method(self, method, has_blend_latent):
+        method = LayerMethod(method)
+        if has_blend_latent:
+            if method == LayerMethod.BG_TO_BLEND:
+                method = LayerMethod.BG_BLEND_TO_FG
+            elif method == LayerMethod.FG_TO_BLEND:
+                method = LayerMethod.FG_BLEND_TO_BG
+        return method
 
-    def settings(self, pipe, method, weight, steps, cfg, sampler_name, scheduler, denoise, seed_num, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, method, weight, steps, cfg, sampler_name, scheduler, denoise, seed_num, image=None, blended_image=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+
+        blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
+        vae = pipe["vae"]
+        batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+
+        method = self.get_layer_diffusion_method(method, blend_samples is not None or blended_image is not None)
+
+        if image is not None:
+            samples = {"samples": vae.encode(image)}
+            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+            images = image
+        elif "samp_images" in pipe:
+            samples = {"samples": vae.encode(pipe["samp_images"])}
+            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+            images = pipe["samp_images"]
+        else:
+            if method not in [LayerMethod.FG_ONLY_ATTN, LayerMethod.FG_ONLY_CONV]:
+                raise Exception("image is missing")
+
+            samples = pipe["samples"]
+            images = pipe["images"]
+
+        if method in [LayerMethod.BG_BLEND_TO_FG, LayerMethod.FG_BLEND_TO_BG]:
+            if blended_image is None and blend_samples is None:
+                raise Exception("blended_image is missing")
+            elif blended_image is not None:
+                blend_samples = {"samples": vae.encode(blended_image)}
+                blend_samples = RepeatLatentBatch().repeat(blend_samples, batch_size)[0]
 
         new_pipe = {
             "model": pipe['model'],
@@ -2113,8 +2149,9 @@ class layerDiffusionSettings:
             "vae": pipe['vae'],
             "clip": pipe['clip'],
 
-            "samples": pipe['samples'],
-            "images":  pipe['images'],
+            "samples": samples,
+            "blend_samples": blend_samples,
+            "images": images,
             "seed": seed_num,
 
             "loader_settings": {
@@ -2273,8 +2310,7 @@ class dynamicThresholdingFull:
         m.set_model_sampler_cfg_function(sampler_dyn_thresh)
         return (m,)
 
-#---------------------------------------------------------------采样器 开始----------------------------------------------------------------------#
-
+#---------------------------------------------------------------采样器 开始----------------------------------------------------------------------
 # 完整采样器
 class samplerFull:
 
@@ -2317,6 +2353,55 @@ class samplerFull:
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
+    def get_layer_diffusion_method(self, method, has_blend_latent):
+        method = LayerMethod(method)
+        if method == LayerMethod.BG_TO_BLEND and has_blend_latent:
+            method = LayerMethod.BG_BLEND_TO_FG
+        elif method == LayerMethod.FG_TO_BLEND and has_blend_latent:
+            method = LayerMethod.FG_BLEND_TO_BG
+        return method
+
+    def apply_layer_c_concat(self, cond, uncond, c_concat):
+        def write_c_concat(cond):
+            new_cond = []
+            for t in cond:
+                n = [t[0], t[1].copy()]
+                if "model_conds" not in n[1]:
+                    n[1]["model_conds"] = {}
+                n[1]["model_conds"]["c_concat"] = CONDRegular(c_concat)
+                new_cond.append(n)
+            return new_cond
+
+        return (write_c_concat(cond), write_c_concat(uncond))
+
+    def apply_layer_diffusion(self, model: ModelPatcher, method, weight, samples, blend_samples, positive, negative):
+
+        model_file = get_local_filepath(LAYER_DIFFUSION[method.value]["model_url"], LAYER_DIFFUSION_DIR)
+        layer_lora_state_dict = load_torch_file(model_file)
+        layer_lora_patch_dict = to_lora_patch_dict(layer_lora_state_dict)
+        work_model = model.clone()
+        work_model.add_patches(layer_lora_patch_dict, weight)
+
+        # cond_contact
+        if method in [LayerMethod.FG_ONLY_ATTN, LayerMethod.FG_ONLY_CONV]:
+            samp_model = work_model
+        else:
+            if method in [LayerMethod.BG_TO_BLEND, LayerMethod.FG_TO_BLEND]:
+                c_concat = model.model.latent_format.process_in(samples["samples"])
+            else:
+                c_concat = model.model.latent_format.process_in(torch.cat([samples["samples"], blend_samples["samples"]], dim=1))
+            samp_model, positive, negative = (work_model,) + self.apply_layer_c_concat(positive, negative, c_concat)
+
+        return samp_model, positive, negative
+
+    def join_image_with_alpha(self, image, alpha):
+        out = image.movedim(-1, 1)
+        if out.shape[1] == 3:  # RGB
+            out = torch.cat([out, torch.ones_like(out[:, :1, :, :])], dim=1)
+        for i in range(out.shape[0]):
+            out[i, 3, :, :] = alpha
+        return out.movedim(1, -1)
+
     def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed_num=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None):
 
         # Clean loaded_objects
@@ -2348,14 +2433,11 @@ class samplerFull:
 
         # LayerDiffusion
         if "layer_diffusion_method" in pipe['loader_settings']:
-            method = LayerMethod(pipe['loader_settings']['layer_diffusion_method'])
+            samp_blend_samples = pipe["blend_samples"] if "blend_samples" in pipe else None
+            method = self.get_layer_diffusion_method(pipe['loader_settings']['layer_diffusion_method'], samp_blend_samples is not None)
+
             weight = pipe['loader_settings']['layer_diffusion_weight'] if 'layer_diffusion_weight' in pipe['loader_settings'] else 1.0
-            model_file = get_local_filepath(LAYER_DIFFUSION[method.value]["model_url"], LAYER_DIFFUSION_DIR)
-            layer_lora_state_dict = load_torch_file(model_file)
-            layer_lora_patch_dict = to_lora_patch_dict(layer_lora_state_dict)
-            work_model = samp_model.clone()
-            work_model.add_patches(layer_lora_patch_dict, weight)
-            samp_model = work_model
+            samp_model, samp_positive, samp_negative = self.apply_layer_diffusion(samp_model, method, weight, samp_samples, samp_blend_samples, samp_positive, samp_negative)
 
         def downscale_model_unet(samp_model):
             if downscale_options is None:
@@ -2398,9 +2480,7 @@ class samplerFull:
                                  preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise):
 
             alpha = None
-            layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
-            # LayerDiffusion Decode
-
+            blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
             # Downscale Model Unet
             if samp_model is not None:
                 samp_model = downscale_model_unet(samp_model)
@@ -2419,30 +2499,28 @@ class samplerFull:
                 samp_images = samp_vae.decode(latent).cpu()
 
             # LayerDiffusion Decode
+            layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
             if layer_diffusion_method is not None:
-                if self.vae_transparent_decoder is None:
-                    decoder_file = get_local_filepath(LAYER_DIFFUSION_VAE['decode']["model_url"], LAYER_DIFFUSION_DIR)
-                    self.vae_transparent_decoder = TransparentVAEDecoder(
-                        load_torch_file(decoder_file),
-                        device=comfy.model_management.get_torch_device(),
-                        dtype=(torch.float16 if comfy.model_management.should_use_fp16() else torch.float32),
-                    )
+                method = self.get_layer_diffusion_method(layer_diffusion_method, blend_samples is not None)
+                print(method.value)
+                if method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN, LayerMethod.BG_BLEND_TO_FG]:
+                    if self.vae_transparent_decoder is None:
+                        decoder_file = get_local_filepath(LAYER_DIFFUSION_VAE['decode']["model_url"], LAYER_DIFFUSION_DIR)
+                        self.vae_transparent_decoder = TransparentVAEDecoder(
+                            load_torch_file(decoder_file),
+                            device=comfy.model_management.get_torch_device(),
+                            dtype=(torch.float16 if comfy.model_management.should_use_fp16() else torch.float32),
+                        )
 
-                pixel = samp_images.movedim(-1, 1)  # [B, H, W, C] => [B, C, H, W]
-                pixel_with_alpha = self.vae_transparent_decoder.decode_pixel(pixel, latent)
-                # [B, C, H, W] => [B, H, W, C]
-                pixel_with_alpha = pixel_with_alpha.movedim(1, -1)
-                image = pixel_with_alpha[..., 1:]
-                alpha = pixel_with_alpha[..., 0]
-
-                # mask to image
-                out = image.movedim(-1, 1)
-                if out.shape[1] == 3:  # RGB
-                    out = torch.cat([out, torch.ones_like(out[:, :1, :, :])], dim=1)
-                for i in range(out.shape[0]):
-                    out[i, 3, :, :] = alpha
-
-                new_images = out.movedim(1, -1)
+                    pixel = samp_images.movedim(-1, 1)  # [B, H, W, C] => [B, C, H, W]
+                    pixel_with_alpha = self.vae_transparent_decoder.decode_pixel(pixel, latent)
+                    # [B, C, H, W] => [B, H, W, C]
+                    pixel_with_alpha = pixel_with_alpha.movedim(1, -1)
+                    image = pixel_with_alpha[..., 1:]
+                    alpha = pixel_with_alpha[..., 0]
+                    new_images = self.join_image_with_alpha(image, alpha)
+                else:
+                    new_images = samp_images
             else:
                 new_images = samp_images
 
@@ -2464,7 +2542,10 @@ class samplerFull:
                 "clip": samp_clip,
 
                 "samples": samp_samples,
+                "blend_samples": blend_samples,
                 "images": new_images,
+                "samp_images": samp_images,
+                "alpha": alpha,
                 "seed": samp_seed,
 
                 "loader_settings": {
@@ -2475,19 +2556,17 @@ class samplerFull:
 
             sampler.update_value_by_id("pipe_line", my_unique_id, new_pipe)
 
-            result = (new_pipe, new_images, samp_images, alpha) if layer_diffusion_method is not None else sampler.get_output(new_pipe,)
-
             del pipe
 
             if image_output in ("Hide", "Hide/Save"):
                 return {"ui": {},
-                    "result": result}
+                    "result": sampler.get_output(new_pipe,)}
 
             if image_output in ("Sender", "Sender/Save"):
                 PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
             return {"ui": {"images": results},
-                    "result": result}
+                    "result": sampler.get_output(new_pipe,)}
 
         def process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative,
                            steps, cfg, sampler_name, scheduler, denoise,
@@ -2695,15 +2774,17 @@ class samplerSimpleLayerDiffusion:
                 }
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE", "IMAGE", "MASK")
-    RETURN_NAMES = ("pipe", "alpha_image", "original_image", "alpha")
+    RETURN_NAMES = ("pipe", "final_image", "original_image", "alpha")
     OUTPUT_NODE = True
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
     def run(self, pipe, image_output='preview', link_id=0, save_prefix='ComfyUI', model=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
-        return samplerFull().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
+        result = samplerFull().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
                                None, model, None, None, None, None, None, None,
                                None, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
+        pipe = result["result"][0] if "result" in result else None
+        return ({"ui":result['ui'], "result":(pipe, pipe["images"], pipe["samp_images"], pipe["alpha"])})
 
 # 简易采样器(收缩Unet)
 class samplerSimpleDownscaleUnet:
@@ -3789,6 +3870,7 @@ class pipeIn:
         xyplot = xyplot if xyplot is not None else  pipe['loader_settings']['xyplot'] if xyplot in pipe['loader_settings'] else None
 
         new_pipe = {
+            **pipe,
             "model": model,
             "positive": pos,
             "negative": neg,

@@ -1,7 +1,9 @@
 import os
+import sys
 import glob
 import folder_paths
 import importlib
+import subprocess
 
 node_list = [
     "server",

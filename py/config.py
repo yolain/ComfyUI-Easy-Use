@@ -69,22 +69,22 @@ LAYER_DIFFUSION_VAE = {
 }
 
 LAYER_DIFFUSION = {
-    "Only Transparent (Attention Injection)": {
+    "Attention Injection": {
         "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_transparent_attn.safetensors"
     },
-    "Only Transparent (Conv Injection)": {
+    "Conv Injection": {
         "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_transparent_conv.safetensors"
     },
-    "Foreground to Blending": {
+    "Foreground": {
         "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_fg2ble.safetensors"
     },
-    "Foreground blending to Background": {
+    "Foreground to Background": {
         "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_fgble2bg.safetensors"
     },
-    "Background to Blending": {
+    "Background": {
         "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_bg2ble.safetensors"
     },
-    "Background blending to Foreground": {
+    "Background to Foreground": {
         "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_bgble2fg.safetensors"
     },
 }
