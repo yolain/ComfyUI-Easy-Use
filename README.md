@@ -30,21 +30,28 @@
 
 首次安装的用户，如需使用本节点包UI主题，请在安装节点包在 Settings -> Color Palette 中自行切换并**刷新页面**即可。
 
-
 ### Stable Cascade
 
 [工作流示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade) <br><br>
-目前支持文生图与图生图，还未支持Lora和Controlnet，敬请期待!<br>
 stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)模型或原来的unet模型 <br><br>
 
 使用方式：<br>
 1.选择[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)模型无需额外加载其余的VAE及clip<br> 
 2.选择Unet模型的话需要额外加载[stage_a](https://huggingface.co/stabilityai/stable-cascade/blob/main/stage_a.safetensors)、[clip](https://huggingface.co/stabilityai/stable-cascade/resolve/main/text_encoder/model.safetensors)及图生图需要用到的[effnet_encoder](https://huggingface.co/stabilityai/stable-cascade/resolve/main/effnet_encoder.safetensors?download=true)和[previewer](https://huggingface.co/stabilityai/stable-cascade/resolve/main/previewer.safetensors)。<br>
 
+### LayerDiffusion
+
+[工作流示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#LayerDiffusion) <br><br>
+
+使用方式：<br>
+你需要运行 `pip install -r requirements.txt` 安装所需依赖 当 **diffusers** 依赖项没有安装的时候。
+
+
 ## 更新日志
 
 **v1.1.0 (2024/3/4)**
 
+- 增加 `easy pipeEdit` - 可编辑Pipe的节点（包含可重新输入提示词）
 - 增加 `easy preSamplingLayerDiffusion` 与 `easy kSamplerLayerDiffusion` （连接 `easy kSampler` 也能通）
 - 增加 在 加载器、预采样、采样器、Controlnet等节点上右键可快速替换同类型节点的便捷菜单
 - 增加 `easy instantIDApplyADV` 可连入 positive 与 negative
@@ -262,6 +269,9 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 #### InstantID
 
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/instantID.png">
+
+### LayerDiffusion
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/layer_diffusion_example.png">
 
 ### StableCascade
 #### 文生图

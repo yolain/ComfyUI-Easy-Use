@@ -30,17 +30,24 @@ After installing the node package, the UI interface will be automatically switch
 ### Stable Cascade
 
 [WorkFlow Example](https://github.com/yolain/ComfyUI-Easy-Use/blob/main/README.en.md#StableCascade) <br><br>
-Currently, txt2img and img2img are supported，Lora and Controlnet are comming soon!<br><br>
 
 Usage：<br>
 1.There is no need to load the rest of the VAE and clips when you are choose [checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints) models.<br> 
 2.You need to load it extra [stage_a](https://huggingface.co/stabilityai/stable-cascade/blob/main/stage_a.safetensors)、[clip](https://huggingface.co/stabilityai/stable-cascade/resolve/main/text_encoder/model.safetensors) and [effnet_encoder](https://huggingface.co/stabilityai/stable-cascade/resolve/main/effnet_encoder.safetensors?download=true)、[previewer](https://huggingface.co/stabilityai/stable-cascade/resolve/main/previewer.safetensors) for img2img when you are choose unet models.<br>
 <br>
 
+### Layer Diffusion
+
+[WorkFlow Example](https://github.com/yolain/ComfyUI-Easy-Use/blob/main/README.en.md#LayerDiffusion) <br><br>
+
+Usage：<br>
+you need to run `pip install -r requirements.txt` to install python dependencies when **diffusers** was not installed.
+
 ## Changelog
 
 **v1.1.0 (2024/3/4)**
 
+- Added `easy pipeEdit` - nodes that can edit pipes (including re-enterable prompts)
 - Added `easy preSamplingLayerDiffusion` and `easy kSamplerLayerDiffusion`
 - Added a convenient menu to right-click on nodes such as Loader, Presampler, Sampler, Controlnet, etc. to quickly replace nodes of the same type
 - Added `easy instantIDApplyADV` can link positive and negative
@@ -255,6 +262,8 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/sdturbo_hiresfix_svd.png">
 
+### LayerDiffusion
+<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/layer_diffusion_example.png">
 
 ### StableCascade
 #### Text to image
