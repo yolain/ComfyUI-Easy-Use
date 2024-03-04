@@ -2,7 +2,9 @@ import torch.nn as nn
 import torch
 import cv2
 import numpy as np
+import comfy.model_management
 
+from comfy.model_patcher import ModelPatcher
 from enum import Enum
 from tqdm import tqdm
 from typing import Optional, Tuple
@@ -19,6 +21,7 @@ try:
     from diffusers.configuration_utils import ConfigMixin, register_to_config
     from diffusers.models.modeling_utils import ModelMixin
     from diffusers.models.unet_2d_blocks import UNetMidBlock2D, get_down_block, get_up_block
+    import functools
 
     def zero_module(module):
         """
@@ -309,10 +312,67 @@ try:
             assert y.shape[1] == 4
             return y
 
+
+    def calculate_weight_adjust_channel(func):
+        @functools.wraps(func)
+        def calculate_weight(
+                self: ModelPatcher, patches, weight: torch.Tensor, key: str
+        ) -> torch.Tensor:
+            weight = func(self, patches, weight, key)
+
+            for p in patches:
+                alpha = p[0]
+                v = p[1]
+
+                if isinstance(v, list):
+                    v = (func(v[1:], v[0].clone(), key),)
+
+                if len(v) == 1:
+                    patch_type = "diff"
+                elif len(v) == 2:
+                    patch_type = v[0]
+                    v = v[1]
+
+                if patch_type == "diff":
+                    w1 = v[0]
+                    if all(
+                            (
+                                    alpha != 0.0,
+                                    w1.shape != weight.shape,
+                                    w1.ndim == weight.ndim == 4,
+                            )
+                    ):
+                        new_shape = [max(n, m) for n, m in zip(weight.shape, w1.shape)]
+                        print(
+                            f"Merged with {key} channel changed from {weight.shape} to {new_shape}"
+                        )
+                        new_diff = alpha * comfy.model_management.cast_to_device(
+                            w1, weight.device, weight.dtype
+                        )
+                        new_weight = torch.zeros(size=new_shape).to(weight)
+                        new_weight[
+                        : weight.shape[0],
+                        : weight.shape[1],
+                        : weight.shape[2],
+                        : weight.shape[3],
+                        ] = weight
+                        new_weight[
+                        : new_diff.shape[0],
+                        : new_diff.shape[1],
+                        : new_diff.shape[2],
+                        : new_diff.shape[3],
+                        ] += new_diff
+                        new_weight = new_weight.contiguous().clone()
+                        weight = new_weight
+            return weight
+
+        return calculate_weight
+
 except ImportError:
     ModelMixin = None
     ConfigMixin = None
     TransparentVAEDecoder = None
+    calculate_weight_adjust_channel = None
     print("\33[31mModule 'diffusers' not installed. Please install it via:\033[0m")
     print("\33[31mpip install diffusers\033[0m")
 

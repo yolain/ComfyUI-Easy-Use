@@ -17,7 +17,7 @@ from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, 
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
-from .layer_diffusion import LayerMethod, TransparentVAEDecoder
+from .layer_diffusion import LayerMethod, TransparentVAEDecoder, calculate_weight_adjust_channel
 
 from .libs.utils import find_nearest_steps, find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, to_lora_patch_dict, add_folder_path_and_extensions
 from .libs.loader import easyLoader
@@ -2068,6 +2068,10 @@ class cascadeSettings:
         return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
 
 # layerDiffusion预采样参数
+try:
+    ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
+except:
+    pass
 class layerDiffusionSettings:
 
     def __init__(self):
@@ -2311,6 +2315,7 @@ class dynamicThresholdingFull:
         return (m,)
 
 #---------------------------------------------------------------采样器 开始----------------------------------------------------------------------
+
 # 完整采样器
 class samplerFull:
 
