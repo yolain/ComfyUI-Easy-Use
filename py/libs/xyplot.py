@@ -403,12 +403,12 @@ class easyXYPlot():
             clip = clip.clone()
             clip.clip_layer(plot_image_vars['clip_skip'])
 
-            positive = self.advanced_encode(clip, plot_image_vars['positive'],
+            positive = advanced_encode(clip, plot_image_vars['positive'],
                                                         plot_image_vars['positive_token_normalization'],
                                                         plot_image_vars['positive_weight_interpretation'], w_max=1.0,
                                                         apply_to_pooled="enable",a1111_prompt_style=a1111_prompt_style, steps=steps)
 
-            negative = self.advanced_encode(clip, plot_image_vars['negative'],
+            negative = advanced_encode(clip, plot_image_vars['negative'],
                                                         plot_image_vars['negative_token_normalization'],
                                                         plot_image_vars['negative_weight_interpretation'], w_max=1.0,
                                                         apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
