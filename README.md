@@ -39,7 +39,7 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 1.选择[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)模型无需额外加载其余的VAE及clip<br> 
 2.选择Unet模型的话需要额外加载[stage_a](https://huggingface.co/stabilityai/stable-cascade/blob/main/stage_a.safetensors)、[clip](https://huggingface.co/stabilityai/stable-cascade/resolve/main/text_encoder/model.safetensors)及图生图需要用到的[effnet_encoder](https://huggingface.co/stabilityai/stable-cascade/resolve/main/effnet_encoder.safetensors?download=true)和[previewer](https://huggingface.co/stabilityai/stable-cascade/resolve/main/previewer.safetensors)。<br>
 
-### LayerDiffusion
+### Layer Diffusion
 
 [工作流示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#LayerDiffusion) <br><br>
 
