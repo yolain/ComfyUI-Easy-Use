@@ -2068,10 +2068,7 @@ class cascadeSettings:
         return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
 
 # layerDiffusion预采样参数
-try:
-    ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
-except:
-    pass
+
 class layerDiffusionSettings:
 
     def __init__(self):
@@ -2442,6 +2439,10 @@ class samplerFull:
             method = self.get_layer_diffusion_method(pipe['loader_settings']['layer_diffusion_method'], samp_blend_samples is not None)
 
             weight = pipe['loader_settings']['layer_diffusion_weight'] if 'layer_diffusion_weight' in pipe['loader_settings'] else 1.0
+            try:
+                ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
+            except:
+                pass
             samp_model, samp_positive, samp_negative = self.apply_layer_diffusion(samp_model, method, weight, samp_samples, samp_blend_samples, samp_positive, samp_negative)
 
         def downscale_model_unet(samp_model):

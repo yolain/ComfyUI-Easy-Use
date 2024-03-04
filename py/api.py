@@ -6,6 +6,7 @@ import json
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .easyNodes import easyCache
+from .logic import ConvertAnything
 
 try:
     import aiohttp
@@ -84,6 +85,19 @@ async def getStylesImage(request):
         elif styles_name == 'fooocus_styles':
             return web.Response(text=FOOOCUS_STYLES_SAMPLES + name + '.jpg')
     return web.Response(status=400)
+
+@PromptServer.instance.routes.post("/easyuse/convert")
+async def convertType(request):
+    post = await request.post()
+    type = post.get('type')
+    print(type)
+    if type:
+        ConvertAnything.RETURN_TYPES = (type.upper(),)
+        ConvertAnything.RETURN_NAMES = (type,)
+        print(ConvertAnything.RETURN_TYPES)
+        return web.Response(status=200)
+    else:
+        return web.Response(status=400)
 
 
 NODE_CLASS_MAPPINGS = {}
