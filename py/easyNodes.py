@@ -3927,6 +3927,147 @@ class pipeOut:
 
         return pipe, model, pos, neg, latent, vae, clip, image, seed
 
+
+# pipeEdit
+class pipeEdit:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+             "required": {
+                 "clip_skip": ("INT", {"default": -1, "min": -24, "max": 0, "step": 1}),
+
+                 "optional_positive": ("STRING", {"default": "", "multiline": True}),
+                 "positive_token_normalization": (["none", "mean", "length", "length+mean"],),
+                 "positive_weight_interpretation": (["comfy", "A1111", "comfy++", "compel", "fixed attention"],),
+
+                 "optional_negative": ("STRING", {"default": "", "multiline": True}),
+                 "negative_token_normalization": (["none", "mean", "length", "length+mean"],),
+                 "negative_weight_interpretation": (["comfy", "A1111", "comfy++", "compel", "fixed attention"],),
+
+                 "a1111_prompt_style": ("BOOLEAN", {"default": False})
+             },
+             "optional": {
+                "pipe": ("PIPE_LINE",),
+                "model": ("MODEL",),
+                "pos": ("CONDITIONING",),
+                "neg": ("CONDITIONING",),
+                "latent": ("LATENT",),
+                "vae": ("VAE",),
+                "clip": ("CLIP",),
+                "image": ("IMAGE",),
+             },
+            "hidden": {"my_unique_id": "UNIQUE_ID", "prompt":"PROMPT"},
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING", "LATENT", "VAE", "CLIP", "IMAGE")
+    RETURN_NAMES = ("pipe", "model", "pos", "neg", "latent", "vae", "clip", "image")
+    FUNCTION = "flush"
+
+    CATEGORY = "EasyUse/Pipe"
+
+    def flush(self, clip_skip, optional_positive, positive_token_normalization, positive_weight_interpretation, optional_negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, pipe=None, model=None, pos=None, neg=None, latent=None, vae=None, clip=None, image=None, my_unique_id=None, prompt=None):
+
+        model = model if model is not None else pipe.get("model")
+        if model is None:
+            log_node_warn(f'pipeIn[{my_unique_id}]', "Model missing from pipeLine")
+        samples = latent if latent is not None else pipe.get("samples")
+        if samples is None:
+            log_node_warn(f'pipeIn[{my_unique_id}]', "Latent missing from pipeLine")
+        vae = vae if vae is not None else pipe.get("vae")
+        if vae is None:
+            log_node_warn(f'pipeIn[{my_unique_id}]', "VAE missing from pipeLine")
+        clip = clip if clip is not None else pipe.get("clip")
+        if clip is None:
+            log_node_warn(f'pipeIn[{my_unique_id}]', "Clip missing from pipeLine")
+        if image is None:
+            image = pipe.get("images") if pipe is not None else None
+        else:
+            batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+            samples = {"samples": vae.encode(image)}
+            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+
+        pipe_lora_stack = pipe.get("lora_stack") if pipe is not None and "lora_stack" in pipe else None
+
+        if pos is None and optional_positive != '':
+            # 判断是否连接 styles selector
+            is_positive_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'positive')
+            log_node_warn("正在处理提示词...")
+            positive_seed = find_wildcards_seed(my_unique_id, optional_positive, prompt)
+            model, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(
+                optional_positive, model, clip, "Positive", positive_seed, True, pipe_lora_stack, easyCache)
+            positive_wildcard_prompt = positive_decode if show_positive_prompt or is_positive_linked_styles_selector else ""
+
+            clipped = clip.clone()
+            if clip_skip != 0:
+                clipped.clip_layer(clip_skip)
+
+            log_node_warn("正在处理提示词编码...")
+            steps = find_nearest_steps(my_unique_id, prompt)
+            pos = advanced_encode(clipped, positive, positive_token_normalization,
+                                                        positive_weight_interpretation, w_max=1.0,
+                                                        apply_to_pooled='enable',
+                                                        a1111_prompt_style=a1111_prompt_style, steps=steps)
+            pipe['loader_settings']['positive'] = positive_wildcard_prompt
+            pipe['loader_settings']['positive_token_normalization'] = positive_token_normalization
+            pipe['loader_settings']['positive_weight_interpretation'] = positive_weight_interpretation
+            if a1111_prompt_style:
+                pipe['loader_settings']['a1111_prompt_style'] = True
+        else:
+            pos = pipe.get("positive")
+            if pos is None:
+                log_node_warn(f'pipeIn[{my_unique_id}]', "Pos Conditioning missing from pipeLine")
+
+        if neg is None and optional_negative != '':
+            # 判断是否连接 styles selector
+            is_negative_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'negative')
+            log_node_warn("正在处理提示词...")
+            negative_seed = find_wildcards_seed(my_unique_id, optional_positive, prompt)
+            model, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(
+                optional_negative, model, clip, "Negative", negative_seed, True, pipe_lora_stack, easyCache)
+            negative_wildcard_prompt = negative_decode if show_negative_prompt or is_negative_linked_styles_selector else ""
+
+            clipped = clip.clone()
+            if clip_skip != 0:
+                clipped.clip_layer(clip_skip)
+
+            log_node_warn("正在处理提示词编码...")
+            steps = find_nearest_steps(my_unique_id, prompt)
+            neg = advanced_encode(clipped, negative, negative_token_normalization,
+                                  positive_weight_interpretation, w_max=1.0,
+                                  apply_to_pooled='enable',
+                                  a1111_prompt_style=a1111_prompt_style, steps=steps)
+            pipe['loader_settings']['negative'] = negative_wildcard_prompt
+            pipe['loader_settings']['negative_token_normalization'] = negative_token_normalization
+            pipe['loader_settings']['negative_weight_interpretation'] = negative_weight_interpretation
+            if a1111_prompt_style:
+                pipe['loader_settings']['a1111_prompt_style'] = True
+        else:
+            neg = pipe.get("negative")
+            if neg is None:
+                log_node_warn(f'pipeIn[{my_unique_id}]', "Neg Conditioning missing from pipeLine")
+        if pipe is None:
+            pipe = {"loader_settings": {"positive": "", "negative": "", "xyplot": None}}
+
+        new_pipe = {
+            **pipe,
+            "model": model,
+            "positive": pos,
+            "negative": neg,
+            "vae": vae,
+            "clip": clip,
+
+            "samples": samples,
+            "images": image,
+            "seed": pipe.get('seed') if pipe is not None and "seed" in pipe else None,
+        }
+        del pipe
+
+        return (new_pipe, model,pos, neg, latent, vae, clip, image)
+
+
 # pipeToBasicPipe
 class pipeToBasicPipe:
     @classmethod
@@ -5033,6 +5174,7 @@ NODE_CLASS_MAPPINGS = {
     # pipe 管道（节点束）
     "easy pipeIn": pipeIn,
     "easy pipeOut": pipeOut,
+    "easy pipeEdit": pipeEdit,
     "easy pipeToBasicPipe": pipeToBasicPipe,
     "easy XYPlot": pipeXYPlot,
     "easy XYPlotAdvanced": pipeXYPlotAdvanced,
@@ -5114,6 +5256,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # pipe 管道（节点束）
     "easy pipeIn": "Pipe In",
     "easy pipeOut": "Pipe Out",
+    "easy pipeEdit": "Pipe Edit",
     "easy pipeToBasicPipe": "Pipe -> BasicPipe",
     "easy XYPlot": "XY Plot",
     "easy XYPlotAdvanced": "XY Plot Advanced",
