@@ -240,27 +240,6 @@ def encode_token_weights_l(model, token_weight_pairs):
     l_out, _ = model.clip_l.encode_token_weights(token_weight_pairs)
     return l_out, None
 
-def encode_break(clip, text):
-    pass3 = [x.strip() for x in text.split("BREAK")]
-    pass3 = [x for x in pass3 if x != '']
-
-    print(pass3)
-    if len(pass3) == 0:
-        return None
-
-    pass3_str = [f'[{x}]' for x in pass3]
-    print(f"CLIP: {str.join(' + ', pass3_str)}")
-
-    conditioning = None
-
-    for text in pass3:
-        cur = CLIPTextEncode().encode(clip, text)[0]
-        if conditioning is not None:
-            conditioning = ConditioningConcat().concat(conditioning, cur)[0]
-        else:
-            conditioning = cur
-
-    return conditioning
 
 def encode_token_weights(model, token_weight_pairs, encode_func):
     if model.layer_idx is not None:
@@ -281,7 +260,6 @@ def prepareXL(embs_l, embs_g, pooled, clip_balance):
     else:
         return embs_g, pooled
 
-
 def advanced_encode(clip, text, token_normalization, weight_interpretation, w_max=1.0, clip_balance=.5,
                     apply_to_pooled=True, width=1024, height=1024, crop_w=0, crop_h=0, target_width=1024, target_height=1024, a1111_prompt_style=False, steps=1):
 
@@ -294,41 +272,59 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
         else:
             raise Exception(f"[smzNodes Not Found] you need to install 'ComfyUI-smzNodes'")
 
-    conditioning = encode_break(clip, text)
-    if conditioning is not None:
-        return conditioning
+    pass3 = [x.strip() for x in text.split("BREAK")]
+    pass3 = [x for x in pass3 if x != '']
 
-    tokenized = clip.tokenize(text, return_word_ids=True)
-    if isinstance(clip.cond_stage_model, (SDXLClipModel, SDXLRefinerClipModel, SDXLClipG)):
-        embs_l = None
-        embs_g = None
-        pooled = None
-        if 'l' in tokenized and isinstance(clip.cond_stage_model, SDXLClipModel):
-            embs_l, _ = advanced_encode_from_tokens(tokenized['l'],
-                                                    token_normalization,
-                                                    weight_interpretation,
-                                                    lambda x: encode_token_weights(clip, x, encode_token_weights_l),
-                                                    w_max=w_max,
-                                                    return_pooled=False)
-        if 'g' in tokenized:
-            embs_g, pooled = advanced_encode_from_tokens(tokenized['g'],
-                                                         token_normalization,
-                                                         weight_interpretation,
-                                                         lambda x: encode_token_weights(clip, x,
-                                                                                        encode_token_weights_g),
-                                                         w_max=w_max,
-                                                         return_pooled=True,
-                                                         apply_to_pooled=apply_to_pooled)
+    if len(pass3) == 0:
+        return ['']
 
-        embeddings_final, pooled = prepareXL(embs_l, embs_g, pooled, clip_balance)
+    # pass3_str = [f'[{x}]' for x in pass3]
+    # print(f"CLIP: {str.join(' + ', pass3_str)}")
 
-        return [[embeddings_final, {"pooled_output": pooled, "width": width, "height": height, "crop_w": crop_w, "crop_h": crop_h, "target_width": target_width, "target_height": target_height}]]
-    else:
-        embeddings_final, pooled = advanced_encode_from_tokens(tokenized['l'],
-                                           token_normalization,
-                                           weight_interpretation,
-                                           lambda x: (clip.encode_from_tokens({'l': x}), None),
-                                           w_max=w_max)
-        return [[embeddings_final, {"pooled_output": pooled}]]
+    conditioning = None
+
+    for text in pass3:
+        tokenized = clip.tokenize(text, return_word_ids=True)
+        if isinstance(clip.cond_stage_model, (SDXLClipModel, SDXLRefinerClipModel, SDXLClipG)):
+            embs_l = None
+            embs_g = None
+            pooled = None
+            if 'l' in tokenized and isinstance(clip.cond_stage_model, SDXLClipModel):
+                embs_l, _ = advanced_encode_from_tokens(tokenized['l'],
+                                                        token_normalization,
+                                                        weight_interpretation,
+                                                        lambda x: encode_token_weights(clip, x, encode_token_weights_l),
+                                                        w_max=w_max,
+                                                        return_pooled=False)
+            if 'g' in tokenized:
+                embs_g, pooled = advanced_encode_from_tokens(tokenized['g'],
+                                                             token_normalization,
+                                                             weight_interpretation,
+                                                             lambda x: encode_token_weights(clip, x,
+                                                                                            encode_token_weights_g),
+                                                             w_max=w_max,
+                                                             return_pooled=True,
+                                                             apply_to_pooled=apply_to_pooled)
+
+            embeddings_final, pooled = prepareXL(embs_l, embs_g, pooled, clip_balance)
+
+            cond = [[embeddings_final,
+                             {"pooled_output": pooled, "width": width, "height": height, "crop_w": crop_w,
+                              "crop_h": crop_h, "target_width": target_width, "target_height": target_height}]]
+        else:
+            embeddings_final, pooled = advanced_encode_from_tokens(tokenized['l'],
+                                                                   token_normalization,
+                                                                   weight_interpretation,
+                                                                   lambda x: (clip.encode_from_tokens({'l': x}), None),
+                                                                   w_max=w_max)
+            cond = [[embeddings_final, {"pooled_output": pooled}]]
+
+        if conditioning is not None:
+            conditioning = ConditioningConcat().concat(conditioning, cond)[0]
+        else:
+            conditioning = cond
+
+    return conditioning
+
 
 
