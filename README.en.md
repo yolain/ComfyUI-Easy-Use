@@ -47,6 +47,10 @@ you need to run `pip install -r requirements.txt` to install python dependencies
 
 **v1.1.0 (2024/3/4)**
 
+- Fixed `easy wildcards` When LoRa is not filled in completely, LoRa is not automatically retrieved, resulting in failure to load LoRa
+- Fixed the issue that 'BREAK' non-initiation when didn't use a1111 prompt style
+
+(722e9f4)
 - Added `easy pipeEdit` - nodes that can edit pipes (including re-enterable prompts)
 - Added `easy preSamplingLayerDiffusion` and `easy kSamplerLayerDiffusion`
 - Added a convenient menu to right-click on nodes such as Loader, Presampler, Sampler, Controlnet, etc. to quickly replace nodes of the same type

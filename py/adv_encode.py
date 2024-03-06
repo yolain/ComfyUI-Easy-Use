@@ -4,7 +4,7 @@ import itertools
 
 from comfy import model_management
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
-from nodes import NODE_CLASS_MAPPINGS
+from nodes import NODE_CLASS_MAPPINGS, ConditioningConcat, CLIPTextEncode
 
 from .libs.utils import compare_revision
 
@@ -240,6 +240,27 @@ def encode_token_weights_l(model, token_weight_pairs):
     l_out, _ = model.clip_l.encode_token_weights(token_weight_pairs)
     return l_out, None
 
+def encode_break(clip, text):
+    pass3 = [x.strip() for x in text.split("BREAK")]
+    pass3 = [x for x in pass3 if x != '']
+
+    print(pass3)
+    if len(pass3) == 0:
+        return None
+
+    pass3_str = [f'[{x}]' for x in pass3]
+    print(f"CLIP: {str.join(' + ', pass3_str)}")
+
+    conditioning = None
+
+    for text in pass3:
+        cur = CLIPTextEncode().encode(clip, text)[0]
+        if conditioning is not None:
+            conditioning = ConditioningConcat().concat(conditioning, cur)[0]
+        else:
+            conditioning = cur
+
+    return conditioning
 
 def encode_token_weights(model, token_weight_pairs, encode_func):
     if model.layer_idx is not None:
@@ -272,6 +293,10 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
             return embeddings_final
         else:
             raise Exception(f"[smzNodes Not Found] you need to install 'ComfyUI-smzNodes'")
+
+    conditioning = encode_break(clip, text)
+    if conditioning is not None:
+        return conditioning
 
     tokenized = clip.tokenize(text, return_word_ids=True)
     if isinstance(clip.cond_stage_model, (SDXLClipModel, SDXLRefinerClipModel, SDXLClipG)):

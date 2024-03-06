@@ -24,6 +24,7 @@ class easyLoader:
             "lora": defaultdict(dict),  # {lora_name: {UID: (model_lora, clip_lora)}}
         }
         self.memory_threshold = self.determine_memory_threshold(0.7)
+        self.lora_name_cache = []
 
     def clean_values(self, values: str):
         original_values = values.split("; ")
@@ -254,26 +255,43 @@ class easyLoader:
         if unique_id in self.loaded_objects["lora"] and unique_id in self.loaded_objects["lora"][lora_name]:
             return self.loaded_objects["lora"][unique_id][0]
 
-        lora_path = folder_paths.get_full_path("loras", lora_name)
-        if lora_path:
+        orig_lora_name = lora_name
+        lora_name = self.resolve_lora_name(lora_name)
+
+        if lora_name is not None:
+            lora_path = folder_paths.get_full_path("loras", lora_name)
+        else:
+            lora_path = None
+
+        if lora_path is not None:
             log_node_info("Load LORA",f"{lora_name}: {model_strength}, {clip_strength}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
-        else:
-            log_node_error(f"LORA NOT FOUND", lora_name)
+            if lbw:
+                lbw = lora["lbw"]
+                lbw_a = lora["lbw_a"]
+                lbw_b = lora["lbw_b"]
+                if 'LoraLoaderBlockWeight //Inspire' not in NODE_CLASS_MAPPINGS:
+                    raise Exception('[InspirePack Not Found] you need to install ComfyUI-Inspire-Pack')
+                cls = NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
+                model, clip, _ = cls().doit(model, clip, lora_name, model_strength, clip_strength, False, 0,
+                                            lbw_a, lbw_b, "", lbw)
+            else:
+                _lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                model, clip = comfy.sd.load_lora_for_models(model, clip, _lora, model_strength, clip_strength)
 
-        if lbw:
-            lbw = lora["lbw"]
-            lbw_a = lora["lbw_a"]
-            lbw_b = lora["lbw_b"]
-            if 'LoraLoaderBlockWeight //Inspire' not in NODE_CLASS_MAPPINGS:
-                raise Exception('[InspirePack Not Found] you need to install ComfyUI-Inspire-Pack')
-            cls = NODE_CLASS_MAPPINGS['LoraLoaderBlockWeight //Inspire']
-            model, clip, _ = cls().doit(model, clip, lora_name, model_strength, clip_strength, False, 0,
-                                        lbw_a, lbw_b, "", lbw)
+            self.add_to_cache("lora", unique_id, (model, clip))
+            self.eviction_based_on_memory()
         else:
-            _lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-            model, clip = comfy.sd.load_lora_for_models(model, clip, _lora, model_strength, clip_strength)
-
-        self.add_to_cache("lora", unique_id, (model, clip))
-        self.eviction_based_on_memory()
+            log_node_error(f"LORA NOT FOUND", orig_lora_name)
 
         return model, clip
+
+    def resolve_lora_name(self, name):
+        if os.path.exists(name):
+            return name
+        else:
+            if len(self.lora_name_cache) == 0:
+                self.lora_name_cache.extend(folder_paths.get_filename_list("loras"))
+
+            for x in self.lora_name_cache:
+                if x.endswith(name):
+                    return x

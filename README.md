@@ -49,8 +49,12 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 ## 更新日志
 
-**v1.1.0 (2024/3/4)**
+**v1.1.0 (2024/3/6)**
 
+- 修复 `easy wildcards` 读取lora未填写完整路径时未自动检索导致加载lora失败的问题
+- 修复 在 非a1111提示词风格下 BREAK 不生效的问题
+
+(722e9f4)
 - 增加 `easy pipeEdit` - 可编辑Pipe的节点（包含可重新输入提示词）
 - 增加 `easy preSamplingLayerDiffusion` 与 `easy kSamplerLayerDiffusion` （连接 `easy kSampler` 也能通）
 - 增加 在 加载器、预采样、采样器、Controlnet等节点上右键可快速替换同类型节点的便捷菜单
