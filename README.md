@@ -51,6 +51,7 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 **v1.1.0 (2024/3/6)**
 
+- 修复 layerDiffusion 在批次大小大于1时报错
 - 修复 `easy wildcards` 读取lora未填写完整路径时未自动检索导致加载lora失败的问题
 - 修复 在 非a1111提示词风格下 BREAK 不生效的问题
 

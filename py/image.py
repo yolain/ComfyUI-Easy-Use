@@ -12,7 +12,6 @@ import torch
 import numpy as np
 from nodes import MAX_RESOLUTION
 from .log import log_node_info
-import cv2
 
 
 def pil2tensor(image):

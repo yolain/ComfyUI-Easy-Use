@@ -47,6 +47,7 @@ you need to run `pip install -r requirements.txt` to install python dependencies
 
 **v1.1.0 (2024/3/4)**
 
+- Fixed layerDiffusion error when batch size greater than 1
 - Fixed `easy wildcards` When LoRa is not filled in completely, LoRa is not automatically retrieved, resulting in failure to load LoRa
 - Fixed the issue that 'BREAK' non-initiation when didn't use a1111 prompt style
 

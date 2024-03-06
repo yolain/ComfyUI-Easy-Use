@@ -8,6 +8,7 @@ from comfy.conds import CONDRegular
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
 from comfy_extras.nodes_mask import LatentCompositeMasked
+from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from urllib.request import urlopen
 from PIL import Image
 
@@ -1752,7 +1753,7 @@ class samplerSettings:
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         if image_to_latent is not None:
-            samples = {"samples": vae.encode(image_to_latent)}
+            samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
             images = image_to_latent
         elif latent is not None:
@@ -1827,7 +1828,7 @@ class samplerSettingsAdvanced:
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         if image_to_latent is not None:
-            samples = {"samples": vae.encode(image_to_latent)}
+            samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
             images = image_to_latent
         elif latent is not None:
@@ -2121,12 +2122,13 @@ class layerDiffusionSettings:
 
         method = self.get_layer_diffusion_method(method, blend_samples is not None or blended_image is not None)
 
-        if image is not None:
-            samples = {"samples": vae.encode(image)}
+        if image is not None or "image" in pipe:
+            image = image if image is not None else pipe['image']
+            samples = {"samples": vae.encode(image[:,:,:,:3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
             images = image
         elif "samp_images" in pipe:
-            samples = {"samples": vae.encode(pipe["samp_images"])}
+            samples = {"samples": vae.encode(pipe["samp_images"][:,:,:,:3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
             images = pipe["samp_images"]
         else:
@@ -2140,7 +2142,7 @@ class layerDiffusionSettings:
             if blended_image is None and blend_samples is None:
                 raise Exception("blended_image is missing")
             elif blended_image is not None:
-                blend_samples = {"samples": vae.encode(blended_image)}
+                blend_samples = {"samples": vae.encode(blended_image[:,:,:,:3])}
                 blend_samples = RepeatLatentBatch().repeat(blend_samples, batch_size)[0]
 
         new_pipe = {
@@ -2231,7 +2233,7 @@ class dynamicCFGSettings:
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         if image_to_latent is not None:
-            samples = {"samples": vae.encode(image_to_latent)}
+            samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
             images = image_to_latent
         elif latent is not None:
@@ -2519,12 +2521,23 @@ class samplerFull:
                         )
 
                     pixel = samp_images.movedim(-1, 1)  # [B, H, W, C] => [B, C, H, W]
-                    pixel_with_alpha = self.vae_transparent_decoder.decode_pixel(pixel, latent)
+                    decoded = []
+                    sub_batch_size = 16
+                    for start_idx in range(0, latent.shape[0], sub_batch_size):
+                        decoded.append(
+                            self.vae_transparent_decoder.decode_pixel(
+                                pixel[start_idx: start_idx + sub_batch_size],
+                                latent[start_idx: start_idx + sub_batch_size],
+                            )
+                        )
+                    pixel_with_alpha = torch.cat(decoded, dim=0)
                     # [B, C, H, W] => [B, H, W, C]
                     pixel_with_alpha = pixel_with_alpha.movedim(1, -1)
                     image = pixel_with_alpha[..., 1:]
                     alpha = pixel_with_alpha[..., 0]
-                    new_images = self.join_image_with_alpha(image, alpha)
+
+                    alpha = 1.0 - alpha
+                    new_images, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
                 else:
                     new_images = samp_images
             else:
@@ -3867,7 +3880,7 @@ class pipeIn:
             image = pipe.get("images") if pipe is not None else None
         else:
             batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
-            samples = {"samples": vae.encode(image)}
+            samples = {"samples": vae.encode(image[:, :, :, :3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
 
         if pipe is None:
@@ -3987,7 +4000,7 @@ class pipeEdit:
             image = pipe.get("images") if pipe is not None else None
         else:
             batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
-            samples = {"samples": vae.encode(image)}
+            samples = {"samples": vae.encode(image[:, :, :, :3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
 
         pipe_lora_stack = pipe.get("lora_stack") if pipe is not None and "lora_stack" in pipe else None

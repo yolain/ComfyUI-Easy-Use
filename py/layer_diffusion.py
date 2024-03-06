@@ -301,16 +301,22 @@ try:
             return median
 
         @torch.no_grad()
-        def decode_pixel(self, pixel, latent):
+        def decode_pixel(
+                self, pixel: torch.TensorType, latent: torch.TensorType
+        ) -> torch.TensorType:
             # pixel.shape = [B, C=3, H, W]
             assert pixel.shape[1] == 3
+            pixel_device = pixel.device
+            pixel_dtype = pixel.dtype
+
             pixel = pixel.to(device=self.load_device, dtype=self.dtype)
             latent = latent.to(device=self.load_device, dtype=self.dtype)
             # y.shape = [B, C=4, H, W]
             y = self.estimate_augmented(pixel, latent)
             y = y.clip(0, 1)
             assert y.shape[1] == 4
-            return y
+            # Restore image to original device of input image.
+            return y.to(pixel_device, dtype=pixel_dtype)
 
 
     def calculate_weight_adjust_channel(func):

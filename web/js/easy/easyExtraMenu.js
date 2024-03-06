@@ -42,7 +42,7 @@ const widgetMapping = {
         "scale_soft_weights": ["scale_soft_weights","cn_soft_weights"],
         "cn_strength": ["strength", "cn_strength"],
         "cn_soft_weights": ["scale_soft_weights","cn_soft_weights"],
-    }
+    },
 }
 const inputMapping = {
     "loaders":{
@@ -70,7 +70,7 @@ const inputMapping = {
     },
     "positive_prompt":{
 
-    }
+    },
 };
 
 const outputMapping = {
@@ -99,6 +99,10 @@ const outputMapping = {
         "text": "positive",
         "positive": "text"
     },
+    "load_image":{
+        "IMAGE":"IMAGE",
+        "MASK": "MASK"
+    }
 };
 
 // 替换节点
