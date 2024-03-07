@@ -2092,7 +2092,6 @@ class layerDiffusionSettings:
         return method
 
     def settings(self, pipe, method, weight, steps, cfg, sampler_name, scheduler, denoise, seed_num, image=None, blended_image=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
-
         blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
@@ -2466,13 +2465,17 @@ class samplerFull:
 
             alpha = None
             blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
+            layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
+            empty_samples = pipe["loader_settings"]["empty_samples"] if "empty_samples" in pipe["loader_settings"] else None
+            samples = empty_samples if layer_diffusion_method is not None and empty_samples is not None else samp_samples
+
             # Downscale Model Unet
             if samp_model is not None:
                 samp_model = downscale_model_unet(samp_model)
             # 推理初始时间
             start_time = int(time.time() * 1000)
             # 开始推理
-            samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler, samp_positive, samp_negative, samp_samples, denoise=denoise, preview_latent=preview_latent, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, disable_noise=disable_noise)
+            samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler, samp_positive, samp_negative, samples, denoise=denoise, preview_latent=preview_latent, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, disable_noise=disable_noise)
             # 推理结束时间
             end_time = int(time.time() * 1000)
             latent = samp_samples["samples"]
@@ -2484,7 +2487,6 @@ class samplerFull:
                 samp_images = samp_vae.decode(latent).cpu()
 
             # LayerDiffusion Decode
-            layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
             if layer_diffusion_method is not None:
                 method = self.get_layer_diffusion_method(layer_diffusion_method, blend_samples is not None)
                 print(method.value)
@@ -2539,6 +2541,7 @@ class samplerFull:
 
                 "samples": samp_samples,
                 "blend_samples": blend_samples,
+                "empty_samples": empty_samples,
                 "images": new_images,
                 "samp_images": samp_images,
                 "alpha": alpha,
