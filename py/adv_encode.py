@@ -267,7 +267,7 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
     if a1111_prompt_style:
         if "smZ CLIPTextEncode" in NODE_CLASS_MAPPINGS:
             cls = NODE_CLASS_MAPPINGS['smZ CLIPTextEncode']
-            embeddings_final, = cls().encode(clip, text,weight_interpretation, True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
+            embeddings_final, = cls().encode(clip, text, weight_interpretation, True, True, False, False, 6, 1024, 1024, 0, 0, 1024, 1024, '', '', steps)
             return embeddings_final
         else:
             raise Exception(f"[smzNodes Not Found] you need to install 'ComfyUI-smzNodes'")

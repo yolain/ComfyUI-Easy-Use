@@ -20,11 +20,12 @@ from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
 from .layer_diffusion import LayerMethod, TransparentVAEDecoder, calculate_weight_adjust_channel
 
-from .libs.utils import find_nearest_steps, find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, to_lora_patch_dict, add_folder_path_and_extensions
+from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, to_lora_patch_dict, add_folder_path_and_extensions
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler
 from .libs.xyplot import easyXYPlot
 from .libs.controlnet import easyControlnet
+from .libs.conditioning import prompt_to_cond, set_cond
 
 sampler = easySampler()
 easyCache = easyLoader()
@@ -760,32 +761,8 @@ class fullLoader:
         if not clip:
             raise Exception("No CLIP found")
 
-        # 判断是否连接 styles selector
-        is_positive_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'positive')
-        is_negative_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'negative')
-
-        log_node_warn("正在处理提示词...")
-        positive_seed = find_wildcards_seed(my_unique_id, positive, prompt)
-        model, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(positive, model, clip, "Positive", positive_seed, can_load_lora, pipe_lora_stack, easyCache)
-        positive_wildcard_prompt = positive_decode if show_positive_prompt or is_positive_linked_styles_selector else ""
-        negative_seed = find_wildcards_seed(my_unique_id, negative, prompt)
-        model, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(negative, model, clip,
-                                                                                          "Negative", negative_seed, can_load_lora, pipe_lora_stack, easyCache)
-        negative_wildcard_prompt = negative_decode if show_negative_prompt or is_negative_linked_styles_selector else ""
-
-        clipped = clip.clone()
-        if clip_skip != 0 and can_load_lora:
-            clipped.clip_layer(clip_skip)
-
-        log_node_warn("正在处理提示词编码...")
-        steps = find_nearest_steps(my_unique_id, prompt)
-        positive_embeddings_final = advanced_encode(clipped, positive, positive_token_normalization,
-                                                                     positive_weight_interpretation, w_max=1.0,
-                                                                     apply_to_pooled='enable', a1111_prompt_style=a1111_prompt_style, steps=steps)
-
-        negative_embeddings_final = advanced_encode(clipped, negative, negative_token_normalization,
-                                                                     negative_weight_interpretation, w_max=1.0,
-                                                                     apply_to_pooled='enable', a1111_prompt_style=a1111_prompt_style, steps=steps)
+        positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, pipe_lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
+        negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, pipe_lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
         image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
 
         log_node_warn("处理结束...")
@@ -793,7 +770,7 @@ class fullLoader:
                 "positive": positive_embeddings_final,
                 "negative": negative_embeddings_final,
                 "vae": vae,
-                "clip": clipped,
+                "clip": clip,
 
                 "samples": samples,
                 "images": image,
@@ -1033,7 +1010,7 @@ class cascadeLoader:
         positive_seed = find_wildcards_seed(my_unique_id, positive, prompt)
         model_c, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(positive,
                                                                                                            model_c, clip,
-                                                                                                           "Positive",
+                                                                                                           "positive",
                                                                                                            positive_seed,
                                                                                                            can_load_lora,
                                                                                                            pipe_lora_stack,
@@ -1042,7 +1019,7 @@ class cascadeLoader:
         negative_seed = find_wildcards_seed(my_unique_id, negative, prompt)
         model_c, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(negative,
                                                                                                            model_c, clip,
-                                                                                                           "Negative",
+                                                                                                           "negative",
                                                                                                            negative_seed,
                                                                                                            can_load_lora,
                                                                                                            pipe_lora_stack,
@@ -3961,7 +3938,13 @@ class pipeEdit:
                  "negative_token_normalization": (["none", "mean", "length", "length+mean"],),
                  "negative_weight_interpretation": (["comfy", "A1111", "comfy++", "compel", "fixed attention"],),
 
-                 "a1111_prompt_style": ("BOOLEAN", {"default": False})
+                 "a1111_prompt_style": ("BOOLEAN", {"default": False}),
+                 "conditioning_mode": (['replace', 'concat', 'combine', 'average', 'timestep'], {"default": "replace"}),
+                 "average_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                 "old_cond_start": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                 "old_cond_end": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                 "new_cond_start": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                 "new_cond_end": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
              },
              "optional": {
                 "pipe": ("PIPE_LINE",),
@@ -3982,14 +3965,11 @@ class pipeEdit:
 
     CATEGORY = "EasyUse/Pipe"
 
-    def flush(self, clip_skip, optional_positive, positive_token_normalization, positive_weight_interpretation, optional_negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, pipe=None, model=None, pos=None, neg=None, latent=None, vae=None, clip=None, image=None, my_unique_id=None, prompt=None):
+    def flush(self, clip_skip, optional_positive, positive_token_normalization, positive_weight_interpretation, optional_negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, conditioning_mode, average_strength, old_cond_start, old_cond_end, new_cond_start, new_cond_end, pipe=None, model=None, pos=None, neg=None, latent=None, vae=None, clip=None, image=None, my_unique_id=None, prompt=None):
 
         model = model if model is not None else pipe.get("model")
         if model is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Model missing from pipeLine")
-        samples = latent if latent is not None else pipe.get("samples")
-        if samples is None:
-            log_node_warn(f'pipeIn[{my_unique_id}]', "Latent missing from pipeLine")
         vae = vae if vae is not None else pipe.get("vae")
         if vae is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "VAE missing from pipeLine")
@@ -3998,6 +3978,9 @@ class pipeEdit:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Clip missing from pipeLine")
         if image is None:
             image = pipe.get("images") if pipe is not None else None
+            samples = latent if latent is not None else pipe.get("samples")
+            if samples is None:
+                log_node_warn(f'pipeIn[{my_unique_id}]', "Latent missing from pipeLine")
         else:
             batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
             samples = {"samples": vae.encode(image[:, :, :, :3])}
@@ -4006,24 +3989,11 @@ class pipeEdit:
         pipe_lora_stack = pipe.get("lora_stack") if pipe is not None and "lora_stack" in pipe else None
 
         if pos is None and optional_positive != '':
-            # 判断是否连接 styles selector
-            is_positive_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'positive')
-            log_node_warn("正在处理提示词...")
-            positive_seed = find_wildcards_seed(my_unique_id, optional_positive, prompt)
-            model, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(
-                optional_positive, model, clip, "Positive", positive_seed, True, pipe_lora_stack, easyCache)
-            positive_wildcard_prompt = positive_decode if show_positive_prompt or is_positive_linked_styles_selector else ""
-
-            clipped = clip.clone()
-            if clip_skip != 0:
-                clipped.clip_layer(clip_skip)
-
-            log_node_warn("正在处理提示词编码...")
-            steps = find_nearest_steps(my_unique_id, prompt)
-            pos = advanced_encode(clipped, positive, positive_token_normalization,
-                                                        positive_weight_interpretation, w_max=1.0,
-                                                        apply_to_pooled='enable',
-                                                        a1111_prompt_style=a1111_prompt_style, steps=steps)
+            print(a1111_prompt_style)
+            pos, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip,
+                                                                        pipe_lora_stack, optional_positive, positive_token_normalization,positive_weight_interpretation,
+                                                                        a1111_prompt_style, my_unique_id, prompt, easyCache)
+            pos = set_cond(pipe['positive'], pos, conditioning_mode, average_strength, old_cond_start, old_cond_end, new_cond_start, new_cond_end)
             pipe['loader_settings']['positive'] = positive_wildcard_prompt
             pipe['loader_settings']['positive_token_normalization'] = positive_token_normalization
             pipe['loader_settings']['positive_weight_interpretation'] = positive_weight_interpretation
@@ -4035,24 +4005,10 @@ class pipeEdit:
                 log_node_warn(f'pipeIn[{my_unique_id}]', "Pos Conditioning missing from pipeLine")
 
         if neg is None and optional_negative != '':
-            # 判断是否连接 styles selector
-            is_negative_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'negative')
-            log_node_warn("正在处理提示词...")
-            negative_seed = find_wildcards_seed(my_unique_id, optional_positive, prompt)
-            model, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(
-                optional_negative, model, clip, "Negative", negative_seed, True, pipe_lora_stack, easyCache)
-            negative_wildcard_prompt = negative_decode if show_negative_prompt or is_negative_linked_styles_selector else ""
-
-            clipped = clip.clone()
-            if clip_skip != 0:
-                clipped.clip_layer(clip_skip)
-
-            log_node_warn("正在处理提示词编码...")
-            steps = find_nearest_steps(my_unique_id, prompt)
-            neg = advanced_encode(clipped, negative, negative_token_normalization,
-                                  positive_weight_interpretation, w_max=1.0,
-                                  apply_to_pooled='enable',
-                                  a1111_prompt_style=a1111_prompt_style, steps=steps)
+            neg, negative_wildcard_prompt, model, clip = prompt_to_cond("negative", model, clip, clip_skip, pipe_lora_stack, optional_negative,
+                                                      negative_token_normalization, negative_weight_interpretation,
+                                                      a1111_prompt_style, my_unique_id, prompt, easyCache)
+            neg = set_cond(pipe['negative'], neg, conditioning_mode, average_strength, old_cond_start, old_cond_end, new_cond_start, new_cond_end)
             pipe['loader_settings']['negative'] = negative_wildcard_prompt
             pipe['loader_settings']['negative_token_normalization'] = negative_token_normalization
             pipe['loader_settings']['negative_weight_interpretation'] = negative_weight_interpretation

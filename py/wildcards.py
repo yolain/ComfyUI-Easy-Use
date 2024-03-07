@@ -299,6 +299,7 @@ def process_with_loras(wildcard_opt, model, clip, title="Positive", seed=None, c
             pipe_lora_stack.append(lora)
 
     log_node_info("easy wildcards",f"{title}: {pass2}")
-    log_node_info("easy wildcards",f'{title}_decode: {pass1}')
+    if pass1 != pass2:
+        log_node_info("easy wildcards",f'{title}_decode: {pass1}')
 
     return model, clip, pass2, pass1, show_wildcard_prompt, pipe_lora_stack

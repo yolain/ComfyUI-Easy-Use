@@ -467,6 +467,36 @@ class showAnything:
 
         return {"ui": {"text": values}}
 
+class showTensorShape:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"tensor": (AlwaysEqualProxy("*"),)}, "optional": {},
+                "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"
+               }}
+
+    RETURN_TYPES = ()
+    RETURN_NAMES = ()
+    OUTPUT_NODE = True
+    FUNCTION = "log_input"
+    CATEGORY = "EasyUse/Logic"
+
+    def log_input(self, tensor, unique_id=None, extra_pnginfo=None):
+        shapes = []
+
+        def tensorShape(tensor):
+            if isinstance(tensor, dict):
+                for k in tensor:
+                    tensorShape(tensor[k])
+            elif isinstance(tensor, list):
+                for i in range(len(tensor)):
+                    tensorShape(tensor[i])
+            elif hasattr(tensor, 'shape'):
+                shapes.append(list(tensor.shape))
+
+        tensorShape(tensor)
+
+        return {"ui": {"text": shapes}}
+
 # cleanGpuUsed
 class cleanGPUUsed:
     @classmethod
@@ -501,6 +531,7 @@ NODE_CLASS_MAPPINGS = {
   "easy xyAny": xyAny,
   "easy convertAnything": ConvertAnything,
   "easy showAnything": showAnything,
+  "easy showTensorShape": showTensorShape,
   "easy cleanGpuUsed": cleanGPUUsed
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -517,5 +548,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy xyAny": "XYAny",
   "easy convertAnything": "Convert Any",
   "easy showAnything": "Show Any",
+  "easy showTensorShape": "Show Tensor Shape",
   "easy cleanGpuUsed": "Clean GPU Used"
 }

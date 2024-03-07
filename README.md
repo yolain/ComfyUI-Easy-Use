@@ -49,8 +49,11 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 
 ## 更新日志
 
-**v1.1.0 (2024/3/6)**
+**v1.1.0 (2024/3/7)**
 
+- `easy pipeEdit` 增加 条件拼接模式选择，可选择替换、合并、联结、平均、设置条件时间
+
+(df4d99)
 - 修复 layerDiffusion 在批次大小大于1时报错
 - 修复 `easy wildcards` 读取lora未填写完整路径时未自动检索导致加载lora失败的问题
 - 修复 在 非a1111提示词风格下 BREAK 不生效的问题

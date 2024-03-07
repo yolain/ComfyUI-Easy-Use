@@ -184,6 +184,28 @@ function widgetLogic(node, widget) {
 		}
 		updateNodeHeight(node)
 	}
+
+	if (widget.name === 'conditioning_mode') {
+		if (["replace", "concat", "combine"].includes(widget.value)) {
+			toggleWidget(node, findWidgetByName(node, 'average_strength'))
+			toggleWidget(node, findWidgetByName(node, 'old_cond_start'))
+			toggleWidget(node, findWidgetByName(node, 'old_cond_end'))
+			toggleWidget(node, findWidgetByName(node, 'new_cond_start'))
+			toggleWidget(node, findWidgetByName(node, 'new_cond_end'))
+		} else if(widget.value == 'average'){
+			toggleWidget(node, findWidgetByName(node, 'average_strength'), true)
+			toggleWidget(node, findWidgetByName(node, 'old_cond_start'))
+			toggleWidget(node, findWidgetByName(node, 'old_cond_end'))
+			toggleWidget(node, findWidgetByName(node, 'new_cond_start'))
+			toggleWidget(node, findWidgetByName(node, 'new_cond_end'))
+		}else if(widget.value == 'timestep'){
+			toggleWidget(node, findWidgetByName(node, 'average_strength'))
+			toggleWidget(node, findWidgetByName(node, 'old_cond_start'), true)
+			toggleWidget(node, findWidgetByName(node, 'old_cond_end'), true)
+			toggleWidget(node, findWidgetByName(node, 'new_cond_start'), true)
+			toggleWidget(node, findWidgetByName(node, 'new_cond_end'), true)
+		}
+	}
 }
 
 function widgetLogic2(node, widget) {
@@ -460,6 +482,7 @@ app.registerExtension({
 			case "easy rangeInt":
 			case "easy rangeFloat":
 			case 'easy latentCompositeMaskedWithCond':
+			case 'easy pipeEdit':
 				getSetters(node)
 				break
 			case "easy wildcards":
@@ -805,7 +828,7 @@ app.registerExtension({
 			}
 		}
 
-		if(nodeData.name == 'easy showAnything'){
+		if(['easy showAnything', 'easy showTensorShape'].includes(nodeData.name)){
 			function populate(text) {
 				if (this.widgets) {
 					const pos = this.widgets.findIndex((w) => w.name === "text");
@@ -885,7 +908,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale', 'image_output',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode','lora_count','ckpt_count']
+						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode','lora_count','ckpt_count', 'conditioning_mode']
 
 function getSetters(node) {
 	if (node.widgets)
