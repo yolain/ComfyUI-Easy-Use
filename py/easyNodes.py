@@ -10,7 +10,7 @@ from urllib.request import urlopen
 from PIL import Image
 
 from server import PromptServer
-from nodes import MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode
+from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode
 from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
@@ -1933,8 +1933,7 @@ class samplerSettingsNoiseIn:
         # generate base noise
         batch_size, _, height, width = latent["samples"].shape
         generator = torch.manual_seed(seed_num)
-        base_noise = torch.randn((1, 4, height, width), dtype=torch.float32, device="cpu", generator=generator).repeat(
-            batch_size, 1, 1, 1).cpu()
+        base_noise = torch.randn((batch_size, 4, height, width), dtype=torch.float32, device="cpu", generator=generator).cpu()
 
         # generate variation noise
         if optional_noise_seed is None or optional_noise_seed == seed_num:
@@ -4140,6 +4139,32 @@ class pipeToBasicPipe:
         del pipe
         return (new_pipe,)
 
+# pipeBatchIndex
+class pipeBatchIndex:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"pipe": ("PIPE_LINE",),
+                             "batch_index": ("INT", {"default": 0, "min": 0, "max": 63}),
+                             "length": ("INT", {"default": 1, "min": 1, "max": 64}),
+                             },
+                "hidden": {"my_unique_id": "UNIQUE_ID"},}
+
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
+    FUNCTION = "doit"
+
+    CATEGORY = "EasyUse/Pipe"
+
+    def doit(self, pipe, batch_index, length, my_unique_id=None):
+        samples = pipe["samples"]
+        new_samples, = LatentFromBatch().frombatch(samples, batch_index, length)
+        new_pipe = {
+            **pipe,
+            "samples": new_samples
+        }
+        del pipe
+        return (new_pipe,)
+
 # pipeXYPlot
 class pipeXYPlot:
     lora_list = ["None"] + folder_paths.get_filename_list("loras")
@@ -5227,6 +5252,7 @@ NODE_CLASS_MAPPINGS = {
     "easy pipeOut": pipeOut,
     "easy pipeEdit": pipeEdit,
     "easy pipeToBasicPipe": pipeToBasicPipe,
+    "easy pipeBatchIndex": pipeBatchIndex,
     "easy XYPlot": pipeXYPlot,
     "easy XYPlotAdvanced": pipeXYPlotAdvanced,
     # XY Inputs
@@ -5309,6 +5335,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy pipeIn": "Pipe In",
     "easy pipeOut": "Pipe Out",
     "easy pipeEdit": "Pipe Edit",
+    "easy pipeBatchIndex": "Pipe Batch Index",
     "easy pipeToBasicPipe": "Pipe -> BasicPipe",
     "easy XYPlot": "XY Plot",
     "easy XYPlotAdvanced": "XY Plot Advanced",
