@@ -1859,8 +1859,8 @@ class samplerSettingsNoiseIn:
                      "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
-                    "image_to_latent": ("IMAGE",),
-                    "latent": ("LATENT",),
+                    # "image_to_latent": ("IMAGE",),
+                    # "latent": ("LATENT",),
                     "optional_noise_seed": ("INT",{"forceInput": True}),
                 },
                 "hidden":

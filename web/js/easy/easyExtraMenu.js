@@ -317,9 +317,11 @@ function convertToInput(node, widget, config) {
 
 	// Add input and store widget config for creating on primitive node
 	const sz = node.size;
-	node.addInput(widget.name, type, {
-		widget: { name: widget.name, [GET_CONFIG]: () => config },
-	});
+    if(!widget.options || !widget.options.forceInput){
+        node.addInput(widget.name, type, {
+        	widget: { name: widget.name, [GET_CONFIG]: () => config },
+        });
+    }
 
 	for (const widget of node.widgets) {
 		widget.last_y += LiteGraph.NODE_SLOT_HEIGHT;
@@ -362,7 +364,6 @@ const reloadNode = function (node) {
                 const input_slot = node.findInputSlot(input_name)
                 const input_node = node.getInputNode(input_slot)
                 const input_link = node.getInputLink(input_slot)
-
                 inputLinks.push([input_link.origin_slot, input_node, input_name])
             }
         }
