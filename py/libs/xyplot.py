@@ -424,6 +424,11 @@ class easyXYPlot():
         sampler_name = sampler_name if sampler_name is not None else plot_image_vars["sampler_name"]
         scheduler = scheduler if scheduler is not None else plot_image_vars["scheduler"]
         denoise = denoise if denoise is not None else plot_image_vars["denoise"]
+
+        # LayerDiffuse
+        layer_diffusion_method = plot_image_vars["layer_diffusion_method"] if "layer_diffusion_method" in plot_image_vars else None
+        empty_samples = plot_image_vars["empty_samples"] if "empty_samples" in plot_image_vars else None
+        samples = empty_samples if layer_diffusion_method is not None and empty_samples is not None else samples
         # Sample
         samples = self.sampler.common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, samples,
                                           denoise=denoise, disable_noise=disable_noise, preview_latent=preview_latent,

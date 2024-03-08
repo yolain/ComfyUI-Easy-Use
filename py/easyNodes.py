@@ -2,25 +2,22 @@ import sys, os, re, json, time, math
 import torch
 import folder_paths
 import comfy.utils, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
-from comfy.utils import load_torch_file
 from comfy.sd import CLIP, VAE
-from comfy.conds import CONDRegular
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
 from comfy_extras.nodes_mask import LatentCompositeMasked
-from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from urllib.request import urlopen
 from PIL import Image
 
 from server import PromptServer
 from nodes import MAX_RESOLUTION, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode
-from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, LAYER_DIFFUSION_DIR, LAYER_DIFFUSION_VAE, LAYER_DIFFUSION
+from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
-from .layer_diffusion import LayerMethod, TransparentVAEDecoder, calculate_weight_adjust_channel
+from .layer_diffusion import LayerDiffuse, LayerMethod, calculate_weight_adjust_channel
 
-from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, to_lora_patch_dict, add_folder_path_and_extensions
+from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler
 from .libs.xyplot import easyXYPlot
@@ -2444,11 +2441,10 @@ class dynamicThresholdingFull:
 #---------------------------------------------------------------采样器 开始----------------------------------------------------------------------
 
 # 完整采样器
-class samplerFull:
+class samplerFull(LayerDiffuse):
 
-    def __init__(self) -> None:
-        self.vae_transparent_decoder = None
-        self.vae_transparent_encoder = None
+    def __init__(self):
+        super().__init__()
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -2484,55 +2480,6 @@ class samplerFull:
     OUTPUT_NODE = True
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
-
-    def get_layer_diffusion_method(self, method, has_blend_latent):
-        method = LayerMethod(method)
-        if method == LayerMethod.BG_TO_BLEND and has_blend_latent:
-            method = LayerMethod.BG_BLEND_TO_FG
-        elif method == LayerMethod.FG_TO_BLEND and has_blend_latent:
-            method = LayerMethod.FG_BLEND_TO_BG
-        return method
-
-    def apply_layer_c_concat(self, cond, uncond, c_concat):
-        def write_c_concat(cond):
-            new_cond = []
-            for t in cond:
-                n = [t[0], t[1].copy()]
-                if "model_conds" not in n[1]:
-                    n[1]["model_conds"] = {}
-                n[1]["model_conds"]["c_concat"] = CONDRegular(c_concat)
-                new_cond.append(n)
-            return new_cond
-
-        return (write_c_concat(cond), write_c_concat(uncond))
-
-    def apply_layer_diffusion(self, model: ModelPatcher, method, weight, samples, blend_samples, positive, negative):
-
-        model_file = get_local_filepath(LAYER_DIFFUSION[method.value]["model_url"], LAYER_DIFFUSION_DIR)
-        layer_lora_state_dict = load_torch_file(model_file)
-        layer_lora_patch_dict = to_lora_patch_dict(layer_lora_state_dict)
-        work_model = model.clone()
-        work_model.add_patches(layer_lora_patch_dict, weight)
-
-        # cond_contact
-        if method in [LayerMethod.FG_ONLY_ATTN, LayerMethod.FG_ONLY_CONV]:
-            samp_model = work_model
-        else:
-            if method in [LayerMethod.BG_TO_BLEND, LayerMethod.FG_TO_BLEND]:
-                c_concat = model.model.latent_format.process_in(samples["samples"])
-            else:
-                c_concat = model.model.latent_format.process_in(torch.cat([samples["samples"], blend_samples["samples"]], dim=1))
-            samp_model, positive, negative = (work_model,) + self.apply_layer_c_concat(positive, negative, c_concat)
-
-        return samp_model, positive, negative
-
-    def join_image_with_alpha(self, image, alpha):
-        out = image.movedim(-1, 1)
-        if out.shape[1] == 3:  # RGB
-            out = torch.cat([out, torch.ones_like(out[:, :1, :, :])], dim=1)
-        for i in range(out.shape[0]):
-            out[i, 3, :, :] = alpha
-        return out.movedim(1, -1)
 
     def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed_num=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None):
 
@@ -2639,40 +2586,7 @@ class samplerFull:
                 samp_images = samp_vae.decode(latent).cpu()
 
             # LayerDiffusion Decode
-            if layer_diffusion_method is not None:
-                method = self.get_layer_diffusion_method(layer_diffusion_method, blend_samples is not None)
-                print(method.value)
-                if method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN, LayerMethod.BG_BLEND_TO_FG]:
-                    if self.vae_transparent_decoder is None:
-                        decoder_file = get_local_filepath(LAYER_DIFFUSION_VAE['decode']["model_url"], LAYER_DIFFUSION_DIR)
-                        self.vae_transparent_decoder = TransparentVAEDecoder(
-                            load_torch_file(decoder_file),
-                            device=comfy.model_management.get_torch_device(),
-                            dtype=(torch.float16 if comfy.model_management.should_use_fp16() else torch.float32),
-                        )
-
-                    pixel = samp_images.movedim(-1, 1)  # [B, H, W, C] => [B, C, H, W]
-                    decoded = []
-                    sub_batch_size = 16
-                    for start_idx in range(0, latent.shape[0], sub_batch_size):
-                        decoded.append(
-                            self.vae_transparent_decoder.decode_pixel(
-                                pixel[start_idx: start_idx + sub_batch_size],
-                                latent[start_idx: start_idx + sub_batch_size],
-                            )
-                        )
-                    pixel_with_alpha = torch.cat(decoded, dim=0)
-                    # [B, C, H, W] => [B, H, W, C]
-                    pixel_with_alpha = pixel_with_alpha.movedim(1, -1)
-                    image = pixel_with_alpha[..., 1:]
-                    alpha = pixel_with_alpha[..., 0]
-
-                    alpha = 1.0 - alpha
-                    new_images, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
-                else:
-                    new_images = samp_images
-            else:
-                new_images = samp_images
+            new_images, samp_images, alpha = self.layer_diffusion_decode(layer_diffusion_method, latent, blend_samples, samp_images)
 
             # 推理总耗时（包含解码）
             end_decode_time = int(time.time() * 1000)
@@ -2734,6 +2648,10 @@ class samplerFull:
             if samp_model is not None:
                 samp_model = downscale_model_unet(samp_model)
 
+            alpha = None
+            blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
+            layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
+
             plot_image_vars = {
                 "x_node_type": sampleXYplot.x_node_type, "y_node_type": sampleXYplot.y_node_type,
                 "lora_name": pipe["loader_settings"]["lora_name"] if "lora_name" in pipe["loader_settings"] else None,
@@ -2773,6 +2691,8 @@ class samplerFull:
                 plot_image_vars["positive_cond_stack"] = pipe["loader_settings"]["positive_cond_stack"]
             if "negative_cond_stack" in pipe["loader_settings"]:
                 plot_image_vars["negative_cond_stack"] = pipe["loader_settings"]["negative_cond_stack"]
+            if "layer_diffusion_method" in pipe["loader_settings"]:
+                plot_image_vars["layer_diffusion_method"] = layer_diffusion_method
 
             latent_image = sampleXYplot.get_latent(pipe["samples"])
 
@@ -2785,6 +2705,9 @@ class samplerFull:
 
             # Generate output_images
             output_images = torch.stack([tensor.squeeze() for tensor in image_list])
+
+            new_images, samp_images, alpha = self.layer_diffusion_decode(layer_diffusion_method, latents_plot, blend_samples,
+                                                                         output_images)
 
             results = easySave(images, save_prefix, image_output, prompt, extra_pnginfo)
             sampler.update_value_by_id("results", my_unique_id, results)
@@ -2800,8 +2723,11 @@ class samplerFull:
                 "clip": samp_clip,
 
                 "samples": samp_samples,
-                "images": output_images,
+                "blend_samples": blend_samples,
+                "samp_images": samp_images,
+                "images": new_images,
                 "seed": samp_seed,
+                "alpha": alpha,
 
                 "loader_settings": pipe["loader_settings"],
             }
