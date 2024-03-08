@@ -35,6 +35,9 @@ app.registerExtension({
 
                 this.addWidget('text', 'shortcut_key', '1', (value) => {
                   value = value.trim()[0] || '1';
+                  if(value !== ''){
+                      this.title = "🔖 " + value;
+                  }
                 },{
                   y: 8,
                 });
@@ -48,6 +51,12 @@ app.registerExtension({
             }
 
             onAdded(){
+                setTimeout(_=>{
+                    const value = this.widgets[0].value
+                    if(value){
+                        this.title = "🔖 " + value;
+                    }
+                },1)
                 window.addEventListener("keydown", this.keypressBound);
             }
 
