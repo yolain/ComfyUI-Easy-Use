@@ -1,7 +1,7 @@
 import {app} from "/scripts/app.js";
 
 const loaders = ['easy fullLoader', 'easy a1111Loader', 'easy comfyLoader']
-const preSampling = ['easy preSampling', 'easy preSamplingAdvanced', 'easy preSamplingDynamicCFG', 'easy preSamplingLayerDiffusion', 'easy fullkSampler']
+const preSampling = ['easy preSampling', 'easy preSamplingAdvanced', 'easy preSamplingDynamicCFG', 'easy preSamplingNoiseIn', 'easy preSamplingLayerDiffusion', 'easy fullkSampler']
 const kSampler = ['easy kSampler', 'easy kSamplerTiled', 'easy kSamplerInpainting', 'easy kSamplerDownscaleUnet', 'easy kSamplerLayerDiffusion']
 const controlnet = ['easy controlnetLoader', 'easy controlnetLoaderADV', 'easy instantIDApply', 'easy instantIDApplyADV']
 const positive_prompt = ['easy positive', 'easy wildcards']
@@ -26,6 +26,7 @@ const widgetMapping = {
     "preSampling":{
         "steps": "steps",
         "cfg": "cfg",
+        "cfg_scale_min": "cfg",
         "sampler_name": "sampler_name",
         "scheduler": "scheduler",
         "denoise": "denoise",

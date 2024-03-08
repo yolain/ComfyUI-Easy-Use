@@ -3,6 +3,8 @@ import server
 from enum import Enum
 
 
+seed_nodes = ["easy wildcards","easy preSampling","easy preSamplingAdvanced","easy preSamplingSdTurbo","easy preSamplingDynamicCFG","easy preSamplingLayerDiffusion","easy preSamplingCascade","easy fullCascadeKSampler","easy fullkSampler","easy seed","easy latentNoisy", "easy preSamplingNoiseIn"]
+
 class SGmode(Enum):
     FIX = 1
     INCR = 2
@@ -127,7 +129,7 @@ def prompt_seed_update(json_data):
             if 'class_type' not in v:
                 continue
             cls = v['class_type']
-            if cls in ["easy wildcards","easy preSampling","easy preSamplingAdvanced","easy preSamplingSdTurbo","easy preSamplingDynamicCFG","easy preSamplingLayerDiffusion","easy preSamplingCascade","easy fullCascadeKSampler","easy fullkSampler","easy seed","easy latentNoisy"]:
+            if cls in seed_nodes:
                 extra_data = next((x for x in workflow["nodes"] if str(x["id"]) == k), None)
                 if extra_data is not None:
                     inputs = extra_data.get('inputs')

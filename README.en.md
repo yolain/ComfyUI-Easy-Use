@@ -47,6 +47,7 @@ you need to run `pip install -r requirements.txt` to install python dependencies
 
 **v1.1.0 (2024/3/7)**
 
+- Added `easy preSamplingNoiseIn` It can replace the `easy latentNoisy` node that needs to be fronted to achieve better noise injection
 - `easy pipeEdit` Added conditioning splicing mode selection, you can choose to replace, concat, combine, average, and set timestep range
 
 (df4d99)
