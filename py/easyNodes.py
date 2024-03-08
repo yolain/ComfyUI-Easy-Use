@@ -2541,7 +2541,6 @@ class samplerFull:
 
                 "samples": samp_samples,
                 "blend_samples": blend_samples,
-                "empty_samples": empty_samples,
                 "images": new_images,
                 "samp_images": samp_images,
                 "alpha": alpha,

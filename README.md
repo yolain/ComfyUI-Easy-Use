@@ -12,40 +12,25 @@
 
 **ComfyUI-Easy-Use** 是一个化繁为简的节点整合包, 在 [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes) 的基础上进行延展，并针对了诸多主流的节点包做了整合与优化，以达到更快更方便使用ComfyUI的目的，在保证自由度的同时还原了本属于Stable Diffusion的极致畅快出图体验。
 
-## 介绍
-
-### 更符合人性化的随机种
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Docs/seed_generate_compare.jpg">
-
-### 分离采样参数与采样预览
-
 <img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Docs/workflow_node_compare.png">
 
-### 支持通配符与Lora的提示词节点
+## 特色介绍
 
-支持 `yaml` `txt` `json` 格式的通配符文件，將其放置到节点包的 `wildcards` 文件夹下即可，更新文件需重新运行ComfyUI。 <br>
-如需使用Lora Block Weight用法，需先保证自定义节点包中安装了 [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack)。
-
-### UI界面美化
-
-首次安装的用户，如需使用本节点包UI主题，请在安装节点包在 Settings -> Color Palette 中自行切换并**刷新页面**即可。
-
-### Stable Cascade
-
-[工作流示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade) <br><br>
-stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)模型或原来的unet模型 <br><br>
-
-使用方式：<br>
-1.选择[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)模型无需额外加载其余的VAE及clip<br> 
-2.选择Unet模型的话需要额外加载[stage_a](https://huggingface.co/stabilityai/stable-cascade/blob/main/stage_a.safetensors)、[clip](https://huggingface.co/stabilityai/stable-cascade/resolve/main/text_encoder/model.safetensors)及图生图需要用到的[effnet_encoder](https://huggingface.co/stabilityai/stable-cascade/resolve/main/effnet_encoder.safetensors?download=true)和[previewer](https://huggingface.co/stabilityai/stable-cascade/resolve/main/previewer.safetensors)。<br>
-
-### Layer Diffusion
-
-[工作流示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#LayerDiffusion) <br><br>
-
-使用方式：<br>
-你需要运行 `pip install -r requirements.txt` 安装所需依赖 当 **diffusers** 依赖项没有安装的时候。
-
+- 沿用了 [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes) 的思路，大大减少了折腾工作流的时间成本。
+- UI界面美化，首次安装的用户，如需使用UI主题，请在 Settings -> Color Palette 中自行切换主题并**刷新页面**即可
+- 增加了预采样参数配置的节点，可与采样节点分离，更方便预览。
+- 预采样/采样器中的随机种使用提示词队列运行前操作的方式，兼容保留了 [cg-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) 的**highlight**功能
+- 支持通配符与Lora的提示词节点，如需使用Lora Block Weight用法，需先保证自定义节点包中安装了 [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack)
+- 可多选的风格化提示词选择器，默认是Fooocus的样式json，可自定义
+- 加载器可开启A1111提示词风格模式，可重现与webui生成近乎相同的图像，需先安装 [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes)
+- 可使用`easy latentNoisy`或`easy preSamplingNoisyIn`节点实现对潜空间的噪声注入
+- 简化 SD1.x、SD2.x、SDXL、SVD、Zero123等流程 [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableDiffusiion)
+- 简化 Stable Cascade [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
+- 简化 Layer Diffuse [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#LayerDiffusion)， 首次使用您可能需要运行 `pip install -r requirements.txt` 安装所需依赖
+- 简化 InstantID [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#InstantID), 需先保证自定义节点包中安装了 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID)
+- 扩展 XYplot 的可用性
+- 整合了Fooocus Inpaint功能
+- 整合了常用的逻辑计算、转换类型、展示所有类型等
 
 ## 更新日志
 
@@ -54,7 +39,7 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 - `easy pipeEdit` 增加 条件拼接模式选择，可选择替换、合并、联结、平均、设置条件时间
 
 (df4d99)
-- 修复 layerDiffusion 在批次大小大于1时报错
+- 修复 layerDiffuse 在批次大小大于1时报错
 - 修复 `easy wildcards` 读取lora未填写完整路径时未自动检索导致加载lora失败的问题
 - 修复 在 非a1111提示词风格下 BREAK 不生效的问题
 
@@ -95,21 +80,26 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 - 增加 `easy fullCascadeKSampler` - stable cascade stage_c 完整版采样器
 - 增加 `easy cascadeKSampler` - stable cascade stage-c ksampler simple
 
-**v1.0.6 (2024-02-16)**
+<details>
+<summary><b>v1.0.6</b></summary>
 
 - 增加 `easy XYInputs: Checkpoint`
 - 增加 `easy XYInputs: Lora`
 - `easy seed` 增加固定种子值时可手动切换随机种
 - 修复 `easy fullLoader`等加载器切换lora时自动调整节点大小的问题
 - 去除原有ttn的图片保存逻辑并适配ComfyUI默认的图片保存格式化扩展
+</details>
 
-**v1.0.5**
+<details>
+<summary><b>v1.0.5</b></summary>
 
 - 增加 `easy isSDXL` 
 - `easy svdLoader` 增加提示词控制, 可配合open_clip模型进行使用
 - `easy wildcards` 增加 **populated_text** 可输出通配填充后文本
+</details>
 
-**v1.0.4**
+<details>
+<summary><b>v1.0.4</b></summary>
 
 - 增加 `easy showLoaderSettingsNames` 可显示与输出加载器部件中的 模型与VAE名称
 - 增加 `easy promptList` - 提示词列表
@@ -128,6 +118,7 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 - 修复 `easy loraStack` **toggle** 为 disabled 时报错
 
 - 修改首次安装节点包不再自动替换主题，需手动调整并刷新页面
+</details>
 
 <details>
 <summary><b>v1.0.3</b></summary>
@@ -242,7 +233,7 @@ stage_c 与 stage_b 可以使用[checkpoints](https://huggingface.co/stabilityai
 -  修改 `easy controlnetLoader` 到 loader 分类底下。
 </details>
 
-## 涉及到的相关节点包
+## 整合参考到的相关节点包
 
 声明: 非常尊重这些原作者们的付出，开源不易，我仅仅只是做了一些整合与优化。
 
