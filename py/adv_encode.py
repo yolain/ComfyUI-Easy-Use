@@ -276,7 +276,7 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
     pass3 = [x for x in pass3 if x != '']
 
     if len(pass3) == 0:
-        return ''
+        pass3 = ['']
 
     # pass3_str = [f'[{x}]' for x in pass3]
     # print(f"CLIP: {str.join(' + ', pass3_str)}")
