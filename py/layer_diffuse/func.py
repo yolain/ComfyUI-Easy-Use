@@ -9,6 +9,7 @@ from .attension_sharing import AttentionSharingPatcher
 from ..config import LAYER_DIFFUSION, LAYER_DIFFUSION_DIR, LAYER_DIFFUSION_VAE
 from ..libs.utils import to_lora_patch_dict, get_local_filepath, get_sd_version
 
+load_layer_model_state_dict = load_torch_file
 class LayerMethod(Enum):
     FG_ONLY_ATTN = "Attention Injection"
     FG_ONLY_CONV = "Conv Injection"
@@ -52,14 +53,16 @@ class LayerDiffuse:
         sd_version = get_sd_version(model)
         model_url = LAYER_DIFFUSION[method.value][sd_version]["model_url"]
         if method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN] and sd_version == 'sd15':
-            self.frames = 3
-        if method == LayerMethod.BG_BLEND_TO_FG and sd_version == 'sd15':
+            self.frames = 1
+        elif method == [LayerMethod.BG_TO_BLEND, LayerMethod.FG_TO_BLEND] and sd_version == 'sd15':
             self.frames = 2
+        elif method == [LayerMethod.BG_BLEND_TO_FG, LayerMethod.FG_BLEND_TO_BG] and sd_version == 'sd15':
+            self.frames = 3
         if model_url is None:
             raise Exception(f"{method.value} is not supported for {sd_version} model")
-        model_file = get_local_filepath(model_url, LAYER_DIFFUSION_DIR)
 
-        layer_lora_state_dict = load_torch_file(model_file)
+        model_path = get_local_filepath(model_url, LAYER_DIFFUSION_DIR)
+        layer_lora_state_dict = load_layer_model_state_dict(model_path)
         work_model = model.clone()
         if sd_version == 'sd15':
             patcher = AttentionSharingPatcher(

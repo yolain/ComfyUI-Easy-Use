@@ -312,6 +312,7 @@ try:
 
 
     def calculate_weight_adjust_channel(func):
+        """Patches ComfyUI's LoRA weight application to accept multi-channel inputs."""
         @functools.wraps(func)
         def calculate_weight(
                 self: ModelPatcher, patches, weight: torch.Tensor, key: str
@@ -322,8 +323,9 @@ try:
                 alpha = p[0]
                 v = p[1]
 
+                # The recursion call should be handled in the main func call.
                 if isinstance(v, list):
-                    v = (func(v[1:], v[0].clone(), key),)
+                    continue
 
                 if len(v) == 1:
                     patch_type = "diff"
@@ -365,6 +367,7 @@ try:
             return weight
 
         return calculate_weight
+
 
 except ImportError:
     ModelMixin = None
