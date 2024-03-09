@@ -27,6 +27,21 @@ def add_folder_path_and_extensions(folder_name, full_folder_paths, extensions):
     else:
         folder_paths.folder_names_and_paths[folder_name] = (full_folder_paths, extensions)
 
+from comfy.model_base import BaseModel
+import comfy.supported_models
+import comfy.supported_models_base
+def get_sd_version(model):
+    base: BaseModel = model.model
+    model_config: comfy.supported_models.supported_models_base.BASE = base.model_config
+    if isinstance(model_config, comfy.supported_models.SDXL):
+        return 'sdxl'
+    elif isinstance(
+            model_config, (comfy.supported_models.SD15, comfy.supported_models.SD20)
+    ):
+        return 'sd15'
+    else:
+        return 'unknown'
+
 def find_nearest_steps(clip_id, prompt):
     """Find the nearest KSampler or preSampling node that references the given id."""
     def check_link_to_clip(node_id, clip_id, visited=None, node=None):

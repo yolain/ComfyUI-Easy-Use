@@ -15,7 +15,7 @@ from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, 
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
-from .layer_diffusion import LayerDiffuse, LayerMethod, calculate_weight_adjust_channel
+from .layer_diffuse.func import LayerDiffuse, LayerMethod
 
 from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions
 from .libs.loader import easyLoader
@@ -1687,7 +1687,7 @@ class instantIDApplyAdvanced(instantID):
     RETURN_NAMES = ("pipe", "model", "positive", "negative")
     OUTPUT_NODE = True
 
-    FUNCTION = "apply"
+    FUNCTION = "apply_advanced"
     CATEGORY = "EasyUse/__for_testing"
 
     def apply_advanced(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, positive=None, negative=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
@@ -2524,10 +2524,6 @@ class samplerFull(LayerDiffuse):
             method = self.get_layer_diffusion_method(pipe['loader_settings']['layer_diffusion_method'], samp_blend_samples is not None)
 
             weight = pipe['loader_settings']['layer_diffusion_weight'] if 'layer_diffusion_weight' in pipe['loader_settings'] else 1.0
-            try:
-                ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
-            except:
-                pass
             samp_model, samp_positive, samp_negative = self.apply_layer_diffusion(samp_model, method, weight, samp_samples, samp_blend_samples, samp_positive, samp_negative)
 
         def downscale_model_unet(samp_model):
@@ -2594,7 +2590,7 @@ class samplerFull(LayerDiffuse):
                 samp_images = samp_vae.decode(latent).cpu()
 
             # LayerDiffusion Decode
-            new_images, samp_images, alpha = self.layer_diffusion_decode(layer_diffusion_method, latent, blend_samples, samp_images)
+            new_images, samp_images, alpha = self.layer_diffusion_decode(layer_diffusion_method, latent, blend_samples, samp_images, samp_model)
 
             # 推理总耗时（包含解码）
             end_decode_time = int(time.time() * 1000)
@@ -2715,7 +2711,7 @@ class samplerFull(LayerDiffuse):
             output_images = torch.stack([tensor.squeeze() for tensor in image_list])
 
             new_images, samp_images, alpha = self.layer_diffusion_decode(layer_diffusion_method, latents_plot, blend_samples,
-                                                                         output_images)
+                                                                         output_images, samp_model)
 
             results = easySave(images, save_prefix, image_output, prompt, extra_pnginfo)
             sampler.update_value_by_id("results", my_unique_id, results)
