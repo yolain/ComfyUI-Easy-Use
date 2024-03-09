@@ -1558,53 +1558,14 @@ class fooocusInpaintLoader:
         return ((inpaint_head_model, inpaint_lora),)
 
 #Apply InstantID
-class instantIDApply:
-
-    def __init__(self):
-        pass
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-                "required":{
-                     "pipe": ("PIPE_LINE",),
-                     "image": ("IMAGE",),
-                     "instantid_file": (folder_paths.get_filename_list("instantid"),),
-                     "insightface": (["CPU", "CUDA", "ROCM"],),
-                     "control_net_name": (folder_paths.get_filename_list("controlnet"),),
-                     "cn_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
-                     "cn_soft_weights": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},),
-                     "weight": ("FLOAT", {"default": .8, "min": 0.0, "max": 5.0, "step": 0.01, }),
-                     "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
-                     "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
-                     "noise": ("FLOAT", {"default": 0.35, "min": 0.0, "max": 1.0, "step": 0.05, }),
-                },
-                "optional": {
-                    "image_kps": ("IMAGE",),
-                    "mask": ("MASK",),
-                    "control_net": ("CONTROL_NET",),
-                },
-                "hidden": {
-                    "positive": None, "negative": None,
-                    "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"
-                },
-        }
-
-    RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING")
-    RETURN_NAMES = ("pipe", "model", "positive", "negative")
-    OUTPUT_NODE = True
-
-    FUNCTION = "apply"
-    CATEGORY = "EasyUse/__for_testing"
+class instantID:
 
     def error(self):
         raise Exception(f"[ERROR] To use instantIDApply, you need to install 'ComfyUI_InstantID'")
 
-    def apply(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, positive=None, negative=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def run(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, positive=None, negative=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         instantid_model, insightface_model, face_embeds = None, None, None
         model = pipe['model']
-        positive = positive if positive is not None else pipe['positive']
-        negative = negative if negative is not None else pipe['negative']
         # Load InstantID
         if "InstantIDModelLoader" in ALL_NODE_CLASS_MAPPINGS:
             load_instant_cls = ALL_NODE_CLASS_MAPPINGS["InstantIDModelLoader"]
@@ -1642,12 +1603,56 @@ class instantIDApply:
         del pipe
 
         return (new_pipe, model, positive, negative)
-
-#Apply InstantID Advanced
-
-class instantIDApplyAdvanced:
+class instantIDApply(instantID):
 
     def __init__(self):
+        super().__init__()
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+                "required":{
+                     "pipe": ("PIPE_LINE",),
+                     "image": ("IMAGE",),
+                     "instantid_file": (folder_paths.get_filename_list("instantid"),),
+                     "insightface": (["CPU", "CUDA", "ROCM"],),
+                     "control_net_name": (folder_paths.get_filename_list("controlnet"),),
+                     "cn_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                     "cn_soft_weights": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},),
+                     "weight": ("FLOAT", {"default": .8, "min": 0.0, "max": 5.0, "step": 0.01, }),
+                     "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
+                     "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001, }),
+                     "noise": ("FLOAT", {"default": 0.35, "min": 0.0, "max": 1.0, "step": 0.05, }),
+                },
+                "optional": {
+                    "image_kps": ("IMAGE",),
+                    "mask": ("MASK",),
+                    "control_net": ("CONTROL_NET",),
+                },
+                "hidden": {
+                    "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"
+                },
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING")
+    RETURN_NAMES = ("pipe", "model", "positive", "negative")
+    OUTPUT_NODE = True
+
+    FUNCTION = "apply"
+    CATEGORY = "EasyUse/__for_testing"
+
+
+    def apply(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+        positive = pipe['positive']
+        negative = pipe['negative']
+        return self.run(pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps, mask, control_net, positive, negative, prompt, extra_pnginfo, my_unique_id)
+
+#Apply InstantID Advanced
+class instantIDApplyAdvanced(instantID):
+
+    def __init__(self):
+        super().__init__()
         pass
 
     @classmethod
@@ -1685,9 +1690,13 @@ class instantIDApplyAdvanced:
     FUNCTION = "apply"
     CATEGORY = "EasyUse/__for_testing"
 
-    def apply(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, positive=None, negative=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def apply_advanced(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, positive=None, negative=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
-        return instantIDApply().apply(pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps, mask, control_net, positive, negative, prompt, extra_pnginfo, my_unique_id)
+        positive = positive if positive is not None else pipe['positive']
+        negative = negative if negative is not None else pipe['negative']
+
+        return self.run(pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps, mask, control_net, positive, negative, prompt, extra_pnginfo, my_unique_id)
+
 #---------------------------------------------------------------预采样 开始----------------------------------------------------------------------#
 
 # 预采样设置（基础）
