@@ -47,6 +47,7 @@ you need to run `pip install -r requirements.txt` to install python dependencies
 
 **v1.1.0 (2024/3/10)**
 
+- Added `easy imageSplitList` - to split every N images
 - The LayerDiffuse node supports SD15 models
 - Added `easy preSamplingDiffusionADDTL` - It can modify foreground、background or blended additional prompt
 - Added `easy preSamplingNoiseIn` It can replace the `easy latentNoisy` node that needs to be fronted to achieve better noise injection

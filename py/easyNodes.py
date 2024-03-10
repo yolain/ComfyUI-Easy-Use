@@ -2912,6 +2912,7 @@ class samplerSimpleLayerDiffusion:
     RETURN_TYPES = ("PIPE_LINE", "IMAGE", "IMAGE", "MASK")
     RETURN_NAMES = ("pipe", "final_image", "original_image", "alpha")
     OUTPUT_NODE = True
+    OUTPUT_IS_LIST = (False, False, False, True)
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 

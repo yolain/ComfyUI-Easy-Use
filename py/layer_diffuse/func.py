@@ -141,15 +141,37 @@ class LayerDiffuse:
         new_images, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
         return new_images, alpha
 
+    def make_3d_mask(self, mask):
+        if len(mask.shape) == 4:
+            return mask.squeeze(0)
+
+        elif len(mask.shape) == 2:
+            return mask.unsqueeze(0)
+
+        return mask
+
+    def masks_to_list(self, masks):
+        if masks is None:
+            empty_mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+            return ([empty_mask],)
+
+        res = []
+
+        for mask in masks:
+            res.append(mask)
+
+        return [self.make_3d_mask(x) for x in res]
+
     def layer_diffusion_decode(self, layer_diffusion_method, latent, blend_samples, samp_images, model):
-        alpha = None
+        alpha = []
         if layer_diffusion_method is not None:
             sd_version = get_sd_version(model)
             if sd_version not in ['sdxl', 'sd15']:
                 raise Exception(f"Only SDXL and SD1.5 model supported for Layer Diffusion")
             method = self.get_layer_diffusion_method(layer_diffusion_method, blend_samples is not None)
-            sd15_allow = True if sd_version == 'sd15' and method in [LayerMethod.EVERYTHING, LayerMethod.BG_TO_BLEND] else False
-            if method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN, LayerMethod.BG_BLEND_TO_FG] or sd15_allow:
+            sd15_allow = True if sd_version == 'sd15' and method in [LayerMethod.FG_ONLY_ATTN, LayerMethod.EVERYTHING, LayerMethod.BG_TO_BLEND, LayerMethod.BG_BLEND_TO_FG] else False
+            sdxl_allow = True if sd_version == 'sdxl' and method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN, LayerMethod.BG_BLEND_TO_FG] else False
+            if sdxl_allow or sd15_allow:
                 if self.vae_transparent_decoder is None:
                     model_url = LAYER_DIFFUSION_VAE['decode'][sd_version]["model_url"]
                     if model_url is None:
@@ -162,16 +184,13 @@ class LayerDiffuse:
                     )
                 if method in [LayerMethod.EVERYTHING, LayerMethod.BG_BLEND_TO_FG, LayerMethod.BG_TO_BLEND]:
                     new_images = []
-                    alpha_images = []
                     sliced_samples = copy.copy({"samples": latent})
-                    sliced_samples["samples"] = sliced_samples["samples"][::self.frames]
-                    for index in range(self.frames):
-                        for img in (samp_images[index::self.frames],):
-                            if index == 0:
-                                alpha_images, alpha = self.image_to_alpha(img, sliced_samples["samples"])
                     for index in range(len(samp_images)):
                         if index % self.frames == 0:
-                            new_images.append(alpha_images[index // self.frames])
+                            img = samp_images[index::self.frames]
+                            alpha_images, _alpha = self.image_to_alpha(img, sliced_samples["samples"][index::self.frames])
+                            alpha.append(self.make_3d_mask(_alpha[0]))
+                            new_images.append(alpha_images[0])
                         else:
                             new_images.append(samp_images[index])
                 else:
@@ -180,5 +199,6 @@ class LayerDiffuse:
                 new_images = samp_images
         else:
             new_images = samp_images
+
 
         return (new_images, samp_images, alpha)

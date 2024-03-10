@@ -466,6 +466,41 @@ class JoinImageBatch:
       image = torch.transpose(torch.transpose(images, 1, 2).reshape(1, n * w, h, c), 1, 2)
     return (image,)
 
+# 图像拆分
+class imageSplitList:
+  @classmethod
+
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+      },
+    }
+
+  RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE",)
+  RETURN_NAMES = ("images", "images", "images",)
+  FUNCTION = "doit"
+  CATEGORY = "EasyUse/Image"
+
+  def doit(self, images):
+    length = len(images)
+    new_images = ([], [], [])
+    if length % 3 == 0:
+      for index, img in enumerate(images):
+        if index % 3 == 0:
+          new_images[0].append(img)
+        elif (index+1) % 3 == 0:
+          new_images[2].append(img)
+        else:
+          new_images[1].append(img)
+    elif length % 2 == 0:
+      for index, img in enumerate(images):
+        if index % 2 == 0:
+          new_images[0].append(img)
+        else:
+          new_images[1].append(img)
+    return new_images
+
 # 姿势编辑器
 class poseEditor:
   @classmethod
@@ -518,6 +553,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageScaleDownBy": imageScaleDownBy,
   "easy imageScaleDownToSize": imageScaleDownToSize,
   "easy imageToMask": imageToMask,
+  "easy imageSplitList": imageSplitList,
   "easy imageSave": imageSaveSimple,
   "easy joinImageBatch": JoinImageBatch,
   "easy poseEditor": poseEditor
@@ -534,6 +570,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageScaleDownToSize": "Image Scale Down To Size",
   "easy imageToMask": "ImageToMask",
   "easy imageHSVMask": "ImageHSVMask",
+  "easy imageSplitList": "imageSplitList",
   "easy imageSave": "SaveImage (Simple)",
   "easy joinImageBatch": "JoinImageBatch",
   "easy poseEditor": "PoseEditor"
