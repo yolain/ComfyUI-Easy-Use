@@ -17,7 +17,7 @@ from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
 from .layer_diffuse.func import LayerDiffuse, LayerMethod
 
-from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions
+from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions, get_sd_version
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler
 from .libs.xyplot import easyXYPlot
@@ -2214,7 +2214,7 @@ class layerDiffusionSettings:
         return {"required":
             {
              "pipe": ("PIPE_LINE",),
-             "method": ([LayerMethod.FG_ONLY_ATTN.value, LayerMethod.FG_ONLY_CONV.value, LayerMethod.FG_TO_BLEND.value, LayerMethod.BG_TO_BLEND.value],),
+             "method": ([LayerMethod.FG_ONLY_ATTN.value, LayerMethod.FG_ONLY_CONV.value, LayerMethod.EVERYTHING.value, LayerMethod.FG_TO_BLEND.value, LayerMethod.BG_TO_BLEND.value],),
              "weight": ("FLOAT",{"default": 1.0, "min": -1, "max": 3, "step": 0.05},),
              "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
              "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
@@ -2265,7 +2265,7 @@ class layerDiffusionSettings:
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
             images = pipe["samp_images"]
         else:
-            if method not in [LayerMethod.FG_ONLY_ATTN, LayerMethod.FG_ONLY_CONV]:
+            if method not in [LayerMethod.FG_ONLY_ATTN, LayerMethod.FG_ONLY_CONV, LayerMethod.EVERYTHING]:
                 raise Exception("image is missing")
 
             samples = pipe["samples"]
@@ -2306,6 +2306,63 @@ class layerDiffusionSettings:
         del pipe
 
         return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
+
+# 预采样设置（layerDiffuse附加）
+class layerDiffusionSettingsADDTL:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required":
+            {
+                "pipe": ("PIPE_LINE",),
+                "foreground_prompt": ("STRING", {"default": "", "placeholder": "Foreground Additional Prompt", "multiline": True}),
+                "background_prompt": ("STRING", {"default": "", "placeholder": "Background Additional Prompt", "multiline": True}),
+                "blended_prompt": ("STRING", {"default": "", "placeholder": "Blended Additional Prompt", "multiline": True}),
+            },
+            "optional": {
+                "optional_fg_cond": ("CONDITIONING",),
+                "optional_bg_cond": ("CONDITIONING",),
+                "optional_blended_cond": ("CONDITIONING",),
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
+    OUTPUT_NODE = True
+
+    FUNCTION = "settings"
+    CATEGORY = "EasyUse/PreSampling"
+
+    def settings(self, pipe, foreground_prompt, background_prompt, blended_prompt, optional_fg_cond=None, optional_bg_cond=None, optional_blended_cond=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+        fg_cond, bg_cond, blended_cond = None, None, None
+        clip = pipe['clip']
+        if optional_fg_cond is not None:
+            fg_cond = optional_fg_cond
+        elif foreground_prompt != "":
+            fg_cond, = CLIPTextEncode().encode(clip, foreground_prompt)
+        if optional_bg_cond is not None:
+            bg_cond = optional_bg_cond
+        elif background_prompt != "":
+            bg_cond, = CLIPTextEncode().encode(clip, background_prompt)
+        if optional_blended_cond is not None:
+            blended_cond = optional_blended_cond
+        elif blended_prompt != "":
+            blended_cond, = CLIPTextEncode().encode(clip, blended_prompt)
+
+        new_pipe = {
+            **pipe,
+            "loader_settings": {
+                **pipe["loader_settings"],
+                "layer_diffusion_cond": (fg_cond, bg_cond, blended_cond)
+            }
+        }
+
+        del pipe
+
+        return (new_pipe,)
 
 # 预采样设置（动态CFG）
 from .dynthres_core import DynThresh
@@ -2521,10 +2578,11 @@ class samplerFull(LayerDiffuse):
         # LayerDiffusion
         if "layer_diffusion_method" in pipe['loader_settings']:
             samp_blend_samples = pipe["blend_samples"] if "blend_samples" in pipe else None
+            additional_cond = pipe["loader_settings"]['layer_diffusion_cond'] if "layer_diffusion_cond" in pipe['loader_settings'] else (None, None, None)
             method = self.get_layer_diffusion_method(pipe['loader_settings']['layer_diffusion_method'], samp_blend_samples is not None)
-
+            images = pipe["images"].movedim(-1, 1) if "images" in pipe else None
             weight = pipe['loader_settings']['layer_diffusion_weight'] if 'layer_diffusion_weight' in pipe['loader_settings'] else 1.0
-            samp_model, samp_positive, samp_negative = self.apply_layer_diffusion(samp_model, method, weight, samp_samples, samp_blend_samples, samp_positive, samp_negative)
+            samp_model, samp_positive, samp_negative = self.apply_layer_diffusion(samp_model, method, weight, samp_samples, samp_blend_samples, samp_positive, samp_negative, images, additional_cond)
 
         def downscale_model_unet(samp_model):
             if downscale_options is None:
@@ -2566,12 +2624,10 @@ class samplerFull(LayerDiffuse):
                                  image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id,
                                  preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise):
 
-            alpha = None
             blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
             layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
             empty_samples = pipe["loader_settings"]["empty_samples"] if "empty_samples" in pipe["loader_settings"] else None
             samples = empty_samples if layer_diffusion_method is not None and empty_samples is not None else samp_samples
-
             # Downscale Model Unet
             if samp_model is not None:
                 samp_model = downscale_model_unet(samp_model)
@@ -5235,6 +5291,7 @@ NODE_CLASS_MAPPINGS = {
     "easy preSamplingDynamicCFG": dynamicCFGSettings,
     "easy preSamplingCascade": cascadeSettings,
     "easy preSamplingLayerDiffusion": layerDiffusionSettings,
+    "easy preSamplingLayerDiffusionADDTL": layerDiffusionSettingsADDTL,
     # kSampler k采样器
     "easy fullkSampler": samplerFull,
     "easy kSampler": samplerSimple,
@@ -5318,12 +5375,13 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy preSamplingSdTurbo": "PreSampling (SDTurbo)",
     "easy preSamplingDynamicCFG": "PreSampling (DynamicCFG)",
     "easy preSamplingCascade": "PreSampling (Cascade)",
-    "easy preSamplingLayerDiffusion": "PreSampling (LayerDiffusion)",
+    "easy preSamplingLayerDiffusion": "PreSampling (LayerDiffuse)",
+    "easy preSamplingLayerDiffusionADDTL": "PreSampling (LayerDiffuse ADDTL)",
     # kSampler k采样器
     "easy kSampler": "EasyKSampler",
     "easy fullkSampler": "EasyKSampler (Full)",
     "easy kSamplerTiled": "EasyKSampler (Tiled Decode)",
-    "easy kSamplerLayerDiffusion": "EasyKSampler (LayerDiffusion)",
+    "easy kSamplerLayerDiffusion": "EasyKSampler (LayerDiffuse)",
     "easy kSamplerInpainting": "EasyKSampler (Inpainting)",
     "easy kSamplerDownscaleUnet": "EasyKsampler (Downscale Unet)",
     "easy kSamplerSDTurbo": "EasyKSampler (SDTurbo)",

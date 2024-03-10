@@ -92,9 +92,17 @@ LAYER_DIFFUSION = {
             "model_url": None
         }
     },
-    "Foreground": {
+    "Everything": {
         "sd15": {
           "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_joint.safetensors"
+        },
+        "sdxl": {
+            "model_url": None
+        }
+    },
+    "Foreground": {
+        "sd15": {
+          "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_fg2bg.safetensors"
         },
         "sdxl": {
            "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_fg2ble.safetensors"
@@ -110,7 +118,7 @@ LAYER_DIFFUSION = {
     },
     "Background": {
         "sd15": {
-          "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_joint.safetensors"
+          "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_bg2fg.safetensors"
         },
         "sdxl": {
             "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_bg2ble.safetensors"
@@ -121,7 +129,7 @@ LAYER_DIFFUSION = {
             "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_bg2fg.safetensors"
         },
         "sdxl": {
-            "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_bgble2fg.safetensor"
+            "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_bgble2fg.safetensors"
         }
     },
 }

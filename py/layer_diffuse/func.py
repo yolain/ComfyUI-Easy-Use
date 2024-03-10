@@ -1,5 +1,7 @@
 import torch
 import comfy.model_management
+import copy
+from typing import Optional
 from enum import Enum
 from comfy.utils import load_torch_file
 from comfy.conds import CONDRegular
@@ -17,16 +19,13 @@ class LayerMethod(Enum):
     FG_BLEND_TO_BG = "Foreground to Background"
     BG_TO_BLEND = "Background"
     BG_BLEND_TO_FG = "Background to Foreground"
+    EVERYTHING = "Everything"
 
 class LayerDiffuse:
 
     def __init__(self) -> None:
         self.vae_transparent_decoder = None
         self.frames = 1
-        try:
-            ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
-        except:
-            pass
 
     def get_layer_diffusion_method(self, method, has_blend_latent):
         method = LayerMethod(method)
@@ -49,15 +48,29 @@ class LayerDiffuse:
 
         return (write_c_concat(cond), write_c_concat(uncond))
 
-    def apply_layer_diffusion(self, model: ModelPatcher, method, weight, samples, blend_samples, positive, negative, control_img=None):
+    def apply_layer_diffusion(self, model: ModelPatcher, method, weight, samples, blend_samples, positive, negative, image=None, additional_cond=(None, None, None)):
+        control_img: Optional[torch.TensorType] = None
         sd_version = get_sd_version(model)
         model_url = LAYER_DIFFUSION[method.value][sd_version]["model_url"]
+
+        try:
+            ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
+        except:
+            pass
+
         if method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN] and sd_version == 'sd15':
             self.frames = 1
-        elif method == [LayerMethod.BG_TO_BLEND, LayerMethod.FG_TO_BLEND] and sd_version == 'sd15':
+        elif method in [LayerMethod.BG_TO_BLEND, LayerMethod.FG_TO_BLEND, LayerMethod.BG_BLEND_TO_FG, LayerMethod.FG_BLEND_TO_BG] and sd_version == 'sd15':
             self.frames = 2
-        elif method == [LayerMethod.BG_BLEND_TO_FG, LayerMethod.FG_BLEND_TO_BG] and sd_version == 'sd15':
+            batch_size, _, height, width = samples['samples'].shape
+            if batch_size % 2 != 0:
+                raise Exception(f"The batch size should be a multiple of 2. 批次大小需为2的倍数")
+            control_img = image
+        elif method == LayerMethod.EVERYTHING and sd_version == 'sd15':
+            batch_size, _, height, width = samples['samples'].shape
             self.frames = 3
+            if batch_size % 3 != 0:
+                raise Exception(f"The batch size should be a multiple of 3. 批次大小需为3的倍数")
         if model_url is None:
             raise Exception(f"{method.value} is not supported for {sd_version} model")
 
@@ -78,12 +91,24 @@ class LayerDiffuse:
         # cond_contact
         if method in [LayerMethod.FG_ONLY_ATTN, LayerMethod.FG_ONLY_CONV]:
             samp_model = work_model
-        else:
+        elif sd_version == 'sdxl':
             if method in [LayerMethod.BG_TO_BLEND, LayerMethod.FG_TO_BLEND]:
                 c_concat = model.model.latent_format.process_in(samples["samples"])
             else:
                 c_concat = model.model.latent_format.process_in(torch.cat([samples["samples"], blend_samples["samples"]], dim=1))
             samp_model, positive, negative = (work_model,) + self.apply_layer_c_concat(positive, negative, c_concat)
+        elif sd_version == 'sd15':
+            if method in [LayerMethod.BG_TO_BLEND, LayerMethod.BG_BLEND_TO_FG]:
+                additional_cond = (additional_cond[0], None)
+            elif method in [LayerMethod.FG_TO_BLEND, LayerMethod.FG_BLEND_TO_BG]:
+                additional_cond = (additional_cond[1], None)
+
+            work_model.model_options.setdefault("transformer_options", {})
+            work_model.model_options["transformer_options"]["cond_overwrite"] = [
+                cond[0][0] if cond is not None else None
+                for cond in additional_cond
+            ]
+            samp_model = work_model
 
         return samp_model, positive, negative
 
@@ -95,17 +120,37 @@ class LayerDiffuse:
             out[i, 3, :, :] = alpha
         return out.movedim(1, -1)
 
+    def image_to_alpha(self, image, latent):
+        pixel = image.movedim(-1, 1)  # [B, H, W, C] => [B, C, H, W]
+        decoded = []
+        sub_batch_size = 16
+        for start_idx in range(0, latent.shape[0], sub_batch_size):
+            decoded.append(
+                self.vae_transparent_decoder.decode_pixel(
+                    pixel[start_idx: start_idx + sub_batch_size],
+                    latent[start_idx: start_idx + sub_batch_size],
+                )
+            )
+        pixel_with_alpha = torch.cat(decoded, dim=0)
+        # [B, C, H, W] => [B, H, W, C]
+        pixel_with_alpha = pixel_with_alpha.movedim(1, -1)
+        image = pixel_with_alpha[..., 1:]
+        alpha = pixel_with_alpha[..., 0]
+
+        alpha = 1.0 - alpha
+        new_images, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
+        return new_images, alpha
+
     def layer_diffusion_decode(self, layer_diffusion_method, latent, blend_samples, samp_images, model):
         alpha = None
         if layer_diffusion_method is not None:
+            sd_version = get_sd_version(model)
+            if sd_version not in ['sdxl', 'sd15']:
+                raise Exception(f"Only SDXL and SD1.5 model supported for Layer Diffusion")
             method = self.get_layer_diffusion_method(layer_diffusion_method, blend_samples is not None)
-            print(method.value)
-            if method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN, LayerMethod.BG_BLEND_TO_FG]:
+            sd15_allow = True if sd_version == 'sd15' and method in [LayerMethod.EVERYTHING, LayerMethod.BG_TO_BLEND] else False
+            if method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN, LayerMethod.BG_BLEND_TO_FG] or sd15_allow:
                 if self.vae_transparent_decoder is None:
-                    sd_version = get_sd_version(model)
-                    print(sd_version)
-                    if sd_version not in ['sdxl', 'sd15']:
-                        raise Exception(f"Only SDXL and SD1.5 model supported for Layer Diffusion")
                     model_url = LAYER_DIFFUSION_VAE['decode'][sd_version]["model_url"]
                     if model_url is None:
                         raise Exception(f"{method.value} is not supported for {sd_version} model")
@@ -115,27 +160,25 @@ class LayerDiffuse:
                         device=comfy.model_management.get_torch_device(),
                         dtype=(torch.float16 if comfy.model_management.should_use_fp16() else torch.float32),
                     )
-
-                pixel = samp_images.movedim(-1, 1)  # [B, H, W, C] => [B, C, H, W]
-                decoded = []
-                sub_batch_size = 16
-                for start_idx in range(0, latent.shape[0], sub_batch_size):
-                    decoded.append(
-                        self.vae_transparent_decoder.decode_pixel(
-                            pixel[start_idx: start_idx + sub_batch_size],
-                            latent[start_idx: start_idx + sub_batch_size],
-                        )
-                    )
-                pixel_with_alpha = torch.cat(decoded, dim=0)
-                # [B, C, H, W] => [B, H, W, C]
-                pixel_with_alpha = pixel_with_alpha.movedim(1, -1)
-                image = pixel_with_alpha[..., 1:]
-                alpha = pixel_with_alpha[..., 0]
-
-                alpha = 1.0 - alpha
-                new_images, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
+                if method in [LayerMethod.EVERYTHING, LayerMethod.BG_BLEND_TO_FG, LayerMethod.BG_TO_BLEND]:
+                    new_images = []
+                    alpha_images = []
+                    sliced_samples = copy.copy({"samples": latent})
+                    sliced_samples["samples"] = sliced_samples["samples"][::self.frames]
+                    for index in range(self.frames):
+                        for img in (samp_images[index::self.frames],):
+                            if index == 0:
+                                alpha_images, alpha = self.image_to_alpha(img, sliced_samples["samples"])
+                    for index in range(len(samp_images)):
+                        if index % self.frames == 0:
+                            new_images.append(alpha_images[index // self.frames])
+                        else:
+                            new_images.append(samp_images[index])
+                else:
+                    new_images, alpha = self.image_to_alpha(samp_images, latent)
             else:
                 new_images = samp_images
         else:
             new_images = samp_images
+
         return (new_images, samp_images, alpha)

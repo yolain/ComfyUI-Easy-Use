@@ -34,8 +34,10 @@
 
 ## 更新日志
 
-**v1.1.0 (2024/3/7)**
+**v1.1.0 (2024/3/10)**
 
+- LayerDiffuse 支持 SD15模型
+- 增加 `easy preSamplingDiffusionADDTL` - 可配置前景、背景、blended的additional_prompt等   
 - 增加 `easy preSamplingNoiseIn` 可替代需要前置的`easy latentNoisy`节点 实现效果更好的噪声注入
 - `easy pipeEdit` 增加 条件拼接模式选择，可选择替换、合并、联结、平均、设置条件时间
 
