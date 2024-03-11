@@ -258,6 +258,8 @@ class easyLoader:
         orig_lora_name = lora_name
         lora_name = self.resolve_lora_name(lora_name)
 
+
+
         if lora_name is not None:
             lora_path = folder_paths.get_full_path("loras", lora_name)
         else:
@@ -290,8 +292,18 @@ class easyLoader:
             return name
         else:
             if len(self.lora_name_cache) == 0:
-                self.lora_name_cache.extend(folder_paths.get_filename_list("loras"))
-
+                loras = folder_paths.get_filename_list("loras")
+                self.lora_name_cache.extend(loras)
             for x in self.lora_name_cache:
                 if x.endswith(name):
                     return x
+
+            # 如果刷新网页后新添加的lora走这个逻辑
+            log_node_info("LORA NOT IN CACHE", f"{name}")
+            loras = folder_paths.get_filename_list("loras")
+            for x in loras:
+                if x.endswith(name):
+                    self.lora_name_cache.append(x)
+                    return x
+
+            return None
