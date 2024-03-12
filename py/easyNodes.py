@@ -1868,9 +1868,8 @@ class samplerSettingsNoiseIn:
                      "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
-                    # "image_to_latent": ("IMAGE",),
-                    # "latent": ("LATENT",),
                     "optional_noise_seed": ("INT",{"forceInput": True}),
+                    "optional_latent": ("LATENT",),
                 },
                 "hidden":
                     {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
@@ -1935,14 +1934,14 @@ class samplerSettingsNoiseIn:
         except:
             return None
 
-    def settings(self, pipe, factor, steps, cfg, sampler_name, scheduler, denoise, seed_num, optional_noise_seed=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
-        latent = pipe["samples"]
+    def settings(self, pipe, factor, steps, cfg, sampler_name, scheduler, denoise, seed_num, optional_noise_seed=None, optional_latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+        latent = optional_latent if optional_latent is not None else pipe["samples"]
         model = pipe["model"]
 
         # generate base noise
         batch_size, _, height, width = latent["samples"].shape
         generator = torch.manual_seed(seed_num)
-        base_noise = torch.randn((batch_size, 4, height, width), dtype=torch.float32, device="cpu", generator=generator).cpu()
+        base_noise = torch.randn((1, 4, height, width), dtype=torch.float32, device="cpu", generator=generator).repeat(batch_size, 1, 1, 1).cpu()
 
         # generate variation noise
         if optional_noise_seed is None or optional_noise_seed == seed_num:
