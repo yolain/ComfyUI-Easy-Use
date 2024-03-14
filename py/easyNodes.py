@@ -922,6 +922,10 @@ class cascadeLoader:
             "stage_a": (["Baked VAE"]+folder_paths.get_filename_list("vae"),),
             "clip_name": (["None"] + folder_paths.get_filename_list("clip"),),
 
+            "lora_name": (["None"] + folder_paths.get_filename_list("loras"),),
+            "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+            "lora_clip_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+
             "resolution": (resolution_strings, {"default": "1024 x 1024"}),
             "empty_latent_width": ("INT", {"default": 1024, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
             "empty_latent_height": ("INT", {"default": 1024, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
@@ -932,7 +936,7 @@ class cascadeLoader:
 
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
-            "optional": {},
+            "optional": {"optional_lora_stack": ("LORA_STACK",), },
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
@@ -949,9 +953,9 @@ class cascadeLoader:
             is_ckpt = True
         return is_ckpt
 
-    def adv_pipeloader(self, stage_c, stage_b, stage_a, clip_name,
+    def adv_pipeloader(self, stage_c, stage_b, stage_a, clip_name, lora_name, lora_model_strength, lora_clip_strength,
                        resolution, empty_latent_width, empty_latent_height, compression,
-                       positive, negative, batch_size, prompt=None,
+                       positive, negative, batch_size, optional_lora_stack=None,prompt=None,
                        my_unique_id=None):
 
         vae: VAE | None = None
@@ -989,6 +993,20 @@ class cascadeLoader:
         else:
             model_b = easyCache.load_unet(stage_b)
             vae_b = None
+
+        if optional_lora_stack is not None and can_load_lora:
+            for lora in optional_lora_stack:
+                lora = {"lora_name": lora[0], "model": model_c, "clip": clip, "model_strength": lora[1], "clip_strength": lora[2]}
+                model_c, clip = easyCache.load_lora(lora)
+                lora['model'] = model_c
+                lora['clip'] = clip
+                pipe_lora_stack.append(lora)
+
+        if lora_name != "None" and can_load_lora:
+            lora = {"lora_name": lora_name, "model": model_c, "clip": clip, "model_strength": lora_model_strength,
+                    "clip_strength": lora_clip_strength}
+            model_c, clip = easyCache.load_lora(lora)
+            pipe_lora_stack.append(lora)
 
         model = (model_c, model_b)
         # Load clip
