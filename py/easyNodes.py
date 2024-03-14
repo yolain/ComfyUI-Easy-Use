@@ -23,6 +23,7 @@ from .libs.sampler import easySampler
 from .libs.xyplot import easyXYPlot
 from .libs.controlnet import easyControlnet
 from .libs.conditioning import prompt_to_cond, set_cond
+from .libs.cache import cache, update_cache
 
 sampler = easySampler()
 easyCache = easyLoader()
@@ -1585,14 +1586,24 @@ class instantID:
         instantid_model, insightface_model, face_embeds = None, None, None
         model = pipe['model']
         # Load InstantID
+        cache_key = 'instantID'
+        if cache_key in cache:
+            log_node_info("easy instantIDApply","Using InstantIDModel Cached")
+            instantid_model = cache[cache_key][1]
         if "InstantIDModelLoader" in ALL_NODE_CLASS_MAPPINGS:
             load_instant_cls = ALL_NODE_CLASS_MAPPINGS["InstantIDModelLoader"]
             instantid_model, = load_instant_cls().load_model(instantid_file)
+            update_cache(cache_key, (False, instantid_model))
         else:
             self.error()
-        if "InstantIDFaceAnalysis" in ALL_NODE_CLASS_MAPPINGS:
+        icache_key = 'insightface-' + insightface
+        if icache_key in cache:
+            log_node_info("easy instantIDApply", f"Using InsightFaceModel {insightface} Cached")
+            insightface_model = cache[icache_key][1]
+        elif "InstantIDFaceAnalysis" in ALL_NODE_CLASS_MAPPINGS:
             load_insightface_cls = ALL_NODE_CLASS_MAPPINGS["InstantIDFaceAnalysis"]
             insightface_model, = load_insightface_cls().load_insight_face(insightface)
+            update_cache(icache_key, (False, insightface_model))
         else:
             self.error()
 
