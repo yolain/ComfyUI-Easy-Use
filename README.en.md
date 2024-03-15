@@ -45,26 +45,26 @@ you need to run `pip install -r requirements.txt` to install python dependencies
 
 ## Changelog
 
-**v1.1.0 (2024/3/10)**
+**v1.1.1 (2024/3/16)**
+
+- Added `easy imageRemBg` - The default is BriaAI's REMB-1.4 model, which removes the background effect more and faster
+
+**v1.1.0 (d5ff84e)**
 
 - Added `easy imageSplitList` - to split every N images
-- The LayerDiffuse node supports SD15 models
 - Added `easy preSamplingDiffusionADDTL` - It can modify foreground、background or blended additional prompt
 - Added `easy preSamplingNoiseIn` It can replace the `easy latentNoisy` node that needs to be fronted to achieve better noise injection
 - `easy pipeEdit` Added conditioning splicing mode selection, you can choose to replace, concat, combine, average, and set timestep range
-
-(df4d99)
-- Fixed layerDiffusion error when batch size greater than 1
-- Fixed `easy wildcards` When LoRa is not filled in completely, LoRa is not automatically retrieved, resulting in failure to load LoRa
-- Fixed the issue that 'BREAK' non-initiation when didn't use a1111 prompt style
-
-(722e9f4)
 - Added `easy pipeEdit` - nodes that can edit pipes (including re-enterable prompts)
 - Added `easy preSamplingLayerDiffusion` and `easy kSamplerLayerDiffusion`
 - Added a convenient menu to right-click on nodes such as Loader, Presampler, Sampler, Controlnet, etc. to quickly replace nodes of the same type
 - Added `easy instantIDApplyADV` can link positive and negative
+- Fixed layerDiffusion error when batch size greater than 1
+- Fixed `easy wildcards` When LoRa is not filled in completely, LoRa is not automatically retrieved, resulting in failure to load LoRa
+- Fixed the issue that 'BREAK' non-initiation when didn't use a1111 prompt style
 - Fixed `easy instantIDApply` mask not input right
-- 
+
+
 **v1.0.9 (ff1add1)**
 
 - Fixed the error when ComfyUI-Impack-Pack and ComfyUI_InstantID were not installed

@@ -473,7 +473,7 @@ app.registerExtension({
 			case "easy cascadeKSampler":
 			case "easy hiresFix":
 			case "easy detailerFix":
-			case "easy imageRemoveBG":
+			case "easy imageRemBg":
 			case "easy XYInputs: Steps":
 			case "easy XYInputs: Sampler/Scheduler":
 			case 'easy XYInputs: Checkpoint':
@@ -904,7 +904,7 @@ app.registerExtension({
 });
 
 
-const getSetWidgets = ['rescale_after_model', 'rescale', 'image_output',
+const getSetWidgets = ['rescale_after_model', 'rescale',
 						'lora_name', 'lora1_name', 'lora2_name', 'lora3_name', 
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',

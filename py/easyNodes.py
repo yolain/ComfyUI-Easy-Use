@@ -37,8 +37,9 @@ add_folder_path_and_extensions("mmdets_segm", [os.path.join(model_path, "mmdets"
 add_folder_path_and_extensions("mmdets", [os.path.join(model_path, "mmdets")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("sams", [os.path.join(model_path, "sams")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("onnx", [os.path.join(model_path, "onnx")], {'.onnx'})
-add_folder_path_and_extensions("instantid", [os.path.join(model_path, "instantid")], {'.bin'})
-add_folder_path_and_extensions("layer_model", [os.path.join(model_path, "layer_model")], {'.safetensors'})
+add_folder_path_and_extensions("instantid", [os.path.join(model_path, "instantid")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("layer_model", [os.path.join(model_path, "layer_model")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("rembg", [os.path.join(model_path, "rembg")], folder_paths.supported_pt_extensions)
 
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 

@@ -34,25 +34,23 @@
 
 ## 更新日志
 
-**v1.1.0 (2024/3/10)**
+**v1.1.1 (2024/3/16)**
+
+- 增加 `easy imageRemBg` - 默认为BriaAI的REMB-1.4模型, 移除背景效果更加，速度更快
+
+**v1.1.0 (d5ff84e)**
 
 - 增加 `easy imageSplitList` - 拆分每 N 张图像
-- LayerDiffuse 支持 SD15模型
 - 增加 `easy preSamplingDiffusionADDTL` - 可配置前景、背景、blended的additional_prompt等   
 - 增加 `easy preSamplingNoiseIn` 可替代需要前置的`easy latentNoisy`节点 实现效果更好的噪声注入
 - `easy pipeEdit` 增加 条件拼接模式选择，可选择替换、合并、联结、平均、设置条件时间
-
-(df4d99)
-- 修复 layerDiffuse 在批次大小大于1时报错
-- 修复 `easy wildcards` 读取lora未填写完整路径时未自动检索导致加载lora失败的问题
-- 修复 在 非a1111提示词风格下 BREAK 不生效的问题
-
-(722e9f4)
 - 增加 `easy pipeEdit` - 可编辑Pipe的节点（包含可重新输入提示词）
 - 增加 `easy preSamplingLayerDiffusion` 与 `easy kSamplerLayerDiffusion` （连接 `easy kSampler` 也能通）
 - 增加 在 加载器、预采样、采样器、Controlnet等节点上右键可快速替换同类型节点的便捷菜单
 - 增加 `easy instantIDApplyADV` 可连入 positive 与 negative
+- 修复 `easy wildcards` 读取lora未填写完整路径时未自动检索导致加载lora失败的问题
 - 修复 `easy instantIDApply` mask 未传入正确值
+- 修复 在 非a1111提示词风格下 BREAK 不生效的问题
 
 **v1.0.9 (ff1add1)**
 

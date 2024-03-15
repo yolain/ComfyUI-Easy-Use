@@ -6,8 +6,9 @@ BASE_RESOLUTIONS = [
     ("自定义", "自定义"),
     (512, 512),
     (512, 768),
-    (768, 512),
     (576, 1024),
+    (768, 512),
+    (768, 768),
     (768, 1024),
     (768, 1280),
     (768, 1344),
@@ -34,14 +35,13 @@ BASE_RESOLUTIONS = [
 ]
 MAX_SEED_NUM = 1125899906842624
 
-INPAINT_DIR = os.path.join(folder_paths.models_dir, "inpaint")
 
 RESOURCES_DIR = os.path.join(Path(__file__).parent.parent, "resources")
+
+# fooocus
+INPAINT_DIR = os.path.join(folder_paths.models_dir, "inpaint")
 FOOOCUS_STYLES_DIR = os.path.join(Path(__file__).parent.parent, "styles")
-LAYER_DIFFUSION_DIR = os.path.join(folder_paths.models_dir, "layer_model")
-
 FOOOCUS_STYLES_SAMPLES = 'https://raw.githubusercontent.com/lllyasviel/Fooocus/main/sdxl_styles/samples/'
-
 FOOOCUS_INPAINT_HEAD = {
     "fooocus_inpaint_head": {
         "model_url": "https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/fooocus_inpaint_head.pth"
@@ -59,6 +59,8 @@ FOOOCUS_INPAINT_PATCH = {
     },
 }
 
+# layerDiffuse
+LAYER_DIFFUSION_DIR = os.path.join(folder_paths.models_dir, "layer_model")
 LAYER_DIFFUSION_VAE = {
     "encode": {
         "sdxl": {
@@ -74,7 +76,6 @@ LAYER_DIFFUSION_VAE = {
         }
     }
 }
-
 LAYER_DIFFUSION = {
     "Attention Injection": {
         "sd15": {
@@ -132,4 +133,12 @@ LAYER_DIFFUSION = {
             "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_bgble2fg.safetensors"
         }
     },
+}
+
+# REMBG
+REMBG_DIR = os.path.join(folder_paths.models_dir, "rembg")
+REMBG_MODELS = {
+    "RMBG-1.4": {
+        "model_url": "https://huggingface.co/briaai/RMBG-1.4/resolve/main/model.pth"
+    }
 }

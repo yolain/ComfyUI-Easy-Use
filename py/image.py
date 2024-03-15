@@ -1,10 +1,5 @@
 from PIL import Image
-from PIL.PngImagePlugin import PngInfo
 from enum import Enum
-import datetime
-import random
-import re
-import json
 import os
 import hashlib
 import folder_paths
@@ -501,7 +496,77 @@ class imageSplitList:
           new_images[1].append(img)
     return new_images
 
-# 姿势编辑器
+# 图片背景移除
+from .briaai.rembg import BriaRMBG, preprocess_image, postprocess_image
+from .libs.utils import get_local_filepath, easySave
+from .config import REMBG_DIR, REMBG_MODELS
+class imageRemBg:
+  @classmethod
+  def INPUT_TYPES(self):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+        "rem_mode": (("RMBG-1.4",),),
+        "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
+        "save_prefix": ("STRING", {"default": "ComfyUI"}),
+      },
+      "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+    }
+
+  RETURN_TYPES = ("IMAGE", "MASK")
+  RETURN_NAMES = ("image", "mask")
+  FUNCTION = "remove"
+  OUTPUT_NODE = True
+
+  CATEGORY = "EasyUse/Image"
+
+  def remove(self, rem_mode, images, image_output, save_prefix, prompt=None, extra_pnginfo=None):
+    if rem_mode == "RMBG-1.4":
+      # load model
+      model_url = REMBG_MODELS[rem_mode]['model_url']
+      suffix = model_url.split(".")[-1]
+      model_path = get_local_filepath(model_url, REMBG_DIR, rem_mode+'.'+suffix)
+
+      net = BriaRMBG()
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      net.load_state_dict(torch.load(model_path, map_location=device))
+      net.to(device)
+      net.eval()
+      # prepare input
+      model_input_size = [1024, 1024]
+      new_images = list()
+      masks = list()
+      for image in images:
+        orig_im = tensor2pil(image)
+        w, h = orig_im.size
+        image = preprocess_image(orig_im, model_input_size).to(device)
+        # inference
+        result = net(image)
+        result_image = postprocess_image(result[0][0], (h, w))
+        mask_im = Image.fromarray(result_image)
+        new_im = Image.new("RGBA", mask_im.size, (0,0,0,0))
+        new_im.paste(orig_im, mask=mask_im)
+
+        new_images.append(pil2tensor(new_im))
+        masks.append(pil2tensor(mask_im))
+
+      new_images = torch.cat(new_images, dim=0)
+      masks = torch.cat(masks, dim=0)
+
+
+      results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
+
+      if image_output in ("Hide", "Hide/Save"):
+        return {"ui": {},
+                "result": (new_images, masks)}
+
+      return {"ui": {"images": results},
+              "result": (new_images, masks)}
+
+    else:
+      return (None, None)
+
+    # 姿势编辑器
 class poseEditor:
   @classmethod
   def INPUT_TYPES(self):
@@ -555,6 +620,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageToMask": imageToMask,
   "easy imageSplitList": imageSplitList,
   "easy imageSave": imageSaveSimple,
+  "easy imageRemBg": imageRemBg,
   "easy joinImageBatch": JoinImageBatch,
   "easy poseEditor": poseEditor
 }
@@ -572,6 +638,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageHSVMask": "ImageHSVMask",
   "easy imageSplitList": "imageSplitList",
   "easy imageSave": "SaveImage (Simple)",
+  "easy imageRemBg": "Image Remove Bg",
   "easy joinImageBatch": "JoinImageBatch",
   "easy poseEditor": "PoseEditor"
 }
