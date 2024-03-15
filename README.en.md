@@ -47,7 +47,7 @@ you need to run `pip install -r requirements.txt` to install python dependencies
 
 **v1.1.1 (2024/3/16)**
 
-- Added `easy imageRemBg` - The default is BriaAI's REMB-1.4 model, which removes the background effect more and faster
+- Added `easy imageRemBg` - The default is BriaAI's RMBG-1.4 model, which removes the background effect more and faster
 
 **v1.1.0 (d5ff84e)**
 

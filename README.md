@@ -36,7 +36,7 @@
 
 **v1.1.1 (2024/3/16)**
 
-- 增加 `easy imageRemBg` - 默认为BriaAI的REMB-1.4模型, 移除背景效果更加，速度更快
+- 增加 `easy imageRemBg` - 默认为BriaAI的RMBG-1.4模型, 移除背景效果更加，速度更快
 
 **v1.1.0 (d5ff84e)**
 
