@@ -79,7 +79,9 @@ def find_wildcards_seed(clip_id, text, prompt):
                     if id != 0:
                         if id == wildcard_id:
                             wildcard_node = prompt[wildcard_id]
-                            seed = wildcard_node["inputs"]["seed_num"] if "seed_num" in wildcard_node["inputs"] else None
+                            seed = wildcard_node["inputs"]["seed"] if "seed" in wildcard_node["inputs"] else None
+                            if seed is None:
+                                seed = wildcard_node["inputs"]["seed_num"] if "seed_num" in wildcard_node["inputs"] else None
                             return seed
                         else:
                             return find_link_clip_id(id, seed, wildcard_id)

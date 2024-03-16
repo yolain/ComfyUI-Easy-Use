@@ -30,7 +30,8 @@ const widgetMapping = {
         "sampler_name": "sampler_name",
         "scheduler": "scheduler",
         "denoise": "denoise",
-        "seed_num": "seed_num"
+        "seed_num": "seed_num",
+        "seed": "seed"
     },
     "kSampler":{
         "image_output": "image_output",

@@ -97,11 +97,13 @@ function widgetLogic(node, widget) {
 	}
 	if (widget.name === 'add_noise') {
 		if (widget.value === "disable") {
-			toggleWidget(node, findWidgetByName(node, 'seed_num'))
+			toggleWidget(node, findWidgetByName(node, 'seed'))
 			toggleWidget(node, findWidgetByName(node, 'control_before_generate'))
+			toggleWidget(node, findWidgetByName(node, 'control_after_generate'))
 		} else {
-			toggleWidget(node, findWidgetByName(node, 'seed_num'), true)
+			toggleWidget(node, findWidgetByName(node, 'seed'), true)
 			toggleWidget(node, findWidgetByName(node, 'control_before_generate'), true)
+			toggleWidget(node, findWidgetByName(node, 'control_after_generate'), true)
 		}
 		updateNodeHeight(node)
 	}
@@ -791,7 +793,7 @@ app.registerExtension({
 				// 	serialize: false
 				// })
 				// seed_widget.linkedWidgets = [seed_control]
-				const seed_widget = this.widgets.find(w => w.name == 'seed_num')
+				const seed_widget = this.widgets.find(w => ['seed_num','seed'].includes(w.name))
 				const seed_control = this.widgets.find(w=> ['control_before_generate','control_after_generate'].includes(w.name))
 				if(nodeData.name == 'easy seed'){
 					this.addWidget("button", "🎲 Manual Random Seed", null, _=>{
