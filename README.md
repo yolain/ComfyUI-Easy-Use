@@ -36,6 +36,7 @@
 
 **v1.1.1 (2024/3/16)**
 
+- 将所有 **seed_num** 调整回 **seed**
 - 修补官方BUG: 当control_mode为before 在首次加载页面时未修改节点中widget名称为 control_before_generate
 - 去除强制**control_before_generate**设定
 - 增加 `easy imageRemBg` - 默认为BriaAI的RMBG-1.4模型, 移除背景效果更加，速度更快

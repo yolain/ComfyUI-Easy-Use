@@ -10,7 +10,7 @@ from urllib.request import urlopen
 from PIL import Image
 
 from server import PromptServer
-from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode
+from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint
 from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
@@ -78,7 +78,7 @@ class wildcardsPrompt:
             "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support Lora Block Weight and wildcard)"}),
             "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
             "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
-            "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+            "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
@@ -93,15 +93,15 @@ class wildcardsPrompt:
     @staticmethod
     def main(*args, **kwargs):
         prompt = kwargs["prompt"] if "prompt" in kwargs else None
-        seed_num = kwargs["seed_num"]
+        seed = kwargs["seed"]
 
         # Clean loaded_objects
         if prompt:
             easyCache.update_loaded_objects(prompt)
 
         text = kwargs['text']
-        populated_text = process(text, seed_num)
-        return {"ui": {"value": [seed_num]}, "result": (text, populated_text)}
+        populated_text = process(text, seed)
+        return {"ui": {"value": [seed]}, "result": (text, populated_text)}
 
 # 负面提示词
 class negativePrompt:
@@ -455,7 +455,7 @@ class latentNoisy:
             "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
             "end_at_step": ("INT", {"default": 10000, "min": 1, "max": 10000}),
             "source": (["CPU", "GPU"],),
-            "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
         },
         "optional": {
             "pipe": ("PIPE_LINE",),
@@ -469,7 +469,7 @@ class latentNoisy:
 
     CATEGORY = "EasyUse/Latent"
 
-    def run(self, sampler_name, scheduler, steps, start_at_step, end_at_step, source, seed_num, pipe=None, optional_model=None, optional_latent=None):
+    def run(self, sampler_name, scheduler, steps, start_at_step, end_at_step, source, seed, pipe=None, optional_model=None, optional_latent=None):
         model = optional_model if optional_model is not None else pipe["model"]
         batch_size = pipe["loader_settings"]["batch_size"]
         empty_latent_height = pipe["loader_settings"]["empty_latent_height"]
@@ -478,7 +478,7 @@ class latentNoisy:
         if optional_latent is not None:
             samples = optional_latent
         else:
-            torch.manual_seed(seed_num)
+            torch.manual_seed(seed)
             if source == "CPU":
                 device = "cpu"
             else:
@@ -596,21 +596,21 @@ class easySeed:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
 
-    RETURN_TYPES = ("INT:seed",)
-    RETURN_NAMES = ("seed_num",)
+    RETURN_TYPES = ("INT",)
+    RETURN_NAMES = ("seed",)
     FUNCTION = "doit"
 
     CATEGORY = "EasyUse/Seed"
 
     OUTPUT_NODE = True
 
-    def doit(self, seed_num=0, prompt=None, extra_pnginfo=None, my_unique_id=None):
-        return seed_num,
+    def doit(self, seed=0, prompt=None, extra_pnginfo=None, my_unique_id=None):
+        return seed,
 
 # 全局随机种
 class globalSeed:
@@ -1744,7 +1744,7 @@ class samplerSettings:
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
                     "image_to_latent": ("IMAGE",),
@@ -1761,7 +1761,7 @@ class samplerSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, steps, cfg, sampler_name, scheduler, denoise, seed_num, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, steps, cfg, sampler_name, scheduler, denoise, seed, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         # 图生图转换
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
@@ -1785,7 +1785,7 @@ class samplerSettings:
 
             "samples": samples,
             "images": images,
-            "seed": seed_num,
+            "seed": seed,
 
             "loader_settings": {
                 **pipe["loader_settings"],
@@ -1800,7 +1800,7 @@ class samplerSettings:
 
         del pipe
 
-        return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
+        return {"ui": {"value": [seed]}, "result": (new_pipe,)}
 
 # 预采样设置（高级）
 class samplerSettingsAdvanced:
@@ -1819,7 +1819,7 @@ class samplerSettingsAdvanced:
                      "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
                      "end_at_step": ("INT", {"default": 10000, "min": 0, "max": 10000}),
                      "add_noise": (["enable", "disable"],),
-                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
                     "image_to_latent": ("IMAGE",),
@@ -1836,7 +1836,7 @@ class samplerSettingsAdvanced:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, steps, cfg, sampler_name, scheduler, start_at_step, end_at_step, add_noise, seed_num, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, steps, cfg, sampler_name, scheduler, start_at_step, end_at_step, add_noise, seed, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         # 图生图转换
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
@@ -1860,7 +1860,7 @@ class samplerSettingsAdvanced:
 
             "samples": samples,
             "images": images,
-            "seed": seed_num,
+            "seed": seed,
 
             "loader_settings": {
                 **pipe["loader_settings"],
@@ -1877,7 +1877,7 @@ class samplerSettingsAdvanced:
 
         del pipe
 
-        return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
+        return {"ui": {"value": [seed]}, "result": (new_pipe,)}
 
 # 预采样设置（噪声注入）
 class samplerSettingsNoiseIn:
@@ -1895,7 +1895,7 @@ class samplerSettingsNoiseIn:
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
                     "optional_noise_seed": ("INT",{"forceInput": True}),
@@ -1964,18 +1964,18 @@ class samplerSettingsNoiseIn:
         except:
             return None
 
-    def settings(self, pipe, factor, steps, cfg, sampler_name, scheduler, denoise, seed_num, optional_noise_seed=None, optional_latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, factor, steps, cfg, sampler_name, scheduler, denoise, seed, optional_noise_seed=None, optional_latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         latent = optional_latent if optional_latent is not None else pipe["samples"]
         model = pipe["model"]
 
         # generate base noise
         batch_size, _, height, width = latent["samples"].shape
-        generator = torch.manual_seed(seed_num)
+        generator = torch.manual_seed(seed)
         base_noise = torch.randn((1, 4, height, width), dtype=torch.float32, device="cpu", generator=generator).repeat(batch_size, 1, 1, 1).cpu()
 
         # generate variation noise
-        if optional_noise_seed is None or optional_noise_seed == seed_num:
-            optional_noise_seed = seed_num+1
+        if optional_noise_seed is None or optional_noise_seed == seed:
+            optional_noise_seed = seed+1
         generator = torch.manual_seed(optional_noise_seed)
         variation_noise = torch.randn((batch_size, 4, height, width), dtype=torch.float32, device="cpu",
                                       generator=generator).cpu()
@@ -2015,7 +2015,7 @@ class samplerSettingsNoiseIn:
 
             "samples": work_latent,
             "images": pipe['images'],
-            "seed": seed_num,
+            "seed": seed,
 
             "loader_settings": {
                 **pipe["loader_settings"],
@@ -2052,7 +2052,7 @@ class sdTurboSettings:
                     "unsharp_kernel_size": ("INT", {"default": 3, "min": 1, "max": 21, "step": 1}),
                     "unsharp_sigma": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 10.0, "step": 0.01, "round": False}),
                     "unsharp_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.01, "round": False}),
-                    "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                    "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                },
                 "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
                 }
@@ -2064,7 +2064,7 @@ class sdTurboSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, steps, cfg, sampler_name, eta, s_noise, upscale_ratio, start_step, end_step, upscale_n_step, unsharp_kernel_size, unsharp_sigma, unsharp_strength, seed_num, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, steps, cfg, sampler_name, eta, s_noise, upscale_ratio, start_step, end_step, upscale_n_step, unsharp_kernel_size, unsharp_sigma, unsharp_strength, seed, prompt=None, extra_pnginfo=None, my_unique_id=None):
         model = pipe['model']
         # sigma
         timesteps = torch.flip(torch.arange(1, 11) * 100 - 1, (0,))[:steps]
@@ -2110,7 +2110,7 @@ class sdTurboSettings:
 
             "samples": pipe["samples"],
             "images": pipe["images"],
-            "seed": seed_num,
+            "seed": seed,
 
             "loader_settings": {
                 **pipe["loader_settings"],
@@ -2125,7 +2125,7 @@ class sdTurboSettings:
 
         del pipe
 
-        return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
+        return {"ui": {"value": [seed]}, "result": (new_pipe,)}
 
 
 # cascade预采样参数
@@ -2145,7 +2145,7 @@ class cascadeSettings:
              "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default":"euler_ancestral"}),
              "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default":"simple"}),
              "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-             "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+             "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
              },
             "optional": {
                 "image_to_latent_c": ("IMAGE",),
@@ -2161,7 +2161,7 @@ class cascadeSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, encode_vae_name, decode_vae_name, steps, cfg, sampler_name, scheduler, denoise, seed_num, model=None, image_to_latent_c=None, latent_c=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, encode_vae_name, decode_vae_name, steps, cfg, sampler_name, scheduler, denoise, seed, model=None, image_to_latent_c=None, latent_c=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         images, samples_c = None, None
         samples = pipe['samples']
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
@@ -2211,7 +2211,7 @@ class cascadeSettings:
 
             "samples": samples,
             "images": images,
-            "seed": seed_num,
+            "seed": seed,
 
             "loader_settings": {
                 **pipe["loader_settings"],
@@ -2230,7 +2230,7 @@ class cascadeSettings:
 
         del pipe
 
-        return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
+        return {"ui": {"value": [seed]}, "result": (new_pipe,)}
 
 # layerDiffusion预采样参数
 class layerDiffusionSettings:
@@ -2250,11 +2250,12 @@ class layerDiffusionSettings:
              "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler_ancestral"}),
              "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "simple"}),
              "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-             "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+             "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
              },
             "optional": {
                 "image": ("IMAGE",),
                 "blended_image": ("IMAGE",),
+                "mask": ("MASK",),
                 # "latent": ("LATENT",),
                 # "blended_latent": ("LATENT",),
             },
@@ -2277,7 +2278,7 @@ class layerDiffusionSettings:
                 method = LayerMethod.FG_BLEND_TO_BG
         return method
 
-    def settings(self, pipe, method, weight, steps, cfg, sampler_name, scheduler, denoise, seed_num, image=None, blended_image=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, method, weight, steps, cfg, sampler_name, scheduler, denoise, seed, image=None, blended_image=None, mask=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
@@ -2286,7 +2287,11 @@ class layerDiffusionSettings:
 
         if image is not None or "image" in pipe:
             image = image if image is not None else pipe['image']
-            samples = {"samples": vae.encode(image[:,:,:,:3])}
+            if mask is not None:
+                print('inpaint')
+                samples, = VAEEncodeForInpaint().encode(vae, image, mask)
+            else:
+                samples = {"samples": vae.encode(image[:,:,:,:3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
             images = image
         elif "samp_images" in pipe:
@@ -2317,7 +2322,7 @@ class layerDiffusionSettings:
             "samples": samples,
             "blend_samples": blend_samples,
             "images": images,
-            "seed": seed_num,
+            "seed": seed,
 
             "loader_settings": {
                 **pipe["loader_settings"],
@@ -2334,7 +2339,7 @@ class layerDiffusionSettings:
 
         del pipe
 
-        return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
+        return {"ui": {"value": [seed]}, "result": (new_pipe,)}
 
 # 预采样设置（layerDiffuse附加）
 class layerDiffusionSettingsADDTL:
@@ -2410,7 +2415,7 @@ class dynamicCFGSettings:
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional":{
                     "image_to_latent": ("IMAGE",),
@@ -2427,7 +2432,7 @@ class dynamicCFGSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, steps, cfg, cfg_mode, cfg_scale_min,sampler_name, scheduler, denoise, seed_num, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, steps, cfg, cfg_mode, cfg_scale_min,sampler_name, scheduler, denoise, seed, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
 
         dynamic_thresh = DynThresh(7.0, 1.0,"CONSTANT", 0, cfg_mode, cfg_scale_min, 0, 0, 999, False,
@@ -2471,7 +2476,7 @@ class dynamicCFGSettings:
 
             "samples": samples,
             "images": images,
-            "seed": seed_num,
+            "seed": seed,
 
             "loader_settings": {
                 **pipe["loader_settings"],
@@ -2485,7 +2490,7 @@ class dynamicCFGSettings:
 
         del pipe
 
-        return {"ui": {"value": [seed_num]}, "result": (new_pipe,)}
+        return {"ui": {"value": [seed]}, "result": (new_pipe,)}
 
 # 动态CFG
 class dynamicThresholdingFull:
@@ -2554,7 +2559,7 @@ class samplerFull(LayerDiffuse):
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
                 "optional": {
-                    "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                    "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                     "model": ("MODEL",),
                     "positive": ("CONDITIONING",),
                     "negative": ("CONDITIONING",),
@@ -2575,7 +2580,7 @@ class samplerFull(LayerDiffuse):
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
-    def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed_num=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None):
+    def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None):
 
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
@@ -2587,7 +2592,7 @@ class samplerFull(LayerDiffuse):
         samp_vae = vae if vae is not None else pipe["vae"]
         samp_clip = clip if clip is not None else pipe["clip"]
 
-        samp_seed = seed_num if seed_num is not None else pipe['seed']
+        samp_seed = seed if seed is not None else pipe['seed']
 
         steps = steps if steps is not None else pipe['loader_settings']['steps']
         start_step = pipe['loader_settings']['start_step'] if 'start_step' in pipe['loader_settings'] else 0
@@ -3254,7 +3259,7 @@ class samplerCascadeFull:
                      "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
                      "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                      "save_prefix": ("STRING", {"default": "ComfyUI"}),
-                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                  },
 
                 "optional": {
@@ -3274,7 +3279,7 @@ class samplerCascadeFull:
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
-    def run(self, pipe, encode_vae_name, decode_vae_name, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed_num, image_to_latent_c=None, latent_c=None, model_c=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+    def run(self, pipe, encode_vae_name, decode_vae_name, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed, image_to_latent_c=None, latent_c=None, model_c=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
 
         encode_vae_name = encode_vae_name if encode_vae_name is not None else pipe['loader_settings']['encode_vae_name']
         decode_vae_name = decode_vae_name if decode_vae_name is not None else pipe['loader_settings']['decode_vae_name']
@@ -3321,7 +3326,7 @@ class samplerCascadeFull:
         samp_negative = pipe["negative"]
         samp_samples = samples_c
 
-        samp_seed = seed_num if seed_num is not None else pipe['seed']
+        samp_seed = seed if seed is not None else pipe['seed']
 
         steps = steps if steps is not None else pipe['loader_settings']['steps']
         start_step = pipe['loader_settings']['start_step'] if 'start_step' in pipe['loader_settings'] else 0
@@ -3386,7 +3391,7 @@ class samplerCascadeFull:
 
             "samples": samples_b,
             "images": images,
-            "seed": seed_num,
+            "seed": seed,
 
             "loader_settings": {
                 **pipe["loader_settings"],
