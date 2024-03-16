@@ -36,6 +36,7 @@
 
 **v1.1.1 (2024/3/16)**
 
+- `easy preSamplingLayerDiffusion` 增加 mask 可选传入参数
 - 将所有 **seed_num** 调整回 **seed**
 - 修补官方BUG: 当control_mode为before 在首次加载页面时未修改节点中widget名称为 control_before_generate
 - 去除强制**control_before_generate**设定
