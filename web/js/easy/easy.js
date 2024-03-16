@@ -1,28 +1,8 @@
 import { app } from "/scripts/app.js";
-import { ComfyWidgets } from "/scripts/widgets.js";
-import { $el } from "/scripts/ui.js";
-import { api } from "/scripts/api.js";
+import {deepEqual,addCss} from "../common/utils.js";
+import {$t} from '../common/i18n.js';
 
-
-function deepEqual (obj1, obj2) {
-  if (typeof obj1 !== typeof obj2) {
-    return false
-  }
-  if (typeof obj1 !== 'object' || obj1 === null || obj2 === null) {
-    return obj1 === obj2
-  }
-  const keys1 = Object.keys(obj1)
-  const keys2 = Object.keys(obj2)
-  if (keys1.length !== keys2.length) {
-    return false
-  }
-  for (let key of keys1) {
-    if (!deepEqual(obj1[key], obj2[key])) {
-      return false
-    }
-  }
-  return true
-}
+addCss('css/index.css')
 
 app.registerExtension({
     name: "comfy.easyUse",
@@ -31,36 +11,23 @@ app.registerExtension({
         const getCanvasMenuOptions = LGraphCanvas.prototype.getCanvasMenuOptions;
         LGraphCanvas.prototype.getCanvasMenuOptions = function () {
             const options = getCanvasMenuOptions.apply(this, arguments);
-            const locale = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
             let draggerEl = null
             let isGroupMapcanMove = true
+            let old_groups = []
             let emptyImg = new Image()
             emptyImg.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
 
             options.push(null,
                 {
-                    content: locale == 'zh-CN' ? "📜管理组 (EasyUse)" : "📜Groups Map (EasyUse)",
-                    callback: () => {
+                    content: '📜 '+ $t('Groups Map (EasyUse)'),
+                    callback: async() => {
                         let groups = app.canvas.graph._groups
                         let nodes = app.canvas.graph._nodes
-                        let groups_len = groups.length
+                        let old_nodes = groups.length
                         let div =
                             document.querySelector('#easyuse_groups_map') ||
                             document.createElement('div')
                         div.id = 'easyuse_groups_map'
-                        div.style = `
-                              flex-direction: column;
-                              align-items: end;
-                              display:flex;position: absolute; 
-                              top: 50px; left: 10px; width: 180px;
-                              border-radius:12px;
-                              min-height:100px; 
-                              max-height:400px;
-                              color: var(--descrip-text);
-                              background-color: var(--comfy-menu-bg);
-                              padding: 10px 4px; 
-                              border: 1px solid var(--border-color);z-index: 999999999;padding-top: 0;`
-
                         div.innerHTML = ''
                         let btn = document.createElement('div')
                         btn.style = `display: flex;
@@ -74,10 +41,12 @@ app.registerExtension({
                         btn.appendChild(textB)
                         btn.appendChild(hideBtn)
                         textB.style.fontSize = '11px'
-                        textB.innerHTML =  locale == 'zh-CN' ? `<b>管理组 (EasyUse)</b>` : `<b>Groups Map (EasyUse)</b>`
+                        textB.innerHTML =  `<b>${$t('Groups Map (EasyUse)')}</b>`
                         hideBtn.style = `float: right;color: var(--input-text);border-radius:6px;font-size:9px;
                             background-color: var(--comfy-input-bg); border: 1px solid var(--border-color);cursor: pointer;padding: 5px;aspect-ratio: 1 / 1;`
-                        hideBtn.addEventListener('click', () => {div.style.display = 'none'})
+                        hideBtn.addEventListener('click', () => {
+                            div.style.display = 'none'
+                        })
                         hideBtn.innerText = '❌'
                         div.appendChild(btn)
 
@@ -114,9 +83,9 @@ app.registerExtension({
                             for (let index in groups) {
                                 const group = groups[index]
                                 const title = group.title
-                                const show_text = locale == 'zh-CN' ? '启用中' : 'Always'
-                                const hide_text = locale == 'zh-CN' ? '已忽略' : 'Bypass'
-                                const mute_text = locale == 'zh-CN' ? '已停用' : 'Never'
+                                const show_text = $t('Always')
+                                const hide_text = $t('Bypass')
+                                const mute_text = $t('Never')
                                 let group_item = document.createElement('div')
                                 let group_item_style = `justify-content: space-between;display:flex;background-color: var(--comfy-input-bg);border-radius: 5px;border:1px solid var(--border-color);margin-top:5px;`
                                 group_item.addEventListener("mouseover",event=>{
@@ -247,7 +216,7 @@ app.registerExtension({
 
                         let autoSortDiv = document.createElement('button')
                         autoSortDiv.style = `cursor:pointer;font-size:10px;padding:2px 4px;color:var(--input-text);background-color: var(--comfy-input-bg);border: 1px solid var(--border-color);border-radius:4px;`
-                        autoSortDiv.innerText = locale == 'zh-CN' ? '自动排序' : 'Automatic sorting'
+                        autoSortDiv.innerText =  $t('Auto Sorting')
                         autoSortDiv.addEventListener('click',e=>{
                             e.preventDefault()
                             groupsDiv.innerHTML = ``
@@ -261,21 +230,23 @@ app.registerExtension({
 
                         let remarkDiv =  document.createElement('p')
                         remarkDiv.style = `text-align:center; font-size:10px; padding:0 10px;color:var(--descrip-text)`
-                        remarkDiv.innerText = locale == 'zh-CN' ? "点击`启用中/已忽略`可设置组模式, 长按可停用该组节点" : "Toggle `Show/Hide` can set mode of group, LongPress can set group nodes to never"
+                        remarkDiv.innerText =  $t('Toggle `Show/Hide` can set mode of group, LongPress can set group nodes to never')
                         div.appendChild(groupsDiv)
                         div.appendChild(remarkDiv)
                         div.appendChild(autoSortDiv)
+
                         let graphDiv = document.getElementById("graph-canvas")
                         graphDiv.addEventListener('mouseover', async () => {
-                            let n = (await app.graphToPrompt()).output
-                            if (!deepEqual(n, nodes)) {
-                              groupsDiv.innerHTML = ``
-                              let new_groups = app.canvas.graph._groups
-                              updateGroups(new_groups, groupsDiv, autoSortDiv)
-                            }
+                          groupsDiv.innerHTML = ``
+                          let new_groups = app.canvas.graph._groups
+                          updateGroups(new_groups, groupsDiv, autoSortDiv)
+                          old_nodes = nodes
                         })
+
                         if (!document.querySelector('#easyuse_groups_map')){
                             document.body.appendChild(div)
+                        }else{
+                            div.style.display = 'flex'
                         }
 
                     }
@@ -294,299 +265,3 @@ app.registerExtension({
         }
     },
 });
-
-
-// easy Dropdown
-var styleElement = document.createElement("style");
-const cssCode = `
-.easy-dropdown, .easy-nested-dropdown {
-    position: relative;
-    box-sizing: border-box;
-    background-color: #171717;
-    box-shadow: 0 4px 4px rgba(255, 255, 255, .25);
-    padding: 0;
-    margin: 0;
-    list-style: none;
-    z-index: 1000;
-    overflow: visible;
-    max-height: fit-content;
-    max-width: fit-content;
-}
-
-.easy-dropdown {
-    position: absolute;
-    border-radius: 0;
-}
-
-/* Style for final items */
-.easy-dropdown li.item, .easy-nested-dropdown li.item {
-    font-weight: normal;
-    min-width: max-content;
-}
-
-/* Style for folders (parent items) */
-.easy-dropdown li.folder, .easy-nested-dropdown li.folder {
-    cursor: default;
-    position: relative;
-    border-right: 3px solid cyan;
-}
-
-.easy-dropdown li.folder::after, .easy-nested-dropdown li.folder::after {
-    content: ">"; 
-    position: absolute; 
-    right: 2px; 
-    font-weight: normal;
-}
-
-.easy-dropdown li, .easy-nested-dropdown li {
-    padding: 4px 10px;
-    cursor: pointer;
-    font-family: system-ui;
-    font-size: 0.7rem;
-    position: relative; 
-}
-
-/* Style for nested dropdowns */
-.easy-nested-dropdown {
-    position: absolute;
-    top: 0;
-    left: 100%;
-    margin: 0;
-    border: none;
-    display: none;
-}
-
-.easy-dropdown li.selected > .easy-nested-dropdown,
-.easy-nested-dropdown li.selected > .easy-nested-dropdown {
-    display: block;
-    border: none;
-}
-  
-.easy-dropdown li.selected,
-.easy-nested-dropdown li.selected {
-    background-color: #e5e5e5;
-    border: none;
-}
-`
-styleElement.innerHTML = cssCode
-document.head.appendChild(styleElement);
-
-let activeDropdown = null;
-
-export function easy_RemoveDropdown() {
-    if (activeDropdown) {
-        activeDropdown.removeEventListeners();
-        activeDropdown.dropdown.remove();
-        activeDropdown = null;
-    }
-}
-
-class Dropdown {
-    constructor(inputEl, suggestions, onSelect, isDict = false) {
-        this.dropdown = document.createElement('ul');
-        this.dropdown.setAttribute('role', 'listbox');
-        this.dropdown.classList.add('easy-dropdown');
-        this.selectedIndex = -1;
-        this.inputEl = inputEl;
-        this.suggestions = suggestions;
-        this.onSelect = onSelect;
-        this.isDict = isDict;
-
-        this.focusedDropdown = this.dropdown;
-
-        this.buildDropdown();
-
-        this.onKeyDownBound = this.onKeyDown.bind(this);
-        this.onWheelBound = this.onWheel.bind(this);
-        this.onClickBound = this.onClick.bind(this);
-
-        this.addEventListeners();
-    }
-
-    buildDropdown() {
-        if (this.isDict) {
-            this.buildNestedDropdown(this.suggestions, this.dropdown);
-        } else {
-            this.suggestions.forEach((suggestion, index) => {
-                this.addListItem(suggestion, index, this.dropdown);
-            });
-        }
-
-        const inputRect = this.inputEl.getBoundingClientRect();
-        this.dropdown.style.top = (inputRect.top + inputRect.height - 10) + 'px';
-        this.dropdown.style.left = inputRect.left + 'px';
-
-        document.body.appendChild(this.dropdown);
-        activeDropdown = this;
-    }
-
-    buildNestedDropdown(dictionary, parentElement) {
-        let index = 0;
-        Object.keys(dictionary).forEach((key) => {
-            const item = dictionary[key];
-            if (typeof item === "object" && item !== null) {
-                const nestedDropdown = document.createElement('ul');
-                nestedDropdown.setAttribute('role', 'listbox');
-                nestedDropdown.classList.add('easy-nested-dropdown');
-                const parentListItem = document.createElement('li');
-                parentListItem.classList.add('folder');
-                parentListItem.textContent = key;
-                parentListItem.appendChild(nestedDropdown);
-                parentListItem.addEventListener('mouseover', this.onMouseOver.bind(this, index, parentElement));
-                parentElement.appendChild(parentListItem);
-                this.buildNestedDropdown(item, nestedDropdown);
-                index = index + 1;
-            } else {
-                const listItem = document.createElement('li');
-                listItem.classList.add('item');
-                listItem.setAttribute('role', 'option');
-                listItem.textContent = key;
-                listItem.addEventListener('mouseover', this.onMouseOver.bind(this, index, parentElement));
-                listItem.addEventListener('mousedown', this.onMouseDown.bind(this, key));
-                parentElement.appendChild(listItem);
-                index = index + 1;
-            }
-        });
-    }
-
-    addListItem(item, index, parentElement) {
-        const listItem = document.createElement('li');
-        listItem.setAttribute('role', 'option');
-        listItem.textContent = item;
-        listItem.addEventListener('mouseover', this.onMouseOver.bind(this, index));
-        listItem.addEventListener('mousedown', this.onMouseDown.bind(this, item));
-        parentElement.appendChild(listItem);
-    }
-
-    addEventListeners() {
-        document.addEventListener('keydown', this.onKeyDownBound);
-        this.dropdown.addEventListener('wheel', this.onWheelBound);
-        document.addEventListener('click', this.onClickBound);
-    }
-
-    removeEventListeners() {
-        document.removeEventListener('keydown', this.onKeyDownBound);
-        this.dropdown.removeEventListener('wheel', this.onWheelBound);
-        document.removeEventListener('click', this.onClickBound);
-    }
-
-    onMouseOver(index, parentElement) {
-        if (parentElement) {
-            this.focusedDropdown = parentElement;
-        }
-        this.selectedIndex = index;
-        this.updateSelection();
-    }
-
-    onMouseOut() {
-        this.selectedIndex = -1;
-        this.updateSelection();
-    }
-
-    onMouseDown(suggestion, event) {
-        event.preventDefault();
-        this.onSelect(suggestion);
-        this.dropdown.remove();
-        this.removeEventListeners();
-    }
-
-    onKeyDown(event) {
-        const enterKeyCode = 13;
-        const escKeyCode = 27;
-        const arrowUpKeyCode = 38;
-        const arrowDownKeyCode = 40;
-        const arrowRightKeyCode = 39;
-        const arrowLeftKeyCode = 37;
-        const tabKeyCode = 9;
-
-        const items = Array.from(this.focusedDropdown.children);
-        const selectedItem = items[this.selectedIndex];
-
-        if (activeDropdown) {
-            if (event.keyCode === arrowUpKeyCode) {
-                event.preventDefault();
-                this.selectedIndex = Math.max(0, this.selectedIndex - 1);
-                this.updateSelection();
-            }
-
-            else if (event.keyCode === arrowDownKeyCode) {
-                event.preventDefault();
-                this.selectedIndex = Math.min(items.length - 1, this.selectedIndex + 1);
-                this.updateSelection();
-            }
-
-            else if (event.keyCode === arrowRightKeyCode) {
-                event.preventDefault();
-                if (selectedItem && selectedItem.classList.contains('folder')) {
-                    const nestedDropdown = selectedItem.querySelector('.easy-nested-dropdown');
-                    if (nestedDropdown) {
-                        this.focusedDropdown = nestedDropdown;
-                        this.selectedIndex = 0;
-                        this.updateSelection();
-                    }
-                }
-            }
-
-            else if (event.keyCode === arrowLeftKeyCode && this.focusedDropdown !== this.dropdown) {
-                const parentDropdown = this.focusedDropdown.closest('.easy-dropdown, .easy-nested-dropdown').parentNode.closest('.easy-dropdown, .easy-nested-dropdown');
-                if (parentDropdown) {
-                    this.focusedDropdown = parentDropdown;
-                    this.selectedIndex = Array.from(parentDropdown.children).indexOf(this.focusedDropdown.parentNode);
-                    this.updateSelection();
-                }
-            }
-
-            else if ((event.keyCode === enterKeyCode || event.keyCode === tabKeyCode) && this.selectedIndex >= 0) {
-                event.preventDefault();
-                if (selectedItem.classList.contains('item')) {
-                    this.onSelect(items[this.selectedIndex].textContent);
-                    this.dropdown.remove();
-                    this.removeEventListeners();
-                }
-                
-                const nestedDropdown = selectedItem.querySelector('.easy-nested-dropdown');
-                if (nestedDropdown) {
-                    this.focusedDropdown = nestedDropdown;
-                    this.selectedIndex = 0;
-                    this.updateSelection();
-                }
-            }
-            
-            else if (event.keyCode === escKeyCode) {
-                this.dropdown.remove();
-                this.removeEventListeners();
-            }
-        } 
-    }
-
-    onWheel(event) {
-        const top = parseInt(this.dropdown.style.top);
-        if (localStorage.getItem("Comfy.Settings.Comfy.InvertMenuScrolling")) {
-            this.dropdown.style.top = (top + (event.deltaY < 0 ? 10 : -10)) + "px";
-        } else {
-            this.dropdown.style.top = (top + (event.deltaY < 0 ? -10 : 10)) + "px";
-        }
-    }
-
-    onClick(event) {
-        if (!this.dropdown.contains(event.target) && event.target !== this.inputEl) {
-            this.dropdown.remove();
-            this.removeEventListeners();
-        }
-    }
-
-    updateSelection() {
-        Array.from(this.focusedDropdown.children).forEach((li, index) => {
-            if (index === this.selectedIndex) {
-                li.classList.add('selected');
-            } else {
-                li.classList.remove('selected');
-            }
-        });
-    }
-}
-
-export function easy_CreateDropdown(inputEl, suggestions, onSelect, isDict = false) {
-    easy_RemoveDropdown();
-    new Dropdown(inputEl, suggestions, onSelect, isDict);
-}

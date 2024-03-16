@@ -78,7 +78,7 @@ class wildcardsPrompt:
             "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support Lora Block Weight and wildcard)"}),
             "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
             "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
-            "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+            "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
@@ -455,7 +455,7 @@ class latentNoisy:
             "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
             "end_at_step": ("INT", {"default": 10000, "min": 1, "max": 10000}),
             "source": (["CPU", "GPU"],),
-            "seed_num": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
         },
         "optional": {
             "pipe": ("PIPE_LINE",),
@@ -596,12 +596,12 @@ class easySeed:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
 
-    RETURN_TYPES = ("INT",)
+    RETURN_TYPES = ("INT:seed",)
     RETURN_NAMES = ("seed_num",)
     FUNCTION = "doit"
 
@@ -1744,7 +1744,7 @@ class samplerSettings:
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
                     "image_to_latent": ("IMAGE",),
@@ -1819,7 +1819,7 @@ class samplerSettingsAdvanced:
                      "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
                      "end_at_step": ("INT", {"default": 10000, "min": 0, "max": 10000}),
                      "add_noise": (["enable", "disable"],),
-                     "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
                     "image_to_latent": ("IMAGE",),
@@ -1895,7 +1895,7 @@ class samplerSettingsNoiseIn:
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional": {
                     "optional_noise_seed": ("INT",{"forceInput": True}),
@@ -2052,7 +2052,7 @@ class sdTurboSettings:
                     "unsharp_kernel_size": ("INT", {"default": 3, "min": 1, "max": 21, "step": 1}),
                     "unsharp_sigma": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 10.0, "step": 0.01, "round": False}),
                     "unsharp_strength": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.01, "round": False}),
-                    "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                    "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                },
                 "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
                 }
@@ -2145,7 +2145,7 @@ class cascadeSettings:
              "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default":"euler_ancestral"}),
              "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default":"simple"}),
              "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-             "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+             "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
              },
             "optional": {
                 "image_to_latent_c": ("IMAGE",),
@@ -2250,7 +2250,7 @@ class layerDiffusionSettings:
              "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler_ancestral"}),
              "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "simple"}),
              "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-             "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+             "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
              },
             "optional": {
                 "image": ("IMAGE",),
@@ -2410,7 +2410,7 @@ class dynamicCFGSettings:
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
                 "optional":{
                     "image_to_latent": ("IMAGE",),
@@ -2554,7 +2554,7 @@ class samplerFull(LayerDiffuse):
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
                 "optional": {
-                    "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                    "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                     "model": ("MODEL",),
                     "positive": ("CONDITIONING",),
                     "negative": ("CONDITIONING",),
@@ -3254,7 +3254,7 @@ class samplerCascadeFull:
                      "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
                      "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                      "save_prefix": ("STRING", {"default": "ComfyUI"}),
-                     "seed_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "seed_num": ("INT:seed", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                  },
 
                 "optional": {

@@ -1,6 +1,7 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 import { $el } from "/scripts/ui.js";
+import {addPreconnect, addCss} from "../common/utils.js";
 
 const locale = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
 
@@ -88,8 +89,8 @@ const ui = {
   }
 }
 
-const custom_theme_name = 'custom_obsidian'
 let custom_theme = null
+let control_mode = null
 try{
     custom_theme = localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes') ? JSON.parse(localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes')) : {};
 }
@@ -108,25 +109,53 @@ try{
         localStorage.setItem('Comfy.Settings.Comfy.CustomColorPalettes', JSON.stringify(custom_theme));
     }
     let theme_name = localStorage.getItem('Comfy.Settings.Comfy.ColorPalette')
+    control_mode = localStorage.getItem('Comfy.Settings.Comfy.WidgetControlMode')
+    if(control_mode) {
+        control_mode = JSON.parse(control_mode)
+        if(control_mode == 'before'){
+            localStorage['Comfy.Settings.AE.mouseover'] = false
+            localStorage['Comfy.Settings.AE.highlight'] = false
+        }
+    }
     // 兼容 ComfyUI Revision: 1887 [235727fe] 以上版本
     if(api.storeSettings){
         const _settings = await api.getSettings()
+        let settings = null
+        // 运行操作设置
+        if(!control_mode && _settings['Comfy.WidgetControlMode']) {
+            control_mode = _settings['Comfy.WidgetControlMode']
+        }else if(!control_mode) control_mode = 'after'
+        if(control_mode == 'before'){
+            if(!settings) settings = {}
+            settings["AE.mouseover"] = false
+            settings["AE.highlight"] = false
+        }
+        // 主题设置
+        console.log(theme_name)
         if(!theme_name && _settings['Comfy.ColorPalette']) {
-            theme_name = _settings['Comfy.ColorPalette']
-            localStorage.setItem('Comfy.Settings.Comfy.ColorPalette',`"${theme_name}"`)
+            theme_name = `"${_settings['Comfy.ColorPalette']}"`
+            localStorage.setItem('Comfy.Settings.Comfy.ColorPalette', theme_name)
         }
-        const settings = {
-            "Comfy.CustomColorPalettes": localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes') ? JSON.parse(localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes')) : {},
+        if(['"custom_obsidian"','"custom_obsidian_dark"'].includes(theme_name)) {
+            if(!settings) settings = {}
+            settings["Comfy.ColorPalette"] = JSON.parse(theme_name)
         }
-        if(['"custom_obsidian"','"custom_obsidian_dark"'].includes(theme_name)) settings["Comfy.ColorPalette"] = custom_theme_name
-
         if(!_settings || !_settings["Comfy.CustomColorPalettes"] || !_settings["Comfy.CustomColorPalettes"]["obsidian"] || _settings["Comfy.CustomColorPalettes"]["obsidian"]['version']<ui.version){
+            if(!settings) settings = {}
+            settings["Comfy.CustomColorPalettes"] = localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes') ? JSON.parse(localStorage.getItem('Comfy.Settings.Comfy.CustomColorPalettes')) : {}
             await api.storeSettings(settings);
             app.ui.settings.load()
+        }else if(settings){
+            await api.storeSettings(settings);
         }
     }
     // 判断主题为黑曜石时改变扩展UI
     if(['"custom_obsidian"','"custom_obsidian_dark"'].includes(theme_name)){
+        // 字体文件
+        addPreconnect("https://fonts.googleapis.com", true)
+        addCss("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&amp;family=JetBrains+Mono&amp;display=swap", false)
+        // 添加easy的主题样式
+        addCss('css/easy.css')
         // canvas
         const bgcolor = LGraphCanvas.node_colors.bgcolor;
         LGraphCanvas.node_colors = {
@@ -693,144 +722,19 @@ try{
             ctx.restore();
             ctx.textAlign = "left";
         };
-        // 字体文件
-        const preconnect1 = document.createElement("link");
-        preconnect1.rel = 'preconnect'
-        preconnect1.href = 'https://fonts.googleapis.com'
-        document.head.appendChild(preconnect1);
-        const preconnect2 = document.createElement("link");
-        preconnect2.rel = 'preconnect'
-        preconnect2.href = 'https://fonts.googleapis.com'
-        preconnect2.crossorigin = ''
-        document.head.appendChild(preconnect2);
-        const fontFile = document.createElement("link")
-        fontFile.rel = "stylesheet"
-        fontFile.href = "https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&amp;family=JetBrains+Mono&amp;display=swap"
-        document.head.appendChild(fontFile);
-        // 样式
-        const styleElement = document.createElement("style");
-        const fontFamily = 'Inter,-apple-system,BlinkMacSystemFont,Helvetica Neue,sans-serif'
-        const cssCode = `
-            .pysssss-workflow-popup{
-                min-width:200px!important;
-                right:0px!important;
-                left:auto!important;
-            }
-            body{
-               font-family: ${fontFamily}!important;
-               -webkit-font-smoothing: antialiased;
-               -moz-osx-font-smoothing: grayscale;
-            }
-            textarea{
-                font-family: ${fontFamily}!important;
-            }
-            
-            .comfy-multiline-input{
-                background-color: transparent;
-                border:1px solid var(--border-color);
-                border-radius:8px;
-                padding: 8px;
-                font-size: 12px;
-            }
-            .comfy-modal {
-                border:1px solid var(--border-color);
-                box-shadow:none;
-                backdrop-filter: blur(8px) brightness(120%);
-            }
-            .comfy-menu{
-                top:38%;
-                border-radius:16px;
-                box-shadow:0 0 1px var(--descrip-text);
-                backdrop-filter: blur(8px) brightness(120%);
-            }
-            .comfy-menu button,.comfy-modal button {
-                font-size: 16px;
-                padding:6px 0;
-                margin-bottom:8px;
-            }
-            .comfy-menu button.comfy-settings-btn{
-                font-size: 12px;
-            }
-            .comfy-menu-btns {
-                margin-bottom: 4px;
-            }
-            .comfy-menu-btns button,.comfy-list-actions button{
-                font-size: 12px;
-            }
-            .comfy-menu > button,
-            .comfy-menu-btns button,
-            .comfy-menu .comfy-list button,
-            .comfy-modal button {
-                border-width:1px;
-            }
-            
-            dialog{
-                border:1px solid var(--border-color);
-                background:transparent;
-                backdrop-filter: blur(8px) brightness(120%);
-                box-shadow:none;
-            }
-            .cm-title{
-                background-color:transparent!important;
-            }
-            .cm-notice-board{
-                border-radius:10px!important;
-                border:1px solid var(--border-color)!important;
-            }
-            .cm-menu-container{
-                margin-bottom:50px!important;
-            }
-            hr{
-               border:1px solid var(--border-color);
-            }
-            #shareButton{
-                background:linear-gradient(to left,${customThemeColor},${LGraphCanvas.node_colors.pale_blue.color})!important;
-                color:white!important;
-            }
-            #queue-button{
-                position:relative;
-                overflow:hidden;
-                z-index:1;
-            }
-            
-            #queue-button:after{
-                content:attr(data-attr);
-                background:green;
-                color:#FFF;
-                width:var(--process-bar-width);
-                height:100%;
-                position:absolute;
-                top:0;
-                left:0;
-                z-index:0;
-                text-align:center;
-                display:flex;
-                justify-content:center;
-                align-items:center;
-            }
-            
-            .litegraph .litemenu-entry.has_submenu {
-                border-right: 2px solid #3f3eed;
-            }
-            ::-webkit-scrollbar {
-                width: 0em;
-            }
-            ::-webkit-scrollbar-track {
-                background-color: transparent;
-            }
-            ::-webkit-scrollbar-thumb {
-                background-color: transparent;
-                border-radius: 2px; 
-            }
-            ::-webkit-scrollbar-thumb:hover {
-                background-color: transparent;
-            }
-        `
-        styleElement.innerHTML = cssCode
-        document.head.appendChild(styleElement);
     }
 }catch(e){
     console.error(e)
+}
+
+function updateControlWidgetLabel(widget, controlValueRunBefore=false) {
+	let replacement = "after";
+	let find = "before";
+	if (controlValueRunBefore) {
+		[find, replacement] = [replacement, find]
+	}
+	widget.label = (widget.label ?? widget.name).replace(find, replacement);
+	widget.name = widget.label;
 }
 
 // 节点颜色
@@ -857,12 +761,25 @@ app.registerExtension({
         Object.assign(LGraphCanvas.link_type_colors, customLinkColors);
     },
 
-    nodeCreated(node) {
+    async nodeCreated(node) {
         if (NODE_COLORS.hasOwnProperty(node.comfyClass)) {
             const colorKey = NODE_COLORS[node.comfyClass]
             const theme = COLOR_THEMES[colorKey];
             setNodeColors(node, theme);
         }
-
-    }
+        // 修复官方bug: 应该初始化修改节点的control_mode name
+        if(control_mode && control_mode == 'before'){
+            const controlValueRunBefore = control_mode == 'before'
+            for (const w of node.widgets) {
+                if (['control_before_generate','control_after_generate'].includes(w.name)) {
+                    await updateControlWidgetLabel(w, controlValueRunBefore);
+                    if (w.linkedWidgets) {
+                        for (const l of w.linkedWidgets) {
+                            await updateControlWidgetLabel(l, controlValueRunBefore);
+                        }
+                    }
+                }
+            }
+        }
+    },
 })

@@ -1,5 +1,5 @@
 import { app } from "/scripts/app.js";
-import { easy_CreateDropdown, easy_RemoveDropdown } from "./easy.js";
+import {removeDropdown, createDropdown} from "../common/dropdown.js";
 
 function generateNumList(dictionary) {
   const minimum = dictionary["min"] || 0;
@@ -154,13 +154,13 @@ function dropdownCreator(node) {
 				const filteredOptionsList = optionsList.filter(option => option.toLowerCase().includes(currentSegmentLower)).map(option => option.replace(/; /g, ''));
 
 				if (filteredOptionsList.length > 0) {
-					easy_CreateDropdown(w.inputEl, filteredOptionsList, (selectedOption) => {
+					createDropdown(w.inputEl, filteredOptionsList, (selectedOption) => {
 						const verifiedText = replaceOptionSegments(selectedOption, inputSegments, cursorSegmentIndex, optionsList);
 						w.inputEl.value = verifiedText;
 					});
 				}
 				else {
-					easy_RemoveDropdown();
+					removeDropdown();
 					const verifiedText = replaceOptionSegments(null, inputSegments, cursorSegmentIndex, optionsList);
 					w.inputEl.value = verifiedText;
 				}

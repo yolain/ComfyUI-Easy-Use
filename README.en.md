@@ -47,6 +47,7 @@ you need to run `pip install -r requirements.txt` to install python dependencies
 
 **v1.1.1 (2024/3/16)**
 
+- Remove forced **control_before_generate** settings。 If you want to use control_before_generate, change widget_value_control_mode to before in system settings
 - Added `easy imageRemBg` - The default is BriaAI's RMBG-1.4 model, which removes the background effect more and faster
 
 **v1.1.0 (d5ff84e)**
