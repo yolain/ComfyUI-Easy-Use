@@ -20,7 +20,7 @@
 - UI界面美化，首次安装的用户，如需使用UI主题，请在 Settings -> Color Palette 中自行切换主题并**刷新页面**即可
 - 增加了预采样参数配置的节点，可与采样节点分离，更方便预览。
 - 支持通配符与Lora的提示词节点，如需使用Lora Block Weight用法，需先保证自定义节点包中安装了 [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack)
-- 可多选的风格化提示词选择器，默认是Fooocus的样式json，可自定义
+- 可多选的风格化提示词选择器，默认是Fooocus的样式json，可自定义json放在styles底下，samples文件夹里可放预览图(名称和name一致,图片文件名如有空格需转为下划线'_')
 - 加载器可开启A1111提示词风格模式，可重现与webui生成近乎相同的图像，需先安装 [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes)
 - 可使用`easy latentNoisy`或`easy preSamplingNoiseIn`节点实现对潜空间的噪声注入
 - 简化 SD1.x、SD2.x、SDXL、SVD、Zero123等流程 [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableDiffusion)
@@ -34,8 +34,9 @@
 
 ## 更新日志
 
-**v1.1.1 (2024/3/16)**
+**v1.1.1 (2024/3/17)**
 
+- 修复 `easy stylesSelector` 当选择自定义样式文件时运行队列报错
 - `easy preSamplingLayerDiffusion` 增加 mask 可选传入参数
 - 将所有 **seed_num** 调整回 **seed**
 - 修补官方BUG: 当control_mode为before 在首次加载页面时未修改节点中widget名称为 control_before_generate

@@ -181,7 +181,7 @@ class stylesPromptSelector:
         if styles == "fooocus_styles":
             file = os.path.join(RESOURCES_DIR,  styles + '.json')
         else:
-            file = os.path.join(RESOURCES_DIR, styles + '.json')
+            file = os.path.join(FOOOCUS_STYLES_DIR, styles + '.json')
         f = open(file, 'r', encoding='utf-8')
         data = json.load(f)
         f.close()

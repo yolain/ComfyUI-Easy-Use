@@ -47,6 +47,7 @@ you need to run `pip install -r requirements.txt` to install python dependencies
 
 **v1.1.1 (2024/3/16)**
 
+- Fixed `easy stylesSelector` error when choose the custom file
 - `easy preSamplingLayerDiffusion` Added optional input parameter for mask
 - Renamed all nodes widget name named seed_num to seed
 - Remove forced **control_before_generate** settings。 If you want to use control_before_generate, change widget_value_control_mode to before in system settings
