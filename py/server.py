@@ -178,18 +178,18 @@ def workflow_seed_update(json_data):
                 length = len(node['widgets_values'])
                 node['widgets_values'][length-1] = node['widgets_values'][0]
                 node['widgets_values'][0] = value
-            # elif node_id in seed_widget_map:
-            #     widget_idx = seed_widget_map[node_id]
-            #
-            #     if 'seed_num' in prompt[node_id]['inputs']:
-            #         seed = prompt[node_id]['inputs']['seed_num']
-            #     elif 'noise_seed' in prompt[node_id]['inputs']:
-            #         seed = prompt[node_id]['inputs']['noise_seed']
-            #     else:
-            #         seed = prompt[node_id]['inputs']['seed']
-            #
-            #     node['widgets_values'][widget_idx] = seed
-            #     updated_seed_map[node_id] = seed
+            elif node_id in seed_widget_map:
+                widget_idx = seed_widget_map[node_id]
+
+                if 'seed_num' in prompt[node_id]['inputs']:
+                    seed = prompt[node_id]['inputs']['seed_num']
+                elif 'noise_seed' in prompt[node_id]['inputs']:
+                    seed = prompt[node_id]['inputs']['noise_seed']
+                else:
+                    seed = prompt[node_id]['inputs']['seed']
+
+                node['widgets_values'][widget_idx] = seed
+                updated_seed_map[node_id] = seed
 
     server.PromptServer.instance.send_sync("easyuse-global-seed", {"id": node_id, "value": value, "seed_map": updated_seed_map})
 
