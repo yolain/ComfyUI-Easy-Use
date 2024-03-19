@@ -12,7 +12,14 @@ from typing import Optional, Tuple
 try:
     from diffusers.configuration_utils import ConfigMixin, register_to_config
     from diffusers.models.modeling_utils import ModelMixin
-    from diffusers.models.unet_2d_blocks import UNetMidBlock2D, get_down_block, get_up_block
+    from diffusers import __version__
+    if __version__:
+        diffusers_version = int(__version__.replace('.', ''))
+        if diffusers_version < 270:
+            from diffusers.models.unet_2d_blocks import UNetMidBlock2D, get_down_block, get_up_block
+        else:
+            from diffusers.models.unets.unet_2d_blocks import UNetMidBlock2D, get_down_block, get_up_block
+
     import functools
 
     def zero_module(module):
@@ -374,8 +381,8 @@ except ImportError:
     ConfigMixin = None
     TransparentVAEDecoder = None
     calculate_weight_adjust_channel = None
-    print("\33[31mModule 'diffusers' not installed. Please install it via:\033[0m")
-    print("\33[31mpip install diffusers\033[0m")
+    print("\33[33mModule 'diffusers' load failed. If you don't have it installed, do it:\033[0m")
+    print("\33[33mpip install diffusers\033[0m")
 
 
 

@@ -770,12 +770,14 @@ app.registerExtension({
         // 修复官方bug: 应该初始化修改节点的control_mode name
         if(control_mode && control_mode == 'before'){
             const controlValueRunBefore = control_mode == 'before'
-            for (const w of node.widgets) {
-                if (['control_before_generate','control_after_generate'].includes(w.name)) {
-                    await updateControlWidgetLabel(w, controlValueRunBefore);
-                    if (w.linkedWidgets) {
-                        for (const l of w.linkedWidgets) {
-                            await updateControlWidgetLabel(l, controlValueRunBefore);
+            if(node.widgets && node.widgets.length>0) {
+                for (const w of node.widgets) {
+                    if (['control_before_generate', 'control_after_generate'].includes(w.name)) {
+                        await updateControlWidgetLabel(w, controlValueRunBefore);
+                        if (w.linkedWidgets) {
+                            for (const l of w.linkedWidgets) {
+                                await updateControlWidgetLabel(l, controlValueRunBefore);
+                            }
                         }
                     }
                 }
