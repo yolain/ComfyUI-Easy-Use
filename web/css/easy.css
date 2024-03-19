@@ -1,8 +1,8 @@
 
 .pysssss-workflow-popup{
-    min-width:200px!important;
-    right:0px!important;
-    left:auto!important;
+    min-width:220px!important;
+    /*right:0px!important;*/
+    /*left:auto!important;*/
 }
 body{
    font-family: var(--font-family)!important;
