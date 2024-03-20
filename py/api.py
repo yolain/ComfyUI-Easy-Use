@@ -90,14 +90,13 @@ async def getStylesImage(request):
 async def convertType(request):
     post = await request.post()
     type = post.get('type')
-    print(type)
     if type:
         ConvertAnything.RETURN_TYPES = (type.upper(),)
         ConvertAnything.RETURN_NAMES = (type,)
-        print(ConvertAnything.RETURN_TYPES)
         return web.Response(status=200)
     else:
         return web.Response(status=400)
+
 
 
 NODE_CLASS_MAPPINGS = {}

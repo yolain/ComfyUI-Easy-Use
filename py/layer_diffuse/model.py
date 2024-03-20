@@ -14,7 +14,10 @@ try:
     from diffusers.models.modeling_utils import ModelMixin
     from diffusers import __version__
     if __version__:
-        diffusers_version = int(__version__.replace('.', ''))
+        try:
+            diffusers_version = float(__version__.replace('.', '').replace('dev','.'))
+        except ValueError:
+            diffusers_version = 270
         if diffusers_version < 270:
             from diffusers.models.unet_2d_blocks import UNetMidBlock2D, get_down_block, get_up_block
         else:
