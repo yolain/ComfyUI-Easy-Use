@@ -1820,6 +1820,7 @@ class samplerSettingsAdvanced:
                      "end_at_step": ("INT", {"default": 10000, "min": 0, "max": 10000}),
                      "add_noise": (["enable", "disable"],),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     "return_with_leftover_noise": (["disable", "enable"], ),
                      },
                 "optional": {
                     "image_to_latent": ("IMAGE",),
@@ -1836,7 +1837,7 @@ class samplerSettingsAdvanced:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def settings(self, pipe, steps, cfg, sampler_name, scheduler, start_at_step, end_at_step, add_noise, seed, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, steps, cfg, sampler_name, scheduler, start_at_step, end_at_step, add_noise, seed, return_with_leftover_noise, image_to_latent=None, latent=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         # 图生图转换
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
@@ -1850,6 +1851,10 @@ class samplerSettingsAdvanced:
         else:
             samples = pipe["samples"]
             images = pipe["images"]
+
+        force_full_denoise = True
+        if return_with_leftover_noise == "enable":
+            force_full_denoise = False
 
         new_pipe = {
             "model": pipe['model'],
@@ -1871,7 +1876,8 @@ class samplerSettingsAdvanced:
                 "start_step": start_at_step,
                 "last_step": end_at_step,
                 "denoise": 1.0,
-                "add_noise": add_noise
+                "add_noise": add_noise,
+                "force_full_denoise": force_full_denoise
             }
         }
 
@@ -2602,9 +2608,8 @@ class samplerFull(LayerDiffuse):
         scheduler = scheduler if scheduler is not None else pipe['loader_settings']['scheduler']
         denoise = denoise if denoise is not None else pipe['loader_settings']['denoise']
         add_noise = pipe['loader_settings']['add_noise'] if 'add_noise' in pipe['loader_settings'] else 'enabled'
+        force_full_denoise = pipe['loader_settings']['force_full_denoise'] if 'force_full_denoise' in pipe['loader_settings'] else True
 
-        if start_step is not None and last_step is not None:
-            force_full_denoise = True
         disable_noise = False
         if add_noise == "disable":
             disable_noise = True
@@ -2728,7 +2733,7 @@ class samplerFull(LayerDiffuse):
 
         def process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative,
                            steps, cfg, sampler_name, scheduler, denoise,
-                           image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot):
+                           image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise):
 
             sampleXYplot = easyXYPlot(xyPlot, save_prefix, image_output, prompt, extra_pnginfo, my_unique_id, sampler, easyCache)
 
@@ -2845,7 +2850,7 @@ class samplerFull(LayerDiffuse):
         else:
             xyPlot = pipe["loader_settings"]["xyplot"] if "xyplot" in pipe["loader_settings"] else xyPlot
         if xyPlot is not None:
-            return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot)
+            return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise)
         else:
             return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, force_full_denoise, disable_noise)
 
