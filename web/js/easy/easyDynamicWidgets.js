@@ -804,6 +804,15 @@ app.registerExtension({
 					})
 				}
 			}
+			const onAdded = nodeType.prototype.onAdded;
+			nodeType.prototype.onAdded = async function () {
+				onAdded ? onAdded.apply(this, []) : undefined;
+				const seed_widget = this.widgets.find(w => ['seed_num','seed'].includes(w.name))
+				const seed_control = this.widgets.find(w=> ['control_before_generate','control_after_generate'].includes(w.name))
+				if(seed_control.name == 'control_before_generate' && seed_widget.value === 0){
+					seed_widget.value = Math.floor(Math.random() * 1125899906842624)
+				}
+			}
 		}
 
 		if (nodeData.name == 'easy imageInsetCrop') {

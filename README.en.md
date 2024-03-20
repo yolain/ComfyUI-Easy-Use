@@ -47,6 +47,8 @@ you need to run `pip install -r requirements.txt` to install python dependencies
 
 **v1.1.1 (2024/3/16)**
 
+- The issue that the seed is 0 when a node with a seed control is added and **control before generate** is fixed for the first time run queue prompt.
+- `easy preSamplingAdvanced` Added **return_with_leftover_noise**
 - Fixed `easy stylesSelector` error when choose the custom file
 - `easy preSamplingLayerDiffusion` Added optional input parameter for mask
 - Renamed all nodes widget name named seed_num to seed

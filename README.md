@@ -34,8 +34,10 @@
 
 ## 更新日志
 
-**v1.1.1 (2024/3/17)**
+**v1.1.1 (2024/3/21)**
 
+- 修复首次添加含seed的节点且当前模式为control_before_generate时，seed为0的问题
+- `easy preSamplingAdvanced` 增加 **return_with_leftover_noise**
 - 修复 `easy stylesSelector` 当选择自定义样式文件时运行队列报错
 - `easy preSamplingLayerDiffusion` 增加 mask 可选传入参数
 - 将所有 **seed_num** 调整回 **seed**
