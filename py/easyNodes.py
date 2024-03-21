@@ -4168,11 +4168,11 @@ class pipeEdit:
 
         pipe_lora_stack = pipe.get("lora_stack") if pipe is not None and "lora_stack" in pipe else None
 
+        steps = pipe["loader_settings"]["steps"] if "steps" in pipe["loader_settings"] else 1
         if pos is None and optional_positive != '':
-            print(a1111_prompt_style)
             pos, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip,
                                                                         pipe_lora_stack, optional_positive, positive_token_normalization,positive_weight_interpretation,
-                                                                        a1111_prompt_style, my_unique_id, prompt, easyCache)
+                                                                        a1111_prompt_style, my_unique_id, prompt, easyCache, True, steps)
             pos = set_cond(pipe['positive'], pos, conditioning_mode, average_strength, old_cond_start, old_cond_end, new_cond_start, new_cond_end)
             pipe['loader_settings']['positive'] = positive_wildcard_prompt
             pipe['loader_settings']['positive_token_normalization'] = positive_token_normalization
@@ -4187,7 +4187,7 @@ class pipeEdit:
         if neg is None and optional_negative != '':
             neg, negative_wildcard_prompt, model, clip = prompt_to_cond("negative", model, clip, clip_skip, pipe_lora_stack, optional_negative,
                                                       negative_token_normalization, negative_weight_interpretation,
-                                                      a1111_prompt_style, my_unique_id, prompt, easyCache)
+                                                      a1111_prompt_style, my_unique_id, prompt, easyCache, True, steps)
             neg = set_cond(pipe['negative'], neg, conditioning_mode, average_strength, old_cond_start, old_cond_end, new_cond_start, new_cond_end)
             pipe['loader_settings']['negative'] = negative_wildcard_prompt
             pipe['loader_settings']['negative_token_normalization'] = negative_token_normalization
@@ -4212,6 +4212,9 @@ class pipeEdit:
             "samples": samples,
             "images": image,
             "seed": pipe.get('seed') if pipe is not None and "seed" in pipe else None,
+            "loader_settings":{
+                **pipe["loader_settings"]
+            }
         }
         del pipe
 
