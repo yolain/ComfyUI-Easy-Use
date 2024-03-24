@@ -6,6 +6,7 @@ from ..config import RESOURCES_DIR
 from ..log import log_node_warn
 from ..adv_encode import advanced_encode
 from .controlnet import easyControlnet
+from ..layer_diffuse.func import LayerDiffuse
 class easyXYPlot():
 
     def __init__(self, xyPlotData, save_prefix, image_output, prompt, extra_pnginfo, my_unique_id, sampler, easyCache):
@@ -354,8 +355,9 @@ class easyXYPlot():
                                             plot_image_vars['positive_weight_interpretation'],
                                             w_max=1.0,
                                             apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
-                if "positive_cond" in plot_image_vars:
-                    positive = positive + plot_image_vars["positive_cond"]
+
+                # if "positive_cond" in plot_image_vars:
+                #     positive = positive + plot_image_vars["positive_cond"]
 
             if "Negative" in self.x_type or "Negative" in self.y_type:
                 if self.x_type == 'Negative Prompt S/R' or self.y_type == 'Negative Prompt S/R':
@@ -366,8 +368,8 @@ class easyXYPlot():
                                             plot_image_vars['negative_weight_interpretation'],
                                             w_max=1.0,
                                             apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
-                if "negative_cond" in plot_image_vars:
-                    negative = negative + plot_image_vars["negative_cond"]
+                # if "negative_cond" in plot_image_vars:
+                #     negative = negative + plot_image_vars["negative_cond"]
 
             # ControlNet
             if "ControlNet" in self.x_type or "ControlNet" in self.y_type:
@@ -428,8 +430,20 @@ class easyXYPlot():
         # LayerDiffuse
         layer_diffusion_method = plot_image_vars["layer_diffusion_method"] if "layer_diffusion_method" in plot_image_vars else None
         empty_samples = plot_image_vars["empty_samples"] if "empty_samples" in plot_image_vars else None
+
+        if layer_diffusion_method:
+            samp_blend_samples = plot_image_vars["blend_samples"] if "blend_samples" in plot_image_vars else None
+            additional_cond = plot_image_vars["layer_diffusion_cond"] if "layer_diffusion_cond" in plot_image_vars else None
+
+            images = plot_image_vars["images"].movedim(-1, 1) if "images" in plot_image_vars else None
+            weight = plot_image_vars['layer_diffusion_weight'] if 'layer_diffusion_weight' in plot_image_vars else 1.0
+            model, positive, negative = LayerDiffuse().apply_layer_diffusion(model, layer_diffusion_method, weight, samples,
+                                                                                  samp_blend_samples, positive,
+                                                                                  negative, images, additional_cond)
+
         samples = empty_samples if layer_diffusion_method is not None and empty_samples is not None else samples
         # Sample
+
         samples = self.sampler.common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, samples,
                                           denoise=denoise, disable_noise=disable_noise, preview_latent=preview_latent,
                                           start_step=start_step, last_step=last_step,

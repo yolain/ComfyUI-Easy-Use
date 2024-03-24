@@ -2614,15 +2614,6 @@ class samplerFull(LayerDiffuse):
         if add_noise == "disable":
             disable_noise = True
 
-        # LayerDiffusion
-        if "layer_diffusion_method" in pipe['loader_settings']:
-            samp_blend_samples = pipe["blend_samples"] if "blend_samples" in pipe else None
-            additional_cond = pipe["loader_settings"]['layer_diffusion_cond'] if "layer_diffusion_cond" in pipe['loader_settings'] else (None, None, None)
-            method = self.get_layer_diffusion_method(pipe['loader_settings']['layer_diffusion_method'], samp_blend_samples is not None)
-            images = pipe["images"].movedim(-1, 1) if "images" in pipe else None
-            weight = pipe['loader_settings']['layer_diffusion_weight'] if 'layer_diffusion_weight' in pipe['loader_settings'] else 1.0
-            samp_model, samp_positive, samp_negative = self.apply_layer_diffusion(samp_model, method, weight, samp_samples, samp_blend_samples, samp_positive, samp_negative, images, additional_cond)
-
         def downscale_model_unet(samp_model):
             if downscale_options is None:
                 return  samp_model
@@ -2662,6 +2653,21 @@ class samplerFull(LayerDiffuse):
                                  steps, start_step, last_step, cfg, sampler_name, scheduler, denoise,
                                  image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id,
                                  preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise):
+
+            # LayerDiffusion
+            if "layer_diffusion_method" in pipe['loader_settings']:
+                samp_blend_samples = pipe["blend_samples"] if "blend_samples" in pipe else None
+                additional_cond = pipe["loader_settings"]['layer_diffusion_cond'] if "layer_diffusion_cond" in pipe[
+                    'loader_settings'] else (None, None, None)
+                method = self.get_layer_diffusion_method(pipe['loader_settings']['layer_diffusion_method'],
+                                                         samp_blend_samples is not None)
+                images = pipe["images"].movedim(-1, 1) if "images" in pipe else None
+                weight = pipe['loader_settings']['layer_diffusion_weight'] if 'layer_diffusion_weight' in pipe[
+                    'loader_settings'] else 1.0
+                samp_model, samp_positive, samp_negative = self.apply_layer_diffusion(samp_model, method, weight,
+                                                                                      samp_samples, samp_blend_samples,
+                                                                                      samp_positive, samp_negative,
+                                                                                      images, additional_cond)
 
             blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
             layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
@@ -2763,6 +2769,7 @@ class samplerFull(LayerDiffuse):
                 "scheduler": scheduler,
                 "denoise": denoise,
                 "seed": samp_seed,
+                "images": pipe['images'],
 
                 "model": samp_model, "vae": samp_vae, "clip": samp_clip, "positive_cond": samp_positive,
                 "negative_cond": samp_negative,
@@ -2790,11 +2797,16 @@ class samplerFull(LayerDiffuse):
                 plot_image_vars["positive_cond_stack"] = pipe["loader_settings"]["positive_cond_stack"]
             if "negative_cond_stack" in pipe["loader_settings"]:
                 plot_image_vars["negative_cond_stack"] = pipe["loader_settings"]["negative_cond_stack"]
-            if "layer_diffusion_method" in pipe["loader_settings"]:
+            if layer_diffusion_method:
                 plot_image_vars["layer_diffusion_method"] = layer_diffusion_method
+            if "layer_diffusion_weight" in pipe["loader_settings"]:
+                plot_image_vars["layer_diffusion_weight"] = pipe['loader_settings']['layer_diffusion_weight']
+            if "layer_diffusion_cond" in pipe["loader_settings"]:
+                plot_image_vars["layer_diffusion_cond"] = pipe['loader_settings']['layer_diffusion_cond']
+            if "empty_samples" in pipe["loader_settings"]:
+                plot_image_vars["empty_samples"] = pipe["loader_settings"]['empty_samples']
 
             latent_image = sampleXYplot.get_latent(pipe["samples"])
-
             latents_plot = sampleXYplot.get_labels_and_sample(plot_image_vars, latent_image, preview_latent, start_step,
                                                               last_step, force_full_denoise, disable_noise)
 
