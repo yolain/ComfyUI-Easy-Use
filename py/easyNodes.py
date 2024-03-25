@@ -4178,7 +4178,7 @@ class pipeEdit:
             samples = {"samples": vae.encode(image[:, :, :, :3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
 
-        pipe_lora_stack = pipe.get("lora_stack") if pipe is not None and "lora_stack" in pipe else None
+        pipe_lora_stack = pipe.get("lora_stack") if pipe is not None and "lora_stack" in pipe else []
 
         steps = pipe["loader_settings"]["steps"] if "steps" in pipe["loader_settings"] else 1
         if pos is None and optional_positive != '':
