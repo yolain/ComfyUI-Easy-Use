@@ -10,7 +10,7 @@ from urllib.request import urlopen
 from PIL import Image
 
 from server import PromptServer
-from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint
+from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint, InpaintModelConditioning
 from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
@@ -3054,6 +3054,7 @@ class samplerSimpleInpainting:
                  "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
+                 "additional": (["None", "Differential Diffusion", "Only InpaintModelConditioning"],{"default": "None"})
                  },
                 "optional": {
                     "model": ("MODEL",),
@@ -3072,62 +3073,73 @@ class samplerSimpleInpainting:
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
-    def run(self, pipe, grow_mask_by, image_output, link_id, save_prefix, model=None, mask=None, patch=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+    def run(self, pipe, grow_mask_by, image_output, link_id, save_prefix, additional, model=None, mask=None, patch=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
         model = model if model is not None else pipe['model']
+        latent = pipe['samples'] if 'samples' in pipe else None
+        if 'noise_mask' in latent:
+            mask = latent['noise_mask']
 
         if mask is not None:
+            positive = pipe['positive']
+            negative = pipe['negative']
             pixels = pipe["images"] if pipe and "images" in pipe else None
-            if pixels is None:
-                raise Exception("No Images found")
             vae = pipe["vae"] if pipe and "vae" in pipe else None
-            if pixels is None:
-                raise Exception("No VAE found")
-            x = (pixels.shape[1] // 8) * 8
-            y = (pixels.shape[2] // 8) * 8
-            mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])),
-                                                   size=(pixels.shape[1], pixels.shape[2]), mode="bilinear")
-
-            pixels = pixels.clone()
-            if pixels.shape[1] != x or pixels.shape[2] != y:
-                x_offset = (pixels.shape[1] % 8) // 2
-                y_offset = (pixels.shape[2] % 8) // 2
-                pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
-                mask = mask[:, :, x_offset:x + x_offset, y_offset:y + y_offset]
-
-            if grow_mask_by == 0:
-                mask_erosion = mask
+            if additional != "None":
+                positive, negative, latent = InpaintModelConditioning().encode(positive, negative, pixels, vae, mask)
+                if additional == "Differential Diffusion":
+                    cls = ALL_NODE_CLASS_MAPPINGS['DifferentialDiffusion']
+                    if cls is not None:
+                        model, = cls().apply(model)
+                    else:
+                        raise Exception("Differential Diffusion not found,please update comfyui")
             else:
-                kernel_tensor = torch.ones((1, 1, grow_mask_by, grow_mask_by))
-                padding = math.ceil((grow_mask_by - 1) / 2)
+                if 'noise_mask' not in latent:
+                    if pixels is None:
+                        raise Exception("No Images found")
+                    if vae is None:
+                        raise Exception("No VAE found")
+                    x = (pixels.shape[1] // 8) * 8
+                    y = (pixels.shape[2] // 8) * 8
+                    mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])),
+                                                           size=(pixels.shape[1], pixels.shape[2]), mode="bilinear")
 
-                mask_erosion = torch.clamp(torch.nn.functional.conv2d(mask.round(), kernel_tensor, padding=padding), 0,
-                                           1)
+                    pixels = pixels.clone()
+                    if pixels.shape[1] != x or pixels.shape[2] != y:
+                        x_offset = (pixels.shape[1] % 8) // 2
+                        y_offset = (pixels.shape[2] % 8) // 2
+                        pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
+                        mask = mask[:, :, x_offset:x + x_offset, y_offset:y + y_offset]
 
-            m = (1.0 - mask.round()).squeeze(1)
-            for i in range(3):
-                pixels[:, :, :, i] -= 0.5
-                pixels[:, :, :, i] *= m
-                pixels[:, :, :, i] += 0.5
-            t = vae.encode(pixels)
+                    if grow_mask_by == 0:
+                        mask_erosion = mask
+                    else:
+                        kernel_tensor = torch.ones((1, 1, grow_mask_by, grow_mask_by))
+                        padding = math.ceil((grow_mask_by - 1) / 2)
 
-            latent = {"samples": t, "noise_mask": (mask_erosion[:, :, :x, :y].round())}
+                        mask_erosion = torch.clamp(torch.nn.functional.conv2d(mask.round(), kernel_tensor, padding=padding), 0,
+                                                   1)
 
-            # when patch was linked
-            if patch is not None:
-                worker = InpaintWorker(node_name="easy kSamplerInpainting")
-                model, = worker.patch(model, latent, patch)
+                    m = (1.0 - mask.round()).squeeze(1)
+                    for i in range(3):
+                        pixels[:, :, :, i] -= 0.5
+                        pixels[:, :, :, i] *= m
+                        pixels[:, :, :, i] += 0.5
+                    t = vae.encode(pixels)
+
+                    latent = {"samples": t, "noise_mask": (mask_erosion[:, :, :x, :y].round())}
+
+                # when patch was linked
+                if patch is not None:
+                    worker = InpaintWorker(node_name="easy kSamplerInpainting")
+                    model, = worker.patch(model, latent, patch)
 
             new_pipe = {
+                **pipe,
                 "model": model,
-                "positive": pipe['positive'],
-                "negative": pipe['negative'],
-                "vae": pipe['vae'],
-                "clip": pipe['clip'],
-
+                "positive": positive,
+                "negative": negative,
+                "vae": vae,
                 "samples": latent,
-                "images": pipe['images'],
-                "seed": pipe['seed'],
-
                 "loader_settings": pipe["loader_settings"],
             }
         else:

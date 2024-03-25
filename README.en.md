@@ -31,6 +31,12 @@
 
 ## Changelog
 
+**v1.1.2 (2024/3/25)**
+
+- `easy kSamplerInpainting` add *additional* widget，you can choose 'Differential Diffusion' or 'Only InpaintModelConditioning'
+- Fixed `easy pipeEdit` error when add lora to prompt
+- Fixed layerDiffuse xyplot bug
+
 **v1.1.1 (2024/3/16)**
 
 - The issue that the seed is 0 when a node with a seed control is added and **control before generate** is fixed for the first time run queue prompt.

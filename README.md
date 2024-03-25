@@ -34,6 +34,12 @@
 
 ## 更新日志
 
+**v1.1.2 (2024/3/25)**
+
+- `easy kSamplerInpainting` 增加 *additional* 属性，可设置成 Differential Diffusion 或 Only InpaintModelConditioning
+- 修复 `easy pipeEdit` 提示词输入lora时报错
+- 修复 layerDiffuse xyplot相关bug
+
 **v1.1.1 (2024/3/21)**
 
 - 修复首次添加含seed的节点且当前模式为control_before_generate时，seed为0的问题
