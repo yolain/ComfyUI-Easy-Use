@@ -3128,10 +3128,10 @@ class samplerSimpleInpainting:
 
                     latent = {"samples": t, "noise_mask": (mask_erosion[:, :, :x, :y].round())}
 
-                # when patch was linked
-                if patch is not None:
-                    worker = InpaintWorker(node_name="easy kSamplerInpainting")
-                    model, = worker.patch(model, latent, patch)
+            # when patch was linked
+            if patch is not None:
+                worker = InpaintWorker(node_name="easy kSamplerInpainting")
+                model, = worker.patch(model, latent, patch)
 
             new_pipe = {
                 **pipe,
