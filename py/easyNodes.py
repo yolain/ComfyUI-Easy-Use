@@ -1830,7 +1830,7 @@ class ipadapterApply(ipadapter):
     def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, start_at, end_at, cache_mode, use_tiled, attn_mask=None, optional_ipadapter=None):
         tiles, masks = [None], [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
-        if use_tiled:
+        if use_tiled and preset not in self.faceid_presets:
             if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
                 self.error()
             cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]

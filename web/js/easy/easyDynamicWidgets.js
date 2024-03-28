@@ -215,17 +215,25 @@ function widgetLogic(node, widget) {
             'VIT-G (medium strength)',
             'PLUS (high strength)', 'PLUS FACE (portraits)',
             'FULL FACE - SD1.5 only (portraits stronger)',
-			'FACEID PORTRAIT (style transfer)'
         ]
 		const faceid_presets = [
             'FACEID',
             'FACEID PLUS - SD1.5 only',
             'FACEID PLUS V2',
+			'FACEID PORTRAIT (style transfer)'
         ]
 		if(normol_presets.includes(widget.value)){
 			toggleWidget(node, findWidgetByName(node, 'lora_strength'))
 			toggleWidget(node, findWidgetByName(node, 'provider'))
 			toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'))
+			toggleWidget(node, findWidgetByName(node, 'use_tiled'), true)
+			let use_tiled = findWidgetByName(node, 'use_tiled').value
+			if(use_tiled){
+				toggleWidget(node, findWidgetByName(node, 'sharpening'), true)
+			}else {
+				toggleWidget(node, findWidgetByName(node, 'sharpening'))
+			}
+
 		}
 		else if(faceid_presets.includes(widget.value)){
 			if(widget.value == 'FACEID PLUS V2'){
@@ -233,8 +241,15 @@ function widgetLogic(node, widget) {
 			}else{
 				toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'))
 			}
-			toggleWidget(node, findWidgetByName(node, 'lora_strength'), true)
+			if(widget.value == 'FACEID PORTRAIT (style transfer)'){
+				toggleWidget(node, findWidgetByName(node, 'lora_strength'), false)
+			}
+			else{
+				toggleWidget(node, findWidgetByName(node, 'lora_strength'), true)
+			}
 			toggleWidget(node, findWidgetByName(node, 'provider'), true)
+			toggleWidget(node, findWidgetByName(node, 'use_tiled'))
+			toggleWidget(node, findWidgetByName(node, 'sharpening'))
 		}
 		updateNodeHeight(node)
 	}
