@@ -37,6 +37,8 @@ PS: Please update [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAd
 <br>
 - Added `easy ipadapterApply`
 - Added `easy ipadapterApplyADV`
+- Added `easy preMaskDetailerFix`
+- Fixed `easy stylesSelector` is change the prompt when not select the style
 
 (4c25580)
 
