@@ -4,6 +4,7 @@ const loaders = ['easy fullLoader', 'easy a1111Loader', 'easy comfyLoader']
 const preSampling = ['easy preSampling', 'easy preSamplingAdvanced', 'easy preSamplingDynamicCFG', 'easy preSamplingNoiseIn', 'easy preSamplingLayerDiffusion', 'easy fullkSampler']
 const kSampler = ['easy kSampler', 'easy kSamplerTiled', 'easy kSamplerInpainting', 'easy kSamplerDownscaleUnet', 'easy kSamplerLayerDiffusion']
 const controlnet = ['easy controlnetLoader', 'easy controlnetLoaderADV', 'easy instantIDApply', 'easy instantIDApplyADV']
+const ipadapter = ['easy ipadapterApply', 'easy ipadapterApplyADV']
 const positive_prompt = ['easy positive', 'easy wildcards']
 const widgetMapping = {
     "positive_prompt":{
@@ -45,6 +46,17 @@ const widgetMapping = {
         "cn_strength": ["strength", "cn_strength"],
         "cn_soft_weights": ["scale_soft_weights","cn_soft_weights"],
     },
+    "ipadapter":{
+        "preset":"preset",
+        "lora_strength": "lora_strength",
+        "provider": "provider",
+        "weight":"weight",
+        "weight_faceidv2": "weight_faceidv2",
+        "start_at": "start_at",
+        "end_at": "end_at",
+        "cache_mode": "cache_mode",
+        "use_tiled": "use_tiled",
+    }
 }
 const inputMapping = {
     "loaders":{
@@ -73,6 +85,12 @@ const inputMapping = {
     "positive_prompt":{
 
     },
+    "ipadapter":{
+        "model":"model",
+        "image":"image",
+        "attn_mask":"attn_mask",
+        "optional_ipadapter":"optional_ipadapter"
+    }
 };
 
 const outputMapping = {
@@ -104,6 +122,12 @@ const outputMapping = {
     "load_image":{
         "IMAGE":"IMAGE",
         "MASK": "MASK"
+    },
+    "ipadapter":{
+        "model":"model",
+        "tiles":"tiles",
+        "masks":"masks",
+        "ipadapter":"ipadapter"
     }
 };
 
@@ -490,6 +514,10 @@ app.registerExtension({
         // Swap ControlNet
         if (controlnet.includes(nodeData.name)) {
             addMenu("↪️ Swap EasyControlnet", 'controlnet', controlnet, nodeType)
+        }
+        // Swap IPAdapater
+        if (ipadapter.includes(nodeData.name)) {
+            addMenu("↪️ Swap EasyIPAdapater", 'ipadapter', ipadapter, nodeType)
         }
     }
 });

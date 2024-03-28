@@ -33,6 +33,13 @@
 
 **v1.1.2 (2024/3/25)**
 
+PS: Please update [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus) to v2， and moved v1 models to **ComfyUI\models\ipadapter** (Otherwise, the latest model is automatically downloaded from Huggingface) 
+<br>
+- Added `easy ipadapterApply`
+- Added `easy ipadapterApplyADV`
+
+(4c25580)
+
 - `easy kSamplerInpainting` add *additional* widget，you can choose 'Differential Diffusion' or 'Only InpaintModelConditioning'
 - Fixed `easy pipeEdit` error when add lora to prompt
 - Fixed layerDiffuse xyplot bug

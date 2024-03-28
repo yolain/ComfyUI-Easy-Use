@@ -27,6 +27,7 @@
 - 简化 Stable Cascade [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
 - 简化 Layer Diffuse [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#LayerDiffusion)， 首次使用您可能需要运行 `pip install -r requirements.txt` 安装所需依赖
 - 简化 InstantID [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#InstantID), 需先保证自定义节点包中安装了 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID)
+- 简化 IPAdapter, 需先保证自定义节点包中安装最新版v2的 [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus)
 - 扩展 XYplot 的可用性
 - 整合了Fooocus Inpaint功能
 - 整合了常用的逻辑计算、转换类型、展示所有类型等
@@ -36,11 +37,18 @@
 
 **v1.1.2 (2024/3/25)**
 
+PS: 请更新至最新版v2的 [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus)， 并移动v1版本模型文件至 ComfyUI\models\ipadapter (否则会自动从huggingface下载最新模型) 
+<br>
+- 增加 `easy ipadapterApply`
+- 增加 `easy ipadapterApplyADV`
+
+(4c25580)
+
 - `easy kSamplerInpainting` 增加 *additional* 属性，可设置成 Differential Diffusion 或 Only InpaintModelConditioning
 - 修复 `easy pipeEdit` 提示词输入lora时报错
 - 修复 layerDiffuse xyplot相关bug
 
-**v1.1.1 (2024/3/21)**
+**v1.1.1 (5c8af8f)**
 
 - 修复首次添加含seed的节点且当前模式为control_before_generate时，seed为0的问题
 - `easy preSamplingAdvanced` 增加 **return_with_leftover_noise**

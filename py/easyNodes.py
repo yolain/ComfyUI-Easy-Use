@@ -6,18 +6,19 @@ from comfy.sd import CLIP, VAE
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
 from comfy_extras.nodes_mask import LatentCompositeMasked
+from comfy.clip_vision import load as load_clip_vision
 from urllib.request import urlopen
 from PIL import Image
 
 from server import PromptServer
 from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint, InpaintModelConditioning
-from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH
+from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, IPADAPTER_DIR, IPADAPTER_MODELS
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
 from .layer_diffuse.func import LayerDiffuse, LayerMethod
 
-from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions, get_sd_version
+from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler
 from .libs.xyplot import easyXYPlot
@@ -40,6 +41,7 @@ add_folder_path_and_extensions("onnx", [os.path.join(model_path, "onnx")], {'.on
 add_folder_path_and_extensions("instantid", [os.path.join(model_path, "instantid")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("layer_model", [os.path.join(model_path, "layer_model")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("rembg", [os.path.join(model_path, "rembg")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("ipadapter", [os.path.join(model_path, "ipadapter")], folder_paths.supported_pt_extensions)
 
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 
@@ -1543,9 +1545,9 @@ class LLLiteLoader:
 
         return (model_lllite,)
 
-#---------------------------------------------------------------测试 开始----------------------------------------------------------------------#
+#---------------------------------------------------------------Inpaint 开始----------------------------------------------------------------------#
 
-# FooocusInpaint (Testing)
+# FooocusInpaint
 from .fooocus import InpaintHead, InpaintWorker
 inpaint_head_model = None
 class fooocusInpaintLoader:
@@ -1560,7 +1562,7 @@ class fooocusInpaintLoader:
 
     RETURN_TYPES = ("INPAINT_PATCH",)
     RETURN_NAMES = ("patch",)
-    CATEGORY = "EasyUse/__for_testing"
+    CATEGORY = "EasyUse/Inpaint"
     FUNCTION = "apply"
 
     def apply(self, head, patch):
@@ -1576,6 +1578,345 @@ class fooocusInpaintLoader:
         inpaint_lora = comfy.utils.load_torch_file(patch_file, safe_load=True)
 
         return ((inpaint_head_model, inpaint_lora),)
+
+#---------------------------------------------------------------适配器 开始----------------------------------------------------------------------#
+def insightface_loader(provider):
+    try:
+        from insightface.app import FaceAnalysis
+    except ImportError as e:
+        raise Exception(e)
+
+    path = os.path.join(folder_paths.models_dir, "insightface")
+    model = FaceAnalysis(name="buffalo_l", root=path, providers=[provider + 'ExecutionProvider', ])
+    model.prepare(ctx_id=0, det_size=(640, 640))
+    return model
+
+# Apply Ipadapter
+class ipadapter:
+
+    def __init__(self):
+        self.normol_presets = [
+            'LIGHT - SD1.5 only (low strength)',
+            'STANDARD (medium strength)',
+            'VIT-G (medium strength)',
+            'PLUS (high strength)',
+            'PLUS FACE (portraits)',
+            'FULL FACE - SD1.5 only (portraits stronger)'
+        ]
+        self.faceid_presets = [
+            'FACEID',
+            'FACEID PLUS - SD1.5 only',
+            'FACEID PLUS V2',
+            'FACEID PORTRAIT (style transfer)'
+        ]
+        self.presets = self.normol_presets + self.faceid_presets
+
+
+    def error(self):
+        raise Exception(f"[ERROR] To use ipadapterApply, you need to install 'ComfyUI_IPAdapter_plus'")
+
+    def get_clipvision_file(self, preset, node_name):
+        preset = preset.lower()
+        clipvision_list = folder_paths.get_filename_list("clip_vision")
+
+        if preset.startswith("vit-g"):
+            pattern = '(ViT.bigG.14.*39B.b160k|ipadapter.*sdxl|sdxl.*model\.(bin|safetensors))'
+        else:
+            pattern = '(ViT.H.14.*s32B.b79K|ipadapter.*sd15|sd1.?5.*model\.(bin|safetensors))'
+        clipvision_files = [e for e in clipvision_list if re.search(pattern, e, re.IGNORECASE)]
+
+        clipvision_name = clipvision_files[0] if len(clipvision_files)>0 else None
+        clipvision_file = folder_paths.get_full_path("clip_vision", clipvision_name) if clipvision_name else None
+        if clipvision_name is not None:
+            log_node_info(node_name, f"Using {clipvision_name}")
+
+        return clipvision_file, clipvision_name
+
+    def get_ipadapter_file(self, preset, is_sdxl, node_name):
+        preset = preset.lower()
+        ipadapter_list = folder_paths.get_filename_list("ipadapter")
+        is_insightface = False
+        lora_pattern = None
+
+        if preset.startswith("light"):
+            if is_sdxl:
+                raise Exception("light model is not supported for SDXL")
+            pattern = 'sd15.light.v11\.(safetensors|bin)$'
+            # if light model v11 is not found, try with the old version
+            if not [e for e in ipadapter_list if re.search(pattern, e, re.IGNORECASE)]:
+                pattern = 'sd15.light\.(safetensors|bin)$'
+        elif preset.startswith("standard"):
+            if is_sdxl:
+                pattern = 'ip.adapter.sdxl.vit.h\.(safetensors|bin)$'
+            else:
+                pattern = 'ip.adapter.sd15\.(safetensors|bin)$'
+        elif preset.startswith("vit-g"):
+            if is_sdxl:
+                pattern = 'ip.adapter.sdxl\.(safetensors|bin)$'
+            else:
+                pattern = 'sd15.vit.g\.(safetensors|bin)$'
+        elif preset.startswith("plus ("):
+            if is_sdxl:
+                pattern = 'plus.sdxl.vit.h\.(safetensors|bin)$'
+            else:
+                pattern = 'ip.adapter.plus.sd15\.(safetensors|bin)$'
+        elif preset.startswith("plus face"):
+            if is_sdxl:
+                pattern = 'plus.face.sdxl.vit.h\.(safetensors|bin)$'
+            else:
+                pattern = 'plus.face.sd15\.(safetensors|bin)$'
+        elif preset.startswith("full"):
+            if is_sdxl:
+                raise Exception("full face model is not supported for SDXL")
+            pattern = 'full.face.sd15\.(safetensors|bin)$'
+        elif preset.startswith("faceid portrait"):
+            if is_sdxl:
+                raise Exception("portrait model is not supported for SDXL")
+            pattern = 'portrait.sd15\.(safetensors|bin)$'
+            is_insightface = True
+        elif preset == "faceid":
+            if is_sdxl:
+                pattern = 'faceid.sdxl\.(safetensors|bin)$'
+                lora_pattern = 'faceid.sdxl.lora\.safetensors$'
+            else:
+                pattern = 'faceid.sd15\.(safetensors|bin)$'
+                lora_pattern = 'faceid.sd15.lora\.safetensors$'
+            is_insightface = True
+        elif preset.startswith("faceid plus -"):
+            if is_sdxl:
+                raise Exception("faceid plus model is not supported for SDXL")
+            pattern = 'faceid.plus.sd15\.(safetensors|bin)$'
+            lora_pattern = 'faceid.plus.sd15.lora\.safetensors$'
+            is_insightface = True
+        elif preset.startswith("faceid plus v2"):
+            if is_sdxl:
+                pattern = 'faceid.plusv2.sdxl\.(safetensors|bin)$'
+                lora_pattern = 'faceid.plusv2.sdxl.lora\.safetensors$'
+            else:
+                pattern = 'faceid.plusv2.sd15\.(safetensors|bin)$'
+                lora_pattern = 'faceid.plusv2.sd15.lora\.safetensors$'
+            is_insightface = True
+        else:
+            raise Exception(f"invalid type '{preset}'")
+
+        ipadapter_files = [e for e in ipadapter_list if re.search(pattern, e, re.IGNORECASE)]
+        ipadapter_name = ipadapter_files[0] if len(ipadapter_files)>0 else None
+        ipadapter_file = folder_paths.get_full_path("ipadapter", ipadapter_name) if ipadapter_name else None
+        if ipadapter_name is not None:
+            log_node_info(node_name, f"Using {ipadapter_name}")
+
+        return ipadapter_file, ipadapter_name, is_insightface, lora_pattern
+
+    def get_lora_file(self, preset, pattern, model_type, model, model_strength, clip_strength, clip=None):
+        lora_list = folder_paths.get_filename_list("loras")
+        lora_files = [e for e in lora_list if re.search(pattern, e, re.IGNORECASE)]
+        lora_name = lora_files[0] if lora_files else None
+        if lora_name:
+            return easyCache.load_lora({"model": model, "clip": clip, "lora_name": lora_name, "model_strength":model_strength, "clip_strength":clip_strength},)
+        else:
+            if "lora_url" in IPADAPTER_MODELS[preset][model_type]:
+                lora_name = get_local_filepath(IPADAPTER_MODELS[preset][model_type]["lora_url"], os.path.join(folder_paths.models_dir, "loras"))
+                return easyCache.load_lora({"model": model, "clip": clip, "lora_name": lora_name, "model_strength":model_strength, "clip_strength":clip_strength},)
+            return (model, clip)
+
+    def ipadapter_model_loader(self, file):
+        model = comfy.utils.load_torch_file(file, safe_load=True)
+
+        if file.lower().endswith(".safetensors"):
+            st_model = {"image_proj": {}, "ip_adapter": {}}
+            for key in model.keys():
+                if key.startswith("image_proj."):
+                    st_model["image_proj"][key.replace("image_proj.", "")] = model[key]
+                elif key.startswith("ip_adapter."):
+                    st_model["ip_adapter"][key.replace("ip_adapter.", "")] = model[key]
+            model = st_model
+            del st_model
+
+        if not "ip_adapter" in model.keys() or not model["ip_adapter"]:
+            raise Exception("invalid IPAdapter model {}".format(file))
+
+        if 'plusv2' in file.lower():
+            model["faceidplusv2"] = True
+
+        return model
+
+    def load_model(self, model, preset, lora_model_strength, provider="CPU", clip_vision=None, optional_ipadapter=None, cache_mode='none', node_name='easy ipadapterApply'):
+        pipeline = {"clipvision": {'file': None, 'model': None}, "ipadapter": {'file': None, 'model': None},
+                    "insightface": {'provider': None, 'model': None}}
+        if optional_ipadapter is not None:
+            pipeline = optional_ipadapter
+
+        # 1. Load the clipvision model
+        if not clip_vision:
+            clipvision_file, clipvision_name = self.get_clipvision_file(preset, node_name)
+            if clipvision_file is None:
+                raise Exception("ClipVision model not found.")
+            if clipvision_file == pipeline['clipvision']['file']:
+                clip_vision = pipeline['clipvision']['model']
+            elif cache_mode in ["all", "clip_vision only"] and clipvision_name in cache:
+                log_node_info("easy ipadapterApply", f"Using ClipModel {clipvision_name} Cached")
+                clip_vision = cache[clipvision_name][1]
+            else:
+                clip_vision = load_clip_vision(clipvision_file)
+                update_cache(clipvision_name, (False, clip_vision))
+            pipeline['clipvision']['file'] = clipvision_file
+        pipeline['clipvision']['model'] = clip_vision
+
+        # 2. Load the ipadapter model
+        is_sdxl = isinstance(model.model, comfy.model_base.SDXL)
+        ipadapter_file, ipadapter_name, is_insightface, lora_pattern = self.get_ipadapter_file(preset, is_sdxl, node_name)
+        model_type = 'sdxl' if is_sdxl else 'sd15'
+        if ipadapter_file is None:
+            ipadapter_file = get_local_filepath(IPADAPTER_MODELS[preset][model_type]["model_url"], IPADAPTER_DIR)
+        ipadapter = self.ipadapter_model_loader(ipadapter_file)
+        pipeline['ipadapter']['file'] = ipadapter_file
+        pipeline['ipadapter']['model'] = ipadapter
+
+        # 3. Load the lora model if needed
+        if lora_pattern is not None:
+            if lora_model_strength > 0:
+              model, _ = self.get_lora_file(preset, lora_pattern, model_type, model, lora_model_strength, 1)
+
+        # 4. Load the insightface model if needed
+        if is_insightface:
+            icache_key = 'insightface-' + provider
+            if provider == pipeline['insightface']['provider']:
+                insightface = pipeline['insightface']['model']
+            elif icache_key in cache:
+                log_node_info("easy ipadapterApply", f"Using InsightFaceModel {icache_key} Cached")
+                insightface = cache[icache_key][1]
+            else:
+                insightface = insightface_loader(provider)
+                update_cache(icache_key, (False, insightface))
+            pipeline['insightface']['provider'] = provider
+            pipeline['insightface']['model'] = insightface
+
+        return (model, pipeline,)
+
+class ipadapterApply(ipadapter):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        presets = cls().presets
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "image": ("IMAGE",),
+                "preset": (presets,),
+                "lora_strength": ("FLOAT", {"default": 0.6, "min": 0, "max": 1, "step": 0.01}),
+                "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"],),
+                "weight": ("FLOAT", {"default": 1.0, "min": -1, "max": 3, "step": 0.05}),
+                "weight_faceidv2": ("FLOAT", { "default": 1.0, "min": -1, "max": 5.0, "step": 0.05 }),
+                "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "cache_mode": (["insightface only", "clip_vision only", "all", "none"], {"default": "insightface only"},),
+                "use_tiled": ("BOOLEAN", {"default": False},),
+            },
+
+            "optional": {
+                "attn_mask": ("MASK",),
+                "optional_ipadapter": ("IPADAPTER",),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL", "IMAGE", "MASK", "IPADAPTER",)
+    RETURN_NAMES = ("model", "tiles", "masks", "ipadapter", )
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, start_at, end_at, cache_mode, use_tiled, attn_mask=None, optional_ipadapter=None):
+        tiles, masks = [None], [None]
+        model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
+        if use_tiled:
+            if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
+                self.error()
+            cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
+            model, tiles, masks = cls().apply_tiled(model, ipadapter, image, weight, "linear", start_at, end_at, sharpening=0.0, combine_embeds="concat", image_negative=None, attn_mask=attn_mask, clip_vision=None, embeds_scaling='V only')
+        else:
+            if preset in ['FACEID PLUS V2', 'FACEID PORTRAIT (style transfer)']:
+                if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
+                model, = cls().apply_ipadapter(model, ipadapter, image, weight, "linear", start_at, end_at, combine_embeds="concat", weight_faceidv2=weight_faceidv2, image_negative=None, clip_vision=None, attn_mask=attn_mask, insightface=None, embeds_scaling='V only')
+            else:
+                if "IPAdapter" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapter"]
+                model, = cls().apply_ipadapter(model, ipadapter, image, weight, start_at, end_at, attn_mask)
+
+        return (model, tiles, masks, ipadapter)
+
+class ipadapterApplyAdvanced(ipadapter):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        presets = cls().presets
+        WEIGHT_TYPES = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output',
+                        'weak middle', 'strong middle', 'style transfer (SDXL)']
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "image": ("IMAGE",),
+                "preset": (presets,),
+                "lora_strength": ("FLOAT", {"default": 0.6, "min": 0, "max": 1, "step": 0.01}),
+                "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"],),
+                "weight": ("FLOAT", {"default": 1.0, "min": -1, "max": 3, "step": 0.05}),
+                "weight_faceidv2": ("FLOAT", {"default": 1.0, "min": -1, "max": 5.0, "step": 0.05 }),
+                "weight_type": (WEIGHT_TYPES,),
+                "combine_embeds": (["concat", "add", "subtract", "average", "norm average"],),
+                "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "embeds_scaling": (['V only', 'K+V', 'K+V w/ C penalty', 'K+mean(V) w/ C penalty'],),
+                "cache_mode": (["insightface only", "clip_vision only", "all", "none"], {"default": "insightface only"},),
+                "use_tiled": ("BOOLEAN", {"default": False},),
+                "use_batch": ("BOOLEAN", {"default": False},),
+                "sharpening": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+            },
+
+            "optional": {
+                "image_negative": ("IMAGE",),
+                "attn_mask": ("MASK",),
+                "clip_vision": ("CLIP_VISION",),
+                "optional_ipadapter": ("IPADAPTER",),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL", "IMAGE", "MASK", "IPADAPTER",)
+    RETURN_NAMES = ("model", "tiles", "masks", "ipadapter", )
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, weight_type, combine_embeds, start_at, end_at, embeds_scaling, cache_mode, use_tiled, use_batch, sharpening, image_negative=None, clip_vision=None, attn_mask=None, optional_ipadapter=None):
+        tiles, masks = [None], [None]
+        model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=clip_vision, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
+        if use_tiled:
+            if use_batch:
+                if "IPAdapterTiledBatch" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiledBatch"]
+            else:
+                if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
+            model, tiles, masks = cls().apply_tiled(model, ipadapter, image, weight, weight_type, start_at, end_at, sharpening=sharpening, combine_embeds=combine_embeds, image_negative=image_negative, attn_mask=attn_mask, clip_vision=clip_vision, embeds_scaling=embeds_scaling)
+        else:
+            if use_batch:
+                if "IPAdapterBatch" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterBatch"]
+            else:
+                if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
+            model, = cls().apply_ipadapter(model, ipadapter, image, weight, weight_type, start_at, end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image_negative=image_negative, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
+
+        return (model, tiles, masks, ipadapter)
 
 #Apply InstantID
 class instantID:
@@ -1670,7 +2011,7 @@ class instantIDApply(instantID):
     OUTPUT_NODE = True
 
     FUNCTION = "apply"
-    CATEGORY = "EasyUse/__for_testing"
+    CATEGORY = "EasyUse/Adapter"
 
 
     def apply(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
@@ -1718,7 +2059,7 @@ class instantIDApplyAdvanced(instantID):
     OUTPUT_NODE = True
 
     FUNCTION = "apply_advanced"
-    CATEGORY = "EasyUse/__for_testing"
+    CATEGORY = "EasyUse/Adapter"
 
     def apply_advanced(self, pipe, image, instantid_file, insightface, control_net_name, cn_strength, cn_soft_weights, weight, start_at, end_at, noise, image_kps=None, mask=None, control_net=None, positive=None, negative=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
@@ -5326,6 +5667,9 @@ class showLoaderSettingsNames:
 
 
 NODE_CLASS_MAPPINGS = {
+    # seed 随机种
+    "easy seed": easySeed,
+    "easy globalSeed": globalSeed,
     # prompt 提示词
     "easy positive": positivePrompt,
     "easy negative": negativePrompt,
@@ -5344,12 +5688,16 @@ NODE_CLASS_MAPPINGS = {
     "easy controlnetLoader": controlnetSimple,
     "easy controlnetLoaderADV": controlnetAdvanced,
     "easy LLLiteLoader": LLLiteLoader,
+    # Adapter 适配器
+    "easy ipadapterApply": ipadapterApply,
+    "easy ipadapterApplyADV": ipadapterApplyAdvanced,
+    "easy instantIDApply": instantIDApply,
+    "easy instantIDApplyADV": instantIDApplyAdvanced,
+    # Inpaint 内补
+    "easy fooocusInpaintLoader": fooocusInpaintLoader,
     # latent 潜空间
     "easy latentNoisy": latentNoisy,
     "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
-    # seed 随机种
-    "easy seed": easySeed,
-    "easy globalSeed": globalSeed,
     # preSampling 预采样处理
     "easy preSampling": samplerSettings,
     "easy preSamplingAdvanced": samplerSettingsAdvanced,
@@ -5404,13 +5752,12 @@ NODE_CLASS_MAPPINGS = {
     "easy showLoaderSettingsNames": showLoaderSettingsNames,
     # "easy imageRemoveBG": imageREMBG,
     "dynamicThresholdingFull": dynamicThresholdingFull,
-    # __for_testing 测试
-    "easy fooocusInpaintLoader": fooocusInpaintLoader,
-    "easy instantIDApply": instantIDApply,
-    "easy instantIDApplyADV": instantIDApplyAdvanced,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    # seed 随机种
+    "easy seed": "EasySeed",
+    "easy globalSeed": "EasyGlobalSeed",
     # prompt 提示词
     "easy positive": "Positive",
     "easy negative": "Negative",
@@ -5429,12 +5776,16 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy controlnetLoader": "EasyControlnet",
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
     "easy LLLiteLoader": "EasyLLLite",
+    # Adapter 适配器
+    "easy ipadapterApply": "Easy Apply IPAdapter",
+    "easy ipadapterApplyADV": "Easy Apply IPAdapter (Advanced)",
+    "easy instantIDApply": "Easy Apply InstantID",
+    "easy instantIDApplyADV": "Easy Apply InstantID (Advanced)",
+    # Inpaint 内补
+    "easy fooocusInpaintLoader": "Load Fooocus Inpaint",
     # latent 潜空间
     "easy latentNoisy": "LatentNoisy",
     "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",
-    # seed 随机种
-    "easy seed": "EasySeed",
-    "easy globalSeed": "EasyGlobalSeed",
     # preSampling 预采样处理
     "easy preSampling": "PreSampling",
     "easy preSamplingAdvanced": "PreSampling (Advanced)",
@@ -5489,8 +5840,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy showLoaderSettingsNames": "Show Loader Settings Names",
     "easy imageRemoveBG": "ImageRemoveBG",
     "dynamicThresholdingFull": "DynamicThresholdingFull",
-    # __for_testing 测试
-    "easy fooocusInpaintLoader": "Load Fooocus Inpaint",
-    "easy instantIDApply": "Easy Apply InstantID",
-    "easy instantIDApplyADV": "Easy Apply InstantID (Advanced)",
 }

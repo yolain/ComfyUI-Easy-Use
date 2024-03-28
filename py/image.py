@@ -1,5 +1,4 @@
 from PIL import Image
-from enum import Enum
 import os
 import hashlib
 import folder_paths
@@ -7,37 +6,7 @@ import torch
 import numpy as np
 from nodes import MAX_RESOLUTION
 from .log import log_node_info
-
-
-def pil2tensor(image):
-  return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
-
-class ResizeMode(Enum):
-  RESIZE = "Just Resize"
-  INNER_FIT = "Crop and Resize"
-  OUTER_FIT = "Resize and Fill"
-  def int_value(self):
-    if self == ResizeMode.RESIZE:
-      return 0
-    elif self == ResizeMode.INNER_FIT:
-      return 1
-    elif self == ResizeMode.OUTER_FIT:
-      return 2
-    assert False, "NOTREACHED"
-
-RESIZE_MODES = [ResizeMode.RESIZE.value, ResizeMode.INNER_FIT.value, ResizeMode.OUTER_FIT.value]
-
-def get_new_bounds(width, height, left, right, top, bottom):
-  """Returns the new bounds for an image with inset crop data."""
-  left = 0 + left
-  right = width - right
-  top = 0 + top
-  bottom = height - bottom
-  return (left, right, top, bottom)
-
-# Tensor to PIL
-def tensor2pil(image):
-    return Image.fromarray(np.clip(255. * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
+from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds
 
 # 图像裁切
 class imageInsetCrop:
@@ -324,6 +293,7 @@ class imageScaleDownToSize(imageScaleDownBy):
 class imagePixelPerfect:
   @classmethod
   def INPUT_TYPES(s):
+    RESIZE_MODES = [ResizeMode.RESIZE.value, ResizeMode.INNER_FIT.value, ResizeMode.OUTER_FIT.value]
     return {
       "required": {
         "image": ("IMAGE",),

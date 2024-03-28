@@ -142,3 +142,94 @@ REMBG_MODELS = {
         "model_url": "https://huggingface.co/briaai/RMBG-1.4/resolve/main/model.pth"
     }
 }
+
+#ipadapter
+IPADAPTER_DIR = os.path.join(folder_paths.models_dir, "ipadapter")
+IPADAPTER_MODELS = {
+    "LIGHT - SD1.5 only (low strength)": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15_light_v11.bin"
+        },
+        "sdxl": {
+            "model_url": ""
+        }
+    },
+    "STANDARD (medium strength)": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15.safetensors"
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl.safetensors"
+        }
+    },
+    "VIT-G (medium strength)": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15_vit-G.safetensors"
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl_vit-h.safetensors"
+        }
+    },
+    "PLUS (high strength)": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter-plus_sd15.safetensors"
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors"
+        }
+    },
+    "PLUS FACE (portraits)": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter-plus-face_sd15.safetensors"
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus-face_sdxl_vit-h.safetensors"
+        }
+    },
+    "FULL FACE - SD1.5 only (portraits stronger)": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter-full-face_sd15.safetensors"
+        },
+        "sdxl": {
+            "model_url": ""
+        }
+    },
+    "FACEID": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid_sd15.bin",
+            "lora_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid_sd15_lora.safetensors"
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid_sdxl.bin",
+            "lora_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid_sdxl_lora.safetensors"
+        }
+    },
+    "FACEID PLUS - SD1.5 only": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plus_sd15.bin",
+            "lora_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plus_sd15_lora.safetensors"
+        },
+        "sdxl": {
+            "model_url": "",
+            "lora_url": ""
+        }
+    },
+    "FACEID PLUS V2": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plusv2_sd15.bin",
+            "lora_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plusv2_sd15_lora.safetensors"
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plusv2_sdxl.bin",
+            "lora_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plusv2_sdxl_lora.safetensors"
+        }
+    },
+    "FACEID PORTRAIT (style transfer)": {
+        "sd15": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-portrait-v11_sd15.bin",
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-portrait_sdxl.bin",
+        }
+    }
+}

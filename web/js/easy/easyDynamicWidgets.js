@@ -4,13 +4,13 @@ import { ComfyWidgets } from "/scripts/widgets.js";
 
 let origProps = {};
 
+const seedNodes = ["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy preSamplingLayerDiffusion", "easy fullkSampler", "easy fullCascadeKSampler"]
+const loaderNodes = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader"]
 const findWidgetByName = (node, name) => node.widgets.find((w) => w.name === name);
 
 const doesInputWithNameExist = (node, name) => node.inputs ? node.inputs.some((input) => input.name === name) : false;
 
-function updateNodeHeight(node) {
-	node.setSize([node.size[0], node.computeSize()[1]]);
-}
+function updateNodeHeight(node) {node.setSize([node.size[0], node.computeSize()[1]]);}
 
 function toggleWidget(node, widget, show = false, suffix = "") {
 	if (!widget || doesInputWithNameExist(node, widget.name)) return;
@@ -26,7 +26,6 @@ function toggleWidget(node, widget, show = false, suffix = "") {
 
 	const height = show ? Math.max(node.computeSize()[1], origSize[1]) : node.size[1];
 	node.setSize([node.size[0], height]);
-	
 }
 
 function widgetLogic(node, widget) {
@@ -207,6 +206,45 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'new_cond_start'), true)
 			toggleWidget(node, findWidgetByName(node, 'new_cond_end'), true)
 		}
+	}
+
+	if (widget.name === 'preset') {
+		const normol_presets = [
+            'LIGHT - SD1.5 only (low strength)',
+            'STANDARD (medium strength)',
+            'VIT-G (medium strength)',
+            'PLUS (high strength)', 'PLUS FACE (portraits)',
+            'FULL FACE - SD1.5 only (portraits stronger)',
+			'FACEID PORTRAIT (style transfer)'
+        ]
+		const faceid_presets = [
+            'FACEID',
+            'FACEID PLUS - SD1.5 only',
+            'FACEID PLUS V2',
+        ]
+		if(normol_presets.includes(widget.value)){
+			toggleWidget(node, findWidgetByName(node, 'lora_strength'))
+			toggleWidget(node, findWidgetByName(node, 'provider'))
+			toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'))
+		}
+		else if(faceid_presets.includes(widget.value)){
+			if(widget.value == 'FACEID PLUS V2'){
+				toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'), true)
+			}else{
+				toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'))
+			}
+			toggleWidget(node, findWidgetByName(node, 'lora_strength'), true)
+			toggleWidget(node, findWidgetByName(node, 'provider'), true)
+		}
+		updateNodeHeight(node)
+	}
+
+	if (widget.name === 'use_tiled') {
+		if(widget.value)
+			toggleWidget(node, findWidgetByName(node, 'sharpening'), true)
+		else
+			toggleWidget(node, findWidgetByName(node, 'sharpening'))
+		updateNodeHeight(node)
 	}
 }
 
@@ -486,6 +524,8 @@ app.registerExtension({
 			case "easy rangeFloat":
 			case 'easy latentCompositeMaskedWithCond':
 			case 'easy pipeEdit':
+			case 'easy ipadapterApply':
+			case 'easy ipadapterApplyADV':
 				getSetters(node)
 				break
 			case "easy wildcards":
@@ -734,7 +774,7 @@ app.registerExtension({
 			};
 		}
 
-		if (["easy fullLoader", "easy a1111Loader", "easy comfyLoader"].includes(nodeData.name)) {
+		if (loaderNodes.includes(nodeData.name)) {
 			function populate(text, type = 'positive') {
 				if (this.widgets) {
 					const pos = this.widgets.findIndex((w) => w.name === type + "_prompt");
@@ -781,7 +821,7 @@ app.registerExtension({
 			};
 		}
 
-		if (["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy preSamplingLayerDiffusion", "easy fullkSampler", "easy fullCascadeKSampler"].includes(nodeData.name)) {
+		if (seedNodes.includes(nodeData.name)) {
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
 			nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
@@ -922,7 +962,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode','lora_count','ckpt_count', 'conditioning_mode']
+						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode','lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch']
 
 function getSetters(node) {
 	if (node.widgets)

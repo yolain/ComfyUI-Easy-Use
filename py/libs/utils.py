@@ -155,30 +155,3 @@ def easySave(images, filename_prefix, output_type, prompt=None, extra_pnginfo=No
     else:
         results = SaveImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
         return results['ui']['images']
-
-# Image Utils
-# from PIL import Image, ImageDraw
-# import numpy as np
-# import torch
-# def is_image_transparent(img):
-#     print(img.shape)
-#     if len(img.shape) > 3 and img.shape[3] == 4:
-#         return True
-#     else:
-#         m = tensor2pil(img)
-#         if m.mode == "RGBA":
-#             return True
-#         else:
-#             return False
-#
-# def create_grid(image_size, box_size):
-#     img = Image.new('RGBA', image_size, (255, 255, 255, 255))  # 白色背景
-#     draw = ImageDraw.Draw(img)
-#
-#     for x in range(0, img.width, box_size):
-#         for y in range(0, img.height, box_size):
-#             if (x // box_size % 2 == 0 and y // box_size % 2 == 0) or (x // box_size % 2 == 1 and y // box_size % 2 == 1):
-#                 draw.rectangle([(x, y), (x+box_size, y+box_size)], fill=(204, 204, 204, 255))  # 不透明
-#             else:
-#                 continue  # 保持透明
-#     return img
