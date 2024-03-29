@@ -3429,7 +3429,16 @@ class samplerSimpleInpainting:
             pixels = pipe["images"] if pipe and "images" in pipe else None
             vae = pipe["vae"] if pipe and "vae" in pipe else None
             if additional != "None":
-                positive, negative, latent = InpaintModelConditioning().encode(positive, negative, pixels, vae, mask)
+                if grow_mask_by == 0:
+                    mask_erosion = mask
+                else:
+                    kernel_tensor = torch.ones((1, 1, grow_mask_by, grow_mask_by))
+                    padding = math.ceil((grow_mask_by - 1) / 2)
+
+                    mask_erosion = torch.clamp(torch.nn.functional.conv2d(mask.round(), kernel_tensor, padding=padding),
+                                               0,
+                                               1)
+                positive, negative, latent = InpaintModelConditioning().encode(positive, negative, pixels, vae, mask_erosion)
                 if additional == "Differential Diffusion":
                     cls = ALL_NODE_CLASS_MAPPINGS['DifferentialDiffusion']
                     if cls is not None:
