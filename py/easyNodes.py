@@ -1598,7 +1598,7 @@ def insightface_loader(provider):
 class ipadapter:
 
     def __init__(self):
-        self.normol_presets = [
+        self.normal_presets = [
             'LIGHT - SD1.5 only (low strength)',
             'STANDARD (medium strength)',
             'VIT-G (medium strength)',
@@ -1612,7 +1612,9 @@ class ipadapter:
             'FACEID PLUS V2',
             'FACEID PORTRAIT (style transfer)'
         ]
-        self.presets = self.normol_presets + self.faceid_presets
+        self.weight_types = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output',
+                        'weak middle', 'strong middle', 'style transfer (SDXL)']
+        self.presets = self.normal_presets + self.faceid_presets
 
 
     def error(self):
@@ -1831,7 +1833,7 @@ class ipadapterApply(ipadapter):
     FUNCTION = "apply"
 
     def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, start_at, end_at, cache_mode, use_tiled, attn_mask=None, optional_ipadapter=None):
-        tiles, masks = [None], [None]
+        tiles, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
         if use_tiled and preset not in self.faceid_presets:
             if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
@@ -1859,9 +1861,9 @@ class ipadapterApplyAdvanced(ipadapter):
 
     @classmethod
     def INPUT_TYPES(cls):
-        presets = cls().presets
-        WEIGHT_TYPES = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output',
-                        'weak middle', 'strong middle', 'style transfer (SDXL)']
+        ipa_cls = cls()
+        presets = ipa_cls.presets
+        weight_types = ipa_cls.weight_types
         return {
             "required": {
                 "model": ("MODEL",),
@@ -1871,7 +1873,7 @@ class ipadapterApplyAdvanced(ipadapter):
                 "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"],),
                 "weight": ("FLOAT", {"default": 1.0, "min": -1, "max": 3, "step": 0.05}),
                 "weight_faceidv2": ("FLOAT", {"default": 1.0, "min": -1, "max": 5.0, "step": 0.05 }),
-                "weight_type": (WEIGHT_TYPES,),
+                "weight_type": (weight_types,),
                 "combine_embeds": (["concat", "add", "subtract", "average", "norm average"],),
                 "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
@@ -1896,7 +1898,7 @@ class ipadapterApplyAdvanced(ipadapter):
     FUNCTION = "apply"
 
     def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, weight_type, combine_embeds, start_at, end_at, embeds_scaling, cache_mode, use_tiled, use_batch, sharpening, image_negative=None, clip_vision=None, attn_mask=None, optional_ipadapter=None):
-        tiles, masks = [None], [None]
+        tiles, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=clip_vision, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
         if use_tiled:
             if use_batch:
@@ -1920,6 +1922,135 @@ class ipadapterApplyAdvanced(ipadapter):
             model, = cls().apply_ipadapter(model, ipadapter, image, weight, weight_type, start_at, end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image_negative=image_negative, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
 
         return (model, tiles, masks, ipadapter)
+class ipadapterApplyEncoder(ipadapter):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        ipa_cls = cls()
+        normal_presets = ipa_cls.normal_presets
+        max_embeds_num = 3
+        inputs = {
+            "required": {
+                "model": ("MODEL",),
+                "image1": ("IMAGE",),
+                "preset": (normal_presets,),
+                "num_embeds":  ("INT", {"default": 2, "min": 1, "max": max_embeds_num}),
+            },
+            "optional": {}
+        }
+
+        for i in range(1, max_embeds_num + 1):
+            if i > 1:
+                inputs["optional"][f"image{i}"] = ("IMAGE",)
+        for i in range(1, max_embeds_num + 1):
+            inputs["optional"][f"mask{i}"] = ("MASK",)
+            inputs["optional"][f"weight{i}"] = ("FLOAT", {"default": 1.0, "min": -1, "max": 3, "step": 0.05})
+        inputs["optional"]["combine_method"] = (["concat", "add", "subtract", "average", "norm average", "max", "min"],)
+        inputs["optional"]["optional_ipadapter"] = ("IPADAPTER",)
+        inputs["optional"]["pos_embeds"] = ("EMBEDS",)
+        inputs["optional"]["neg_embeds"] = ("EMBEDS",)
+        return inputs
+
+    RETURN_TYPES = ("MODEL", "IPADAPTER", "EMBEDS", "EMBEDS", )
+    RETURN_NAMES = ("model", "ipadapter", "pos_embed", "neg_embed", )
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def batch(self, embeds, method):
+        if method == 'concat' and len(embeds) == 1:
+            return (embeds[0],)
+
+        embeds = [embed for embed in embeds if embed is not None]
+        embeds = torch.cat(embeds, dim=0)
+
+        if method == "add":
+            embeds = torch.sum(embeds, dim=0).unsqueeze(0)
+        elif method == "subtract":
+            embeds = embeds[0] - torch.mean(embeds[1:], dim=0)
+            embeds = embeds.unsqueeze(0)
+        elif method == "average":
+            embeds = torch.mean(embeds, dim=0).unsqueeze(0)
+        elif method == "norm average":
+            embeds = torch.mean(embeds / torch.norm(embeds, dim=0, keepdim=True), dim=0).unsqueeze(0)
+        elif method == "max":
+            embeds = torch.max(embeds, dim=0).values.unsqueeze(0)
+        elif method == "min":
+            embeds = torch.min(embeds, dim=0).values.unsqueeze(0)
+
+        return embeds
+
+    def apply(self, **kwargs):
+        model = kwargs['model']
+        preset = kwargs['preset']
+        if 'optional_ipadapter' in kwargs:
+            ipadapter = kwargs['optional_ipadapter']
+        else:
+            model, ipadapter = self.load_model(model, preset, 0, 'CPU', clip_vision=None, optional_ipadapter=None, cache_mode='none')
+
+        if "IPAdapterEncoder" not in ALL_NODE_CLASS_MAPPINGS:
+            self.error()
+        encoder_cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterEncoder"]
+
+        pos_embeds = kwargs["pos_embeds"] if "pos_embeds" in kwargs else []
+        neg_embeds = kwargs["neg_embeds"] if "neg_embeds" in kwargs else []
+        for i in range(1, kwargs['num_embeds'] + 1):
+            if f"image{i}" not in kwargs:
+                raise Exception(f"image{i} is required")
+            kwargs[f"mask{i}"] = kwargs[f"mask{i}"] if f"mask{i}" in kwargs else None
+            kwargs[f"weight{i}"] = kwargs[f"weight{i}"] if f"weight{i}" in kwargs else 1.0
+
+            pos, neg = encoder_cls().encode(ipadapter, kwargs[f"image{i}"], kwargs[f"weight{i}"], kwargs[f"mask{i}"], clip_vision=None)
+            pos_embeds.append(pos)
+            neg_embeds.append(neg)
+
+        pos_embeds = self.batch(pos_embeds, kwargs['combine_method'])
+        neg_embeds = self.batch(neg_embeds, kwargs['combine_method'])
+
+        return (model, ipadapter, pos_embeds, neg_embeds)
+
+class ipadapterApplyEmbeds(ipadapter):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        ipa_cls = cls()
+        weight_types = ipa_cls.weight_types
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "ipadapter": ("IPADAPTER",),
+                "pos_embed": ("EMBEDS",),
+                "weight": ("FLOAT", {"default": 1.0, "min": -1, "max": 3, "step": 0.05}),
+                "weight_type": (weight_types,),
+                "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "embeds_scaling": (['V only', 'K+V', 'K+V w/ C penalty', 'K+mean(V) w/ C penalty'],),
+            },
+
+            "optional": {
+                "neg_embed": ("EMBEDS",),
+                "attn_mask": ("MASK",),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL", "IPADAPTER",)
+    RETURN_NAMES = ("model", "ipadapter", )
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def apply(self, model, ipadapter, pos_embed, weight, weight_type, start_at, end_at, embeds_scaling, attn_mask=None, neg_embed=None,):
+        if "IPAdapterEmbeds" not in ALL_NODE_CLASS_MAPPINGS:
+            self.error()
+        cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterEmbeds"]
+        model, = cls().apply_ipadapter(model, ipadapter, pos_embed, weight, weight_type, start_at, end_at, neg_embed=neg_embed, attn_mask=attn_mask, clip_vision=None, embeds_scaling=embeds_scaling)
+
+        return (model, ipadapter)
+
 
 #Apply InstantID
 class instantID:
@@ -5872,6 +6003,8 @@ NODE_CLASS_MAPPINGS = {
     # Adapter 适配器
     "easy ipadapterApply": ipadapterApply,
     "easy ipadapterApplyADV": ipadapterApplyAdvanced,
+    "easy ipadapterApplyEncoder": ipadapterApplyEncoder,
+    "easy ipadapterApplyEmbeds": ipadapterApplyEmbeds,
     "easy instantIDApply": instantIDApply,
     "easy instantIDApplyADV": instantIDApplyAdvanced,
     # Inpaint 内补
@@ -5961,6 +6094,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Adapter 适配器
     "easy ipadapterApply": "Easy Apply IPAdapter",
     "easy ipadapterApplyADV": "Easy Apply IPAdapter (Advanced)",
+    "easy ipadapterApplyEncoder": "Easy Apply IPAdapter (Encoder)",
+    "easy ipadapterApplyEmbeds": "Easy Apply IPAdapter (Embeds)",
     "easy instantIDApply": "Easy Apply InstantID",
     "easy instantIDApplyADV": "Easy Apply InstantID (Advanced)",
     # Inpaint 内补

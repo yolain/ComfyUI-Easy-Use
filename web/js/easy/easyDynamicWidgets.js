@@ -28,6 +28,11 @@ function toggleWidget(node, widget, show = false, suffix = "") {
 	node.setSize([node.size[0], height]);
 }
 
+function toggleInput(node, name, show = false) {
+	if(!show){
+	}
+}
+
 function widgetLogic(node, widget) {
 	if (widget.name === 'lora_name') {
 		if (widget.value === "None") {
@@ -227,8 +232,8 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'provider'))
 			toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'))
 			toggleWidget(node, findWidgetByName(node, 'use_tiled'), true)
-			let use_tiled = findWidgetByName(node, 'use_tiled').value
-			if(use_tiled){
+			let use_tiled = findWidgetByName(node, 'use_tiled')
+			if(use_tiled && use_tiled.value){
 				toggleWidget(node, findWidgetByName(node, 'sharpening'), true)
 			}else {
 				toggleWidget(node, findWidgetByName(node, 'sharpening'))
@@ -259,6 +264,21 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'sharpening'), true)
 		else
 			toggleWidget(node, findWidgetByName(node, 'sharpening'))
+		updateNodeHeight(node)
+	}
+
+	if (widget.name === 'num_embeds') {
+		let number_to_show = widget.value + 1
+		for (let i = 0; i < number_to_show; i++) {
+			toggleInput(node, 'image'+i, true)
+			toggleInput(node, 'mask'+i, true)
+			toggleWidget(node, findWidgetByName(node, 'weight'+i), true)
+		}
+		for (let i = number_to_show; i < 6; i++) {
+			toggleInput(node, 'image'+i)
+			toggleInput(node, 'mask'+i)
+			toggleWidget(node, findWidgetByName(node, 'weight'+i))
+		}
 		updateNodeHeight(node)
 	}
 }
@@ -541,6 +561,7 @@ app.registerExtension({
 			case 'easy pipeEdit':
 			case 'easy ipadapterApply':
 			case 'easy ipadapterApplyADV':
+			case 'easy ipadapterApplyEncoder':
 				getSetters(node)
 				break
 			case "easy wildcards":
@@ -977,7 +998,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode','lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch']
+						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode','lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch', 'num_embeds']
 
 function getSetters(node) {
 	if (node.widgets)

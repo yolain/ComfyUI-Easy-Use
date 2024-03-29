@@ -41,6 +41,8 @@ PS: 请更新至最新版v2的 [ComfyUI_IPAdapter_plus](https://github.com/cubiq
 <br>
 - 增加 `easy ipadapterApply`
 - 增加 `easy ipadapterApplyADV`
+- 增加 `easy ipadapterApplyEncoder`
+- 增加 `easy ipadapterApplyEmbeds`
 - 增加 `easy preMaskDetailerFix`
 - 修复 `easy stylesSelector` 当未选择样式时，原有提示词发生了变化
 
