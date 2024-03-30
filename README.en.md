@@ -35,6 +35,7 @@
 
 PS: Please update [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus) to v2， and moved v1 models to **ComfyUI\models\ipadapter** (Otherwise, the latest model is automatically downloaded from Huggingface) 
 <br>
+- Added `easy dynamiCrafterLoader` 
 - Added `easy ipadapterApply`
 - Added `easy ipadapterApplyADV`
 - Added `easy ipadapterApplyEncoder`
@@ -268,6 +269,7 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 | easy imageInsetCrop        | [rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | ImageInsetCrop           | 
 | easy poseEditor            | [ComfyUI_Custom_Nodes_AlekPet](https://github.com/AlekPet/ComfyUI_Custom_Nodes_AlekPet) | poseNode                 | 
 | easy preSamplingLayerDiffusion | [ComfyUI-layerdiffusion](https://github.com/huchenlei/ComfyUI-layerdiffusion) | LayeredDiffusionApply... | 
+| easy dynamiCrafterLoader | [ComfyUI-layerdiffusion](https://github.com/ExponentialML/ComfyUI_Native_DynamiCrafter) | Apply Dynamicrafter    | 
 
 ## Workflow Examples
 

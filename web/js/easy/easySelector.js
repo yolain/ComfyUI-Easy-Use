@@ -128,9 +128,15 @@ app.registerExtension({
                             textContent: language == 'zh-CN' ? '清空所有' : 'Empty All',
                             style:{},
                             onclick:()=>{
+                                selector.element.children[0].querySelectorAll(".search").forEach(el=>{
+                                    el.value = ''
+                                })
                                 selector.element.children[1].querySelectorAll(".easyuse-prompt-styles-tag-selected").forEach(el => {
                                     el.classList.remove("easyuse-prompt-styles-tag-selected");
                                     el.children[0].checked = false
+                                })
+                                selector.element.children[1].querySelectorAll(".easyuse-prompt-styles-tag").forEach(el => {
+                                    el.classList.remove('hide')
                                 })
                                 this.setProperty("values", [])
                             }}
