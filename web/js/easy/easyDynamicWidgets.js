@@ -530,6 +530,7 @@ app.registerExtension({
 			case "easy comfyLoader":
 			case "easy cascadeLoader":
 			case "easy svdLoader":
+			case "easy dynamiCrafterLoader":
 			case "easy loraStack":
 			case "easy latentNoisy":
 			case "easy preSamplingAdvanced":

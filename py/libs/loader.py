@@ -258,8 +258,6 @@ class easyLoader:
         orig_lora_name = lora_name
         lora_name = self.resolve_lora_name(lora_name)
 
-
-
         if lora_name is not None:
             lora_path = folder_paths.get_full_path("loras", lora_name)
         else:

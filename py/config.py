@@ -233,3 +233,23 @@ IPADAPTER_MODELS = {
         }
     }
 }
+
+# dynamiCrafter
+DYNAMICRAFTER_DIR = os.path.join(folder_paths.models_dir, "dynamicrafter_models")
+DYNAMICRAFTER_MODELS = {
+    "dynamicrafter_unet_512 (2.98GB)": {
+        "model_url": "https://huggingface.co/ExponentialML/DynamiCrafterUNet/resolve/main/dynamicrafter_unet_512.safetensors",
+        "vae_url": "https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors",
+        "clip_url": "https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/text_encoder/model.safetensors",
+        "clip_vision_url": "https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K/resolve/main/open_clip_pytorch_model.safetensors",
+    },
+    "dynamicrafter_unet_512_interp (2.98GB)": {
+        "model_url": "https://huggingface.co/ExponentialML/DynamiCrafterUNet/resolve/main/dynamicrafter_unet_512_interp.safetensors"
+    },
+    "dynamicrafter_unet_1024 (2.98GB)": {
+        "model_url": "https://huggingface.co/ExponentialML/DynamiCrafterUNet/resolve/main/dynamicrafter_unet_1024.safetensors"
+    },
+    "dynamicrafter_unet_256 (2.98GB)": {
+        "model_url": "https://huggingface.co/ExponentialML/DynamiCrafterUNet/resolve/main/dynamicrafter_unet_256.safetensors"
+    },
+}
