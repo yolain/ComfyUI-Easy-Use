@@ -1315,7 +1315,7 @@ class svdLoader:
         return (pipe, model, vae)
 
 #dynamiCrafter加载器
-from .dynamicCrafter import DynamiCrafter
+from .dynamiCrafter import DynamiCrafter
 class dynamiCrafterLoader(DynamiCrafter):
 
     def __init__(self):
