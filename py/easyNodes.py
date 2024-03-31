@@ -4883,14 +4883,17 @@ class pipeIn:
         if image is None:
             image = pipe.get("images") if pipe is not None else None
         else:
-            batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+            if pipe is None:
+                batch_size = 1
+            else:
+                batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
             samples = {"samples": vae.encode(image[:, :, :, :3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
 
         if pipe is None:
             pipe = {"loader_settings": {"positive": "", "negative": "", "xyplot": None}}
 
-        xyplot = xyplot if xyplot is not None else  pipe['loader_settings']['xyplot'] if xyplot in pipe['loader_settings'] else None
+        xyplot = xyplot if xyplot is not None else pipe['loader_settings']['xyplot'] if xyplot in pipe['loader_settings'] else None
 
         new_pipe = {
             **pipe,
