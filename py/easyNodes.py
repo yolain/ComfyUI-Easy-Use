@@ -25,6 +25,7 @@ from .libs.xyplot import easyXYPlot
 from .libs.controlnet import easyControlnet
 from .libs.conditioning import prompt_to_cond, set_cond
 from .libs.cache import cache, update_cache
+from .libs.easing import EasingBase
 
 sampler = easySampler()
 easyCache = easyLoader()
@@ -1117,7 +1118,7 @@ class zero123Loader:
     @classmethod
     def INPUT_TYPES(cls):
         def get_file_list(filenames):
-            return [file for file in filenames if file != "put_models_here.txt" and "zero123" in file]
+            return [file for file in filenames if file != "put_models_here.txt" and "zero123" in file.lower()]
 
         return {"required": {
             "ckpt_name": (get_file_list(folder_paths.get_filename_list("checkpoints")),),
@@ -1196,6 +1197,164 @@ class zero123Loader:
                 }
 
         return (pipe, model, vae)
+
+# SV3D加载器
+class sv3DLoader(EasingBase):
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        def get_file_list(filenames):
+            return [file for file in filenames if file != "put_models_here.txt" and "sv3d" in file]
+
+        return {"required": {
+            "ckpt_name": (get_file_list(folder_paths.get_filename_list("checkpoints")),),
+            "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
+
+            "init_image": ("IMAGE",),
+            "empty_latent_width": ("INT", {"default": 576, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
+            "empty_latent_height": ("INT", {"default": 576, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
+
+            "batch_size": ("INT", {"default": 21, "min": 1, "max": 4096}),
+            "interp_easing": (["linear", "ease_in", "ease_out", "ease_in_out"], {"default": "linear"}),
+            "easing_mode": (["azimuth", "elevation", "custom"], {"default": "azimuth"}),
+        },
+            "optional": {"scheduler": ("STRING", {"default": "",  "multiline": True})},
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "STRING")
+    RETURN_NAMES = ("pipe", "model", "interp_log")
+
+    FUNCTION = "adv_pipeloader"
+    CATEGORY = "EasyUse/Loaders"
+
+    def adv_pipeloader(self, ckpt_name, vae_name, init_image, empty_latent_width, empty_latent_height, batch_size, interp_easing, easing_mode, scheduler='',prompt=None, my_unique_id=None):
+        model: ModelPatcher | None = None
+        vae: VAE | None = None
+        clip: CLIP | None = None
+
+        # Clean models from loaded_objects
+        easyCache.update_loaded_objects(prompt)
+
+        model, clip, vae, clip_vision = easyCache.load_checkpoint(ckpt_name, "Default", True)
+
+        output = clip_vision.encode_image(init_image)
+        pooled = output.image_embeds.unsqueeze(0)
+        pixels = comfy.utils.common_upscale(init_image.movedim(-1, 1), empty_latent_width, empty_latent_height, "bilinear", "center").movedim(1,
+                                                                                                                    -1)
+        encode_pixels = pixels[:, :, :, :3]
+        t = vae.encode(encode_pixels)
+
+        azimuth_points = []
+        elevation_points = []
+        if easing_mode == 'azimuth':
+            azimuth_points = [(0, 0), (batch_size-1, 360)]
+            elevation_points = [(0, 0)] * batch_size
+        elif easing_mode == 'elevation':
+            azimuth_points = [(0, 0)] * batch_size
+            elevation_points = [(0, -90), (batch_size-1, 90)]
+        else:
+            schedulers = scheduler.rstrip('\n')
+            for line in schedulers.split('\n'):
+                frame_str, point_str = line.split(':')
+                point_str = point_str.strip()[1:-1]
+                point = point_str.split(',')
+                azimuth_point = point[0]
+                elevation_point = point[1] if point[1] else 0.0
+                frame = int(frame_str.strip())
+                azimuth = float(azimuth_point)
+                azimuth_points.append((frame, azimuth))
+                elevation_val = float(elevation_point)
+                elevation_points.append((frame, elevation_val))
+            azimuth_points.sort(key=lambda x: x[0])
+            elevation_points.sort(key=lambda x: x[0])
+
+        #interpolation
+        next_point = 1
+        next_elevation_point = 1
+        elevations = []
+        azimuths = []
+        # For azimuth interpolation
+        for i in range(batch_size):
+            # Find the interpolated azimuth for the current frame
+            while next_point < len(azimuth_points) and i >= azimuth_points[next_point][0]:
+                next_point += 1
+            if next_point == len(azimuth_points):
+                next_point -= 1
+            prev_point = max(next_point - 1, 0)
+
+            if azimuth_points[next_point][0] != azimuth_points[prev_point][0]:
+                timing = (i - azimuth_points[prev_point][0]) / (
+                            azimuth_points[next_point][0] - azimuth_points[prev_point][0])
+                interpolated_azimuth = self.ease(azimuth_points[prev_point][1], azimuth_points[next_point][1], self.easing(timing, interp_easing))
+            else:
+                interpolated_azimuth = azimuth_points[prev_point][1]
+
+            # Interpolate the elevation
+            next_elevation_point = 1
+            while next_elevation_point < len(elevation_points) and i >= elevation_points[next_elevation_point][0]:
+                next_elevation_point += 1
+            if next_elevation_point == len(elevation_points):
+                next_elevation_point -= 1
+            prev_elevation_point = max(next_elevation_point - 1, 0)
+
+            if elevation_points[next_elevation_point][0] != elevation_points[prev_elevation_point][0]:
+                timing = (i - elevation_points[prev_elevation_point][0]) / (
+                            elevation_points[next_elevation_point][0] - elevation_points[prev_elevation_point][0])
+                interpolated_elevation = self.ease(elevation_points[prev_point][1], elevation_points[next_point][1], self.easing(timing, interp_easing))
+            else:
+                interpolated_elevation = elevation_points[prev_elevation_point][1]
+
+            azimuths.append(interpolated_azimuth)
+            elevations.append(interpolated_elevation)
+
+        log_node_info("easy sv3dLoader", "azimuths:" + str(azimuths))
+        log_node_info("easy sv3dLoader", "elevations:" + str(elevations))
+
+        log = 'azimuths:' + str(azimuths) + '\n\n' + "elevations:" + str(elevations)
+        # Structure the final output
+        positive = [[pooled, {"concat_latent_image": t, "elevation": elevations, "azimuth": azimuths}]]
+        negative = [[torch.zeros_like(pooled),
+                           {"concat_latent_image": torch.zeros_like(t), "elevation": elevations, "azimuth": azimuths}]]
+
+        latent = torch.zeros([batch_size, 4, empty_latent_height // 8, empty_latent_width // 8])
+        samples = {"samples": latent}
+
+        image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
+
+
+        pipe = {"model": model,
+                "positive": positive,
+                "negative": negative,
+                "vae": vae,
+                "clip": clip,
+
+                "samples": samples,
+                "images": image,
+                "seed": 0,
+
+                "loader_settings": {"ckpt_name": ckpt_name,
+                                    "vae_name": vae_name,
+
+                                    "positive": positive,
+                                    "positive_l": None,
+                                    "positive_g": None,
+                                    "positive_balance": None,
+                                    "negative": negative,
+                                    "negative_l": None,
+                                    "negative_g": None,
+                                    "negative_balance": None,
+                                    "empty_latent_width": empty_latent_width,
+                                    "empty_latent_height": empty_latent_height,
+                                    "batch_size": batch_size,
+                                    "seed": 0,
+                                    "empty_samples": samples, }
+                }
+
+        return (pipe, model, log)
 
 #svd加载器
 class svdLoader:
@@ -4871,18 +5030,18 @@ class pipeIn:
         neg = neg if neg is not None else pipe.get("negative")
         if neg is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Neg Conditioning missing from pipeLine")
-        samples = latent if latent is not None else pipe.get("samples")
-        if samples is None:
-            log_node_warn(f'pipeIn[{my_unique_id}]', "Latent missing from pipeLine")
         vae = vae if vae is not None else pipe.get("vae")
         if vae is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "VAE missing from pipeLine")
         clip = clip if clip is not None else pipe.get("clip")
         if clip is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Clip missing from pipeLine")
-        if image is None:
+        if latent is not None:
+            samples = latent
+        elif image is None:
+            samples = pipe.get("samples") if pipe is not None else None
             image = pipe.get("images") if pipe is not None else None
-        else:
+        elif image is not None:
             if pipe is None:
                 batch_size = 1
             else:
@@ -6166,8 +6325,9 @@ NODE_CLASS_MAPPINGS = {
     "easy fullLoader": fullLoader,
     "easy a1111Loader": a1111Loader,
     "easy comfyLoader": comfyLoader,
-    "easy zero123Loader": zero123Loader,
     "easy svdLoader": svdLoader,
+    "easy sv3dLoader": sv3DLoader,
+    "easy zero123Loader": zero123Loader,
     "easy dynamiCrafterLoader": dynamiCrafterLoader,
     "easy cascadeLoader": cascadeLoader,
     "easy loraStack": loraStackLoader,
@@ -6258,8 +6418,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy fullLoader": "EasyLoader (Full)",
     "easy a1111Loader": "EasyLoader (A1111)",
     "easy comfyLoader": "EasyLoader (Comfy)",
-    "easy zero123Loader": "EasyLoader (Zero123)",
     "easy svdLoader": "EasyLoader (SVD)",
+    "easy sv3dLoader": "EasyLoader (SV3D)",
+    "easy zero123Loader": "EasyLoader (Zero123)",
     "easy dynamiCrafterLoader": "EasyLoader (DynamiCrafter)",
     "easy cascadeLoader": "EasyCascadeLoader",
     "easy loraStack": "EasyLoraStack",

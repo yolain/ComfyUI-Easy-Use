@@ -39,6 +39,7 @@
 
 PS: 请更新至最新版v2的 [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus)， 并移动v1版本模型文件至 ComfyUI\models\ipadapter (否则会自动从huggingface下载最新模型) 
 <br>
+- 增加 `easy sv3dLoader` 
 - 增加 `easy dynamiCrafterLoader` 
 - 增加 `easy ipadapterApply`
 - 增加 `easy ipadapterApplyADV`

@@ -858,6 +858,44 @@ app.registerExtension({
 			};
 		}
 
+		if(["easy sv3dLoader"].includes(nodeData.name)){
+			function changeSchedulerText(mode, batch_size, inputEl) {
+				console.log(mode)
+				switch (mode){
+					case 'azimuth':
+						inputEl.readOnly = true
+						inputEl.style.opacity = 0.6
+						return `0:(0.0,0.0)` + (batch_size > 1 ? `\n${batch_size-1}:(360.0,0.0)` : '')
+					case 'elevation':
+						inputEl.readOnly = true
+						inputEl.style.opacity = 0.6
+						return `0:(-90.0,0.0)` + (batch_size > 1 ? `\n${batch_size-1}:(90.0,0.0)` : '')
+					case 'custom':
+						inputEl.readOnly = false
+						inputEl.style.opacity = 1
+						return `0:(0.0,0.0)\n9:(180.0,0.0)\n20:(360.0,0.0)`
+				}
+			}
+
+
+			const onNodeCreated = nodeType.prototype.onNodeCreated;
+			nodeType.prototype.onNodeCreated = async function () {
+				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
+				const easing_mode_widget = this.widgets.find(w => w.name == 'easing_mode')
+				const batch_size = this.widgets.find(w => w.name == 'batch_size')
+				const scheduler = this.widgets.find(w => w.name == 'scheduler')
+				setTimeout(_=>{
+					if(!scheduler.value) scheduler.value = changeSchedulerText(easing_mode_widget.value, batch_size.value, scheduler.inputEl)
+				},1)
+				easing_mode_widget.callback = value=>{
+					scheduler.value = changeSchedulerText(value, batch_size.value, scheduler.inputEl)
+				}
+				batch_size.callback = value =>{
+					scheduler.value = changeSchedulerText(easing_mode_widget.value, value, scheduler.inputEl)
+				}
+			}
+		}
+
 		if (seedNodes.includes(nodeData.name)) {
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
 			nodeType.prototype.onNodeCreated = async function () {
@@ -999,7 +1037,11 @@ const getSetWidgets = ['rescale_after_model', 'rescale',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter', 'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode','lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch', 'num_embeds']
+						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter',
+	'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode',
+	'lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch', 'num_embeds',
+	"easing_mode"
+]
 
 function getSetters(node) {
 	if (node.widgets)

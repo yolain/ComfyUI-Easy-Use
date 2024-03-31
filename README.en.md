@@ -35,6 +35,7 @@
 
 PS: Please update [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus) to v2， and moved v1 models to **ComfyUI\models\ipadapter** (Otherwise, the latest model is automatically downloaded from Huggingface) 
 <br>
+- Added `easy sv3dLoader` 
 - Added `easy dynamiCrafterLoader` 
 - Added `easy ipadapterApply`
 - Added `easy ipadapterApplyADV`
