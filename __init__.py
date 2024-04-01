@@ -2,6 +2,7 @@ import os
 import glob
 import folder_paths
 import importlib
+from pathlib import Path
 
 node_list = [
     "server",
@@ -68,6 +69,17 @@ if os.path.exists(pyssss_path):
         # 将合并的内容写入目标文件 autocomplete.txt，并指定编码为 utf-8
         with open(output_file, 'w', encoding='utf-8') as target_file:
             target_file.write(merged_content)
+
+# ComfyUI-Easy-PS相关 (需要把模型预览图暴露给PS读取，此处借鉴了 AIGODLIKE-ComfyUI-Studio 的部分代码)
+from .py.libs.add_resources import add_static_resource
+from .py.libs.model import easyModelManager
+model_config = easyModelManager().models_config
+for model in model_config:
+    paths = folder_paths.get_folder_paths(model)
+    for path in paths:
+        if not Path(path).exists():
+            continue
+        add_static_resource(path, path, limit=True)
 
 WEB_DIRECTORY = "./web"
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]

@@ -15,6 +15,19 @@ def compare_revision(num):
     if not comfy_ui_revision:
         comfy_ui_revision = get_comfyui_revision()
     return True if comfy_ui_revision == 'Unknown' or int(comfy_ui_revision) >= num else False
+def find_tags(string: str, sep="/") -> list[str]:
+    """
+    find tags from string use the sep for split
+    Note: string may contain the \\ or / for path separator
+    """
+    if not string:
+        return []
+    string = string.replace("\\", "/")
+    while "//" in string:
+        string = string.replace("//", "/")
+    if string and sep in string:
+        return string.split(sep)[:-1]
+    return []
 
 import folder_paths
 def add_folder_path_and_extensions(folder_name, full_folder_paths, extensions):

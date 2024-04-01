@@ -2005,9 +2005,13 @@ class ipadapter:
             pattern = 'full.face.sd15\.(safetensors|bin)$'
         elif preset.startswith("faceid portrait"):
             if is_sdxl:
-                raise Exception("portrait model is not supported for SDXL")
-            pattern = 'portrait.sd15\.(safetensors|bin)$'
-            is_insightface = True
+                pattern = 'portrait.sdxl\.(safetensors|bin)$'
+            else:
+                pattern = 'portrait.v11.sd15\.(safetensors|bin)$'
+                # if v11 is not found, try with the old version
+                if not [e for e in ipadapter_list if re.search(pattern, e, re.IGNORECASE)]:
+                    pattern = 'portrait.sd15\.(safetensors|bin)$'
+                is_insightface = True
         elif preset == "faceid":
             if is_sdxl:
                 pattern = 'faceid.sdxl\.(safetensors|bin)$'

@@ -7,6 +7,7 @@ from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .easyNodes import easyCache
 from .logic import ConvertAnything
+from .libs.model import easyModelManager
 
 try:
     import aiohttp
@@ -86,6 +87,7 @@ async def getStylesImage(request):
             return web.Response(text=FOOOCUS_STYLES_SAMPLES + name + '.jpg')
     return web.Response(status=400)
 
+# convert type
 @PromptServer.instance.routes.post("/easyuse/convert")
 async def convertType(request):
     post = await request.post()
@@ -97,6 +99,17 @@ async def convertType(request):
     else:
         return web.Response(status=400)
 
+# get models lists
+@PromptServer.instance.routes.get("/easyuse/models/list")
+async def getModelsList(request):
+    if "type" in request.rel_url.query:
+        type = request.rel_url.query["type"]
+        if type not in ['checkpoints', 'loras']:
+            return web.Response(status=400)
+        manager = easyModelManager()
+        return web.json_response(manager.get_model_lists(type))
+    else:
+        return web.Response(status=400)
 
 
 NODE_CLASS_MAPPINGS = {}
