@@ -289,6 +289,50 @@ class imageScaleDownToSize(imageScaleDownBy):
     return self.image_scale_down_by(images, scale_by)
 
 
+# 图像比率
+class imageRatio:
+  def __init__(self):
+    pass
+
+  @classmethod
+  def INPUT_TYPES(cls):
+    return {
+      "required": {
+        "image": ("IMAGE",),
+      }
+    }
+
+  RETURN_TYPES = ("INT", "INT", "FLOAT", "FLOAT")
+  RETURN_NAMES = ("width_ratio_int", "height_ratio_int", "width_ratio_float", "height_ratio_float")
+  OUTPUT_NODE = True
+  FUNCTION = "image_ratio"
+
+  CATEGORY = "EasyUse/Image"
+
+  def gcf(self, a, b):
+    while b:
+      a, b = b, a % b
+    return a
+
+  def image_ratio(self, image):
+    _, raw_H, raw_W, _ = image.shape
+
+    width = raw_W
+    height = raw_H
+
+    ratio = self.gcf(width, height)
+
+    if width is not None and height is not None:
+      width_ratio = width // ratio
+      height_ratio = height // ratio
+      result = (width_ratio, height_ratio, width_ratio, height_ratio)
+    else:
+      result = (0, 0, 0.0, 0.0)
+    text = f"Image Ratio is {str(width_ratio)}:{str(height_ratio)}"
+
+    return {"ui": {"text": text}, "result": result}
+
+
 # 图像完美像素
 class imagePixelPerfect:
   @classmethod
@@ -587,6 +631,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageScaleDown": imageScaleDown,
   "easy imageScaleDownBy": imageScaleDownBy,
   "easy imageScaleDownToSize": imageScaleDownToSize,
+  "easy imageRatio": imageRatio,
   "easy imageToMask": imageToMask,
   "easy imageSplitList": imageSplitList,
   "easy imageSave": imageSaveSimple,
@@ -604,6 +649,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageScaleDown": "Image Scale Down",
   "easy imageScaleDownBy": "Image Scale Down By",
   "easy imageScaleDownToSize": "Image Scale Down To Size",
+  "easy imageRatio": "ImageRatio",
   "easy imageToMask": "ImageToMask",
   "easy imageHSVMask": "ImageHSVMask",
   "easy imageSplitList": "imageSplitList",
