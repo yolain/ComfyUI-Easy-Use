@@ -308,6 +308,7 @@ class easyXYPlot():
                 ckpt_name, clip_skip, vae_name = xy_values.split(",")
                 ckpt_name = ckpt_name.replace('*', ',')
                 vae_name = vae_name.replace('*', ',')
+                print(ckpt_name)
                 model, clip, vae, clip_vision = self.easyCache.load_checkpoint(ckpt_name)
                 if vae_name != 'None':
                     vae = self.easyCache.load_vae(vae_name)
@@ -316,6 +317,8 @@ class easyXYPlot():
                 optional_lora_stack = plot_image_vars['lora_stack']
                 if optional_lora_stack is not None and optional_lora_stack != []:
                     for lora in optional_lora_stack:
+                        lora['model'] = model
+                        lora['clip'] = clip
                         model, clip = self.easyCache.load_lora(lora)
 
                 # 处理clip

@@ -327,6 +327,8 @@ class imageRatio:
       height_ratio = height // ratio
       result = (width_ratio, height_ratio, width_ratio, height_ratio)
     else:
+      width_ratio = 0
+      height_ratio = 0
       result = (0, 0, 0.0, 0.0)
     text = f"Image Ratio is {str(width_ratio)}:{str(height_ratio)}"
 
