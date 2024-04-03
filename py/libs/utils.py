@@ -134,7 +134,17 @@ def get_local_filepath(url, dirname, local_file_name=None):
     destination = os.path.join(dirname, local_file_name)
     if not os.path.exists(destination):
         print(f'downloading {url} to {destination}')
-        download_url_to_file(url, destination)
+        try:
+            download_url_to_file(url, destination)
+        except Exception as e:
+            args = e.args[0] if e.args is not None and len(e.args) > 0 else None
+            if isinstance(args, TimeoutError):
+                print(f'无法从 {url} 下载，正在尝试使用镜像地址...')
+                url = url.replace('huggingface.co', 'hf-mirror.com')
+                try:
+                    download_url_to_file(url, destination)
+                except Exception as err:
+                    raise Exception(f'无法从 {url} 下载，错误信息：{str(err.args[0])}')
     return destination
 
 def to_lora_patch_dict(state_dict: dict) -> dict:

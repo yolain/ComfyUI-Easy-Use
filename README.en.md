@@ -31,7 +31,7 @@
 
 ## Changelog
 
-**v1.1.2 (2024/3/25)**
+**v1.1.2 (39c5ccf)**
 
 - Optimized some of the recommended nodes for slots related to EasyUse
 - Added **Enable ContextMenu Auto Nest Subdirectories** The setting item is enabled by default, and it can be classified into subdirectories, checkpoints and loras previews
@@ -43,8 +43,6 @@
 - Added `easy ipadapterApplyEmbeds`
 - Added `easy preMaskDetailerFix`
 - Fixed `easy stylesSelector` is change the prompt when not select the style
-
-(4c25580)
 
 - `easy kSamplerInpainting` add *additional* widget，you can choose 'Differential Diffusion' or 'Only InpaintModelConditioning'
 - Fixed `easy pipeEdit` error when add lora to prompt

@@ -35,7 +35,11 @@
 
 ## 更新日志
 
-**v1.1.2 (2024/3/25)**
+**v1.1.3 (2024/4/3)**
+
+- 增加 当节点需要下载模型时，若huggingface连接超时，会切换至镜像地址下载模型
+
+**v1.1.2 (39c5ccf)**
 
 - 改写 EasyUse 相关节点的部分插槽推荐节点
 - 增加 **启用上下文菜单自动嵌套子目录** 设置项，默认为启用状态，可分类子目录及checkpoints、loras预览图
@@ -47,8 +51,6 @@
 - 增加 `easy ipadapterApplyEmbeds`
 - 增加 `easy preMaskDetailerFix`
 - 修复 `easy stylesSelector` 当未选择样式时，原有提示词发生了变化
-
-(4c25580)
 
 - `easy kSamplerInpainting` 增加 *additional* 属性，可设置成 Differential Diffusion 或 Only InpaintModelConditioning
 - 修复 `easy pipeEdit` 提示词输入lora时报错
