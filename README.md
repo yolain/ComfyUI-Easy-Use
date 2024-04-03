@@ -37,6 +37,7 @@
 
 **v1.1.2 (2024/3/25)**
 
+- 改写 EasyUse 相关节点的部分插槽推荐节点
 - 增加 **启用上下文菜单自动嵌套子目录** 设置项，默认为启用状态，可分类子目录及checkpoints、loras预览图
 - 增加 `easy sv3dLoader` 
 - 增加 `easy dynamiCrafterLoader` 
