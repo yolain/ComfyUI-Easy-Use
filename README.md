@@ -37,8 +37,7 @@
 
 **v1.1.2 (2024/3/25)**
 
-PS: 请更新至最新版v2的 [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus)， 并移动v1版本模型文件至 ComfyUI\models\ipadapter (否则会自动从huggingface下载最新模型) 
-<br>
+- 增加 **启用上下文菜单自动嵌套子目录** 设置项，默认为启用状态，可分类子目录及checkpoints、loras预览图
 - 增加 `easy sv3dLoader` 
 - 增加 `easy dynamiCrafterLoader` 
 - 增加 `easy ipadapterApply`

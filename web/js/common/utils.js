@@ -39,3 +39,10 @@ export function getLocale(){
     const locale = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
     return locale
 }
+
+export function spliceExtension(fileName){
+   return fileName.substring(0,fileName.lastIndexOf('.'))
+}
+export function getExtension(fileName){
+   return fileName.substring(fileName.lastIndexOf('.') + 1)
+}

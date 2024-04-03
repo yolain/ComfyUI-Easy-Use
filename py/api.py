@@ -3,6 +3,7 @@ import os
 import torch
 import sys
 import json
+import folder_paths
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .easyNodes import easyCache
@@ -111,6 +112,22 @@ async def getModelsList(request):
     else:
         return web.Response(status=400)
 
+# get models thumbnails
+@PromptServer.instance.routes.get("/easyuse/models/thumbnail")
+async def getModelsThumbnail(request):
+    checkpoints = folder_paths.get_filename_list("checkpoints_thumb")
+    loras = folder_paths.get_filename_list("loras_thumb")
+    checkpoints_full = []
+    loras_full = []
+    for index, i in enumerate(checkpoints):
+        full_path = folder_paths.get_full_path('checkpoints_thumb', str(i))
+        if full_path:
+            checkpoints_full.append(full_path)
+    for index, i in enumerate(loras):
+        full_path = folder_paths.get_full_path('loras_thumb', str(i))
+        if full_path:
+            loras_full.append(full_path)
+    return web.json_response(checkpoints_full + loras_full)
 
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}

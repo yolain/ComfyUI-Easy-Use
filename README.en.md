@@ -33,8 +33,7 @@
 
 **v1.1.2 (2024/3/25)**
 
-PS: Please update [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus) to v2， and moved v1 models to **ComfyUI\models\ipadapter** (Otherwise, the latest model is automatically downloaded from Huggingface) 
-<br>
+- Added **Enable ContextMenu Auto Nest Subdirectories** The setting item is enabled by default, and it can be classified into subdirectories, checkpoints and loras previews
 - Added `easy sv3dLoader` 
 - Added `easy dynamiCrafterLoader` 
 - Added `easy ipadapterApply`
