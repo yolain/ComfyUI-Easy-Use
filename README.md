@@ -35,8 +35,13 @@
 
 ## 更新日志
 
-**v1.1.3 (2024/4/3)**
+**v1.1.3 (2024/4/4)**
 
+- 增加 对[ResAdapter](https://huggingface.co/jiaxiangc/res-adapter) lora模型 的加载支持
+- 增加 `easy promptLine`
+- 增加 `easy promptReplace`
+- 增加 `easy promptConcat`
+- `easy wildcards` 增加 **multiline_mode**属性 
 - 增加 当节点需要下载模型时，若huggingface连接超时，会切换至镜像地址下载模型
 
 **v1.1.2 (39c5ccf)**
@@ -50,9 +55,8 @@
 - 增加 `easy ipadapterApplyEncoder`
 - 增加 `easy ipadapterApplyEmbeds`
 - 增加 `easy preMaskDetailerFix`
+- `easy kSamplerInpainting` 增加 **additional** 属性，可设置成 Differential Diffusion 或 Only InpaintModelConditioning
 - 修复 `easy stylesSelector` 当未选择样式时，原有提示词发生了变化
-
-- `easy kSamplerInpainting` 增加 *additional* 属性，可设置成 Differential Diffusion 或 Only InpaintModelConditioning
 - 修复 `easy pipeEdit` 提示词输入lora时报错
 - 修复 layerDiffuse xyplot相关bug
 
@@ -331,3 +335,5 @@
 [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) - 常规整合包2
 
 [ComfyUI-Logic](https://github.com/theUpsider/ComfyUI-Logic) -  ComfyUI逻辑运算
+
+[ComfyUI-ResAdapter](https://github.com/jiaxiangc/ComfyUI-ResAdapter) - 让模型生成不受训练分辨率限制

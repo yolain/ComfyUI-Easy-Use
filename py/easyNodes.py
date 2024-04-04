@@ -88,12 +88,14 @@ class wildcardsPrompt:
             "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
             "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
             "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+            "multiline_mode": ("BOOLEAN", {"default": False}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
 
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("text", "populated_text")
+    OUTPUT_IS_LIST = (True, True)
     OUTPUT_NODE = True
     FUNCTION = "main"
 
@@ -109,7 +111,14 @@ class wildcardsPrompt:
             easyCache.update_loaded_objects(prompt)
 
         text = kwargs['text']
-        populated_text = process(text, seed)
+        if "multiline_mode" in kwargs and kwargs["multiline_mode"]:
+            populated_text = []
+            text = text.split("\n")
+            for t in text:
+                populated_text.append(process(t, seed))
+        else:
+            populated_text = [process(text, seed)]
+            text = [text]
         return {"ui": {"value": [seed]}, "result": (text, populated_text)}
 
 # 负面提示词
@@ -239,8 +248,9 @@ class promptList:
             }
         }
 
-    RETURN_TYPES = ("LIST",)
-    RETURN_NAMES = ("prompt_list",)
+    RETURN_TYPES = ("LIST", "STRING")
+    RETURN_NAMES = ("prompt_list", "prompt_strings")
+    OUTPUT_IS_LIST = (False, True)
     FUNCTION = "run"
     CATEGORY = "EasyUse/Prompt"
 
@@ -259,9 +269,90 @@ class promptList:
             if isinstance(v, str) and v != '':
                 prompts.append(v)
 
-        return (prompts,)
+        return (prompts, prompts)
 
-# 肖像大师
+#promptLine
+class promptLine:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {"prompt": ("STRING", {"multiline": True, "default": "text"}),
+                             "start_index": ("INT", {"default": 0, "min": 0, "max": 9999}),
+                             "max_rows": ("INT", {"default": 1000, "min": 1, "max": 9999}),
+                             }
+                }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("STRING",)
+    OUTPUT_IS_LIST = (True,)
+    FUNCTION = "generate_strings"
+    CATEGORY = "EasyUse/Prompt"
+
+    def generate_strings(self, prompt, start_index, max_rows):
+
+        lines = prompt.split('\n')
+
+        start_index = max(0, min(start_index, len(lines) - 1))
+
+        end_index = min(start_index + max_rows, len(lines))
+
+        rows = lines[start_index:end_index]
+
+        return (rows,)
+
+class promptConcat:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+        },
+            "optional": {
+                "prompt1": ("STRING", {"multiline": False, "default": "", "forceInput": True}),
+                "prompt2": ("STRING", {"multiline": False, "default": "", "forceInput": True}),
+                "separator": ("STRING", {"multiline": False, "default": ""}),
+            },
+        }
+    RETURN_TYPES = ("STRING", )
+    RETURN_NAMES = ("prompt", )
+    FUNCTION = "concat_text"
+    CATEGORY = "EasyUse/Prompt"
+
+    def concat_text(self, prompt1="", prompt2="", separator=""):
+
+        return (prompt1 + separator + prompt2,)
+
+class promptReplace:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"multiline": True, "default": "", "forceInput": True}),
+            },
+            "optional": {
+                "find1": ("STRING", {"multiline": False, "default": ""}),
+                "replace1": ("STRING", {"multiline": False, "default": ""}),
+                "find2": ("STRING", {"multiline": False, "default": ""}),
+                "replace2": ("STRING", {"multiline": False, "default": ""}),
+                "find3": ("STRING", {"multiline": False, "default": ""}),
+                "replace3": ("STRING", {"multiline": False, "default": ""}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("prompt",)
+    FUNCTION = "replace_text"
+    CATEGORY = "EasyUse/Prompt"
+
+    def replace_text(self, text, find1="", replace1="", find2="", replace2="", find3="", replace3=""):
+
+        text = text.replace(find1, replace1)
+        text = text.replace(find2, replace2)
+        text = text.replace(find3, replace3)
+
+        return (text,)
+
+
+    # 肖像大师
 # Created by AI Wiz Art (Stefano Flore)
 # Version: 2.2
 # https://stefanoflore.it
@@ -3934,7 +4025,7 @@ class samplerSimpleInpainting:
         del pipe
 
         return samplerFull().run(new_pipe, None, None,None,None,None, image_output, link_id, save_prefix,
-                               None, model, None, None, None, None, None, None,
+                               None, None, None, None, None, None, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
 # SDTurbo采样器
@@ -6293,6 +6384,9 @@ NODE_CLASS_MAPPINGS = {
     "easy negative": negativePrompt,
     "easy wildcards": wildcardsPrompt,
     "easy promptList": promptList,
+    "easy promptLine": promptLine,
+    "easy promptConcat": promptConcat,
+    "easy promptReplace": promptReplace,
     "easy stylesSelector": stylesPromptSelector,
     "easy portraitMaster": portraitMaster,
     # loaders 加载器
@@ -6386,6 +6480,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy negative": "Negative",
     "easy wildcards": "Wildcards",
     "easy promptList": "PromptList",
+    "easy promptLine": "PromptLine",
+    "easy promptConcat": "PromptConcat",
+    "easy promptReplace": "PromptReplace",
     "easy stylesSelector": "Styles Selector",
     "easy portraitMaster": "Portrait Master",
     # loaders 加载器

@@ -2,7 +2,7 @@ import {app} from "/scripts/app.js";
 import {api} from "/scripts/api.js";
 import {$el} from "/scripts/ui.js";
 
-const propmts = ["easy wildcards", "easy positive", "easy negative", "easy stylesSelector"]
+const propmts = ["easy wildcards", "easy positive", "easy negative", "easy stylesSelector", "easy promptConcat", "easy promptReplace"]
 const loaders = ["easy a1111Loader", "easy comfyLoader", "easy fullLoader", "easy svdLoader", "easy cascadeLoader", "easy sv3dLoader"]
 const preSamplingNodes = ["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "easy preSamplingDynamicCFG","easy preSamplingSdTurbo", "easy preSamplingLayerDiffusion"]
 const kSampler = ["easy kSampler", "easy kSamplerTiled","easy kSamplerInpainting", "easy kSamplerDownscaleUnet", "easy kSamplerSDTurbo"]
@@ -19,6 +19,36 @@ const suggestions = {
         "from":{
             "INT": [...["Reroute"],...preSamplingNodes,...['easy fullkSampler']]
         }
+    },
+    "easy positive":{
+       "from":{
+           "STRING": [...["Reroute"],...propmts]
+       }
+    },
+    "easy negative":{
+       "from":{
+           "STRING": [...["Reroute"],...propmts]
+       }
+    },
+    "easy wildcards":{
+        "from":{
+           "STRING": [...["Reroute","easy showAnything"],...propmts,]
+       }
+    },
+    "easy stylesSelector":{
+        "from":{
+           "STRING": [...["Reroute","easy showAnything"],...propmts,]
+       }
+    },
+    "easy promptConcat":{
+        "from":{
+           "STRING": [...["Reroute","easy showAnything"],...propmts,]
+       }
+    },
+    "easy promptReplace":{
+        "from":{
+           "STRING": [...["Reroute","easy showAnything"],...propmts,]
+       }
     },
     // sd相关
     "easy fullLoader": {

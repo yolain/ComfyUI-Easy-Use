@@ -743,6 +743,9 @@ const NODE_COLORS = {
     "easy positive":"green",
     "easy negative":"red",
     "easy promptList":"cyan",
+    "easy promptLine":"cyan",
+    "easy promptConcat":"cyan",
+    "easy promptReplace":"cyan",
     "easy XYInputs: Seeds++ Batch": customXYLink,
     "easy XYInputs: ModelMergeBlocks": customXYLink,
 }

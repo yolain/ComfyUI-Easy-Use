@@ -31,6 +31,14 @@
 
 ## Changelog
 
+**v1.1.3 (2024/4/4)**
+
+- Supported [ResAdapter](https://huggingface.co/jiaxiangc/res-adapter) when load ResAdapter lora
+- Added `easy promptLine`
+- Added `easy promptReplace`
+- Added `easy promptConcat`
+- `easy wildcards` 增加 **multiline_mode**属性 
+
 **v1.1.2 (39c5ccf)**
 
 - Optimized some of the recommended nodes for slots related to EasyUse
@@ -43,10 +51,9 @@
 - Added `easy ipadapterApplyEmbeds`
 - Added `easy preMaskDetailerFix`
 - Fixed `easy stylesSelector` is change the prompt when not select the style
-
-- `easy kSamplerInpainting` add *additional* widget，you can choose 'Differential Diffusion' or 'Only InpaintModelConditioning'
 - Fixed `easy pipeEdit` error when add lora to prompt
 - Fixed layerDiffuse xyplot bug
+- `easy kSamplerInpainting` add *additional* widget，you can choose 'Differential Diffusion' or 'Only InpaintModelConditioning'
 
 **v1.1.1 (2024/3/16)**
 
@@ -311,3 +318,5 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 [ComfyUI-Impact-Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack) - General modpack 1
 
 [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) - General Modpack 2
+
+[ComfyUI-ResAdapter](https://github.com/jiaxiangc/ComfyUI-ResAdapter) - Make model generation independent of training resolution

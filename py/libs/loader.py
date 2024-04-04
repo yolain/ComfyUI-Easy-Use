@@ -276,6 +276,32 @@ class easyLoader:
                                             lbw_a, lbw_b, "", lbw)
             else:
                 _lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                keys = _lora.keys()
+                if "down_blocks.0.resnets.0.norm1.bias" in keys:
+                    print('Using LORA for Resadapter')
+                    key_map = {}
+                    key_map = comfy.lora.model_lora_keys_unet(model.model, key_map)
+                    mapping_norm = {}
+
+                    for key in keys:
+                        if ".weight" in key:
+                            key_name_in_ori_sd = key_map[key.replace(".weight", "")]
+                            mapping_norm[key_name_in_ori_sd] = _lora[key]
+                        elif ".bias" in key:
+                            key_name_in_ori_sd = key_map[key.replace(".bias", "")]
+                            mapping_norm[key_name_in_ori_sd.replace(".weight", ".bias")] = _lora[
+                                key
+                            ]
+                        else:
+                            print("===>Unexpected key", key)
+                            mapping_norm[key] = _lora[key]
+
+                    for k in mapping_norm.keys():
+                        if k not in model.model.state_dict():
+                            print("===>Missing key:", k)
+                    model.model.load_state_dict(mapping_norm, strict=False)
+                    return (model, clip)
+
                 model, clip = comfy.sd.load_lora_for_models(model, clip, _lora, model_strength, clip_strength)
 
             self.add_to_cache("lora", unique_id, (model, clip))
