@@ -1,14 +1,13 @@
-import re
 import os
-import torch
+import hashlib
 import sys
 import json
 import folder_paths
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
-from .easyNodes import easyCache
 from .logic import ConvertAnything
 from .libs.model import easyModelManager
+from .libs.utils import getMetadata
 
 try:
     import aiohttp
@@ -128,6 +127,64 @@ async def getModelsThumbnail(request):
         if full_path:
             loras_full.append(full_path)
     return web.json_response(checkpoints_full + loras_full)
+
+@PromptServer.instance.routes.get("/easyuse/metadata/{name}")
+async def load_metadata(request):
+    name = request.match_info["name"]
+    pos = name.index("/")
+    type = name[0:pos]
+    name = name[pos+1:]
+
+    file_path = None
+    if type == "embeddings":
+        name = name.lower()
+        files = folder_paths.get_filename_list(type)
+        for f in files:
+            lower_f = f.lower()
+            if lower_f == name:
+                file_path = folder_paths.get_full_path(type, f)
+            else:
+                n = os.path.splitext(f)[0].lower()
+                if n == name:
+                    file_path = folder_paths.get_full_path(type, f)
+
+            if file_path is not None:
+                break
+    else:
+        file_path = folder_paths.get_full_path(type, name)
+    if not file_path:
+        return web.Response(status=404)
+
+    try:
+        header = getMetadata(file_path)
+        header_json = json.loads(header)
+        meta = header_json["__metadata__"] if "__metadata__" in header_json else None
+    except:
+        meta = None
+
+    if meta is None:
+        meta = {}
+
+    file_no_ext = os.path.splitext(file_path)[0]
+
+    info_file = file_no_ext + ".txt"
+    if os.path.isfile(info_file):
+        with open(info_file, "r") as f:
+            meta["easyuse.notes"] = f.read()
+
+    hash_file = file_no_ext + ".sha256"
+    if os.path.isfile(hash_file):
+        with open(hash_file, "rt") as f:
+            meta["easyuse.sha256"] = f.read()
+    else:
+        with open(file_path, "rb") as f:
+            meta["easyuse.sha256"] = hashlib.sha256(f.read()).hexdigest()
+        with open(hash_file, "wt") as f:
+            f.write(meta["easyuse.sha256"])
+
+    return web.json_response(meta)
+
+
 
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}

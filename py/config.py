@@ -231,6 +231,14 @@ IPADAPTER_MODELS = {
         "sdxl": {
             "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-portrait_sdxl.bin",
         }
+    },
+    "COMPOSITION": {
+        "sd15": {
+            "model_url": "https://huggingface.co/ostris/ip-composition-adapter/resolve/main/ip_plus_composition_sd15.safetensors"
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/ostris/ip-composition-adapter/resolve/main/ip_plus_composition_sdxl.safetensors"
+        }
     }
 }
 

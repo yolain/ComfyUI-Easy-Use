@@ -2029,7 +2029,8 @@ class ipadapter:
             'VIT-G (medium strength)',
             'PLUS (high strength)',
             'PLUS FACE (portraits)',
-            'FULL FACE - SD1.5 only (portraits stronger)'
+            'FULL FACE - SD1.5 only (portraits stronger)',
+            'COMPOSITION'
         ]
         self.faceid_presets = [
             'FACEID',
@@ -2099,6 +2100,11 @@ class ipadapter:
             if is_sdxl:
                 raise Exception("full face model is not supported for SDXL")
             pattern = 'full.face.sd15\.(safetensors|bin)$'
+        elif preset.startswith("composition"):
+            if is_sdxl:
+                pattern = 'plus.composition.sdxl\.(safetensors|bin)$'
+            else:
+                pattern = 'plus.composition.sd15\.(safetensors|bin)$'
         elif preset.startswith("faceid portrait"):
             if is_sdxl:
                 pattern = 'portrait.sdxl\.(safetensors|bin)$'

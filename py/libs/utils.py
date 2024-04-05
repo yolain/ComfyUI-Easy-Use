@@ -121,11 +121,13 @@ def is_linked_styles_selector(prompt, my_unique_id, prompt_type='positive'):
     else:
         return False
 
+use_mirror = False
 def get_local_filepath(url, dirname, local_file_name=None):
     """Get local file path when is already downloaded or download it"""
     import os
     from urllib.parse import urlparse
     from torch.hub import download_url_to_file
+    global use_mirror
     if not os.path.exists(dirname):
         os.makedirs(dirname)
     if not local_file_name:
@@ -133,13 +135,16 @@ def get_local_filepath(url, dirname, local_file_name=None):
         local_file_name = os.path.basename(parsed_url.path)
     destination = os.path.join(dirname, local_file_name)
     if not os.path.exists(destination):
-        print(f'downloading {url} to {destination}')
         try:
+            if use_mirror:
+                url = url.replace('huggingface.co', 'hf-mirror.com')
+            print(f'downloading {url} to {destination}')
             download_url_to_file(url, destination)
         except Exception as e:
             args = e.args[0] if e.args is not None and len(e.args) > 0 else None
             if isinstance(args, TimeoutError):
                 print(f'无法从 {url} 下载，正在尝试使用镜像地址...')
+                use_mirror = True
                 url = url.replace('huggingface.co', 'hf-mirror.com')
                 try:
                     download_url_to_file(url, destination)
@@ -178,3 +183,18 @@ def easySave(images, filename_prefix, output_type, prompt=None, extra_pnginfo=No
     else:
         results = SaveImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
         return results['ui']['images']
+
+def getMetadata(filepath):
+    with open(filepath, "rb") as file:
+        # https://github.com/huggingface/safetensors#format
+        # 8 bytes: N, an unsigned little-endian 64-bit integer, containing the size of the header
+        header_size = int.from_bytes(file.read(8), "little", signed=False)
+
+        if header_size <= 0:
+            raise BufferError("Invalid header size")
+
+        header = file.read(header_size)
+        if header_size <= 0:
+            raise BufferError("Invalid header")
+
+        return header

@@ -37,6 +37,7 @@
 
 **v1.1.3 (2024/4/4)**
 
+- `easy ipadapterApply` 增加 **COMPOSITION** 预置项
 - 增加 对[ResAdapter](https://huggingface.co/jiaxiangc/res-adapter) lora模型 的加载支持
 - 增加 `easy promptLine`
 - 增加 `easy promptReplace`

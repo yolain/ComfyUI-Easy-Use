@@ -1,4 +1,6 @@
 import {app} from "/scripts/app.js";
+import {$t} from '../common/i18n.js'
+import {CheckpointInfoDialog, LoraInfoDialog} from "../common/model.js";
 
 const loaders = ['easy fullLoader', 'easy a1111Loader', 'easy comfyLoader']
 const preSampling = ['easy preSampling', 'easy preSamplingAdvanced', 'easy preSamplingDynamicCFG', 'easy preSamplingNoiseIn', 'easy preSamplingLayerDiffusion', 'easy fullkSampler']
@@ -264,6 +266,25 @@ const addMenu = (content, type, nodes_include, nodeType, has_submenu=true) => {
             has_submenu: has_submenu,
             callback: (value, options, e, menu, node) => showSwapMenu(value, options, e, menu, node, type, nodes_include)
         })
+        // if(type == 'loaders'){
+        //     options.unshift({
+        //         content: $t("💎 View Lora Info..."),
+        //         callback: (value, options, e, menu, node) => {
+        //             const widget = node.widgets.find(cate=> cate.name == 'lora_name')
+        //             let name = widget.value;
+        //             if (!name || name == 'None') return
+        //             new LoraInfoDialog(name).show('loras', name);
+        //         }
+        //     })
+        //     options.unshift({
+        //         content: $t("💎 View Checkpoint Info..."),
+        //         callback: (value, options, e, menu, node) => {
+        //             let name = node.widgets[0].value;
+        //             if (!name || name == 'None') return
+        //             new CheckpointInfoDialog(name).show('checkpoints', name);
+        //         }
+        //     })
+        // }
     })
 }
 const showSwapMenu = (value, options, e, menu, node, type, nodes_include) => {
@@ -482,7 +503,7 @@ app.registerExtension({
         // 刷新节点
         addMenuHandler(nodeType, function (_, options) {
             options.unshift({
-                content: "🔃 Reload Node",
+                content: $t("🔃 Reload Node"),
                 callback: (value, options, e, menu, node) => {
                     let graphcanvas = LGraphCanvas.active_canvas;
                     if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1) {

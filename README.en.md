@@ -33,6 +33,7 @@
 
 **v1.1.3 (2024/4/4)**
 
+- `easy ipadapterApply` Added **COMPOSITION** preset
 - Supported [ResAdapter](https://huggingface.co/jiaxiangc/res-adapter) when load ResAdapter lora
 - Added `easy promptLine`
 - Added `easy promptReplace`

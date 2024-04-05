@@ -18,6 +18,7 @@ app.registerExtension({
             emptyImg.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
 
             options.push(null,
+                // Groups Map
                 {
                     content: '📜 '+ $t('Groups Map (EasyUse)'),
                     callback: async() => {
@@ -250,7 +251,7 @@ app.registerExtension({
                         }
 
                     }
-                },
+                }
             );
             return options;
         };
