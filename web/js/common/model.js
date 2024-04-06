@@ -262,12 +262,41 @@ export class ModelInfoDialog extends ComfyDialog {
 					)
 				}
 				// 替换内容
-				content.replaceChildren(
-					$el("a", {
-						href: "https://civitai.com/models/" + info.modelId,
-						textContent: "View " + info.model.name,
-						target: "_blank",
-					})
+				this.info.replaceChildren(
+					$el("div.easyuse-model-detail",[
+						$el("div.easyuse-model-detail-head",{textContent:$t("Details")}),
+						$el("div.easyuse-model-detail-body",[
+							$el("div.easyuse-model-detail-item",[
+								$el("div.easyuse-model-detail-item-label",{textContent:$t("BaseModel")}),
+								$el("div.easyuse-model-detail-item-value",{textContent:info.baseModel}),
+							]),
+							$el("div.easyuse-model-detail-item",[
+								$el("div.easyuse-model-detail-item-label",{textContent:$t("Download")}),
+								$el("div.easyuse-model-detail-item-value",{textContent:info.stats?.downloadCount || 0}),
+							]),
+							$el("div.easyuse-model-detail-item",[
+								$el("div.easyuse-model-detail-item-label",{textContent:$t("Source")}),
+								$el("div.easyuse-model-detail-item-value",[
+									$el("label", [
+										$el("img", {
+											style: {
+												width: "14px",
+												position: "relative",
+												top: "3px",
+												margin: "0 5px 0 0",
+											},
+											src: "https://civitai.com/favicon.ico",
+										}),
+										$el("a", {
+											href: "https://civitai.com/models/" + info.modelId,
+											textContent: "View " + info.model.name,
+											target: "_blank",
+										})
+									])
+								]),
+							])
+						]),
+					])
 				);
 
 				if (info.images?.length) {
@@ -276,7 +305,47 @@ export class ModelInfoDialog extends ComfyDialog {
 						cate.url &&
 						this.imgList.appendChild(
 							$el('div.easyuse-preview-slide',[
-								$el('img',{src:(cate.url)})
+								$el('div.easyuse-preview-slide-content',[
+									$el('img',{src:(cate.url)}),
+									$el("div.save", {
+										textContent: "Save as preview",
+										onclick: async () => {
+											// Convert the preview to a blob
+											const blob = await (await fetch(cate.url)).blob();
+
+											// Store it in temp
+											const name = "temp_preview." + new URL(cate.url).pathname.split(".")[1];
+											const body = new FormData();
+											body.append("image", new File([blob], name));
+											body.append("overwrite", "true");
+											body.append("type", "temp");
+
+											const resp = await api.fetchApi("/upload/image", {
+												method: "POST",
+												body,
+											});
+
+											if (resp.status !== 200) {
+												console.error(resp);
+												alert(`Error saving preview (${req.status}) ${req.statusText}`);
+												return;
+											}
+
+											// Use as preview
+											await api.fetchApi("/easyuse/save/" + encodeURIComponent(`${this.type}/${this.name}`), {
+												method: "POST",
+												body: JSON.stringify({
+													filename: name,
+													type: "temp",
+												}),
+												headers: {
+													"content-type": "application/json",
+												},
+											});
+											app.refreshComboInNodes();
+										},
+									})
+								])
 							])
 						)
 					)
@@ -339,45 +408,6 @@ export class ModelInfoDialog extends ComfyDialog {
 						}
 					})
 
-					// this.imgSave = $el("button", {
-					// 	textContent: "Use as preview",
-					// 	parent: this.imgWrapper,
-					// 	onclick: async () => {
-					// 		// Convert the preview to a blob
-					// 		const blob = await (await fetch(this.img.src)).blob();
-					//
-					// 		// Store it in temp
-					// 		const name = "temp_preview." + new URL(this.img.src).pathname.split(".")[1];
-					// 		const body = new FormData();
-					// 		body.append("image", new File([blob], name));
-					// 		body.append("overwrite", "true");
-					// 		body.append("type", "temp");
-					//
-					// 		const resp = await api.fetchApi("/upload/image", {
-					// 			method: "POST",
-					// 			body,
-					// 		});
-					//
-					// 		if (resp.status !== 200) {
-					// 			console.error(resp);
-					// 			alert(`Error saving preview (${req.status}) ${req.statusText}`);
-					// 			return;
-					// 		}
-					//
-					// 		// Use as preview
-					// 		await api.fetchApi("/pysssss/save/" + encodeURIComponent(`${this.type}/${this.name}`), {
-					// 			method: "POST",
-					// 			body: JSON.stringify({
-					// 				filename: name,
-					// 				type: "temp",
-					// 			}),
-					// 			headers: {
-					// 				"content-type": "application/json",
-					// 			},
-					// 		});
-					// 		app.refreshComboInNodes();
-					// 	},
-					// });
 				}
 
 				return info;
@@ -394,16 +424,16 @@ export class CheckpointInfoDialog extends ModelInfoDialog {
         super.addInfo();
         const info = await this.addCivitaiInfo();
         if (info) {
-            this.addInfoEntry("Base Model", info.baseModel || "⚠️ Unknown");
-
-            $el("div", {
-                parent: this.content,
-                innerHTML: info.description,
-                style: {
-                    maxHeight: "250px",
-                    overflow: "auto",
-                },
-            });
+            // this.addInfoEntry("Base Model", info.baseModel || "⚠️ Unknown");
+			//
+            // $el("div", {
+            //     parent: this.content,
+            //     innerHTML: info.description,
+            //     style: {
+            //         maxHeight: "250px",
+            //         overflow: "auto",
+            //     },
+            // });
         }
     }
 }

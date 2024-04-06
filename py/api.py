@@ -2,7 +2,9 @@ import os
 import hashlib
 import sys
 import json
+import shutil
 import folder_paths
+from folder_paths import get_directory_by_type
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .logic import ConvertAnything
@@ -184,7 +186,32 @@ async def load_metadata(request):
 
     return web.json_response(meta)
 
+@PromptServer.instance.routes.post("/easyuse/save/{name}")
+async def save_preview(request):
+    name = request.match_info["name"]
+    pos = name.index("/")
+    type = name[0:pos]
+    name = name[pos+1:]
 
+    body = await request.json()
+
+    dir = get_directory_by_type(body.get("type", "output"))
+    subfolder = body.get("subfolder", "")
+    full_output_folder = os.path.join(dir, os.path.normpath(subfolder))
+
+    if os.path.commonpath((dir, os.path.abspath(full_output_folder))) != dir:
+        return web.Response(status=400)
+
+    filepath = os.path.join(full_output_folder, body.get("filename", ""))
+    image_path = folder_paths.get_full_path(type, name)
+    image_path = os.path.splitext(
+        image_path)[0] + os.path.splitext(filepath)[1]
+
+    shutil.copyfile(filepath, image_path)
+
+    return web.json_response({
+        "image":  type + "/" + os.path.basename(image_path)
+    })
 
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}

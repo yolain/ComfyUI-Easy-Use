@@ -115,14 +115,48 @@
 }
 .easyuse-preview-slide{
 	display: flex;
-	flex-basis: 50%;
+	flex-basis: calc(50% - 5px);
 	flex-grow: 0;
 	flex-shrink: 0;
 	position: relative;
 	justify-content: center;
 	align-items: center;
+	padding-right:5px;
+	padding-left:0;
 }
-.easyuse-preview-slide img {
+.easyuse-preview-slide:nth-child(even){
+	padding-left:5px;
+	padding-right:0;
+}
+.easyuse-preview-slide-content{
+	position: relative;
+	min-height:150px;
+	width: 100%;
+}
+.easyuse-preview-slide-content .save{
+    position: absolute;
+    right: 6px;
+    z-index: 12;
+    bottom: 6px;
+    display: flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 9px;
+    color: var(--input-text);
+    font-size: 12px;
+    line-height: 26px;
+    background: rgba(0, 0, 0, .5);
+    border-radius: 13px;
+    cursor: pointer;
+	min-width:80px;
+	text-align: center;
+}
+.easyuse-preview-slide-content .save:hover{
+	filter: brightness(120%);
+	will-change: auto;
+}
+
+.easyuse-preview-slide-content img {
 	border-radius: 14px;
 	object-position: center center;
 	max-width: 100%;
@@ -140,7 +174,7 @@
 	width:30px;
 	height:30px;
 	border-radius:15px;
-	border:1px solid rgba(66, 63, 78, .3);
+	border:1px solid rgba(66, 63, 78, .15);
 	background-color: rgba(66, 63, 78, .5);
 	color:hsla(0, 0%, 100%, .8);
 	transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
@@ -153,6 +187,47 @@
 }
 .easyuse-preview button.right{
 	right:10px;
+}
+
+.easyuse-model-detail{
+	margin-top: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+	width:300px;
+}
+.easyuse-model-detail-head{
+	height: 40px;
+    padding: 0 10px;
+    font-weight: 500;
+    font-size: 14px;
+    font-style: normal;
+    line-height: 40px;
+}
+.easyuse-model-detail-body{
+	box-sizing: border-box;
+    font-size: 12px;
+}
+.easyuse-model-detail-item{
+	display: flex;
+    justify-content: flex-start;
+    border-top: 1px solid var(--border-color);
+}
+.easyuse-model-detail-item-label{
+	flex-shrink: 0;
+    width: 88px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 10px;
+    border-right: 1px solid var(--border-color);
+    color: var(--input-text);
+    font-weight: 400;
+}
+.easyuse-model-detail-item-value{
+	display: flex;
+    flex-wrap: wrap;
+    padding: 5px 10px 5px 10px;
+	color: var(--input-text);
 }
 .easyuse-model-notes {
 	background-color: rgba(0, 0, 0, 0.25);

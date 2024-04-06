@@ -201,7 +201,7 @@ app.registerExtension({
 					},
 					{
 						values: () => {
-                            const setterNodes = graph._nodes.filter((otherNode) => otherNode.type == 'easy setNode');
+                            const setterNodes = node.graph._nodes.filter((otherNode) => otherNode.type == 'easy setNode');
                             return setterNodes.map((otherNode) => otherNode.widgets[0].value).sort();
                         }
 					}
