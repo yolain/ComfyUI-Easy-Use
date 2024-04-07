@@ -130,6 +130,41 @@ async def getModelsThumbnail(request):
             loras_full.append(full_path)
     return web.json_response(checkpoints_full + loras_full)
 
+@PromptServer.instance.routes.post("/easyuse/metadata/notes/{name}")
+async def save_notes(request):
+    name = request.match_info["name"]
+    pos = name.index("/")
+    type = name[0:pos]
+    name = name[pos+1:]
+
+    file_path = None
+    if type == "embeddings" or type == "loras":
+        name = name.lower()
+        files = folder_paths.get_filename_list(type)
+        for f in files:
+            lower_f = f.lower()
+            if lower_f == name:
+                file_path = folder_paths.get_full_path(type, f)
+            else:
+                n = os.path.splitext(f)[0].lower()
+                if n == name:
+                    file_path = folder_paths.get_full_path(type, f)
+
+            if file_path is not None:
+                break
+    else:
+        file_path = folder_paths.get_full_path(
+            type, name)
+    if not file_path:
+        return web.Response(status=404)
+
+    file_no_ext = os.path.splitext(file_path)[0]
+    info_file = file_no_ext + ".txt"
+    with open(info_file, "w") as f:
+        f.write(await request.text())
+
+    return web.Response(status=200)
+
 @PromptServer.instance.routes.get("/easyuse/metadata/{name}")
 async def load_metadata(request):
     name = request.match_info["name"]

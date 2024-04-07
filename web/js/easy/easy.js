@@ -1,9 +1,26 @@
+import { api } from "/scripts/api.js";
 import { app } from "/scripts/app.js";
 import {deepEqual,addCss} from "../common/utils.js";
 import {$t} from '../common/i18n.js';
+import {toast} from "../common/toast.js";
 
 addCss('css/index.css')
 
+api.addEventListener("easyuse-toast",event=>{
+    const content = event.detail.content
+    const type = event.detail.type
+    const duration = event.detail.duration
+    if(!type){
+        toast.info(content, duration)
+    }
+    else{
+      toast.showToast({
+        id: `toast-${type}`,
+        content: `${toast[type+"_icon"]} ${content}`,
+        duration: duration || 3000,
+      })
+    }
+})
 app.registerExtension({
     name: "comfy.easyUse",
     init() {

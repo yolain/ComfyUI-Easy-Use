@@ -31,6 +31,12 @@
 
 ## Changelog
 
+**v1.1.4**
+
+- Added the right-click menu to view checkpoints and lora information in all Loaders
+- Fixed `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` compatible with ComfyUI Revision>=2098 [0542088e] or later
+ 
+
 **v1.1.3 (2024/4/4)**
 
 - `easy ipadapterApply` Added **COMPOSITION** preset
@@ -38,7 +44,7 @@
 - Added `easy promptLine`
 - Added `easy promptReplace`
 - Added `easy promptConcat`
-- `easy wildcards` 增加 **multiline_mode**属性 
+- `easy wildcards` Added **multiline_mode**  
 
 **v1.1.2 (39c5ccf)**
 
@@ -321,3 +327,9 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) - General Modpack 2
 
 [ComfyUI-ResAdapter](https://github.com/jiaxiangc/ComfyUI-ResAdapter) - Make model generation independent of training resolution
+
+[ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus) - Style migration
+
+[ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID) - Face migration
+
+[ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) - pyssss🐍

@@ -1,3 +1,10 @@
+export function sleep(ms = 100, value) {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(value);
+        }, ms);
+    });
+}
 export function addPreconnect(href, crossorigin=false){
     const preconnect = document.createElement("link");
     preconnect.rel = 'preconnect'
@@ -5,7 +12,6 @@ export function addPreconnect(href, crossorigin=false){
     if(crossorigin) preconnect.crossorigin = ''
     document.head.appendChild(preconnect);
 }
-
 export function addCss(href, base=true) {
     const link = document.createElement("link");
     link.rel = "stylesheet";

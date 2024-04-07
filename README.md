@@ -35,6 +35,11 @@
 
 ## 更新日志
 
+**v1.1.4 (2024/4/7)**
+
+- 增加 在Loaders上右键菜单可查看 checkpoints、lora 信息
+- 修复 `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` 以兼容ComfyUI Revision>=2098 [0542088e] 以上版本
+
 **v1.1.3 (2024/4/4)**
 
 - `easy ipadapterApply` 增加 **COMPOSITION** 预置项
@@ -338,3 +343,9 @@
 [ComfyUI-Logic](https://github.com/theUpsider/ComfyUI-Logic) -  ComfyUI逻辑运算
 
 [ComfyUI-ResAdapter](https://github.com/jiaxiangc/ComfyUI-ResAdapter) - 让模型生成不受训练分辨率限制
+
+[ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus) - 风格迁移
+
+[ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID) - 人脸迁移
+
+[ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) - pyssss 小蛇🐍脚本

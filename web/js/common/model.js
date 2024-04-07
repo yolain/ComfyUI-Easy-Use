@@ -2,7 +2,7 @@ import { $el, ComfyDialog } from "/scripts/ui.js";
 import { api } from "/scripts/api.js";
 import {formatTime} from './utils.js';
 import {$t} from "./i18n.js";
-
+import {toast} from "./toast.js";
 
 class MetadataDialog extends ComfyDialog {
 	constructor() {
@@ -93,115 +93,47 @@ export class ModelInfoDialog extends ComfyDialog {
 		return btns;
 	}
 
-	getNoteInfo() {
-		function parseNote() {
-			if (!this.customNotes) return [];
+	parseNote() {
+		if (!this.customNotes) return [];
 
-			let notes = [];
-			// Extract links from notes
-			const r = new RegExp("(\\bhttps?:\\/\\/[^\\s]+)", "g");
-			let end = 0;
-			let m;
-			do {
-				m = r.exec(this.customNotes);
-				let pos;
-				let fin = 0;
-				if (m) {
-					pos = m.index;
-					fin = m.index + m[0].length;
-				} else {
-					pos = this.customNotes.length;
-				}
+		let notes = [];
+		// Extract links from notes
+		const r = new RegExp("(\\bhttps?:\\/\\/[^\\s]+)", "g");
+		let end = 0;
+		let m;
+		do {
+			m = r.exec(this.customNotes);
+			let pos;
+			let fin = 0;
+			if (m) {
+				pos = m.index;
+				fin = m.index + m[0].length;
+			} else {
+				pos = this.customNotes.length;
+			}
 
-				let pre = this.customNotes.substring(end, pos);
-				if (pre) {
-					pre = pre.replaceAll("\n", "<br>");
-					notes.push(
-						$el("span", {
-							innerHTML: pre,
-						})
-					);
-				}
-				if (m) {
-					notes.push(
-						$el("a", {
-							href: m[0],
-							textContent: m[0],
-							target: "_blank",
-						})
-					);
-				}
+			let pre = this.customNotes.substring(end, pos);
+			if (pre) {
+				pre = pre.replaceAll("\n", "<br>");
+				notes.push(
+					$el("span", {
+						innerHTML: pre,
+					})
+				);
+			}
+			if (m) {
+				notes.push(
+					$el("a", {
+						href: m[0],
+						textContent: m[0],
+						target: "_blank",
+					})
+				);
+			}
 
-				end = fin;
-			} while (m);
-			return notes;
-		}
-
-		let textarea;
-		let notesContainer;
-		const editText = "✏️ Edit";
-		const edit = $el("a", {
-			textContent: editText,
-			href: "#",
-			style: {
-				float: "right",
-				color: "greenyellow",
-				textDecoration: "none",
-			},
-			onclick: async (e) => {
-				e.preventDefault();
-
-				if (textarea) {
-					this.customNotes = textarea.value;
-
-					const resp = await api.fetchApi(
-						"/pysssss/metadata/notes/" + encodeURIComponent(`${this.type}/${this.name}`),
-						{
-							method: "POST",
-							body: this.customNotes,
-						}
-					);
-
-					if (resp.status !== 200) {
-						console.error(resp);
-						alert(`Error saving notes (${req.status}) ${req.statusText}`);
-						return;
-					}
-
-					e.target.textContent = editText;
-					textarea.remove();
-					textarea = null;
-
-					notesContainer.replaceChildren(...parseNote.call(this));
-				} else {
-					e.target.textContent = "💾 Save";
-					textarea = $el("textarea", {
-						style: {
-							width: "100%",
-							minWidth: "200px",
-							minHeight: "50px",
-						},
-						textContent: this.customNotes,
-					});
-					e.target.after(textarea);
-					notesContainer.replaceChildren();
-					textarea.style.height = Math.min(textarea.scrollHeight, 300) + "px";
-				}
-			},
-		});
-
-		notesContainer = $el("div.easyuse-model-notes", parseNote.call(this));
-		return $el(
-			"div",
-			{
-				style: { display: "contents" },
-			},
-			[edit, notesContainer]
-		);
-	}
-
-	addInfo() {
-		// this.addInfoEntry("Notes", this.getNoteInfo());
+			end = fin;
+		} while (m);
+		return notes;
 	}
 
 	addInfoEntry(name, value) {
@@ -250,6 +182,7 @@ export class ModelInfoDialog extends ComfyDialog {
 
 		return promise
 			.then((info) => {
+				this.imgWrapper.style.display = 'block'
 				// 变更标题信息
 				let header = this.element.querySelector('.easyuse-model-header')
 				if(header){
@@ -262,10 +195,90 @@ export class ModelInfoDialog extends ComfyDialog {
 					)
 				}
 				// 替换内容
+				let textarea = null
+				let notes = this.parseNote.call(this)
+				let editText = $t("✏️ Edit")
+				console.log(notes)
+				let textarea_div = $el("div.easyuse-model-detail-textarea",[
+					$el("p",notes?.length>0 ? notes : {textContent:$t('No notes')}),
+				])
+				if(!notes || notes.length == 0) textarea_div.classList.add('empty')
+				else textarea_div.classList.remove('empty')
 				this.info.replaceChildren(
+					$el("div.easyuse-model-detail",[
+						$el("div.easyuse-model-detail-head.flex-b",[
+							$el('span',$t("Notes")),
+							$el("a", {
+								textContent: editText,
+								href: "#",
+								style: {
+									fontSize: "12px",
+									float: "right",
+									color: "var(--warning-color)",
+									textDecoration: "none",
+								},
+								onclick: async (e) => {
+									e.preventDefault();
+
+									if (textarea) {
+										if(textarea.value != this.customNotes){
+											toast.showLoading($t('Saving Notes...'))
+											this.customNotes = textarea.value;
+											const resp = await api.fetchApi(
+												"/easyuse/metadata/notes/" + encodeURIComponent(`${this.type}/${this.name}`),
+												{
+													method: "POST",
+													body: this.customNotes,
+												}
+											);
+											toast.hideLoading()
+											if (resp.status !== 200) {
+												toast.error($t('Saving Failed'))
+												console.error(resp);
+												alert(`Error saving notes (${resp.status}) ${resp.statusText}`);
+												return;
+											}
+											toast.success($t('Saving Succeed'))
+											notes = this.parseNote.call(this)
+											console.log(notes)
+											textarea_div.replaceChildren($el("p",notes?.length>0 ? notes : {textContent:$t('No notes')}));
+											if(textarea.value) textarea_div.classList.remove('empty')
+											else textarea_div.classList.add('empty')
+										}else {
+											textarea_div.replaceChildren($el("p",{textContent:$t('No notes')}));
+											textarea_div.classList.add('empty')
+										}
+										e.target.textContent = editText;
+										textarea.remove();
+										textarea = null;
+
+									} else {
+										e.target.textContent = "💾 Save";
+										textarea = $el("textarea", {
+											placeholder: $t("Type your notes here"),
+											style: {
+												width: "100%",
+												minWidth: "200px",
+												minHeight: "50px",
+												height:"100px"
+											},
+											textContent: this.customNotes,
+										});
+										textarea_div.replaceChildren(textarea);
+										textarea.focus()
+									}
+								}
+							})
+						]),
+						textarea_div
+					]),
 					$el("div.easyuse-model-detail",[
 						$el("div.easyuse-model-detail-head",{textContent:$t("Details")}),
 						$el("div.easyuse-model-detail-body",[
+							$el("div.easyuse-model-detail-item",[
+								$el("div.easyuse-model-detail-item-label",{textContent:$t("Type")}),
+								$el("div.easyuse-model-detail-item-value",{textContent:info.model.type}),
+							]),
 							$el("div.easyuse-model-detail-item",[
 								$el("div.easyuse-model-detail-item-label",{textContent:$t("BaseModel")}),
 								$el("div.easyuse-model-detail-item-value",{textContent:info.baseModel}),
@@ -273,6 +286,10 @@ export class ModelInfoDialog extends ComfyDialog {
 							$el("div.easyuse-model-detail-item",[
 								$el("div.easyuse-model-detail-item-label",{textContent:$t("Download")}),
 								$el("div.easyuse-model-detail-item-value",{textContent:info.stats?.downloadCount || 0}),
+							]),
+							$el("div.easyuse-model-detail-item",[
+								$el("div.easyuse-model-detail-item-label",{textContent:$t("Trained Words")}),
+								$el("div.easyuse-model-detail-item-value",{textContent:info?.trainedWords.join(',') || '-'}),
 							]),
 							$el("div.easyuse-model-detail-item",[
 								$el("div.easyuse-model-detail-item-label",{textContent:$t("Source")}),
@@ -301,6 +318,7 @@ export class ModelInfoDialog extends ComfyDialog {
 
 				if (info.images?.length) {
 					this.imgCurrent = 0
+					this.isSaving = false
 					info.images.map(cate=>
 						cate.url &&
 						this.imgList.appendChild(
@@ -310,6 +328,9 @@ export class ModelInfoDialog extends ComfyDialog {
 									$el("div.save", {
 										textContent: "Save as preview",
 										onclick: async () => {
+											if(this.isSaving) return
+											this.isSaving = true
+											toast.showLoading($t('Saving Preview...'))
 											// Convert the preview to a blob
 											const blob = await (await fetch(cate.url)).blob();
 
@@ -326,6 +347,9 @@ export class ModelInfoDialog extends ComfyDialog {
 											});
 
 											if (resp.status !== 200) {
+												this.isSaving = false
+												toast.error($t('Saving Failed'))
+												toast.hideLoading()
 												console.error(resp);
 												alert(`Error saving preview (${req.status}) ${req.statusText}`);
 												return;
@@ -341,7 +365,11 @@ export class ModelInfoDialog extends ComfyDialog {
 												headers: {
 													"content-type": "application/json",
 												},
+											}).then(_=>{
+												toast.success($t('Saving Succeed'))
+												toast.hideLoading()
 											});
+											this.isSaving = false
 											app.refreshComboInNodes();
 										},
 									})
@@ -357,8 +385,12 @@ export class ModelInfoDialog extends ComfyDialog {
 					// 添加按钮
 					this.slideLeftButton = $el("button.left",{
 						parent: this.imgWrapper,
+						style:{
+							display:info.images.length <= 2 ? 'none' : 'block'
+						},
 						innerHTML:`<svg viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="transform: rotate(90deg);"><path d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg>`,
 						onclick: ()=>{
+							if(info.images.length <= 2) return
 							_this.imgList.classList.remove("no-transition")
 							if(_this.imgCurrent == 0){
 								_this.imgCurrent = (info.images.length/2)-1
@@ -382,9 +414,14 @@ export class ModelInfoDialog extends ComfyDialog {
 					})
 					this.slideRightButton = $el("button.right",{
 						parent: this.imgWrapper,
+						style:{
+							display:info.images.length <= 2 ? 'none' : 'block'
+						},
 						innerHTML:`<svg viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" style="transform: rotate(-90deg);"><path d="M3.13523 6.15803C3.3241 5.95657 3.64052 5.94637 3.84197 6.13523L7.5 9.56464L11.158 6.13523C11.3595 5.94637 11.6759 5.95657 11.8648 6.15803C12.0536 6.35949 12.0434 6.67591 11.842 6.86477L7.84197 10.6148C7.64964 10.7951 7.35036 10.7951 7.15803 10.6148L3.15803 6.86477C2.95657 6.67591 2.94637 6.35949 3.13523 6.15803Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg>`,
 						onclick: ()=>{
+							if(info.images.length <= 2) return
 							_this.imgList.classList.remove("no-transition")
+
 							if( _this.imgCurrent >= (info.images.length/2)-1){
 								_this.imgCurrent = 0
 								const max = info.images.length/2
@@ -410,31 +447,32 @@ export class ModelInfoDialog extends ComfyDialog {
 
 				}
 
+				if(info.description){
+					$el("div", {
+						parent: this.content,
+						innerHTML: info.description,
+						style: {
+							marginTop: "10px",
+						},
+					});
+				}
+
 				return info;
 			})
 			.catch((err) => {
+				this.imgWrapper.style.display = 'none'
 				content.textContent = "⚠️ " + err.message;
-			});
+			})
+			.finally(_=>{
+			})
 	}
 }
 
 
 export class CheckpointInfoDialog extends ModelInfoDialog {
     async addInfo() {
-        super.addInfo();
-        const info = await this.addCivitaiInfo();
-        if (info) {
-            // this.addInfoEntry("Base Model", info.baseModel || "⚠️ Unknown");
-			//
-            // $el("div", {
-            //     parent: this.content,
-            //     innerHTML: info.description,
-            //     style: {
-            //         maxHeight: "250px",
-            //         overflow: "auto",
-            //     },
-            // });
-        }
+        // super.addInfo();
+        await this.addCivitaiInfo();
     }
 }
 
@@ -545,45 +583,45 @@ export class LoraInfoDialog extends ModelInfoDialog {
 	}
 
 	async addInfo() {
-		this.addInfoEntry("Name", this.metadata.ss_output_name || "⚠️ Unknown");
-		this.addInfoEntry("Base Model", this.metadata.ss_sd_model_name || "⚠️ Unknown");
-		this.addInfoEntry("Clip Skip", this.metadata.ss_clip_skip || "⚠️ Unknown");
+		// this.addInfoEntry("Name", this.metadata.ss_output_name || "⚠️ Unknown");
+		// this.addInfoEntry("Base Model", this.metadata.ss_sd_model_name || "⚠️ Unknown");
+		// this.addInfoEntry("Clip Skip", this.metadata.ss_clip_skip || "⚠️ Unknown");
+		//
+		// this.addInfoEntry(
+		// 	"Resolution",
+		// 	$el(
+		// 		"select",
+		// 		this.getResolutions().map((r) => $el("option", { textContent: r }))
+		// 	)
+		// );
 
-		this.addInfoEntry(
-			"Resolution",
-			$el(
-				"select",
-				this.getResolutions().map((r) => $el("option", { textContent: r }))
-			)
-		);
-
-		super.addInfo();
+		// super.addInfo();
 		const p = this.addCivitaiInfo();
 		this.addTags();
 
 		const info = await p;
 		if (info) {
-			$el(
-				"p",
-				{
-					parent: this.content,
-					textContent: "Trained Words: ",
-				},
-				[
-					$el("pre", {
-						textContent: info.trainedWords.join(", "),
-						style: {
-							whiteSpace: "pre-wrap",
-							margin: "10px 0",
-							background: "#222",
-							padding: "5px",
-							borderRadius: "5px",
-							maxHeight: "250px",
-							overflow: "auto",
-						},
-					}),
-				]
-			);
+			// $el(
+			// 	"p",
+			// 	{
+			// 		parent: this.content,
+			// 		textContent: "Trained Words: ",
+			// 	},
+			// 	[
+			// 		$el("pre", {
+			// 			textContent: info.trainedWords.join(", "),
+			// 			style: {
+			// 				whiteSpace: "pre-wrap",
+			// 				margin: "10px 0",
+			// 				background: "#222",
+			// 				padding: "5px",
+			// 				borderRadius: "5px",
+			// 				maxHeight: "250px",
+			// 				overflow: "auto",
+			// 			},
+			// 		}),
+			// 	]
+			// );
 			$el("div", {
 				parent: this.content,
 				innerHTML: info.description,

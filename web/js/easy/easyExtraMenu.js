@@ -267,23 +267,23 @@ const addMenu = (content, type, nodes_include, nodeType, has_submenu=true) => {
             callback: (value, options, e, menu, node) => showSwapMenu(value, options, e, menu, node, type, nodes_include)
         })
         if(type == 'loaders'){
-            // options.unshift({
-            //     content: $t("💎 View Lora Info..."),
-            //     callback: (value, options, e, menu, node) => {
-            //         const widget = node.widgets.find(cate=> cate.name == 'lora_name')
-            //         let name = widget.value;
-            //         if (!name || name == 'None') return
-            //         new LoraInfoDialog(name).show('loras', name);
-            //     }
-            // })
-            // options.unshift({
-            //     content: $t("💎 View Checkpoint Info..."),
-            //     callback: (value, options, e, menu, node) => {
-            //         let name = node.widgets[0].value;
-            //         if (!name || name == 'None') return
-            //         new CheckpointInfoDialog(name).show('checkpoints', name);
-            //     }
-            // })
+            options.unshift({
+                content: $t("💎 View Lora Info..."),
+                callback: (value, options, e, menu, node) => {
+                    const widget = node.widgets.find(cate=> cate.name == 'lora_name')
+                    let name = widget.value;
+                    if (!name || name == 'None') return
+                    new LoraInfoDialog(name).show('loras', name);
+                }
+            })
+            options.unshift({
+                content: $t("💎 View Checkpoint Info..."),
+                callback: (value, options, e, menu, node) => {
+                    let name = node.widgets[0].value;
+                    if (!name || name == 'None') return
+                    new CheckpointInfoDialog(name).show('checkpoints', name);
+                }
+            })
         }
     })
 }

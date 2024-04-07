@@ -1,7 +1,7 @@
 import sys, os, re, json, time, math
 import torch
 import folder_paths
-import comfy.utils, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
+import comfy.utils, comfy.sample, comfy.sampler_helpers, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
 from comfy.sd import CLIP, VAE
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
@@ -594,10 +594,9 @@ class latentNoisy:
         device = comfy.model_management.get_torch_device()
         end_at_step = min(steps, end_at_step)
         start_at_step = min(start_at_step, end_at_step)
-        real_model = None
         comfy.model_management.load_model_gpu(model)
-        real_model = model.model
-        sampler = comfy.samplers.KSampler(real_model, steps=steps, device=device, sampler=sampler_name,
+        model_patcher = comfy.model_patcher.ModelPatcher(model.model, load_device=device, offload_device=comfy.model_management.unet_offload_device())
+        sampler = comfy.samplers.KSampler(model_patcher, steps=steps, device=device, sampler=sampler_name,
                                           scheduler=scheduler, denoise=1.0, model_options=model.model_options)
         sigmas = sampler.sigmas
         sigma = sigmas[start_at_step] - sigmas[end_at_step]
@@ -2903,8 +2902,8 @@ class samplerSettingsNoiseIn:
 
         device = comfy.model_management.get_torch_device()
         comfy.model_management.load_model_gpu(model)
-        real_model = model.model
-        sampler = comfy.samplers.KSampler(real_model, steps=steps, device=device, sampler=sampler_name,
+        model_patcher = comfy.model_patcher.ModelPatcher(model.model, load_device=device, offload_device=comfy.model_management.unet_offload_device())
+        sampler = comfy.samplers.KSampler(model_patcher, steps=steps, device=device, sampler=sampler_name,
                                           scheduler=scheduler, denoise=1.0, model_options=model.model_options)
         sigmas = sampler.sigmas
         sigma = sigmas[start_at_step] - sigmas[end_at_step]
@@ -3483,6 +3482,7 @@ class samplerFull(LayerDiffuse):
                     "vae": ("VAE",),
                     "clip": ("CLIP",),
                     "xyPlot": ("XYPLOT",),
+                    "image": ("IMAGE",),
                 },
                 "hidden":
                   {"tile_size": "INT", "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
@@ -4407,23 +4407,23 @@ class unsampler:
         if "noise_mask" in latent:
             noise_mask = comfy.sample.prepare_mask(latent["noise_mask"], noise.shape, device)
 
-        real_model = None
-        real_model = model.model
 
         noise = noise.to(device)
         latent_image = latent_image.to(device)
 
-        positive = comfy.sample.convert_cond(positive)
-        negative = comfy.sample.convert_cond(negative)
+        _positive = comfy.sampler_helpers.convert_cond(positive)
+        _negative = comfy.sampler_helpers.convert_cond(negative)
+        models, inference_memory = comfy.sampler_helpers.get_additional_models({"positive": _positive, "negative": _negative}, model.model_dtype())
 
-        models, inference_memory = comfy.sample.get_additional_models(positive, negative, model.model_dtype())
 
         comfy.model_management.load_models_gpu([model] + models, model.memory_required(noise.shape) + inference_memory)
 
-        sampler = comfy.samplers.KSampler(real_model, steps=steps, device=device, sampler=sampler_name,
+        model_patcher = comfy.model_patcher.ModelPatcher(model.model, load_device=device, offload_device=comfy.model_management.unet_offload_device())
+
+        sampler = comfy.samplers.KSampler(model_patcher, steps=steps, device=device, sampler=sampler_name,
                                           scheduler=scheduler, denoise=1.0, model_options=model.model_options)
 
-        sigmas = sigmas = sampler.sigmas.flip(0) + 0.0001
+        sigmas = sampler.sigmas.flip(0) + 0.0001
 
         pbar = comfy.utils.ProgressBar(steps)
 
