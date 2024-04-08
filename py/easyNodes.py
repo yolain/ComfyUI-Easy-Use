@@ -1,7 +1,11 @@
 import sys, os, re, json, time, math
 import torch
 import folder_paths
-import comfy.utils, comfy.sample, comfy.sampler_helpers, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
+import comfy.utils, comfy.sample, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
+try:
+    comfy.sampler_helpers
+except:
+    pass
 from comfy.sd import CLIP, VAE
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
@@ -2279,7 +2283,7 @@ class ipadapterApply(ipadapter):
                 if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
-                model, = cls().apply_ipadapter(model, ipadapter, image, weight, "linear", start_at, end_at, combine_embeds="concat", weight_faceidv2=weight_faceidv2, image_negative=None, clip_vision=None, attn_mask=attn_mask, insightface=None, embeds_scaling='V only')
+                model, = cls().apply_ipadapter(model, ipadapter, start_at=start_at, end_at=end_at, weight=weight, weight_type="linear", combine_embeds="concat", weight_faceidv2=weight_faceidv2, image=image, image_negative=None, clip_vision=None, attn_mask=attn_mask, insightface=None, embeds_scaling='V only')
             else:
                 if "IPAdapter" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
@@ -2353,7 +2357,7 @@ class ipadapterApplyAdvanced(ipadapter):
                 if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
-            model, = cls().apply_ipadapter(model, ipadapter, image, weight, weight_type, start_at, end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image_negative=image_negative, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
+            model, = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
 
         return (model, tiles, masks, ipadapter)
 class ipadapterApplyEncoder(ipadapter):
