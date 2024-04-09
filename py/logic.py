@@ -513,7 +513,7 @@ class cleanGPUUsed:
         return ()
 
 from .libs.cache import remove_cache
-class cleanCacheKey:
+class clearCacheKey:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
@@ -533,7 +533,7 @@ class cleanCacheKey:
         remove_cache(cache_name)
         return ()
 
-class cleanCacheAll:
+class clearCacheAll:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
@@ -567,8 +567,8 @@ NODE_CLASS_MAPPINGS = {
   "easy convertAnything": ConvertAnything,
   "easy showAnything": showAnything,
   "easy showTensorShape": showTensorShape,
-  "easy cleanCacheKey": cleanCacheKey,
-  "easy cleanCacheAll": cleanCacheAll,
+  "easy clearCacheKey": clearCacheKey,
+  "easy clearCacheAll": clearCacheAll,
   "easy cleanGpuUsed": cleanGPUUsed,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -586,7 +586,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy convertAnything": "Convert Any",
   "easy showAnything": "Show Any",
   "easy showTensorShape": "Show Tensor Shape",
-  "easy cleanCacheKey": "Clean Cache Key",
-  "easy cleanCacheAll": "Clean Cache All",
+  "easy clearCacheKey": "Clear Cache Key",
+  "easy clearCacheAll": "Clear Cache All",
   "easy cleanGpuUsed": "Clean GPU Used"
 }
