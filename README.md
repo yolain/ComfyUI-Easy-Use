@@ -35,8 +35,9 @@
 
 ## 更新日志
 
-**v1.1.4 (2024/4/7)**
+**v1.1.4 2024/4/10)**
 
+- 增加 `easy ipadapterStyleComposition`
 - 增加 在Loaders上右键菜单可查看 checkpoints、lora 信息
 - 修复 `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` 以兼容ComfyUI Revision>=2098 [0542088e] 以上版本
 

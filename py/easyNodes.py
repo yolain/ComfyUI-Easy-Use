@@ -22,13 +22,13 @@ from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
 from .layer_diffuse.func import LayerDiffuse, LayerMethod
 
-from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions
+from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions, AlwaysEqualProxy
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler
 from .libs.xyplot import easyXYPlot
 from .libs.controlnet import easyControlnet
 from .libs.conditioning import prompt_to_cond, set_cond
-from .libs.cache import cache, update_cache
+from .libs import cache as backend_cache
 from .libs.easing import EasingBase
 
 sampler = easySampler()
@@ -280,20 +280,23 @@ class promptLine:
 
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {"prompt": ("STRING", {"multiline": True, "default": "text"}),
-                             "start_index": ("INT", {"default": 0, "min": 0, "max": 9999}),
-                             "max_rows": ("INT", {"default": 1000, "min": 1, "max": 9999}),
-                             }
-                }
+        return {"required": {
+                    "prompt": ("STRING", {"multiline": True, "default": "text"}),
+                    "start_index": ("INT", {"default": 0, "min": 0, "max": 9999}),
+                     "max_rows": ("INT", {"default": 1000, "min": 1, "max": 9999}),
+                    },
+            "hidden":{
+                "workflow_prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"
+            }
+        }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("STRING",)
-    OUTPUT_IS_LIST = (True,)
+    RETURN_TYPES = ("STRING", AlwaysEqualProxy('*'))
+    RETURN_NAMES = ("STRING", "COMBO")
+    OUTPUT_IS_LIST = (True, True)
     FUNCTION = "generate_strings"
     CATEGORY = "EasyUse/Prompt"
 
-    def generate_strings(self, prompt, start_index, max_rows):
-
+    def generate_strings(self, prompt, start_index, max_rows, workflow_prompt=None, my_unique_id=None):
         lines = prompt.split('\n')
 
         start_index = max(0, min(start_index, len(lines) - 1))
@@ -302,7 +305,8 @@ class promptLine:
 
         rows = lines[start_index:end_index]
 
-        return (rows,)
+
+        return (rows, rows)
 
 class promptConcat:
     @classmethod
@@ -2041,8 +2045,7 @@ class ipadapter:
             'FACEID PLUS V2',
             'FACEID PORTRAIT (style transfer)'
         ]
-        self.weight_types = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output',
-                        'weak middle', 'strong middle', 'style transfer (SDXL)']
+        self.weight_types = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output', 'weak middle', 'strong middle', 'style transfer', 'composition']
         self.presets = self.normal_presets + self.faceid_presets
 
 
@@ -2061,8 +2064,8 @@ class ipadapter:
 
         clipvision_name = clipvision_files[0] if len(clipvision_files)>0 else None
         clipvision_file = folder_paths.get_full_path("clip_vision", clipvision_name) if clipvision_name else None
-        if clipvision_name is not None:
-            log_node_info(node_name, f"Using {clipvision_name}")
+        # if clipvision_name is not None:
+        #     log_node_info(node_name, f"Using {clipvision_name}")
 
         return clipvision_file, clipvision_name
 
@@ -2145,8 +2148,8 @@ class ipadapter:
         ipadapter_files = [e for e in ipadapter_list if re.search(pattern, e, re.IGNORECASE)]
         ipadapter_name = ipadapter_files[0] if len(ipadapter_files)>0 else None
         ipadapter_file = folder_paths.get_full_path("ipadapter", ipadapter_name) if ipadapter_name else None
-        if ipadapter_name is not None:
-            log_node_info(node_name, f"Using {ipadapter_name}")
+        # if ipadapter_name is not None:
+        #     log_node_info(node_name, f"Using {ipadapter_name}")
 
         return ipadapter_file, ipadapter_name, is_insightface, lora_pattern
 
@@ -2196,12 +2199,14 @@ class ipadapter:
                 raise Exception("ClipVision model not found.")
             if clipvision_file == pipeline['clipvision']['file']:
                 clip_vision = pipeline['clipvision']['model']
-            elif cache_mode in ["all", "clip_vision only"] and clipvision_name in cache:
-                log_node_info("easy ipadapterApply", f"Using ClipModel {clipvision_name} Cached")
-                clip_vision = cache[clipvision_name][1]
+            elif cache_mode in ["all", "clip_vision only"] and clipvision_name in backend_cache.cache:
+                log_node_info("easy ipadapterApply", f"Using ClipVisonModel {clipvision_name} Cached")
+                _, clip_vision = backend_cache.cache[clipvision_name][1]
             else:
                 clip_vision = load_clip_vision(clipvision_file)
-                update_cache(clipvision_name, (False, clip_vision))
+                log_node_info("easy ipadapterApply", f"Using ClipVisonModel {clipvision_name}")
+                if cache_mode in ["all", "clip_vision only"]:
+                    backend_cache.update_cache(clipvision_name, 'clip_vision', (False, clip_vision))
             pipeline['clipvision']['file'] = clipvision_file
         pipeline['clipvision']['model'] = clip_vision
 
@@ -2210,9 +2215,21 @@ class ipadapter:
         ipadapter_file, ipadapter_name, is_insightface, lora_pattern = self.get_ipadapter_file(preset, is_sdxl, node_name)
         model_type = 'sdxl' if is_sdxl else 'sd15'
         if ipadapter_file is None:
-            ipadapter_file = get_local_filepath(IPADAPTER_MODELS[preset][model_type]["model_url"], IPADAPTER_DIR)
-        ipadapter = self.ipadapter_model_loader(ipadapter_file)
-        pipeline['ipadapter']['file'] = ipadapter_file
+            model_url = IPADAPTER_MODELS[preset][model_type]["model_url"]
+            ipadapter_file = get_local_filepath(model_url, IPADAPTER_DIR)
+            ipadapter_name = os.path.basename(model_url)
+        if ipadapter_file == pipeline['ipadapter']['file']:
+            ipadapter = pipeline['ipadapter']['model']
+        elif cache_mode in ["all", "ipadapter only"] and ipadapter_name in backend_cache.cache:
+            log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name} Cached")
+            _, ipadapter = backend_cache.cache[ipadapter_name][1]
+        else:
+            ipadapter = self.ipadapter_model_loader(ipadapter_file)
+            pipeline['ipadapter']['file'] = ipadapter_file
+            log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name}")
+            if cache_mode in ["all", "ipadapter only"]:
+                backend_cache.update_cache(ipadapter_name, 'ipadapter', (False, ipadapter))
+
         pipeline['ipadapter']['model'] = ipadapter
 
         # 3. Load the lora model if needed
@@ -2225,12 +2242,13 @@ class ipadapter:
             icache_key = 'insightface-' + provider
             if provider == pipeline['insightface']['provider']:
                 insightface = pipeline['insightface']['model']
-            elif icache_key in cache:
+            elif cache_mode in ["all", "insightface only"] and icache_key in backend_cache.cache:
                 log_node_info("easy ipadapterApply", f"Using InsightFaceModel {icache_key} Cached")
-                insightface = cache[icache_key][1]
+                _, insightface = backend_cache.cache[icache_key][1]
             else:
                 insightface = insightface_loader(provider)
-                update_cache(icache_key, (False, insightface))
+                if cache_mode in ["all", "insightface only"]:
+                    backend_cache.update_cache(icache_key, 'insightface',(False, insightface))
             pipeline['insightface']['provider'] = provider
             pipeline['insightface']['model'] = insightface
 
@@ -2255,7 +2273,7 @@ class ipadapterApply(ipadapter):
                 "weight_faceidv2": ("FLOAT", { "default": 1.0, "min": -1, "max": 5.0, "step": 0.05 }),
                 "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-                "cache_mode": (["insightface only", "clip_vision only", "all", "none"], {"default": "insightface only"},),
+                "cache_mode": (["insightface only", "clip_vision only", "ipadapter only", "all", "none"], {"default": "insightface only"},),
                 "use_tiled": ("BOOLEAN", {"default": False},),
             },
 
@@ -2316,7 +2334,7 @@ class ipadapterApplyAdvanced(ipadapter):
                 "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "embeds_scaling": (['V only', 'K+V', 'K+V w/ C penalty', 'K+mean(V) w/ C penalty'],),
-                "cache_mode": (["insightface only", "clip_vision only", "all", "none"], {"default": "insightface only"},),
+                "cache_mode": (["insightface only", "clip_vision only","ipadapter only", "all", "none"], {"default": "insightface only"},),
                 "use_tiled": ("BOOLEAN", {"default": False},),
                 "use_batch": ("BOOLEAN", {"default": False},),
                 "sharpening": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
@@ -2335,9 +2353,10 @@ class ipadapterApplyAdvanced(ipadapter):
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
-    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, weight_type, combine_embeds, start_at, end_at, embeds_scaling, cache_mode, use_tiled, use_batch, sharpening, image_negative=None, clip_vision=None, attn_mask=None, optional_ipadapter=None):
+    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, weight_type, combine_embeds, start_at, end_at, embeds_scaling, cache_mode, use_tiled, use_batch, sharpening, weight_style=1.0, weight_composition=1.0, image_style=None, image_composition=None, expand_style=False, image_negative=None, clip_vision=None, attn_mask=None, optional_ipadapter=None):
         tiles, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=clip_vision, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
+
         if use_tiled:
             if use_batch:
                 if "IPAdapterTiledBatch" not in ALL_NODE_CLASS_MAPPINGS:
@@ -2347,7 +2366,7 @@ class ipadapterApplyAdvanced(ipadapter):
                 if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
-            model, tiles, masks = cls().apply_tiled(model, ipadapter, image, weight, weight_type, start_at, end_at, sharpening=sharpening, combine_embeds=combine_embeds, image_negative=image_negative, attn_mask=attn_mask, clip_vision=clip_vision, embeds_scaling=embeds_scaling)
+            model, tiles, masks = cls().apply_tiled(model, ipadapter, weight, weight_type, start_at, end_at, sharpening=sharpening, combine_embeds=combine_embeds, image_negative=image_negative, attn_mask=attn_mask, clip_vision=clip_vision, embeds_scaling=embeds_scaling)
         else:
             if use_batch:
                 if "IPAdapterBatch" not in ALL_NODE_CLASS_MAPPINGS:
@@ -2357,9 +2376,61 @@ class ipadapterApplyAdvanced(ipadapter):
                 if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
-            model, = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
+            model, = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=1.0, weight_composition=1.0, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
 
         return (model, tiles, masks, ipadapter)
+
+class ipadapterStyleComposition(ipadapter):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        ipa_cls = cls()
+        normal_presets = ipa_cls.normal_presets
+        weight_types = ipa_cls.weight_types
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "image_style": ("IMAGE",),
+                "preset": (normal_presets,),
+                "weight_style": ("FLOAT", {"default": 1.0, "min": -1, "max": 5, "step": 0.05}),
+                "weight_composition": ("FLOAT", {"default": 1.0, "min": -1, "max": 5, "step": 0.05}),
+                "expand_style": ("BOOLEAN", {"default": False}),
+                "combine_embeds": (["concat", "add", "subtract", "average", "norm average"], {"default": "average"}),
+                "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "embeds_scaling": (['V only', 'K+V', 'K+V w/ C penalty', 'K+mean(V) w/ C penalty'],),
+                "cache_mode": (["insightface only", "clip_vision only", "ipadapter only", "all", "none"],
+                               {"default": "insightface only"},),
+            },
+            "optional": {
+                "image_composition": ("IMAGE",),
+                "image_negative": ("IMAGE",),
+                "attn_mask": ("MASK",),
+                "clip_vision": ("CLIP_VISION",),
+                "optional_ipadapter": ("IPADAPTER",),
+            }
+        }
+
+    CATEGORY = "EasyUse/Adapter"
+
+    RETURN_TYPES = ("MODEL", "IPADAPTER",)
+    RETURN_NAMES = ("model", "ipadapter",)
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def apply(self, model, preset, weight_style, weight_composition, expand_style, combine_embeds, start_at, end_at, embeds_scaling, cache_mode, image_style=None , image_composition=None, image_negative=None, clip_vision=None, attn_mask=None, optional_ipadapter=None):
+        model, ipadapter = self.load_model(model, preset, 0, 'CPU', clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
+
+        if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
+            self.error()
+        cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
+
+        model, = cls().apply_ipadapter(model, ipadapter, start_at=start_at, end_at=end_at, weight_style=weight_style, weight_composition=weight_composition, weight_type='linear', combine_embeds=combine_embeds, weight_faceidv2=weight_composition, image_style=image_style, image_composition=image_composition, image_negative=image_negative, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
+        return (model, ipadapter)
+
 class ipadapterApplyEncoder(ipadapter):
     def __init__(self):
         super().__init__()
@@ -2501,23 +2572,23 @@ class instantID:
         model = pipe['model']
         # Load InstantID
         cache_key = 'instantID'
-        if cache_key in cache:
+        if cache_key in backend_cache.cache:
             log_node_info("easy instantIDApply","Using InstantIDModel Cached")
-            instantid_model = cache[cache_key][1]
+            _, instantid_model = backend_cache.cache[cache_key][1]
         if "InstantIDModelLoader" in ALL_NODE_CLASS_MAPPINGS:
             load_instant_cls = ALL_NODE_CLASS_MAPPINGS["InstantIDModelLoader"]
             instantid_model, = load_instant_cls().load_model(instantid_file)
-            update_cache(cache_key, (False, instantid_model))
+            backend_cache.update_cache(cache_key, 'instantid', (False, instantid_model))
         else:
             self.error()
         icache_key = 'insightface-' + insightface
-        if icache_key in cache:
+        if icache_key in backend_cache.cache:
             log_node_info("easy instantIDApply", f"Using InsightFaceModel {insightface} Cached")
-            insightface_model = cache[icache_key][1]
+            _, insightface_model = backend_cache.cache[icache_key][1]
         elif "InstantIDFaceAnalysis" in ALL_NODE_CLASS_MAPPINGS:
             load_insightface_cls = ALL_NODE_CLASS_MAPPINGS["InstantIDFaceAnalysis"]
             insightface_model, = load_insightface_cls().load_insight_face(insightface)
-            update_cache(icache_key, (False, insightface_model))
+            backend_cache.update_cache(icache_key, 'insightface', (False, insightface_model))
         else:
             self.error()
 
@@ -6417,6 +6488,7 @@ NODE_CLASS_MAPPINGS = {
     "easy ipadapterApplyADV": ipadapterApplyAdvanced,
     "easy ipadapterApplyEncoder": ipadapterApplyEncoder,
     "easy ipadapterApplyEmbeds": ipadapterApplyEmbeds,
+    "easy ipadapterStyleComposition": ipadapterStyleComposition,
     "easy instantIDApply": instantIDApply,
     "easy instantIDApplyADV": instantIDApplyAdvanced,
     # Inpaint 内补
@@ -6511,6 +6583,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Adapter 适配器
     "easy ipadapterApply": "Easy Apply IPAdapter",
     "easy ipadapterApplyADV": "Easy Apply IPAdapter (Advanced)",
+    "easy ipadapterStyleComposition": "Easy Apply IPAdapter (StyleComposition)",
     "easy ipadapterApplyEncoder": "Easy Apply IPAdapter (Encoder)",
     "easy ipadapterApplyEmbeds": "Easy Apply IPAdapter (Embeds)",
     "easy instantIDApply": "Easy Apply InstantID",

@@ -24,6 +24,7 @@ const zhCN = {
     "Saving Preview...": "正在保存预览图...",
     "Saving Succeed":"保存成功",
     "Saving Failed":"保存失败",
+    "No COMBO link": "沒有找到COMBO连接",
     // GroupMap
     "Groups Map (EasyUse)": "管理组 (EasyUse)",
     "Always": "启用中",

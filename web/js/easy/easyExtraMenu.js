@@ -6,7 +6,7 @@ const loaders = ['easy fullLoader', 'easy a1111Loader', 'easy comfyLoader']
 const preSampling = ['easy preSampling', 'easy preSamplingAdvanced', 'easy preSamplingDynamicCFG', 'easy preSamplingNoiseIn', 'easy preSamplingLayerDiffusion', 'easy fullkSampler']
 const kSampler = ['easy kSampler', 'easy kSamplerTiled', 'easy kSamplerInpainting', 'easy kSamplerDownscaleUnet', 'easy kSamplerLayerDiffusion']
 const controlnet = ['easy controlnetLoader', 'easy controlnetLoaderADV', 'easy instantIDApply', 'easy instantIDApplyADV']
-const ipadapter = ['easy ipadapterApply', 'easy ipadapterApplyADV']
+const ipadapter = ['easy ipadapterApply', 'easy ipadapterApplyADV', 'easy ipadapterStyleComposition']
 const positive_prompt = ['easy positive', 'easy wildcards']
 const widgetMapping = {
     "positive_prompt":{
@@ -90,6 +90,7 @@ const inputMapping = {
     "ipadapter":{
         "model":"model",
         "image":"image",
+        "image_style": "image",
         "attn_mask":"attn_mask",
         "optional_ipadapter":"optional_ipadapter"
     }

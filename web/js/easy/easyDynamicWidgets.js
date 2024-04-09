@@ -1,6 +1,8 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 import { ComfyWidgets } from "/scripts/widgets.js";
+import { toast} from "../common/toast.js";
+import { $t } from '../common/i18n.js';
 
 let origProps = {};
 
@@ -1026,6 +1028,36 @@ app.registerExtension({
 					}
 				},300)
 
+			}
+		}
+
+		if (nodeData.name == 'easy promptLine') {
+			const onAdded = nodeType.prototype.onAdded;
+			nodeType.prototype.onAdded = async function () {
+				onAdded ? onAdded.apply(this, []) : undefined;
+				let prompt_widget = this.widgets.find(w => w.name == "prompt")
+				const button = this.addWidget("button", "get values from COMBO link", '', () => {
+					const output_link = this.outputs[1]?.links?.length>0 ? this.outputs[1]['links'][0] : null
+					const all_nodes = app.graph._nodes
+					const node = all_nodes.find(cate=> cate.inputs?.find(input=> input.link == output_link))
+					if(!output_link || !node){
+						toast.error($t('No COMBO link'), 3000)
+						return
+					}
+					else{
+						const input = node.inputs.find(input=> input.link == output_link)
+						const widget_name = input.widget.name
+						const widgets = node.widgets
+						const widget = widgets.find(cate=> cate.name == widget_name)
+						let values = widget?.options.values || null
+						if(values){
+							values = values.join('\n')
+							prompt_widget.value = values
+						}
+					}
+				}, {
+					serialize: false
+				})
 			}
 		}
 	}

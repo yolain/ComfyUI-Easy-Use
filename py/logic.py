@@ -1,6 +1,7 @@
 from typing import Iterator, List, Tuple, Dict, Any, Union, Optional
 from _decimal import Context, getcontext
 from decimal import Decimal
+from .libs.utils import AlwaysEqualProxy
 import torch
 import numpy as np
 import json
@@ -287,12 +288,6 @@ COMPARE_FUNCTIONS = {
     "a <= b": lambda a, b: a <= b,
     "a >= b": lambda a, b: a >= b,
 }
-class AlwaysEqualProxy(str):
-    def __eq__(self, _):
-        return True
-
-    def __ne__(self, _):
-        return False
 
 # 比较
 class Compare:
@@ -517,6 +512,46 @@ class cleanGPUUsed:
 
         return ()
 
+from .libs.cache import remove_cache
+class cleanCacheKey:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "anything": (AlwaysEqualProxy("*"), {}),
+            "cache_key": ("STRING", {"default": "*"}),
+        }, "optional": {},
+            "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",}
+        }
+
+    RETURN_TYPES = ()
+    RETURN_NAMES = ()
+    OUTPUT_NODE = True
+    FUNCTION = "empty_cache"
+    CATEGORY = "EasyUse/Logic"
+
+    def empty_cache(self, anything, cache_name, unique_id=None, extra_pnginfo=None):
+        remove_cache(cache_name)
+        return ()
+
+class cleanCacheAll:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "anything": (AlwaysEqualProxy("*"), {}),
+        }, "optional": {},
+            "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",}
+        }
+
+    RETURN_TYPES = ()
+    RETURN_NAMES = ()
+    OUTPUT_NODE = True
+    FUNCTION = "empty_cache"
+    CATEGORY = "EasyUse/Logic"
+
+    def empty_cache(self, anything, unique_id=None, extra_pnginfo=None):
+        remove_cache('*')
+        return ()
+
 NODE_CLASS_MAPPINGS = {
   "easy string": String,
   "easy int": Int,
@@ -532,7 +567,9 @@ NODE_CLASS_MAPPINGS = {
   "easy convertAnything": ConvertAnything,
   "easy showAnything": showAnything,
   "easy showTensorShape": showTensorShape,
-  "easy cleanGpuUsed": cleanGPUUsed
+  "easy cleanCacheKey": cleanCacheKey,
+  "easy cleanCacheAll": cleanCacheAll,
+  "easy cleanGpuUsed": cleanGPUUsed,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy string": "String",
@@ -549,5 +586,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy convertAnything": "Convert Any",
   "easy showAnything": "Show Any",
   "easy showTensorShape": "Show Tensor Shape",
+  "easy cleanCacheKey": "Clean Cache Key",
+  "easy cleanCacheAll": "Clean Cache All",
   "easy cleanGpuUsed": "Clean GPU Used"
 }

@@ -31,8 +31,9 @@
 
 ## Changelog
 
-**v1.1.4**
+**v1.1.4 2024/4/10)**
 
+- Added `easy ipadapterStyleComposition`
 - Added the right-click menu to view checkpoints and lora information in all Loaders
 - Fixed `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` compatible with ComfyUI Revision>=2098 [0542088e] or later
  
