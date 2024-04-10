@@ -1,9 +1,9 @@
-import sys, os, re, json, time, math
+import sys, os, re, json, time, math, copy
 import torch
 import folder_paths
 import comfy.utils, comfy.sample, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
 try:
-    comfy.sampler_helpers
+    import comfy.sampler_helpers
 except:
     pass
 from comfy.sd import CLIP, VAE
@@ -33,6 +33,7 @@ from .libs.easing import EasingBase
 
 sampler = easySampler()
 easyCache = easyLoader()
+default_calculate_weight = copy.copy(ModelPatcher.calculate_weight)
 
 image_suffixs = set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".svg", ".ico", ".apng", ".tif", ".hdr", ".exr"])
 
@@ -2306,7 +2307,7 @@ class ipadapterApply(ipadapter):
                 if "IPAdapter" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapter"]
-                model, = cls().apply_ipadapter(model, ipadapter, image, weight, start_at, end_at, attn_mask)
+                model, = cls().apply_ipadapter(model, ipadapter, image, weight, start_at, end_at, weight_type='standard',attn_mask=attn_mask)
 
         return (model, tiles, masks, ipadapter)
 
@@ -3719,6 +3720,7 @@ class samplerFull(LayerDiffuse):
             if image_output in ("Sender", "Sender/Save"):
                 PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
+            ModelPatcher.calculate_weight = default_calculate_weight
             return {"ui": {"images": results},
                     "result": sampler.get_output(new_pipe,)}
 
@@ -3835,6 +3837,7 @@ class samplerFull(LayerDiffuse):
             if image_output in ("Hide", "Hide/Save"):
                 return sampler.get_output(new_pipe)
 
+            ModelPatcher.calculate_weight = default_calculate_weight
             return {"ui": {"images": results}, "result": (sampler.get_output(new_pipe))}
 
         preview_latent = True
@@ -4088,13 +4091,14 @@ class samplerSimpleInpainting:
                         raise Exception("Differential Diffusion not found,please update comfyui")
 
             # when patch was linked
+            fooocus_model = None
             if patch is not None:
                 worker = InpaintWorker(node_name="easy kSamplerInpainting")
                 fooocus_model, = worker.patch(model, latent, patch)
 
             new_pipe = {
                 **pipe,
-                "model": fooocus_model if fooocus_model is not None else model,
+                "model": fooocus_model if fooocus_model else model,
                 "positive": positive,
                 "negative": negative,
                 "vae": vae,

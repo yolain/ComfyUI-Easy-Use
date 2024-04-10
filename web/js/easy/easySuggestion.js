@@ -157,12 +157,33 @@ const suggestions = {
         "from": {
             "PIPE_LINE": [...["Reroute"], ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
              "MODEL": modelNormalNodes
+        },
+        "to":{
+            "COMBO": [...["Reroute", "easy promptLine"]]
         }
     },
     "easy instantIDApplyADV":{
         "from": {
             "PIPE_LINE": [...["Reroute"], ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
             "MODEL": modelNormalNodes
+        },
+        "to":{
+            "COMBO": [...["Reroute", "easy promptLine"]]
+        }
+    },
+    "easy ipadapterApply":{
+        "to":{
+            "COMBO": [...["Reroute", "easy promptLine"]]
+        }
+    },
+    "easy ipadapterApplyADV":{
+        "to":{
+            "COMBO": [...["Reroute", "easy promptLine"]]
+        }
+    },
+    "easy ipadapterStyleComposition":{
+        "to":{
+            "COMBO": [...["Reroute", "easy promptLine"]]
         }
     },
     // fix

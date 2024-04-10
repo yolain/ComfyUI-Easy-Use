@@ -37,6 +37,7 @@
 
 **v1.1.4 2024/4/10)**
 
+- 修复 FooocusInpaint修改ModelPatcher计算权重引发的问题，理应在生成model后重置ModelPatcher为默认值
 - 增加 `easy ipadapterStyleComposition`
 - 增加 在Loaders上右键菜单可查看 checkpoints、lora 信息
 - 修复 `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` 以兼容ComfyUI Revision>=2098 [0542088e] 以上版本
