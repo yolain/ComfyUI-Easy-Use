@@ -35,7 +35,7 @@
 
 ## 更新日志
 
-**v1.1.4 2024/4/10)**
+**v1.1.4 (2024/4/10)**
 
 - 修复 FooocusInpaint修改ModelPatcher计算权重引发的问题，理应在生成model后重置ModelPatcher为默认值
 - 增加 `easy ipadapterStyleComposition`

@@ -3,6 +3,7 @@ import {api} from "/scripts/api.js";
 import {$el} from "/scripts/ui.js";
 import {$t} from "../common/i18n.js";
 import {getExtension, spliceExtension} from '../common/utils.js'
+import {toast} from "../common/toast.js";
 
 const setting_id = "Comfy.EasyUse.MenuNestSub"
 let enableMenuNestSub = true
@@ -20,7 +21,7 @@ export function addMenuNestSubSetting(app) {
 	});
 }
 
-const getEnableMenuNestSub = _ => app.ui.settings.getSettingValue(setting_id, true)
+const getEnableMenuNestSub = _ => app.ui.settings.getSettingValue(setting_id, enableMenuNestSub)
 
 const Loaders = ['easy fullLoader','easy a1111Loader','easy comfyLoader']
 app.registerExtension({
@@ -32,6 +33,9 @@ app.registerExtension({
         if (imgRes.status === 200) {
             let data = await imgRes.json();
             thumbnails = data
+        }
+        else if(getEnableMenuNestSub()){
+            toast.error($t("Too many thumbnails, have closed the display"))
         }
         const existingContextMenu = LiteGraph.ContextMenu;
         LiteGraph.ContextMenu = function(values,options){

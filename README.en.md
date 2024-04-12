@@ -31,7 +31,7 @@
 
 ## Changelog
 
-**v1.1.4 2024/4/10)**
+**v1.1.4 (2024/4/10)**
 
 - Added `easy ipadapterStyleComposition`
 - Added the right-click menu to view checkpoints and lora information in all Loaders
