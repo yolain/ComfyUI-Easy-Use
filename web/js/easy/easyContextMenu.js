@@ -6,7 +6,7 @@ import {getExtension, spliceExtension} from '../common/utils.js'
 import {toast} from "../common/toast.js";
 
 const setting_id = "Comfy.EasyUse.MenuNestSub"
-let enableMenuNestSub = true
+let enableMenuNestSub = false
 let thumbnails = []
 
 export function addMenuNestSubSetting(app) {

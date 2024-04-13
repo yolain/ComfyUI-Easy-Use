@@ -283,6 +283,59 @@ function widgetLogic(node, widget) {
 		}
 		updateNodeHeight(node)
 	}
+
+	if (widget.name === 'guider'){
+		switch (widget.value){
+			case 'Basic':
+				toggleWidget(node, findWidgetByName(node, 'cfg'))
+				toggleWidget(node, findWidgetByName(node, 'cfg_negative'))
+				break
+			case 'CFG':
+				toggleWidget(node, findWidgetByName(node, 'cfg'),true)
+				toggleWidget(node, findWidgetByName(node, 'cfg_negative'))
+				break
+			case 'IP2P+DualCFG':
+			case 'DualCFG':
+				toggleWidget(node, findWidgetByName(node, 'cfg'),true)
+				toggleWidget(node, findWidgetByName(node, 'cfg_negative'), true)
+				break
+
+		}
+		updateNodeHeight(node)
+	}
+
+	if (widget.name === 'scheduler'){
+		if (['karrasADV','exponentialADV','polyExponential'].includes(widget.value)){
+			toggleWidget(node, findWidgetByName(node, 'sigma_max'), true)
+			toggleWidget(node, findWidgetByName(node, 'sigma_min'), true)
+			toggleWidget(node, findWidgetByName(node, 'denoise'))
+			toggleWidget(node, findWidgetByName(node, 'beta_d'))
+			toggleWidget(node, findWidgetByName(node, 'beta_min'))
+			toggleWidget(node, findWidgetByName(node, 'eps_s'))
+			if(widget.value != 'exponentialADV'){
+				toggleWidget(node, findWidgetByName(node, 'rho'), true)
+			}else{
+				toggleWidget(node, findWidgetByName(node, 'rho'))
+			}
+		}else if(widget.value == 'vp'){
+			toggleWidget(node, findWidgetByName(node, 'sigma_max'))
+			toggleWidget(node, findWidgetByName(node, 'sigma_min'))
+			toggleWidget(node, findWidgetByName(node, 'denoise'))
+			toggleWidget(node, findWidgetByName(node, 'rho'))
+			toggleWidget(node, findWidgetByName(node, 'beta_d'),true)
+			toggleWidget(node, findWidgetByName(node, 'beta_min'),true)
+			toggleWidget(node, findWidgetByName(node, 'eps_s'),true)
+		}else{
+			toggleWidget(node, findWidgetByName(node, 'denoise'),true)
+			toggleWidget(node, findWidgetByName(node, 'sigma_max'))
+			toggleWidget(node, findWidgetByName(node, 'sigma_min'))
+			toggleWidget(node, findWidgetByName(node, 'beta_d'))
+			toggleWidget(node, findWidgetByName(node, 'beta_min'))
+			toggleWidget(node, findWidgetByName(node, 'eps_s'))
+			toggleWidget(node, findWidgetByName(node, 'rho'))
+		}
+		updateNodeHeight(node)
+	}
 }
 
 function widgetLogic2(node, widget) {
@@ -537,6 +590,7 @@ app.registerExtension({
 			case "easy latentNoisy":
 			case "easy preSamplingAdvanced":
 			case "easy preSamplingNoiseIn":
+			case "easy preSamplingCustom":
 			case "easy preSamplingSdTurbo":
 			case "easy preSamplingCascade":
 			case "easy preSamplingLayerDiffusion":
@@ -1072,7 +1126,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale',
 						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter',
 	'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode',
 	'lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch', 'num_embeds',
-	"easing_mode"
+	"easing_mode", "guider", "scheduler"
 ]
 
 function getSetters(node) {

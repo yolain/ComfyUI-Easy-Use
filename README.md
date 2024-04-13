@@ -35,12 +35,13 @@
 
 ## 更新日志
 
-**v1.1.4 (2024/4/10)**
+**v1.1.4 (2024/4/13)**
 
-- 修复 FooocusInpaint修改ModelPatcher计算权重引发的问题，理应在生成model后重置ModelPatcher为默认值
+- 增加 `easy preSamplingCustom` - 自定义预采样，可支持cosXL-edit
 - 增加 `easy ipadapterStyleComposition`
 - 增加 在Loaders上右键菜单可查看 checkpoints、lora 信息
 - 修复 `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` 以兼容ComfyUI Revision>=2098 [0542088e] 以上版本
+- 修复 FooocusInpaint修改ModelPatcher计算权重引发的问题，理应在生成model后重置ModelPatcher为默认值
 
 **v1.1.3 (2024/4/4)**
 

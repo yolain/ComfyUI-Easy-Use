@@ -3021,6 +3021,209 @@ class samplerSettingsNoiseIn:
 
         return (new_pipe,)
 
+# 预采样设置（自定义）
+from comfy_extras.nodes_custom_sampler import BasicGuider, DualCFGGuider, CFGGuider, KSamplerSelect, DisableNoise, RandomNoise, BasicScheduler, KarrasScheduler, ExponentialScheduler, PolyexponentialScheduler, SDTurboScheduler, VPScheduler
+from tqdm import trange
+class samplerCustomSettings:
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required":
+                    {"pipe": ("PIPE_LINE",),
+                     "guider": (['CFG','DualCFG','IP2P+DualCFG','Basic'],{"default":"Basic"}),
+                     "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+                     "cfg_negative": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+                     "sampler_name": (comfy.samplers.KSampler.SAMPLERS + ['inversed_euler'],),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['karrasADV','exponentialADV','polyExponential','sdturbo','vp'],),
+                     "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+                     "sigma_max": ("FLOAT", {"default": 14.614642, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
+                     "sigma_min": ("FLOAT", {"default": 0.0291675, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
+                     "rho": ("FLOAT", {"default": 7.0, "min": 0.0, "max": 100.0, "step": 0.01, "round": False}),
+                     "beta_d": ("FLOAT", {"default": 19.9, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
+                     "beta_min": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
+                     "eps_s": ("FLOAT", {"default": 0.001, "min": 0.0, "max": 1.0, "step": 0.0001, "round": False}),
+                     "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                     "add_noise": (["enable", "disable"], {"default": "enable"}),
+                     "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
+                     },
+                "optional": {
+                    "image_to_latent": ("IMAGE",),
+                    "latent": ("LATENT",),
+                    "optional_sampler":("SAMPLER"),
+                    "optional_sigmas":("SIGMAS"),
+                },
+                "hidden":
+                    {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+                }
+
+    RETURN_TYPES = ("PIPE_LINE", )
+    RETURN_NAMES = ("pipe",)
+    OUTPUT_NODE = True
+
+    FUNCTION = "settings"
+    CATEGORY = "EasyUse/PreSampling"
+
+    def ip2p(self, positive, negative, vae=None, pixels=None, latent=None):
+        if latent is not None:
+            concat_latent = latent
+        else:
+            x = (pixels.shape[1] // 8) * 8
+            y = (pixels.shape[2] // 8) * 8
+
+            if pixels.shape[1] != x or pixels.shape[2] != y:
+                x_offset = (pixels.shape[1] % 8) // 2
+                y_offset = (pixels.shape[2] % 8) // 2
+                pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
+
+            concat_latent = vae.encode(pixels)
+
+        out_latent = {}
+        out_latent["samples"] = torch.zeros_like(concat_latent)
+
+        out = []
+        for conditioning in [positive, negative]:
+            c = []
+            for t in conditioning:
+                d = t[1].copy()
+                d["concat_latent_image"] = concat_latent
+                n = [t[0], d]
+                c.append(n)
+            out.append(c)
+        return (out[0], out[1], out_latent)
+
+    def get_inversed_euler_sampler(self):
+        @torch.no_grad()
+        def sample_inversed_euler(model, x, sigmas, extra_args=None, callback=None, disable=None, s_churn=0., s_tmin=0.,
+                                  s_tmax=float('inf'), s_noise=1.):
+            """Implements Algorithm 2 (Euler steps) from Karras et al. (2022)."""
+            extra_args = {} if extra_args is None else extra_args
+            s_in = x.new_ones([x.shape[0]])
+            for i in trange(1, len(sigmas), disable=disable):
+                sigma_in = sigmas[i - 1]
+
+                if i == 1:
+                    sigma_t = sigmas[i]
+                else:
+                    sigma_t = sigma_in
+
+                denoised = model(x, sigma_t * s_in, **extra_args)
+
+                if i == 1:
+                    d = (x - denoised) / (2 * sigmas[i])
+                else:
+                    d = (x - denoised) / sigmas[i - 1]
+
+                dt = sigmas[i] - sigmas[i - 1]
+                x = x + d * dt
+                if callback is not None:
+                    callback(
+                        {'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
+            return x / sigmas[-1]
+
+        ksampler = comfy.samplers.KSAMPLER(sample_inversed_euler)
+        return (ksampler,)
+
+    def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+        # 图生图转换
+        vae = pipe["vae"]
+        model = pipe["model"]
+        positive = pipe['positive']
+        negative = pipe['negative']
+        batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+        _guider, sigmas = None, None
+        if image_to_latent is not None:
+            if guider == "IP2P+DualCFG":
+                positive, negative, latent = self.ip2p(pipe['positive'], pipe['negative'], vae, image_to_latent)
+                samples = latent
+            else:
+                samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
+                samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+            images = image_to_latent
+        elif latent is not None:
+            if guider == "IP2P+DualCFG":
+                positive, negative, latent = self.ip2p(pipe['positive'], pipe['negative'], latent=latent)
+                samples = latent
+            else:
+                samples = latent
+            images = pipe["images"]
+        else:
+            samples = pipe["samples"]
+            images = pipe["images"]
+
+        # guider
+        if guider == 'CFG':
+            _guider, = CFGGuider().get_guider(model, positive, negative, cfg)
+        elif guider in ['DualCFG', 'IP2P+DualCFG']:
+            _guider, = DualCFGGuider().get_guider(model, positive, negative, pipe['negative'], cfg, cfg_negative)
+        else:
+            _guider, = BasicGuider().get_guider(model, positive)
+
+        # sampler
+        if optional_sampler:
+            sampler = optional_sampler
+        else:
+            if sampler_name == 'inversed_euler':
+                sampler, = self.get_inversed_euler_sampler()
+            else:
+                sampler, = KSamplerSelect().get_sampler(sampler_name)
+
+        # sigmas
+        if optional_sigmas:
+            sigmas = optional_sigmas
+        else:
+            if scheduler == 'vp':
+                sigmas, = VPScheduler().get_sigmas(steps, beta_d, beta_min, eps_s)
+            elif scheduler == 'karrasADV':
+                sigmas, = KarrasScheduler().get_sigmas(steps, sigma_max, sigma_min, rho)
+            elif scheduler == 'exponentialADV':
+                sigmas, = ExponentialScheduler().get_sigmas(steps, sigma_max, sigma_min)
+            elif scheduler == 'polyExponential':
+                sigmas, = PolyexponentialScheduler().get_sigmas(steps, sigma_max, sigma_min, rho)
+            elif scheduler == 'sdturbo':
+                sigmas, = SDTurboScheduler().get_sigmas(model, steps, denoise)
+            else:
+                sigmas, = BasicScheduler().get_sigmas(model, scheduler, steps, denoise)
+
+        # noise
+        if add_noise == 'disabled':
+            noise, = DisableNoise().get_noise()
+        else:
+            noise, = RandomNoise().get_noise(seed)
+
+        new_pipe = {
+            "model": pipe['model'],
+            "positive": pipe['positive'],
+            "negative": pipe['negative'],
+            "vae": pipe['vae'],
+            "clip": pipe['clip'],
+
+            "samples": samples,
+            "images": images,
+            "seed": seed,
+
+            "loader_settings": {
+                **pipe["loader_settings"],
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler_name,
+                "scheduler": scheduler,
+                "denoise": denoise,
+                "custom": {
+                    "noise": noise,
+                    "guider": _guider,
+                    "sampler": sampler,
+                    "sigmas": sigmas,
+                }
+            }
+        }
+
+        del pipe
+
+        return {"ui": {"value": [seed]}, "result": (new_pipe,)}
+
 # 预采样设置（SDTurbo）
 from .gradual_latent_hires_fix import sample_dpmpp_2s_ancestral, sample_dpmpp_2m_sde, sample_lcm, sample_euler_ancestral
 class sdTurboSettings:
@@ -3586,6 +3789,8 @@ class samplerFull(LayerDiffuse):
 
         samp_seed = seed if seed is not None else pipe['seed']
 
+        samp_custom = pipe["loader_settings"]["custom"] if "custom" in pipe["loader_settings"] else None
+
         steps = steps if steps is not None else pipe['loader_settings']['steps']
         start_step = pipe['loader_settings']['start_step'] if 'start_step' in pipe['loader_settings'] else 0
         last_step = pipe['loader_settings']['last_step'] if 'last_step' in pipe['loader_settings'] else 10000
@@ -3638,7 +3843,7 @@ class samplerFull(LayerDiffuse):
                                  samp_negative,
                                  steps, start_step, last_step, cfg, sampler_name, scheduler, denoise,
                                  image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id,
-                                 preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise):
+                                 preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise, samp_custom=None):
 
             # LayerDiffusion
             if "layer_diffusion_method" in pipe['loader_settings']:
@@ -3665,7 +3870,7 @@ class samplerFull(LayerDiffuse):
             # 推理初始时间
             start_time = int(time.time() * 1000)
             # 开始推理
-            samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler, samp_positive, samp_negative, samples, denoise=denoise, preview_latent=preview_latent, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, disable_noise=disable_noise)
+            samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler, samp_positive, samp_negative, samples, denoise=denoise, preview_latent=preview_latent, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, disable_noise=disable_noise, custom=samp_custom)
             # 推理结束时间
             end_time = int(time.time() * 1000)
             latent = samp_samples["samples"]
@@ -3726,7 +3931,7 @@ class samplerFull(LayerDiffuse):
 
         def process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative,
                            steps, cfg, sampler_name, scheduler, denoise,
-                           image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise):
+                           image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom):
 
             sampleXYplot = easyXYPlot(xyPlot, save_prefix, image_output, prompt, extra_pnginfo, my_unique_id, sampler, easyCache)
 
@@ -3734,7 +3939,7 @@ class samplerFull(LayerDiffuse):
                 return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
                                             samp_negative, steps, 0, 10000, cfg,
                                             sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt,
-                                            extra_pnginfo, my_unique_id, preview_latent)
+                                            extra_pnginfo, my_unique_id, preview_latent, samp_custom=samp_custom)
 
             # Downscale Model Unet
             if samp_model is not None:
@@ -3850,9 +4055,9 @@ class samplerFull(LayerDiffuse):
         else:
             xyPlot = pipe["loader_settings"]["xyplot"] if "xyplot" in pipe["loader_settings"] else xyPlot
         if xyPlot is not None:
-            return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise)
+            return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom)
         else:
-            return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, force_full_denoise, disable_noise)
+            return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, force_full_denoise, disable_noise, samp_custom)
 
 # 简易采样器
 class samplerSimple:
@@ -6504,6 +6709,7 @@ NODE_CLASS_MAPPINGS = {
     "easy preSampling": samplerSettings,
     "easy preSamplingAdvanced": samplerSettingsAdvanced,
     "easy preSamplingNoiseIn": samplerSettingsNoiseIn,
+    "easy preSamplingCustom": samplerCustomSettings,
     "easy preSamplingSdTurbo": sdTurboSettings,
     "easy preSamplingDynamicCFG": dynamicCFGSettings,
     "easy preSamplingCascade": cascadeSettings,
@@ -6601,6 +6807,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy preSampling": "PreSampling",
     "easy preSamplingAdvanced": "PreSampling (Advanced)",
     "easy preSamplingNoiseIn": "PreSampling (NoiseIn)",
+    "easy preSamplingCustom": "PreSampling (Custom)",
     "easy preSamplingSdTurbo": "PreSampling (SDTurbo)",
     "easy preSamplingDynamicCFG": "PreSampling (DynamicCFG)",
     "easy preSamplingCascade": "PreSampling (Cascade)",

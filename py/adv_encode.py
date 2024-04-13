@@ -308,9 +308,10 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
 
             embeddings_final, pooled = prepareXL(embs_l, embs_g, pooled, clip_balance)
 
-            cond = [[embeddings_final,
-                             {"pooled_output": pooled, "width": width, "height": height, "crop_w": crop_w,
-                              "crop_h": crop_h, "target_width": target_width, "target_height": target_height}]]
+            cond = [[embeddings_final, {"pooled_output": pooled}]]
+            # cond = [[embeddings_final,
+            #                  {"pooled_output": pooled, "width": width, "height": height, "crop_w": crop_w,
+            #                   "crop_h": crop_h, "target_width": target_width, "target_height": target_height}]]
         else:
             embeddings_final, pooled = advanced_encode_from_tokens(tokenized['l'],
                                                                    token_normalization,

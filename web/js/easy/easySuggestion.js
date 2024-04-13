@@ -4,7 +4,7 @@ import {$el} from "/scripts/ui.js";
 
 const propmts = ["easy wildcards", "easy positive", "easy negative", "easy stylesSelector", "easy promptConcat", "easy promptReplace"]
 const loaders = ["easy a1111Loader", "easy comfyLoader", "easy fullLoader", "easy svdLoader", "easy cascadeLoader", "easy sv3dLoader"]
-const preSamplingNodes = ["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "easy preSamplingDynamicCFG","easy preSamplingSdTurbo", "easy preSamplingLayerDiffusion"]
+const preSamplingNodes = ["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "preSamplingCustom", "easy preSamplingDynamicCFG","easy preSamplingSdTurbo", "easy preSamplingLayerDiffusion"]
 const kSampler = ["easy kSampler", "easy kSamplerTiled","easy kSamplerInpainting", "easy kSamplerDownscaleUnet", "easy kSamplerSDTurbo"]
 const controlNetNodes = ["easy controlnetLoader", "easy controlnetLoaderADV"]
 const instantIDNodes = ["easy instantIDApply", "easy instantIDApplyADV"]
@@ -116,6 +116,11 @@ const suggestions = {
          }
     },
     "easy preSamplingDynamicCFG": {
+         "from": {
+             "PIPE_LINE": [...["Reroute"], ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
+         }
+    },
+     "easy preSamplingCustom": {
          "from": {
              "PIPE_LINE": [...["Reroute"], ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
          }
