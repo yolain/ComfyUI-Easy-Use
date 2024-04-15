@@ -25,8 +25,11 @@ const zhCN = {
     "Saving Succeed":"保存成功",
     "Saving Failed":"保存失败",
     "No COMBO link": "沒有找到COMBO连接",
+    "Reboot ComfyUI":"重启ComfyUI",
+    "Are you sure you'd like to reboot the server?": "是否要重启ComfyUI？",
     // GroupMap
     "Groups Map (EasyUse)": "管理组 (EasyUse)",
+    "Reboot ComfyUI (EasyUse)": "重启服务 (EasyUse)",
     "Always": "启用中",
     "Bypass": "已忽略",
     "Never": "已停用",

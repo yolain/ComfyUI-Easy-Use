@@ -1,6 +1,6 @@
 import { api } from "/scripts/api.js";
 import { app } from "/scripts/app.js";
-import {deepEqual,addCss} from "../common/utils.js";
+import {deepEqual, addCss, isLocalNetwork} from "../common/utils.js";
 import {$t} from '../common/i18n.js';
 import {toast} from "../common/toast.js";
 
@@ -270,6 +270,19 @@ app.registerExtension({
                     }
                 }
             );
+            // Only show the reboot option if the server is running on a local network 仅在本地或局域网环境可重启服务
+            if(isLocalNetwork(window.location.host)){
+                options.push(null,{
+                    content: '🔴 '+ $t('Reboot ComfyUI (EasyUse)'),
+                    callback: _ =>{
+                        if (confirm($t("Are you sure you'd like to reboot the server?"))){
+                            try {
+                                api.fetchApi("/easyuse/reboot");
+                            } catch (exception) {}
+                        }
+                    }
+                })
+            }
             return options;
         };
     },

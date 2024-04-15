@@ -70,3 +70,44 @@ export function formatTime(time, format) {
   };
   return format.replace(/([Mmdhs]|y{2})\1/g, (key) => time[_mapping[key]]);
 }
+
+
+let origProps = {};
+export const findWidgetByName = (node, name) => node.widgets.find((w) => w.name === name);
+
+export const doesInputWithNameExist = (node, name) => node.inputs ? node.inputs.some((input) => input.name === name) : false;
+
+export function updateNodeHeight(node) {node.setSize([node.size[0], node.computeSize()[1]]);}
+
+export function toggleWidget(node, widget, show = false, suffix = "") {
+	if (!widget || doesInputWithNameExist(node, widget.name)) return;
+	if (!origProps[widget.name]) {
+		origProps[widget.name] = { origType: widget.type, origComputeSize: widget.computeSize };
+	}
+	const origSize = node.size;
+
+	widget.type = show ? origProps[widget.name].origType : "easyHidden" + suffix;
+	widget.computeSize = show ? origProps[widget.name].origComputeSize : () => [0, -4];
+
+	widget.linkedWidgets?.forEach(w => toggleWidget(node, w, ":" + widget.name, show));
+
+	const height = show ? Math.max(node.computeSize()[1], origSize[1]) : node.size[1];
+	node.setSize([node.size[0], height]);
+}
+
+export function isLocalNetwork(ip) {
+  const localNetworkRanges = [
+    '192.168.',
+    '10.',
+    '127.',
+    /^172\.((1[6-9]|2[0-9]|3[0-1])\.)/
+  ];
+
+  return localNetworkRanges.some(range => {
+    if (typeof range === 'string') {
+      return ip.startsWith(range);
+    } else {
+      return range.test(ip);
+    }
+  });
+}

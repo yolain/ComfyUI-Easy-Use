@@ -19,6 +19,15 @@ except ImportError:
     print("pip install aiohttp")
     sys.exit()
 
+@PromptServer.instance.routes.get("/easyuse/reboot")
+def reboot(self):
+    try:
+        sys.stdout.close_log()
+    except Exception as e:
+        pass
+
+    return os.execv(sys.executable, [sys.executable] + sys.argv)
+
 # parse csv
 @PromptServer.instance.routes.post("/easyuse/upload/csv")
 async def parse_csv(request):

@@ -2618,6 +2618,7 @@ class instantID:
         del pipe
 
         return (new_pipe, model, positive, negative)
+
 class instantIDApply(instantID):
 
     def __init__(self):

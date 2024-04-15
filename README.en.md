@@ -271,20 +271,21 @@
 
 Disclaimer: Opened source was not easy. I have a lot of respect for the contributions of these original authors. I just did some integration and optimization.
 
-| Nodes Name(Search Name)    | Related libraries                                                                        | Library-related node     |
-|:---------------------------|:----------------------------------------------------------------------------|:-------------------------|
-| easy setNode               | [ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.SetNode          |
-| easy getNode               | [ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.GetNode          |
-| easy bookmark              | [rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | Bookmark 🔖              |
-| easy portraitMarker        | [comfyui-portrait-master](https://github.com/florestefano1975/comfyui-portrait-master) | Portrait Master          |
-| easy LLLiteLoader          | [ControlNet-LLLite-ComfyUI](https://github.com/kohya-ss/ControlNet-LLLite-ComfyUI) | LLLiteLoader             |
-| easy globalSeed            | [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) | Global Seed (Inspire)    | 
-| easy preSamplingDynamicCFG | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull  | 
-| dynamicThresholdingFull    | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull  | 
-| easy imageInsetCrop        | [rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | ImageInsetCrop           | 
-| easy poseEditor            | [ComfyUI_Custom_Nodes_AlekPet](https://github.com/AlekPet/ComfyUI_Custom_Nodes_AlekPet) | poseNode                 | 
+| Nodes Name(Search Name)        | Related libraries                                                                        | Library-related node     |
+|:-------------------------------|:----------------------------------------------------------------------------|:-------------------------|
+| easy setNode                   | [ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.SetNode          |
+| easy getNode                   | [ComfyUI-extensions](https://github.com/diffus3/ComfyUI-extensions) | diffus3.GetNode          |
+| easy bookmark                  | [rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | Bookmark 🔖              |
+| easy portraitMarker            | [comfyui-portrait-master](https://github.com/florestefano1975/comfyui-portrait-master) | Portrait Master          |
+| easy LLLiteLoader              | [ControlNet-LLLite-ComfyUI](https://github.com/kohya-ss/ControlNet-LLLite-ComfyUI) | LLLiteLoader             |
+| easy globalSeed                | [ComfyUI-Inspire-Pack](https://github.com/ltdrdata/ComfyUI-Inspire-Pack) | Global Seed (Inspire)    | 
+| easy preSamplingDynamicCFG     | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull  | 
+| dynamicThresholdingFull        | [sd-dynamic-thresholding](https://github.com/mcmonkeyprojects/sd-dynamic-thresholding) | DynamicThresholdingFull  | 
+| easy imageInsetCrop            | [rgthree-comfy](https://github.com/rgthree/rgthree-comfy) | ImageInsetCrop           | 
+| easy poseEditor                | [ComfyUI_Custom_Nodes_AlekPet](https://github.com/AlekPet/ComfyUI_Custom_Nodes_AlekPet) | poseNode                 | 
 | easy preSamplingLayerDiffusion | [ComfyUI-layerdiffusion](https://github.com/huchenlei/ComfyUI-layerdiffusion) | LayeredDiffusionApply... | 
-| easy dynamiCrafterLoader | [ComfyUI-layerdiffusion](https://github.com/ExponentialML/ComfyUI_Native_DynamiCrafter) | Apply Dynamicrafter    | 
+| easy dynamiCrafterLoader       | [ComfyUI-layerdiffusion](https://github.com/ExponentialML/ComfyUI_Native_DynamiCrafter) | Apply Dynamicrafter    | 
+| easy imageChooser              | [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) | Preview Chooser         | 
 
 ## Workflow Examples
 
@@ -335,3 +336,5 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID) - Face migration
 
 [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) - pyssss🐍
+
+[cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) - Image Preview Chooser

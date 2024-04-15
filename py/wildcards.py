@@ -156,9 +156,8 @@ def process(text, seed=None):
 
     def replace_wildcard(string):
         global easy_wildcard_dict
-        pattern = r"__([\w.\-+/*\\]+)__"
+        pattern = r"__([\w\s.\-+/*\\]+?)__"
         matches = re.findall(pattern, string)
-
         replacements_found = False
 
         for match in matches:

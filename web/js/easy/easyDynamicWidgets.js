@@ -4,36 +4,11 @@ import { ComfyWidgets } from "/scripts/widgets.js";
 import { toast} from "../common/toast.js";
 import { $t } from '../common/i18n.js';
 
-let origProps = {};
+import { findWidgetByName, toggleWidget, updateNodeHeight} from "../common/utils.js";
 
 const seedNodes = ["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy preSamplingLayerDiffusion", "easy fullkSampler", "easy fullCascadeKSampler"]
 const loaderNodes = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader"]
-const findWidgetByName = (node, name) => node.widgets.find((w) => w.name === name);
 
-const doesInputWithNameExist = (node, name) => node.inputs ? node.inputs.some((input) => input.name === name) : false;
-
-function updateNodeHeight(node) {node.setSize([node.size[0], node.computeSize()[1]]);}
-
-function toggleWidget(node, widget, show = false, suffix = "") {
-	if (!widget || doesInputWithNameExist(node, widget.name)) return;
-	if (!origProps[widget.name]) {
-		origProps[widget.name] = { origType: widget.type, origComputeSize: widget.computeSize };	
-	}
-	const origSize = node.size;
-
-	widget.type = show ? origProps[widget.name].origType : "easyHidden" + suffix;
-	widget.computeSize = show ? origProps[widget.name].origComputeSize : () => [0, -4];
-
-	widget.linkedWidgets?.forEach(w => toggleWidget(node, w, ":" + widget.name, show));	
-
-	const height = show ? Math.max(node.computeSize()[1], origSize[1]) : node.size[1];
-	node.setSize([node.size[0], height]);
-}
-
-function toggleInput(node, name, show = false) {
-	if(!show){
-	}
-}
 
 function widgetLogic(node, widget) {
 	if (widget.name === 'lora_name') {
@@ -81,7 +56,7 @@ function widgetLogic(node, widget) {
 	    }else {
 	        toggleWidget(node, findWidgetByName(node, 'link_id'))
 	    }
-		if (widget.value === 'Hide' || widget.value === 'Preview' || widget.value === 'Sender') {
+		if (widget.value === 'Hide' || widget.value === 'Preview' || widget.value == 'PreviewChooser' || widget.value === 'Sender') {
 			toggleWidget(node, findWidgetByName(node, 'save_prefix'))
 			toggleWidget(node, findWidgetByName(node, 'output_path'))
 			toggleWidget(node, findWidgetByName(node, 'embed_workflow'))
@@ -272,13 +247,9 @@ function widgetLogic(node, widget) {
 	if (widget.name === 'num_embeds') {
 		let number_to_show = widget.value + 1
 		for (let i = 0; i < number_to_show; i++) {
-			toggleInput(node, 'image'+i, true)
-			toggleInput(node, 'mask'+i, true)
 			toggleWidget(node, findWidgetByName(node, 'weight'+i), true)
 		}
 		for (let i = number_to_show; i < 6; i++) {
-			toggleInput(node, 'image'+i)
-			toggleInput(node, 'mask'+i)
 			toggleWidget(node, findWidgetByName(node, 'weight'+i))
 		}
 		updateNodeHeight(node)
