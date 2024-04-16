@@ -2367,7 +2367,7 @@ class ipadapterApplyAdvanced(ipadapter):
                 if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
-            model, tiles, masks = cls().apply_tiled(model, ipadapter, weight, weight_type, start_at, end_at, sharpening=sharpening, combine_embeds=combine_embeds, image_negative=image_negative, attn_mask=attn_mask, clip_vision=clip_vision, embeds_scaling=embeds_scaling)
+            model, tiles, masks = cls().apply_tiled(model, ipadapter, image=image, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, sharpening=sharpening, combine_embeds=combine_embeds, image_negative=image_negative, attn_mask=attn_mask, clip_vision=clip_vision, embeds_scaling=embeds_scaling)
         else:
             if use_batch:
                 if "IPAdapterBatch" not in ALL_NODE_CLASS_MAPPINGS:
