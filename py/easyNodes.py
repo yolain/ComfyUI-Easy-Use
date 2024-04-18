@@ -3053,8 +3053,8 @@ class samplerCustomSettings:
                 "optional": {
                     "image_to_latent": ("IMAGE",),
                     "latent": ("LATENT",),
-                    "optional_sampler":("SAMPLER"),
-                    "optional_sigmas":("SIGMAS"),
+                    "optional_sampler":("SAMPLER",),
+                    "optional_sigmas":("SIGMAS",),
                 },
                 "hidden":
                     {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
