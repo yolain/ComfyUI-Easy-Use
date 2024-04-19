@@ -3,7 +3,7 @@ import { api } from "/scripts/api.js";
 import { $el, ComfyDialog } from "/scripts/ui.js";
 import { $t } from '../common/i18n.js'
 import { toast } from "../common/toast.js";
-import {sleep} from "../common/utils.js";
+import {sleep, accSub} from "../common/utils.js";
 
 let api_keys = []
 let api_current = 0
@@ -198,14 +198,23 @@ app.registerExtension({
                 let user_div = $el('div.easyuse-account-user', [$t('Loading UserInfo...')])
                 let account = this.addDOMWidget('account',"btn",$el('div.easyuse-account',user_div));
                 // 更新balance信息
-                api.addEventListener('stable-diffusion-api-generate-succeed', async (data) => {
+                api.addEventListener('stable-diffusion-api-generate-succeed', async ({detail}) => {
+                    let remarkDiv = user_div.querySelectorAll('.remark')
+                    if(remarkDiv && remarkDiv[0]){
+                        const credits = detail?.model ? api_cost[detail.model] : 0
+                        if(credits) {
+                            let balance = accSub(parseFloat(remarkDiv[0].innerText.replace(/Credits: /g,'')),credits)
+                            if(balance>0){
+                                remarkDiv[0].innerText = 'Credits: '+ balance.toString()
+                            }
+                        }
+                    }
                     await sleep(10000)
                     const res = await api.fetchApi('/easyuse/stability/balance')
                     if(res.status == 200){
                         const data = await res.json()
                         if(data?.balance){
                             const credits = data.balance?.credits || 0
-                            const remarkDiv = user_div.querySelectorAll('.remark')
                             if(remarkDiv && remarkDiv[0]){
                                 remarkDiv[0].innerText = 'Credits:' + credits
                             }

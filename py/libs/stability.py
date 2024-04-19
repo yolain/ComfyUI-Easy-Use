@@ -109,7 +109,7 @@ class StabilityAPI:
             data=data,
         )
         if response.status_code == 200:
-            PromptServer.instance.send_sync('stable-diffusion-api-generate-succeed',{})
+            PromptServer.instance.send_sync('stable-diffusion-api-generate-succeed',{"model":model})
             json_data = response.json()
             image_base64 = json_data['image']
             image_data = image2base64(image_base64)
