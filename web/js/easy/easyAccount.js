@@ -24,14 +24,14 @@ class AccountDialog extends ComfyDialog {
 
     addItem(index, user_div){
         return $el('div.easyuse-account-dialog-item',[
-          $el('input',{type:'text',oninput: e=>{
+          $el('input',{type:'text',placeholder:'Enter name',oninput: e=>{
               const dataIndex = Array.prototype.indexOf.call(this.dialog_div.querySelectorAll('.easyuse-account-dialog-item'), e.target.parentNode)
               api_keys[dataIndex]['name'] = e.target.value
           },value:api_keys[index]['name']}),
           $el('input.key',{type:'text',oninput: e=>{
               const dataIndex = Array.prototype.indexOf.call(this.dialog_div.querySelectorAll('.easyuse-account-dialog-item'), e.target.parentNode)
               api_keys[dataIndex]['key'] = e.target.value
-          }, value:api_keys[index]['key']}),
+          },placeholder:'Enter APIKEY', value:api_keys[index]['key']}),
           $el('button.choose',{textContent:$t('Choose'),onclick:async(e)=>{
                 const dataIndex = Array.prototype.indexOf.call(this.dialog_div.querySelectorAll('.easyuse-account-dialog-item'), e.target.parentNode)
                 let name = api_keys[dataIndex]['name']
@@ -216,7 +216,7 @@ app.registerExtension({
                         if(data?.balance){
                             const credits = data.balance?.credits || 0
                             if(remarkDiv && remarkDiv[0]){
-                                remarkDiv[0].innerText = 'Credits:' + credits
+                                remarkDiv[0].innerText = 'Credits: ' + credits
                             }
                         }
                     }
