@@ -2,6 +2,7 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
 import { $el } from "/scripts/ui.js";
+import { $t } from "../common/i18n.js";
 
 // 获取风格列表
 let styles_list_cache = {}
@@ -118,14 +119,13 @@ app.registerExtension({
                 onNodeCreated ? onNodeCreated?.apply(this, arguments) : undefined;
                 const styles_id =  this.widgets.findIndex((w) => w.name == 'styles');
                 const language = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
-
                 const list = $el("ul.easyuse-prompt-styles-list",[]);
                 let styles_values = ''
                 this.setProperty("values", [])
 
                 let selector = this.addDOMWidget('select_styles',"btn",$el('div.easyuse-prompt-styles',[$el('div.tools', [
                         $el('button.delete',{
-                            textContent: language == 'zh-CN' ? '清空所有' : 'Empty All',
+                            textContent: $t('Empty All'),
                             style:{},
                             onclick:()=>{
                                 selector.element.children[0].querySelectorAll(".search").forEach(el=>{
@@ -145,7 +145,7 @@ app.registerExtension({
                             dir:"ltr",
                             style:{"overflow-y": "scroll"},
                             rows:1,
-                            placeholder:language == 'zh-CN' ? "🔎 在此处输入以搜索样式 ..."  : "🔎 Type here to search styles ...",
+                            placeholder:$t("🔎 Type here to search styles ..."),
                             oninput:(e)=>{
                                 let value = e.target.value
                                 selector.element.children[1].querySelectorAll(".easyuse-prompt-styles-tag").forEach(el => {

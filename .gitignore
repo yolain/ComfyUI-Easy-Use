@@ -11,3 +11,4 @@ docs/**
 .vscode/
 .idea/
 mmb-preset.custom.txt
+config.yaml

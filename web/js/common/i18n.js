@@ -39,7 +39,22 @@ const zhCN = {
     "Enable ALT+1~9 to paste nodes from nodes template (ComfyUI-Easy-Use)": "启用ALT1~9从节点模板粘贴到工作流 (ComfyUI-Easy-Use)",
     "Enable process bar in queue button (ComfyUI-Easy-Use)": "启用提示词队列进度显示条 (ComfyUI-Easy-Use）",
     "Enable ContextMenu Auto Nest Subdirectories (ComfyUI-Easy-Use)": "启用上下文菜单自动嵌套子目录 (ComfyUI-Easy-Use)",
-    "Too many thumbnails, have closed the display": "模型缩略图太多啦，为您关闭了显示"
+    "Too many thumbnails, have closed the display": "模型缩略图太多啦，为您关闭了显示",
+    // selector
+    "Empty All": "清空所有",
+    "🔎 Type here to search styles ...": "🔎 在此处输入以搜索样式 ...",
+    // account
+    "Loading UserInfo...": "正在获取用户信息...",
+    "Please set the APIKEY first": "请先设置APIKEY",
+    "Setting APIKEY": "设置APIKEY",
+    "Save Account Info": "保存账号信息",
+    "Choose": "选择",
+    "Delete": "删除",
+    "Edit": "编辑",
+    "At least one account is required": "删除失败: 至少需要一个账户",
+    "APIKEY is not Empty": "APIKEY 不能为空",
+    "Add Account": "添加账号",
+    "Getting Your APIKEY": "获取您的APIKEY"
 }
 
 export const $t = (key) => {

@@ -31,6 +31,10 @@
 
 ## Changelog
 
+**v1.1.5 (2024/4/19)**
+
+- Added `easy stableDiffusion3API` - Easy Stable Diffusion 3 Multiple accounts API Node
+
 **v1.1.4 (2024/4/10)**
 
 - Added `easy preSamplingCustom` - Custom-PreSampling, can be supported cosXL-edit

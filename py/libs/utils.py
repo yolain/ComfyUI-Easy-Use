@@ -158,7 +158,7 @@ def get_local_filepath(url, dirname, local_file_name=None):
                 download_url_to_file(url, destination)
             except Exception as err:
                 PromptServer.instance.send_sync("easyuse-toast",
-                                                {'content': f'无法从 {url} 下载模型'}, type='error')
+                                                {'content': f'无法从 {url} 下载模型', 'type':'error'})
                 raise Exception(f'无法从 {url} 下载，错误信息：{str(err.args[0])}')
     return destination
 

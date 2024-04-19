@@ -35,8 +35,13 @@
 
 ## 更新日志
 
+**v1.1.5 (2024/4/19)**
+
+- 增加 `easy stableDiffusion3API` - 简易的Stable Diffusion 3 多账号API节点
+
 **v1.1.4 (2024/4/13)**
 
+- 增加 `easy imageChooser` - 从[cg-image-picker](https://github.com/chrisgoringe/cg-image-picker)简化的图片选择器
 - 增加 `easy preSamplingCustom` - 自定义预采样，可支持cosXL-edit
 - 增加 `easy ipadapterStyleComposition`
 - 增加 在Loaders上右键菜单可查看 checkpoints、lora 信息

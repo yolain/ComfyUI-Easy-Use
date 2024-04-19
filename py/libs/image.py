@@ -1,7 +1,9 @@
+import base64
 import torch
 import numpy as np
 from enum import Enum
 from PIL import Image
+from io import BytesIO
 
 # PIL to Tensor
 def pil2tensor(image):
@@ -9,6 +11,17 @@ def pil2tensor(image):
 # Tensor to PIL
 def tensor2pil(image):
     return Image.fromarray(np.clip(255. * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
+
+def pil2byte(pil_image, format='PNG'):
+  byte_arr = BytesIO()
+  pil_image.save(byte_arr, format=format)
+  byte_arr.seek(0)
+  return byte_arr
+
+def image2base64(image_base64):
+    image_bytes = base64.b64decode(image_base64)
+    image_data = Image.open(BytesIO(image_bytes))
+    return image_data
 
 # Get new bounds
 def get_new_bounds(width, height, left, right, top, bottom):
