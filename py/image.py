@@ -5,12 +5,15 @@ import folder_paths
 import torch
 import numpy as np
 import comfy.model_management
+from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
 from nodes import MAX_RESOLUTION
+from torchvision.transforms.functional import to_pil_image, to_tensor
 from .log import log_node_info
 from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds
 from .libs.chooser import ChooserMessage, ChooserCancelled
-from nodes import PreviewImage
+from .config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS
+
 
 # 图像裁切
 class imageInsetCrop:
@@ -519,7 +522,6 @@ class imageSplitList:
 # 图片背景移除
 from .briaai.rembg import BriaRMBG, preprocess_image, postprocess_image
 from .libs.utils import get_local_filepath, easySave
-from .config import REMBG_DIR, REMBG_MODELS
 class imageRemBg:
   @classmethod
   def INPUT_TYPES(self):
@@ -654,6 +656,74 @@ class imageChooser(PreviewImage):
     return {"ui": {"images": images},
               "result": (self.tensor_bundle(images_in, choosen),)}
 
+# 图像反推
+from .libs.image import ci
+class imageInterrogator:
+    @classmethod
+    def INPUT_TYPES(self):
+        return {
+          "required": {
+              "image": ("IMAGE",),
+              "mode": (['fast','classic','best','negative'],),
+              "use_lowvram": ("BOOLEAN", {"default": True}),
+          }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("prompt",)
+    FUNCTION = "interrogate"
+    CATEGORY = "EasyUse/Image"
+    OUTPUT_NODE = True
+    OUTPUT_IS_LIST = (True,)
+
+    def interrogate(self, image, mode, use_lowvram=False):
+      prompt = ci.image_to_prompt(image, mode, low_vram=use_lowvram)
+
+
+      return {"ui":{"text":prompt},"result":(prompt,)}
+
+# 人类分割器
+# from .human_parsing.run_parsing import Parsing
+# class humanParsing:
+#
+#     lip_components = ['Background', 'Hat', 'Hair', 'Glove', 'Sunglasses', 'Upper-clothes', 'Dress', 'Coat',
+#                   'Socks', 'Pants', 'Jumpsuits', 'Scarf', 'Skirt', 'Face', 'Left-arm', 'Right-arm',
+#                   'Left-leg', 'Right-leg', 'Left-shoe', 'Right-shoe']
+#
+#     @classmethod
+#     def INPUT_TYPES(cls):
+#         required = {"image": ("IMAGE",)}
+#         for comp in cls.lip_components:
+#           required[comp] = ("BOOLEAN", {"default": False})
+#
+#         return {
+#           "required": required
+#         }
+#
+#     RETURN_TYPES = ("IMAGE", "MASK",)
+#     RETURN_NAMES = ("image", "mask",)
+#     FUNCTION = "parsing"
+#     CATEGORY = "EasyUse/Image"
+#
+#     def parsing(self, image, **kwargs):
+#       mask_components = [i for i, x in enumerate([kwargs[x] for x in self.lip_components]) if x]
+#       onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+#       model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
+#       parsing = Parsing(model_path=model_path)
+#       model_image = image.squeeze(0)
+#       model_image = model_image.permute((2, 0, 1))
+#       model_image = to_pil_image(model_image)
+#
+#       map_image, mask = parsing(model_image, mask_components)
+#
+#       mask = mask[:, :, :, 0]
+#
+#       alpha = 1.0 - mask
+#
+#       ouput_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
+#
+#       return (ouput_image, mask)
+
 # 姿势编辑器
 class poseEditor:
   @classmethod
@@ -711,7 +781,9 @@ NODE_CLASS_MAPPINGS = {
   "easy imageSave": imageSaveSimple,
   "easy imageRemBg": imageRemBg,
   "easy imageChooser": imageChooser,
+  "easy imageInterrogator": imageInterrogator,
   "easy joinImageBatch": JoinImageBatch,
+  # "easy humanParsing": humanParsing,
   "easy poseEditor": poseEditor
 }
 
@@ -731,6 +803,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageSave": "SaveImage (Simple)",
   "easy imageRemBg": "Image Remove Bg",
   "easy imageChooser": "Image Chooser",
+  "easy imageInterrogator": "Image To Prompt",
   "easy joinImageBatch": "JoinImageBatch",
-  "easy poseEditor": "PoseEditor"
+  # "easy humanParsing": "Human Parsing",
+  "easy poseEditor": "PoseEditor",
 }

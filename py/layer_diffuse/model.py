@@ -7,18 +7,17 @@ import comfy.model_management
 from comfy.model_patcher import ModelPatcher
 from tqdm import tqdm
 from typing import Optional, Tuple
-
+from ..libs.utils import install_package
+from packaging import version
 
 try:
+    install_package("diffusers", "0.27.2", True, "0.25.0")
+
     from diffusers.configuration_utils import ConfigMixin, register_to_config
     from diffusers.models.modeling_utils import ModelMixin
     from diffusers import __version__
     if __version__:
-        try:
-            diffusers_version = float(__version__.replace('.', '').replace('dev','.'))
-        except ValueError:
-            diffusers_version = 270
-        if diffusers_version < 270:
+        if version.parse(__version__) < version.parse("0.27.0"):
             from diffusers.models.unet_2d_blocks import UNetMidBlock2D, get_down_block, get_up_block
         else:
             from diffusers.models.unets.unet_2d_blocks import UNetMidBlock2D, get_down_block, get_up_block

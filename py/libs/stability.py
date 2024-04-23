@@ -1,10 +1,8 @@
 import json
-import base64
 import os
 import yaml
 import requests
 import pathlib
-from PIL import Image
 from aiohttp import web
 from server import PromptServer
 from .image import tensor2pil, pil2tensor, image2base64, pil2byte

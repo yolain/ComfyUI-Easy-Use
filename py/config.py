@@ -159,7 +159,7 @@ IPADAPTER_MODELS = {
             "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15.safetensors"
         },
         "sdxl": {
-            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl.safetensors"
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl_vit-h.safetensors"
         }
     },
     "VIT-G (medium strength)": {
@@ -167,7 +167,7 @@ IPADAPTER_MODELS = {
             "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15_vit-G.safetensors"
         },
         "sdxl": {
-            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl_vit-h.safetensors"
+            "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter_sdxl.safetensors"
         }
     },
     "PLUS (high strength)": {
@@ -260,4 +260,11 @@ DYNAMICRAFTER_MODELS = {
     "dynamicrafter_unet_256 (2.98GB)": {
         "model_url": "https://huggingface.co/ExponentialML/DynamiCrafterUNet/resolve/main/dynamicrafter_unet_256.safetensors"
     },
+}
+
+#humanParsing
+HUMANPARSING_MODELS = {
+    "parsing_lip": {
+        "model_url": "https://huggingface.co/levihsu/OOTDiffusion/resolve/main/checkpoints/humanparsing/parsing_lip.onnx",
+    }
 }

@@ -131,7 +131,6 @@ try{
             settings["AE.highlight"] = false
         }
         // 主题设置
-        console.log(theme_name)
         if(!theme_name && _settings['Comfy.ColorPalette']) {
             theme_name = `"${_settings['Comfy.ColorPalette']}"`
             localStorage.setItem('Comfy.Settings.Comfy.ColorPalette', theme_name)

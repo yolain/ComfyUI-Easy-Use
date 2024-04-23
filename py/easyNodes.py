@@ -352,16 +352,16 @@ class promptReplace:
     FUNCTION = "replace_text"
     CATEGORY = "EasyUse/Prompt"
 
-    def replace_text(self, text, find1="", replace1="", find2="", replace2="", find3="", replace3=""):
+    def replace_text(self, prompt, find1="", replace1="", find2="", replace2="", find3="", replace3=""):
 
-        text = text.replace(find1, replace1)
-        text = text.replace(find2, replace2)
-        text = text.replace(find3, replace3)
+        prompt = prompt.replace(find1, replace1)
+        prompt = prompt.replace(find2, replace2)
+        prompt = prompt.replace(find3, replace3)
 
-        return (text,)
+        return (prompt,)
 
 
-    # 肖像大师
+# 肖像大师
 # Created by AI Wiz Art (Stefano Flore)
 # Version: 2.2
 # https://stefanoflore.it
@@ -700,6 +700,73 @@ class latentCompositeMaskedWithCond:
         del pipe
 
         return (new_pipe, samples, conds)
+
+# 噪声注入到潜空间
+class injectNoiseToLatent:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "strength": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 200.0, "step": 0.0001}),
+            "normalize": ("BOOLEAN", {"default": False}),
+            "average": ("BOOLEAN", {"default": False}),
+        },
+            "optional": {
+                "pipe_to_noise": ("PIPE_LINE",),
+                "image_to_latent": ("IMAGE",),
+                "latent": ("LATENT",),
+                "noise": ("LATENT",),
+                "mask": ("MASK",),
+                "mix_randn_amount": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1000.0, "step": 0.001}),
+                # "seed": ("INT", {"default": 123, "min": 0, "max": 0xffffffffffffffff, "step": 1}),
+            }
+        }
+
+    RETURN_TYPES = ("LATENT",)
+    FUNCTION = "inject"
+    CATEGORY = "EasyUse/Latent"
+
+    def inject(self,strength, normalize, average, pipe_to_noise=None, noise=None, image_to_latent=None, latent=None, mix_randn_amount=0, mask=None):
+
+        vae = pipe_to_noise["vae"] if pipe_to_noise is not None else pipe_to_noise["vae"]
+        batch_size = pipe_to_noise["loader_settings"]["batch_size"] if pipe_to_noise is not None and "batch_size" in pipe_to_noise["loader_settings"] else 1
+        if noise is None and pipe_to_noise is not None:
+            noise = pipe_to_noise["samples"]
+        elif noise is None:
+            raise Exception("InjectNoiseToLatent: No noise provided")
+
+        if image_to_latent is not None and vae is not None:
+            samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
+            latents = RepeatLatentBatch().repeat(samples, batch_size)[0]
+        elif latent is not None:
+            latents = latent
+        else:
+            raise Exception("InjectNoiseToLatent: No input latent provided")
+
+        samples = latents.copy()
+        if latents["samples"].shape != noise["samples"].shape:
+            raise ValueError("InjectNoiseToLatent: Latent and noise must have the same shape")
+        if average:
+            noised = (samples["samples"].clone() + noise["samples"].clone()) / 2
+        else:
+            noised = samples["samples"].clone() + noise["samples"].clone() * strength
+        if normalize:
+            noised = noised / noised.std()
+        if mask is not None:
+            mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])),
+                                                   size=(noised.shape[2], noised.shape[3]), mode="bilinear")
+            mask = mask.expand((-1, noised.shape[1], -1, -1))
+            if mask.shape[0] < noised.shape[0]:
+                mask = mask.repeat((noised.shape[0] - 1) // mask.shape[0] + 1, 1, 1, 1)[:noised.shape[0]]
+            noised = mask * noised + (1 - mask) * latents["samples"]
+        if mix_randn_amount > 0:
+            # if seed is not None:
+            #     torch.manual_seed(seed)
+            rand_noise = torch.randn_like(noised)
+            noised = ((1 - mix_randn_amount) * noised + mix_randn_amount *
+                      rand_noise) / ((mix_randn_amount ** 2 + (1 - mix_randn_amount) ** 2) ** 0.5)
+        samples["samples"] = noised
+        return (samples,)
+
 
 # 随机种
 class easySeed:
@@ -2556,11 +2623,140 @@ class ipadapterApplyEmbeds(ipadapter):
     def apply(self, model, ipadapter, pos_embed, weight, weight_type, start_at, end_at, embeds_scaling, attn_mask=None, neg_embed=None,):
         if "IPAdapterEmbeds" not in ALL_NODE_CLASS_MAPPINGS:
             self.error()
+
         cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterEmbeds"]
         model, = cls().apply_ipadapter(model, ipadapter, pos_embed, weight, weight_type, start_at, end_at, neg_embed=neg_embed, attn_mask=attn_mask, clip_vision=None, embeds_scaling=embeds_scaling)
 
         return (model, ipadapter)
 
+class ipadapterApplyRegional(ipadapter):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        ipa_cls = cls()
+        weight_types = ipa_cls.weight_types
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "image": ("IMAGE",),
+                "positive": ("STRING", {"default": "", "placeholder": "positive", "multiline": True}),
+                "negative": ("STRING", {"default": "", "placeholder": "negative",  "multiline": True}),
+                "image_weight": ("FLOAT", {"default": 1.0, "min": -1.0, "max": 3.0, "step": 0.05}),
+                "prompt_weight": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.05}),
+                "weight_type": (weight_types,),
+                "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+            },
+
+            "optional": {
+                "mask": ("MASK",),
+                "optional_ipadapter_params": ("IPADAPTER_PARAMS",),
+            },
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "IPADAPTER_PARAMS", "CONDITIONING", "CONDITIONING")
+    RETURN_NAMES = ("pipe", "ipadapter_params", "positive", "negative")
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def apply(self, pipe, image, positive, negative, image_weight, prompt_weight, weight_type, start_at, end_at, mask=None, optional_ipadapter_params=None, prompt=None, my_unique_id=None):
+        model = pipe['model']
+        clip = pipe['clip']
+        clip_skip = pipe['loader_settings']['clip_skip']
+        a1111_prompt_style = pipe['loader_settings']['a1111_prompt_style']
+        pipe_lora_stack = pipe['loader_settings']['lora_stack']
+        positive_token_normalization = pipe['loader_settings']['positive_token_normalization']
+        positive_weight_interpretation = pipe['loader_settings']['positive_weight_interpretation']
+        negative_token_normalization = pipe['loader_settings']['negative_token_normalization']
+        negative_weight_interpretation = pipe['loader_settings']['negative_weight_interpretation']
+        if positive == '':
+            positive = pipe['loader_settings']['positive']
+        if negative == '':
+            negative = pipe['loader_settings']['negative']
+
+        if not clip:
+            raise Exception("No CLIP found")
+
+        positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, pipe_lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
+        negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, pipe_lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
+
+        #ipadapter regional
+        if "IPAdapterRegionalConditioning" not in ALL_NODE_CLASS_MAPPINGS:
+            self.error()
+
+        cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterRegionalConditioning"]
+        ipadapter_params, new_positive_embeds, new_negative_embeds = cls().conditioning(image, image_weight, prompt_weight, weight_type, start_at, end_at, mask=mask, positive=positive_embeddings_final, negative=negative_embeddings_final)
+
+        if optional_ipadapter_params is not None:
+            positive_embeds = pipe['positive'] + new_positive_embeds
+            negative_embeds = pipe['negative'] + new_negative_embeds
+            _ipadapter_params = {
+                "image": optional_ipadapter_params["image"] + ipadapter_params["image"],
+                "attn_mask": optional_ipadapter_params["attn_mask"] + ipadapter_params["attn_mask"],
+                "weight": optional_ipadapter_params["weight"] + ipadapter_params["weight"],
+                "weight_type": optional_ipadapter_params["weight_type"] + ipadapter_params["weight_type"],
+                "start_at": optional_ipadapter_params["start_at"] + ipadapter_params["start_at"],
+                "end_at": optional_ipadapter_params["end_at"] + ipadapter_params["end_at"],
+            }
+            ipadapter_params = _ipadapter_params
+            del _ipadapter_params
+        else:
+            positive_embeds = new_positive_embeds
+            negative_embeds = new_negative_embeds
+
+        new_pipe = {
+            **pipe,
+            "positive": positive_embeds,
+            "negative": negative_embeds,
+        }
+
+        del pipe
+
+        return (new_pipe, ipadapter_params, positive_embeds, negative_embeds)
+
+class ipadapterApplyFromParams(ipadapter):
+    def __init__(self):
+        super().__init__()
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        ipa_cls = cls()
+        normal_presets = ipa_cls.normal_presets
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "preset": (normal_presets,),
+                "ipadapter_params": ("IPADAPTER_PARAMS",),
+                "combine_embeds": (["concat", "add", "subtract", "average", "norm average", "max", "min"],),
+                "embeds_scaling": (['V only', 'K+V', 'K+V w/ C penalty', 'K+mean(V) w/ C penalty'],),
+                "cache_mode": (["insightface only", "clip_vision only", "ipadapter only", "all", "none"],
+                               {"default": "insightface only"},{"default":"none"}),
+            },
+
+            "optional": {
+                "optional_ipadapter": ("IPADAPTER",),
+                "image_negative": ("IMAGE",),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL", "IPADAPTER",)
+    RETURN_NAMES = ("model", "ipadapter", )
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def apply(self, model, preset, ipadapter_params, combine_embeds, embeds_scaling, cache_mode, optional_ipadapter=None, image_negative=None,):
+        model, ipadapter = self.load_model(model, preset, 0, 'CPU', clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
+        if "IPAdapterFromParams" not in ALL_NODE_CLASS_MAPPINGS:
+            self.error()
+        cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterFromParams"]
+        model, = cls().apply_ipadapter(model, ipadapter, clip_vision=None, combine_embeds=combine_embeds, embeds_scaling=embeds_scaling, image_negative=image_negative, ipadapter_params=ipadapter_params)
+
+        return (model, ipadapter)
 
 #Apply InstantID
 class instantID:
@@ -3023,7 +3219,7 @@ class samplerSettingsNoiseIn:
         return (new_pipe,)
 
 # 预采样设置（自定义）
-from comfy_extras.nodes_custom_sampler import BasicGuider, DualCFGGuider, CFGGuider, KSamplerSelect, DisableNoise, RandomNoise, BasicScheduler, KarrasScheduler, ExponentialScheduler, PolyexponentialScheduler, SDTurboScheduler, VPScheduler
+from comfy_extras.nodes_custom_sampler import BasicGuider, DualCFGGuider, CFGGuider, KSamplerSelect, DisableNoise, RandomNoise, BasicScheduler, KarrasScheduler, ExponentialScheduler, PolyexponentialScheduler, SDTurboScheduler, VPScheduler, FlipSigmas
 from tqdm import trange
 class samplerCustomSettings:
 
@@ -3046,6 +3242,7 @@ class samplerCustomSettings:
                      "beta_d": ("FLOAT", {"default": 19.9, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
                      "beta_min": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
                      "eps_s": ("FLOAT", {"default": 0.001, "min": 0.0, "max": 1.0, "step": 0.0001, "round": False}),
+                     "flip_sigmas": ("BOOLEAN", {"default": False}),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                      "add_noise": (["enable", "disable"], {"default": "enable"}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
@@ -3127,7 +3324,7 @@ class samplerCustomSettings:
         ksampler = comfy.samplers.KSAMPLER(sample_inversed_euler)
         return (ksampler,)
 
-    def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, flip_sigmas, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         # 图生图转换
         vae = pipe["vae"]
         model = pipe["model"]
@@ -3188,8 +3385,11 @@ class samplerCustomSettings:
             else:
                 sigmas, = BasicScheduler().get_sigmas(model, scheduler, steps, denoise)
 
+            # filp_sigmas
+            if flip_sigmas:
+                sigmas, = FlipSigmas().get_sigmas(sigmas)
         # noise
-        if add_noise == 'disabled':
+        if add_noise == 'disable':
             noise, = DisableNoise().get_noise()
         else:
             noise, = RandomNoise().get_noise(seed)
@@ -4311,6 +4511,7 @@ class samplerSimpleInpainting:
                 "samples": latent,
                 "loader_settings": pipe["loader_settings"],
             }
+
         else:
             new_pipe = pipe
         del pipe
@@ -6738,6 +6939,8 @@ NODE_CLASS_MAPPINGS = {
     "easy ipadapterApplyADV": ipadapterApplyAdvanced,
     "easy ipadapterApplyEncoder": ipadapterApplyEncoder,
     "easy ipadapterApplyEmbeds": ipadapterApplyEmbeds,
+    "easy ipadapterApplyRegional": ipadapterApplyRegional,
+    "easy ipadapterApplyFromParams": ipadapterApplyFromParams,
     "easy ipadapterStyleComposition": ipadapterStyleComposition,
     "easy instantIDApply": instantIDApply,
     "easy instantIDApplyADV": instantIDApplyAdvanced,
@@ -6746,6 +6949,7 @@ NODE_CLASS_MAPPINGS = {
     # latent 潜空间
     "easy latentNoisy": latentNoisy,
     "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
+    "easy injectNoiseToLatent": injectNoiseToLatent,
     # preSampling 预采样处理
     "easy preSampling": samplerSettings,
     "easy preSamplingAdvanced": samplerSettingsAdvanced,
@@ -6837,7 +7041,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy ipadapterApplyADV": "Easy Apply IPAdapter (Advanced)",
     "easy ipadapterStyleComposition": "Easy Apply IPAdapter (StyleComposition)",
     "easy ipadapterApplyEncoder": "Easy Apply IPAdapter (Encoder)",
+    "easy ipadapterApplyRegional": "Easy Apply IPAdapter (Regional)",
     "easy ipadapterApplyEmbeds": "Easy Apply IPAdapter (Embeds)",
+    "easy ipadapterApplyFromParams": "Easy Apply IPAdapter (From Params)",
     "easy instantIDApply": "Easy Apply InstantID",
     "easy instantIDApplyADV": "Easy Apply InstantID (Advanced)",
     # Inpaint 内补
@@ -6845,6 +7051,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # latent 潜空间
     "easy latentNoisy": "LatentNoisy",
     "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",
+    "easy injectNoiseToLatent": "InjectNoiseToLatent",
     # preSampling 预采样处理
     "easy preSampling": "PreSampling",
     "easy preSamplingAdvanced": "PreSampling (Advanced)",

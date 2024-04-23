@@ -31,8 +31,11 @@
 
 ## Changelog
 
-**v1.1.5 (2024/4/19)**
+**v1.1.5 (2024/4/23)**
 
+- Added `easy ipadapterApplyRegional`
+- Added `easy ipadapterApplyFromParams`
+- Added `easy imageInterrogator` - Image To Prompt
 - Added `easy stableDiffusion3API` - Easy Stable Diffusion 3 Multiple accounts API Node
 
 **v1.1.4 (2024/4/10)**

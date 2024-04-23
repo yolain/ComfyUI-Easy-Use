@@ -986,7 +986,7 @@ app.registerExtension({
 			}
 		}
 
-		if(['easy showAnything', 'easy showTensorShape'].includes(nodeData.name)){
+		if(['easy showAnything', 'easy showTensorShape', 'easy imageInterrogator'].includes(nodeData.name)){
 			function populate(text) {
 				if (this.widgets) {
 					const pos = this.widgets.findIndex((w) => w.name === "text");
@@ -1025,13 +1025,15 @@ app.registerExtension({
 				populate.call(this, message.text);
 			};
 
-			const onConfigure = nodeType.prototype.onConfigure;
-			nodeType.prototype.onConfigure = function () {
-				onConfigure?.apply(this, arguments);
-				if (this.widgets_values?.length) {
-					populate.call(this, this.widgets_values);
-				}
-			};
+			if('easy imageInterrogator' != nodeData.name) {
+				const onConfigure = nodeType.prototype.onConfigure;
+				nodeType.prototype.onConfigure = function () {
+					onConfigure?.apply(this, arguments);
+					if (this.widgets_values?.length) {
+						populate.call(this, this.widgets_values);
+					}
+				};
+			}
 		}
 
 		if(nodeData.name == 'easy convertAnything'){

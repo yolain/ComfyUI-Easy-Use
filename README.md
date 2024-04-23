@@ -35,8 +35,11 @@
 
 ## 更新日志
 
-**v1.1.5 (2024/4/19)**
+**v1.1.5 (2024/4/23)**
 
+- 增加 `easy ipadapterApplyRegional`
+- 增加 `easy ipadapterApplyFromParams`
+- 增加 `easy imageInterrogator` - 图像反推
 - 增加 `easy stableDiffusion3API` - 简易的Stable Diffusion 3 多账号API节点
 
 **v1.1.4 (2024/4/13)**

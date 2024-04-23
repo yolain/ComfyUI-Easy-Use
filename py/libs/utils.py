@@ -17,6 +17,46 @@ def get_comfyui_revision():
         comfy_ui_revision = "Unknown"
     return comfy_ui_revision
 
+
+import sys
+import importlib.util
+import importlib.metadata
+from packaging import version
+def is_package_installed(package):
+    try:
+        module = importlib.util.find_spec(package)
+        return module is not None
+    except ImportError:
+        return False
+
+def install_package(package, v=None, compare=True, compare_version=None):
+    run_install = True
+    if is_package_installed(package):
+        try:
+            installed_version = importlib.metadata.version(package)
+            if v is not None:
+                if compare_version is None:
+                    compare_version = v
+                if not compare or version.parse(installed_version) >= version.parse(compare_version):
+                    run_install = False
+            else:
+                run_install = False
+        except:
+            run_install = False
+
+    if run_install:
+        import subprocess
+        package_command = package + '==' + v if v is not None else package
+        result = subprocess.run([sys.executable, '-s', '-m', 'pip', 'install', package_command], capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"Package {package} installed successfully")
+            return True
+        else:
+            print(f"Package {package} installed failed")
+            return False
+    else:
+        return False
+
 def compare_revision(num):
     global comfy_ui_revision
     if not comfy_ui_revision:
