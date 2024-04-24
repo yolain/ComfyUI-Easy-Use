@@ -28,12 +28,15 @@
 - Fooocus Inpaint integration
 - Integration of common logical calculations, conversion of types, display of all types, etc.
 - Background removal nodes for the RMBG-1.4 model supporting BriaAI, [BriaAI Guide](https://huggingface.co/briaai/RMBG-1.4)
-
+- Forcibly cleared the memory usage of the comfy UI model are supported
+- Stable Diffusion 3 multi-account API nodes are supported
+- 
 ## Changelog
 
-**v1.1.5 (2024/4/23)**
+**v1.1.5 (2024/4/24)**
 
 - Rewrite `easy cleanGPUUsed` - the memory usage of the comfyUI can to be cleared
+- Added `easy imageColorMatch`
 - Added `easy ipadapterApplyRegional`
 - Added `easy ipadapterApplyFromParams`
 - Added `easy imageInterrogator` - Image To Prompt

@@ -27,7 +27,8 @@ def is_package_installed(package):
     try:
         module = importlib.util.find_spec(package)
         return module is not None
-    except ImportError:
+    except ImportError as e:
+        print(e)
         return False
 
 def install_package(package, v=None, compare=True, compare_version=None):

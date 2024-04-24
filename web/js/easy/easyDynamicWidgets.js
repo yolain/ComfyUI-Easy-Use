@@ -577,6 +577,7 @@ app.registerExtension({
 			case "easy hiresFix":
 			case "easy detailerFix":
 			case "easy imageRemBg":
+			case "easy imageColorMatch":
 			case "easy XYInputs: Steps":
 			case "easy XYInputs: Sampler/Scheduler":
 			case 'easy XYInputs: Checkpoint':

@@ -32,14 +32,15 @@
 - 整合了Fooocus Inpaint功能
 - 整合了常用的逻辑计算、转换类型、展示所有类型等
 - 支持BriaAI的RMBG-1.4模型的背景去除节点，[技术参考](https://huggingface.co/briaai/RMBG-1.4)
-- 支持 强制清理omfyUI模型显存占用
+- 支持 强制清理comfyUI模型显存占用
 - 支持Stable Diffusion 3 多账号API节点
 
 ## 更新日志
 
-**v1.1.5 (2024/4/23)**
+**v1.1.5 (2024/4/24)**
 
 - 重写 `easy cleanGPUUsed` - 可强制清理comfyUI的模型显存占用
+- 增加 `easy imageColorMatch`
 - 增加 `easy ipadapterApplyRegional`
 - 增加 `easy ipadapterApplyFromParams`
 - 增加 `easy imageInterrogator` - 图像反推

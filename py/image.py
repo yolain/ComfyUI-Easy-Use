@@ -656,31 +656,33 @@ class imageChooser(PreviewImage):
     return {"ui": {"images": images},
               "result": (self.tensor_bundle(images_in, choosen),)}
 
-class imageColorMatch:
+class imageColorMatch(PreviewImage):
   @classmethod
   def INPUT_TYPES(cls):
     return {
       "required": {
         "image_ref": ("IMAGE",),
         "image_target": ("IMAGE",),
-        "method": (['mkl', 'hm', 'reinhard', 'mvgd', 'hm-mvgd-hm', 'hm-mkl-hm'],)
+        "method": (['mkl', 'hm', 'reinhard', 'mvgd', 'hm-mvgd-hm', 'hm-mkl-hm'],),
+        "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
+        "save_prefix": ("STRING", {"default": "ComfyUI"}),
       },
+      "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
     }
 
   CATEGORY = "EasyUse/Image"
 
   RETURN_TYPES = ("IMAGE",)
   RETURN_NAMES = ("image",)
-
+  OUTPUT_NODE = True
   FUNCTION = "color_match"
 
-  def color_match(self, image_ref, image_target, method):
-
-    install_package("color-matcher")
+  def color_match(self, image_ref, image_target, method, image_output, save_prefix, prompt=None, extra_pnginfo=None):
     try:
       from color_matcher import ColorMatcher
     except:
-      raise ImportError("Error importing color_matcher. Please check if the package is installed.")
+      install_package("color-matcher")
+      from color_matcher import ColorMatcher
     cm = ColorMatcher()
     image_ref = image_ref.cpu()
     image_target = image_target.cpu()
@@ -705,7 +707,16 @@ class imageColorMatch:
         break
       out.append(torch.from_numpy(image_result))
 
-    return (torch.stack(out, dim=0).to(torch.float32),)
+    new_images = torch.stack(out, dim=0).to(torch.float32)
+
+    results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
+
+    if image_output in ("Hide", "Hide/Save"):
+      return {"ui": {},
+              "result": (new_images,)}
+
+    return {"ui": {"images": results},
+            "result": (new_images,)}
 
 
 # 图像反推
