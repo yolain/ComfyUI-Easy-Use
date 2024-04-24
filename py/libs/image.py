@@ -36,6 +36,18 @@ def get_new_bounds(width, height, left, right, top, bottom):
   bottom = height - bottom
   return (left, right, top, bottom)
 
+def RGB2RGBA(image: Image, mask: Image) -> Image:
+  (R, G, B) = image.convert('RGB').split()
+  return Image.merge('RGBA', (R, G, B, mask.convert('L')))
+
+def image2mask(image: Image) -> torch.Tensor:
+  _image = image.convert('RGBA')
+  alpha = _image.split()[0]
+  bg = Image.new("L", _image.size)
+  _image = Image.merge('RGBA', (bg, bg, bg, alpha))
+  ret_mask = torch.tensor([pil2tensor(_image)[0, :, :, 3].tolist()])
+  return ret_mask
+
 
 class ResizeMode(Enum):
   RESIZE = "Just Resize"

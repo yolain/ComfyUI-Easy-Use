@@ -36,6 +36,7 @@
 **v1.1.5 (2024/4/24)**
 
 - Rewrite `easy cleanGPUUsed` - the memory usage of the comfyUI can to be cleared
+- Added `easy humanSegmentation` - Human Part Segmentation
 - Added `easy imageColorMatch`
 - Added `easy ipadapterApplyRegional`
 - Added `easy ipadapterApplyFromParams`

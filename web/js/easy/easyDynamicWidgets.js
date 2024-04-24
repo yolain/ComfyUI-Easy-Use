@@ -578,6 +578,7 @@ app.registerExtension({
 			case "easy detailerFix":
 			case "easy imageRemBg":
 			case "easy imageColorMatch":
+			case "easy loadImageBase64":
 			case "easy XYInputs: Steps":
 			case "easy XYInputs: Sampler/Scheduler":
 			case 'easy XYInputs: Checkpoint':
@@ -944,6 +945,7 @@ app.registerExtension({
 							seed_control.value = 'fixed'
 						}
 						seed_widget.value = Math.floor(Math.random() * 1125899906842624)
+						app.queuePrompt(0, 1)
 					})
 				}
 			}
@@ -1026,7 +1028,7 @@ app.registerExtension({
 				populate.call(this, message.text);
 			};
 
-			if('easy imageInterrogator' != nodeData.name) {
+			if(['easy imageInterrogator'].includes(nodeData.name)) {
 				const onConfigure = nodeType.prototype.onConfigure;
 				nodeType.prototype.onConfigure = function () {
 					onConfigure?.apply(this, arguments);

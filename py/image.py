@@ -10,9 +10,9 @@ from server import PromptServer
 from nodes import MAX_RESOLUTION
 from torchvision.transforms.functional import to_pil_image
 from .log import log_node_info
-from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds
+from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask
 from .libs.chooser import ChooserMessage, ChooserCancelled
-from .config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS
+from .config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS, MEDIAPIPE_MODELS, MEDIAPIPE_DIR
 
 
 # 图像裁切
@@ -744,46 +744,222 @@ class imageInterrogator:
       return {"ui":{"text":prompt},"result":(prompt,)}
 
 # 人类分割器
-# from .human_parsing.run_parsing import HumanParsing
-# class humanParsing:
-#
-#     lip_components = ['Background', 'Hat', 'Hair', 'Glove', 'Sunglasses', 'Upper-clothes', 'Dress', 'Coat',
-#                   'Socks', 'Pants', 'Jumpsuits', 'Scarf', 'Skirt', 'Face', 'Left-arm', 'Right-arm',
-#                   'Left-leg', 'Right-leg', 'Left-shoe', 'Right-shoe']
-#
-#     @classmethod
-#     def INPUT_TYPES(cls):
-#         required = {"image": ("IMAGE",)}
-#         for comp in cls.lip_components:
-#           required[comp] = ("BOOLEAN", {"default": False})
-#
-#         return {
-#           "required": required
-#         }
-#
-#     RETURN_TYPES = ("IMAGE", "MASK",)
-#     RETURN_NAMES = ("image", "mask",)
-#     FUNCTION = "parsing"
-#     CATEGORY = "EasyUse/Image"
-#
-#     def parsing(self, image, **kwargs):
-#       mask_components = [i for i, x in enumerate([kwargs[x] for x in self.lip_components]) if x]
-#       onnx_path = os.path.join(folder_paths.models_dir, 'ultralytics')
-#       model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
-#       parsing = HumanParsing(model_path=model_path)
-#       model_image = image.squeeze(0)
-#       model_image = model_image.permute((2, 0, 1))
-#       model_image = to_pil_image(model_image)
-#
-#       map_image, mask = parsing(model_image, mask_components)
-#
-#       mask = mask[:, :, :, 0]
-#
-#       alpha = 1.0 - mask
-#
-#       ouput_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
-#
-#       return (ouput_image, mask)
+class humanSegmentation:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+
+        return {
+          "required":{
+            "image": ("IMAGE",),
+            "method": (["selfie_multiclass_256x256", "human_parsing_lip"],),
+            "confidence": ("FLOAT", {"default": 0.4, "min": 0.05, "max": 0.95, "step": 0.01},),
+          },
+          "hidden": {
+              "prompt": "PROMPT",
+              "my_unique_id": "UNIQUE_ID",
+          }
+        }
+
+    RETURN_TYPES = ("IMAGE", "MASK",)
+    RETURN_NAMES = ("image", "mask",)
+    FUNCTION = "parsing"
+    CATEGORY = "EasyUse/Segmentation"
+
+    def get_mediapipe_image(self, image: Image):
+      import mediapipe as mp
+      # Convert image to NumPy array
+      numpy_image = np.asarray(image)
+      image_format = mp.ImageFormat.SRGB
+      # Convert BGR to RGB (if necessary)
+      if numpy_image.shape[-1] == 4:
+        image_format = mp.ImageFormat.SRGBA
+      elif numpy_image.shape[-1] == 3:
+        image_format = mp.ImageFormat.SRGB
+        numpy_image = cv2.cvtColor(numpy_image, cv2.COLOR_BGR2RGB)
+      return mp.Image(image_format=image_format, data=numpy_image)
+
+    def parsing(self, image, confidence, method, prompt=None, my_unique_id=None):
+      mask_components = []
+      if my_unique_id in prompt:
+        if prompt[my_unique_id]["inputs"]['mask_components']:
+          mask_components = prompt[my_unique_id]["inputs"]['mask_components'].split(',')
+      mask_components = list(map(int, mask_components))
+      if method == 'selfie_multiclass_256x256':
+        try:
+          import mediapipe as mp
+        except:
+          install_package("mediapipe")
+          import mediapipe as mp
+
+        from functools import reduce
+
+        model_path = get_local_filepath(MEDIAPIPE_MODELS['selfie_multiclass_256x256']['model_url'], MEDIAPIPE_DIR)
+        model_asset_buffer = None
+        with open(model_path, "rb") as f:
+            model_asset_buffer = f.read()
+        image_segmenter_base_options = mp.tasks.BaseOptions(model_asset_buffer=model_asset_buffer)
+        options = mp.tasks.vision.ImageSegmenterOptions(
+          base_options=image_segmenter_base_options,
+          running_mode=mp.tasks.vision.RunningMode.IMAGE,
+          output_category_mask=True)
+        # Create the image segmenter
+        ret_images = []
+        ret_masks = []
+
+        with mp.tasks.vision.ImageSegmenter.create_from_options(options) as segmenter:
+            for img in image:
+                _image = torch.unsqueeze(img, 0)
+                orig_image = tensor2pil(_image).convert('RGB')
+                # Convert the Tensor to a PIL image
+                i = 255. * img.cpu().numpy()
+                image_pil = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+                # create our foreground and background arrays for storing the mask results
+                mask_background_array = np.zeros((image_pil.size[0], image_pil.size[1], 4), dtype=np.uint8)
+                mask_background_array[:] = (0, 0, 0, 255)
+                mask_foreground_array = np.zeros((image_pil.size[0], image_pil.size[1], 4), dtype=np.uint8)
+                mask_foreground_array[:] = (255, 255, 255, 255)
+                # Retrieve the masks for the segmented image
+                media_pipe_image = self.get_mediapipe_image(image=image_pil)
+                segmented_masks = segmenter.segment(media_pipe_image)
+                masks = []
+                for i, com in enumerate(mask_components):
+                    masks.append(segmented_masks.confidence_masks[com])
+
+                image_data = media_pipe_image.numpy_view()
+                image_shape = image_data.shape
+                # convert the image shape from "rgb" to "rgba" aka add the alpha channel
+                if image_shape[-1] == 3:
+                    image_shape = (image_shape[0], image_shape[1], 4)
+                mask_background_array = np.zeros(image_shape, dtype=np.uint8)
+                mask_background_array[:] = (0, 0, 0, 255)
+                mask_foreground_array = np.zeros(image_shape, dtype=np.uint8)
+                mask_foreground_array[:] = (255, 255, 255, 255)
+                mask_arrays = []
+                if len(masks) == 0:
+                    mask_arrays.append(mask_background_array)
+                else:
+                    for i, mask in enumerate(masks):
+                        condition = np.stack((mask.numpy_view(),) * image_shape[-1], axis=-1) > confidence
+                        mask_array = np.where(condition, mask_foreground_array, mask_background_array)
+                        mask_arrays.append(mask_array)
+                # Merge our masks taking the maximum from each
+                merged_mask_arrays = reduce(np.maximum, mask_arrays)
+                # Create the image
+                mask_image = Image.fromarray(merged_mask_arrays)
+                # convert PIL image to tensor image
+                tensor_mask = mask_image.convert("RGB")
+                tensor_mask = np.array(tensor_mask).astype(np.float32) / 255.0
+                tensor_mask = torch.from_numpy(tensor_mask)[None,]
+                _mask = tensor_mask.squeeze(3)[..., 0]
+
+                _mask = tensor2pil(tensor_mask).convert('L')
+
+                ret_image = RGB2RGBA(orig_image, _mask)
+                ret_images.append(pil2tensor(ret_image))
+                ret_masks.append(image2mask(_mask))
+
+            output_image = torch.cat(ret_images, dim=0)
+            mask = torch.cat(ret_masks, dim=0)
+
+      elif method == "human_parsing_lip":
+        from .human_parsing.run_parsing import HumanParsing
+        onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+        model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
+        parsing = HumanParsing(model_path=model_path)
+        model_image = image.squeeze(0)
+        model_image = model_image.permute((2, 0, 1))
+        model_image = to_pil_image(model_image)
+
+        map_image, mask = parsing(model_image, mask_components)
+
+        mask = mask[:, :, :, 0]
+
+        alpha = 1.0 - mask
+
+        output_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
+
+      return (output_image, mask)
+
+import cv2
+import base64
+class loadImageBase64:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "base64_data": ("STRING", {"default": ""}),
+        "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
+        "save_prefix": ("STRING", {"default": "ComfyUI"}),
+      },
+      "optional": {
+
+      },
+      "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+    }
+
+  RETURN_TYPES = ("IMAGE", "MASK")
+  OUTPUT_NODE = True
+  FUNCTION = "load_image"
+  CATEGORY = "image"
+
+  def convert_color(self, image,):
+    if len(image.shape) > 2 and image.shape[2] >= 4:
+      return cv2.cvtColor(image, cv2.COLOR_BGRA2RGB)
+    return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+  def load_image(self, base64_data, image_output, save_prefix, prompt=None, extra_pnginfo=None):
+    nparr = np.frombuffer(base64.b64decode(base64_data), np.uint8)
+
+    result = cv2.imdecode(nparr, cv2.IMREAD_UNCHANGED)
+    channels = cv2.split(result)
+    if len(channels) > 3:
+      mask = channels[3].astype(np.float32) / 255.0
+      mask = torch.from_numpy(mask)
+    else:
+      mask = torch.ones(channels[0].shape, dtype=torch.float32, device="cpu")
+
+    result = self.convert_color(result)
+    result = result.astype(np.float32) / 255.0
+    new_images = torch.from_numpy(result)[None,]
+
+    results = easySave(new_images, save_prefix, image_output, None, None)
+    mask = mask.unsqueeze(0)
+
+    if image_output in ("Hide", "Hide/Save"):
+      return {"ui": {},
+              "result": (new_images, mask)}
+
+    return {"ui": {"images": results},
+            "result": (new_images, mask)}
+
+class imageToBase64:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+        "required": {
+            "image": ("IMAGE",),
+        },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "to_base64"
+    CATEGORY = "EasyUse/Image"
+    OUTPUT_NODE = True
+
+    def to_base64(self, image, ):
+      import base64
+      from io import BytesIO
+
+      # 将张量图像转换为PIL图像
+      pil_image = tensor2pil(image)
+
+      buffered = BytesIO()
+      pil_image.save(buffered, format="JPEG")
+      image_bytes = buffered.getvalue()
+
+      base64_str = base64.b64encode(image_bytes).decode("utf-8")
+      return {"result": (base64_str,)}
 
 # 姿势编辑器
 class poseEditor:
@@ -845,7 +1021,9 @@ NODE_CLASS_MAPPINGS = {
   "easy imageColorMatch": imageColorMatch,
   "easy imageInterrogator": imageInterrogator,
   "easy joinImageBatch": JoinImageBatch,
-  # "easy humanParsing": humanParsing,
+  "easy loadImageBase64": loadImageBase64,
+  "easy imageToBase64": imageToBase64,
+  "easy humanSegmentation": humanSegmentation,
   "easy poseEditor": poseEditor
 }
 
@@ -868,6 +1046,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageColorMatch": "Image Color Match",
   "easy imageInterrogator": "Image To Prompt",
   "easy joinImageBatch": "JoinImageBatch",
-  # "easy humanParsing": "Human Parsing",
+  "easy loadImageBase64": "LoadImage (Base64)",
+  "easy imageToBase64": "Image To Base64",
+  "easy humanSegmentation": "Human Segmentation",
   "easy poseEditor": "PoseEditor",
 }

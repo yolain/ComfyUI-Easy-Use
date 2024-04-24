@@ -58,9 +58,32 @@ const zhCN = {
     "At least one account is required": "删除失败: 至少需要一个账户",
     "APIKEY is not Empty": "APIKEY 不能为空",
     "Add Account": "添加账号",
-    "Getting Your APIKEY": "获取您的APIKEY"
+    "Getting Your APIKEY": "获取您的APIKEY",
+    // seg
+    "Background": "背景",
+    "Hat": "帽子",
+    "Hair": "头发",
+    "Body": "身体",
+    "Face": "脸部",
+    "Clothes": "衣服",
+    "Others": "其他",
+    "Glove": "手套",
+    "Sunglasses": "太阳镜",
+    "Upper-clothes": "上衣",
+    "Dress": "连衣裙",
+    "Coat": "外套",
+    "Socks": "袜子",
+    "Pants": "裤子",
+    "Jumpsuits": "连体衣",
+    "Scarf": "围巾",
+    "Skirt": "裙子",
+    "Left-arm": "左臂",
+    "Right-arm": "右臂",
+    "Left-leg": "左腿",
+    "Right-leg": "右腿",
+    "Left-shoe": "左鞋",
+    "Right-shoe": "右鞋",
 }
-
 export const $t = (key) => {
     const cn = zhCN[key]
     return locale === 'zh-CN' && cn ? cn : key

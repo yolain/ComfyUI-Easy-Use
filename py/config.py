@@ -268,3 +268,11 @@ HUMANPARSING_MODELS = {
         "model_url": "https://huggingface.co/levihsu/OOTDiffusion/resolve/main/checkpoints/humanparsing/parsing_lip.onnx",
     },
 }
+
+#mediapipe
+MEDIAPIPE_DIR = os.path.join(folder_paths.models_dir, "mediapipe")
+MEDIAPIPE_MODELS = {
+    "selfie_multiclass_256x256": {
+        "model_url": "https://huggingface.co/yolain/selfie_multiclass_256x256/resolve/main/selfie_multiclass_256x256.tflite"
+    }
+}

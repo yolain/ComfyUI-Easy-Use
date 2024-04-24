@@ -1,3 +1,6 @@
+.easyuse-prompt-styles{
+    overflow: auto;
+}
 .easyuse-prompt-styles .tools{
     display:flex;
     justify-content:space-between;
@@ -41,9 +44,13 @@
     min-height: 150px;
     height: calc(100% - 40px);
     overflow: auto;
-    // display: flex;
-    // flex-wrap: wrap;
+    /*display: flex;*/
+    /*flex-wrap: wrap;*/
 }
+.easyuse-prompt-styles-list.no-top{
+    height: auto;
+}
+
 .easyuse-prompt-styles-tag{
     display: inline-block;
     vertical-align: middle;

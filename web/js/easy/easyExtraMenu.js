@@ -8,6 +8,7 @@ const kSampler = ['easy kSampler', 'easy kSamplerTiled', 'easy kSamplerInpaintin
 const controlnet = ['easy controlnetLoader', 'easy controlnetLoaderADV', 'easy instantIDApply', 'easy instantIDApplyADV']
 const ipadapter = ['easy ipadapterApply', 'easy ipadapterApplyADV', 'easy ipadapterStyleComposition', 'easy ipadapterApplyFromParams']
 const positive_prompt = ['easy positive', 'easy wildcards']
+const imageNode = ['easy loadImageBase64', 'LoadImage', 'LoadImageMask']
 const widgetMapping = {
     "positive_prompt":{
         "text": "positive",
@@ -58,6 +59,11 @@ const widgetMapping = {
         "end_at": "end_at",
         "cache_mode": "cache_mode",
         "use_tiled": "use_tiled",
+    },
+    "load_image":{
+        "image":"image",
+        "base64_data":"base64_data",
+        "channel": "channel"
     }
 }
 const inputMapping = {
@@ -131,7 +137,7 @@ const outputMapping = {
         "tiles":"tiles",
         "masks":"masks",
         "ipadapter":"ipadapter"
-    }
+    },
 };
 
 // 替换节点
@@ -540,6 +546,10 @@ app.registerExtension({
         // Swap IPAdapater
         if (ipadapter.includes(nodeData.name)) {
             addMenu("↪️ Swap EasyIPAdapater", 'ipadapter', ipadapter, nodeType)
+        }
+        // Swap Image
+        if (imageNode.includes(nodeData.name)) {
+            addMenu("↪️ Swap LoadImage", 'load_image', imageNode, nodeType)
         }
     }
 });

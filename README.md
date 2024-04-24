@@ -40,6 +40,7 @@
 **v1.1.5 (2024/4/24)**
 
 - 重写 `easy cleanGPUUsed` - 可强制清理comfyUI的模型显存占用
+- 增加 `easy humanSegmentation` - 多类分割、人像分割
 - 增加 `easy imageColorMatch`
 - 增加 `easy ipadapterApplyRegional`
 - 增加 `easy ipadapterApplyFromParams`
