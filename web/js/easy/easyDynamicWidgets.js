@@ -1028,7 +1028,7 @@ app.registerExtension({
 				populate.call(this, message.text);
 			};
 
-			if(['easy imageInterrogator'].includes(nodeData.name)) {
+			if(!['easy imageInterrogator'].includes(nodeData.name)) {
 				const onConfigure = nodeType.prototype.onConfigure;
 				nodeType.prototype.onConfigure = function () {
 					onConfigure?.apply(this, arguments);
