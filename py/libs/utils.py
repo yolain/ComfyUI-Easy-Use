@@ -22,6 +22,7 @@ import sys
 import importlib.util
 import importlib.metadata
 from packaging import version
+from server import PromptServer
 def is_package_installed(package):
     try:
         module = importlib.util.find_spec(package)
@@ -47,11 +48,14 @@ def install_package(package, v=None, compare=True, compare_version=None):
     if run_install:
         import subprocess
         package_command = package + '==' + v if v is not None else package
+        PromptServer.instance.send_sync("easyuse-toast", {'content': f"Installing {package_command}...", 'duration': 5000})
         result = subprocess.run([sys.executable, '-s', '-m', 'pip', 'install', package_command], capture_output=True, text=True)
         if result.returncode == 0:
+            PromptServer.instance.send_sync("easyuse-toast", {'content': f"{package} installed successfully", 'type': 'success', 'duration': 5000})
             print(f"Package {package} installed successfully")
             return True
         else:
+            PromptServer.instance.send_sync("easyuse-toast", {'content': f"{package} installed failed", 'type': 'error', 'duration': 5000})
             print(f"Package {package} installed failed")
             return False
     else:
@@ -248,3 +252,10 @@ def getMetadata(filepath):
             raise BufferError("Invalid header")
 
         return header
+
+def cleanGPUUsedForce():
+    import torch.cuda
+    import comfy.model_management
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    comfy.model_management.unload_all_models()

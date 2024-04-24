@@ -266,5 +266,5 @@ DYNAMICRAFTER_MODELS = {
 HUMANPARSING_MODELS = {
     "parsing_lip": {
         "model_url": "https://huggingface.co/levihsu/OOTDiffusion/resolve/main/checkpoints/humanparsing/parsing_lip.onnx",
-    }
+    },
 }

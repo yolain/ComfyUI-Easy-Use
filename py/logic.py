@@ -1,8 +1,7 @@
 from typing import Iterator, List, Tuple, Dict, Any, Union, Optional
 from _decimal import Context, getcontext
 from decimal import Decimal
-from .libs.utils import AlwaysEqualProxy
-import torch
+from .libs.utils import AlwaysEqualProxy, cleanGPUUsedForce
 import numpy as np
 import json
 
@@ -507,9 +506,7 @@ class cleanGPUUsed:
     CATEGORY = "EasyUse/Logic"
 
     def empty_cache(self, anything, unique_id=None, extra_pnginfo=None):
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
+        cleanGPUUsedForce()
         return ()
 
 from .libs.cache import remove_cache

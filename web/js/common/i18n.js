@@ -23,6 +23,8 @@ const zhCN = {
     "Source": "来源",
     "Saving Preview...": "正在保存预览图...",
     "Saving Succeed":"保存成功",
+    "Clean SuccessFully":"清理成功",
+    "Clean Failed": "清理失败",
     "Saving Failed":"保存失败",
     "No COMBO link": "沒有找到COMBO连接",
     "Reboot ComfyUI":"重启ComfyUI",
@@ -30,6 +32,8 @@ const zhCN = {
     // GroupMap
     "Groups Map (EasyUse)": "管理组 (EasyUse)",
     "Reboot ComfyUI (EasyUse)": "重启服务 (EasyUse)",
+    "Forced Cleanup Of GPU Usage (EasyUse)": "强制清理GPU占用 (EasyUse)",
+    "Please stop all running tasks before cleaning GPU": "请在清理GPU之前停止所有运行中的任务",
     "Always": "启用中",
     "Bypass": "已忽略",
     "Never": "已停用",

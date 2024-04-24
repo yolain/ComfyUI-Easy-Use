@@ -268,11 +268,32 @@ app.registerExtension({
                         }
 
                     }
-                }
-            );
-            // Only show the reboot option if the server is running on a local network 仅在本地或局域网环境可重启服务
-            if(isLocalNetwork(window.location.host)){
-                options.push(null,{
+                },
+                // Force clean ComfyUI GPU Used 强制卸载模型GPU占用
+                {
+                    content: '🚀 '+ $t('Forced Cleanup Of GPU Usage (EasyUse)'),
+                    callback: async() =>{
+                       try {
+                           const {Running, Pending} = await api.getQueue()
+                           if(Running.length>0 || Pending.length>0){
+                               toast.error($t("Clean Failed")+ ":"+ $t("Please stop all running tasks before cleaning GPU"))
+                               return
+                           }
+                            api.fetchApi("/easyuse/cleangpu",{
+                                method:"POST"
+                            }).then(res=>{
+                                if(res.status == 200){
+                                    toast.success($t("Clean SuccessFully"))
+                                }else{
+                                    toast.error($t("Clean Failed"))
+                                }
+                            })
+
+                        } catch (exception) {}
+                    }
+                },
+                // Only show the reboot option if the server is running on a local network 仅在本地或局域网环境可重启服务
+                isLocalNetwork(window.location.host) ? {
                     content: '🔴 '+ $t('Reboot ComfyUI (EasyUse)'),
                     callback: _ =>{
                         if (confirm($t("Are you sure you'd like to reboot the server?"))){
@@ -281,8 +302,8 @@ app.registerExtension({
                             } catch (exception) {}
                         }
                     }
-                })
-            }
+                } : null,
+            );
             return options;
         };
     },

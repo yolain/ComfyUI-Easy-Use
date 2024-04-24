@@ -152,3 +152,5 @@ def onnx_inference(lip_session, input_dir, mask_components=[0]):
     return output_img, mask_image
 
 
+
+

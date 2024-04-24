@@ -9,7 +9,7 @@ from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .logic import ConvertAnything
 from .libs.model import easyModelManager
-from .libs.utils import getMetadata
+from .libs.utils import getMetadata,cleanGPUUsedForce
 
 try:
     import aiohttp
@@ -19,8 +19,17 @@ except ImportError:
     print("pip install aiohttp")
     sys.exit()
 
+@PromptServer.instance.routes.post("/easyuse/cleangpu")
+def cleanGPU(request):
+    try:
+        cleanGPUUsedForce()
+        return web.Response(status=200)
+    except Exception as e:
+        return web.Response(status=500)
+        pass
+
 @PromptServer.instance.routes.get("/easyuse/reboot")
-def reboot(self):
+def reboot(request):
     try:
         sys.stdout.close_log()
     except Exception as e:

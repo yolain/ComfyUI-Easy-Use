@@ -1,6 +1,7 @@
 from .parsing_api import onnx_inference
 from ..libs.utils import install_package
-class Parsing:
+
+class HumanParsing:
     def __init__(self, model_path):
         self.model_path = model_path
         self.session = None
@@ -19,3 +20,4 @@ class Parsing:
 
         parsed_image, mask = onnx_inference(self.session, input_image, mask_components)
         return parsed_image, mask
+

@@ -8,7 +8,7 @@ import comfy.model_management
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
 from nodes import MAX_RESOLUTION
-from torchvision.transforms.functional import to_pil_image, to_tensor
+from torchvision.transforms.functional import to_pil_image
 from .log import log_node_info
 from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds
 from .libs.chooser import ChooserMessage, ChooserCancelled
@@ -521,7 +521,7 @@ class imageSplitList:
 
 # 图片背景移除
 from .briaai.rembg import BriaRMBG, preprocess_image, postprocess_image
-from .libs.utils import get_local_filepath, easySave
+from .libs.utils import get_local_filepath, easySave, install_package
 class imageRemBg:
   @classmethod
   def INPUT_TYPES(self):
@@ -656,6 +656,58 @@ class imageChooser(PreviewImage):
     return {"ui": {"images": images},
               "result": (self.tensor_bundle(images_in, choosen),)}
 
+class imageColorMatch:
+  @classmethod
+  def INPUT_TYPES(cls):
+    return {
+      "required": {
+        "image_ref": ("IMAGE",),
+        "image_target": ("IMAGE",),
+        "method": (['mkl', 'hm', 'reinhard', 'mvgd', 'hm-mvgd-hm', 'hm-mkl-hm'],)
+      },
+    }
+
+  CATEGORY = "EasyUse/Image"
+
+  RETURN_TYPES = ("IMAGE",)
+  RETURN_NAMES = ("image",)
+
+  FUNCTION = "color_match"
+
+  def color_match(self, image_ref, image_target, method):
+
+    install_package("color-matcher")
+    try:
+      from color_matcher import ColorMatcher
+    except:
+      raise ImportError("Error importing color_matcher. Please check if the package is installed.")
+    cm = ColorMatcher()
+    image_ref = image_ref.cpu()
+    image_target = image_target.cpu()
+    batch_size = image_target.size(0)
+    out = []
+    images_target = image_target.squeeze()
+    images_ref = image_ref.squeeze()
+
+    image_ref_np = images_ref.numpy()
+    images_target_np = images_target.numpy()
+
+    if image_ref.size(0) > 1 and image_ref.size(0) != batch_size:
+      raise ValueError("ColorMatch: Use either single reference image or a matching batch of reference images.")
+
+    for i in range(batch_size):
+      image_target_np = images_target_np if batch_size == 1 else images_target[i].numpy()
+      image_ref_np_i = image_ref_np if image_ref.size(0) == 1 else images_ref[i].numpy()
+      try:
+        image_result = cm.transfer(src=image_target_np, ref=image_ref_np_i, method=method)
+      except BaseException as e:
+        print(f"Error occurred during transfer: {e}")
+        break
+      out.append(torch.from_numpy(image_result))
+
+    return (torch.stack(out, dim=0).to(torch.float32),)
+
+
 # 图像反推
 from .libs.image import ci
 class imageInterrogator:
@@ -678,12 +730,10 @@ class imageInterrogator:
 
     def interrogate(self, image, mode, use_lowvram=False):
       prompt = ci.image_to_prompt(image, mode, low_vram=use_lowvram)
-
-
       return {"ui":{"text":prompt},"result":(prompt,)}
 
 # 人类分割器
-# from .human_parsing.run_parsing import Parsing
+# from .human_parsing.run_parsing import HumanParsing
 # class humanParsing:
 #
 #     lip_components = ['Background', 'Hat', 'Hair', 'Glove', 'Sunglasses', 'Upper-clothes', 'Dress', 'Coat',
@@ -707,9 +757,9 @@ class imageInterrogator:
 #
 #     def parsing(self, image, **kwargs):
 #       mask_components = [i for i, x in enumerate([kwargs[x] for x in self.lip_components]) if x]
-#       onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+#       onnx_path = os.path.join(folder_paths.models_dir, 'ultralytics')
 #       model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
-#       parsing = Parsing(model_path=model_path)
+#       parsing = HumanParsing(model_path=model_path)
 #       model_image = image.squeeze(0)
 #       model_image = model_image.permute((2, 0, 1))
 #       model_image = to_pil_image(model_image)
@@ -781,6 +831,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageSave": imageSaveSimple,
   "easy imageRemBg": imageRemBg,
   "easy imageChooser": imageChooser,
+  "easy imageColorMatch": imageColorMatch,
   "easy imageInterrogator": imageInterrogator,
   "easy joinImageBatch": JoinImageBatch,
   # "easy humanParsing": humanParsing,
@@ -803,6 +854,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageSave": "SaveImage (Simple)",
   "easy imageRemBg": "Image Remove Bg",
   "easy imageChooser": "Image Chooser",
+  "easy imageColorMatch": "Image Color Match",
   "easy imageInterrogator": "Image To Prompt",
   "easy joinImageBatch": "JoinImageBatch",
   # "easy humanParsing": "Human Parsing",

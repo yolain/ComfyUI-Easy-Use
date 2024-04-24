@@ -33,6 +33,7 @@
 
 **v1.1.5 (2024/4/23)**
 
+- Rewrite `easy cleanGPUUsed` - the memory usage of the comfyUI can to be cleared
 - Added `easy ipadapterApplyRegional`
 - Added `easy ipadapterApplyFromParams`
 - Added `easy imageInterrogator` - Image To Prompt
