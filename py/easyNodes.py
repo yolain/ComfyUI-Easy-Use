@@ -2498,7 +2498,7 @@ class ipadapterStyleComposition(ipadapter):
             self.error()
         cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
 
-        model, = cls().apply_ipadapter(model, ipadapter, start_at=start_at, end_at=end_at, weight_style=weight_style, weight_composition=weight_composition, weight_type='linear', combine_embeds=combine_embeds, weight_faceidv2=weight_composition, image_style=image_style, image_composition=image_composition, image_negative=image_negative, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
+        model, image = cls().apply_ipadapter(model, ipadapter, start_at=start_at, end_at=end_at, weight_style=weight_style, weight_composition=weight_composition, weight_type='linear', combine_embeds=combine_embeds, weight_faceidv2=weight_composition, image_style=image_style, image_composition=image_composition, image_negative=image_negative, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
         return (model, ipadapter)
 
 class ipadapterApplyEncoder(ipadapter):
@@ -2627,7 +2627,7 @@ class ipadapterApplyEmbeds(ipadapter):
             self.error()
 
         cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterEmbeds"]
-        model, = cls().apply_ipadapter(model, ipadapter, pos_embed, weight, weight_type, start_at, end_at, neg_embed=neg_embed, attn_mask=attn_mask, clip_vision=None, embeds_scaling=embeds_scaling)
+        model, image = cls().apply_ipadapter(model, ipadapter, pos_embed, weight, weight_type, start_at, end_at, neg_embed=neg_embed, attn_mask=attn_mask, clip_vision=None, embeds_scaling=embeds_scaling)
 
         return (model, ipadapter)
 
@@ -2756,7 +2756,7 @@ class ipadapterApplyFromParams(ipadapter):
         if "IPAdapterFromParams" not in ALL_NODE_CLASS_MAPPINGS:
             self.error()
         cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterFromParams"]
-        model, = cls().apply_ipadapter(model, ipadapter, clip_vision=None, combine_embeds=combine_embeds, embeds_scaling=embeds_scaling, image_negative=image_negative, ipadapter_params=ipadapter_params)
+        model, image = cls().apply_ipadapter(model, ipadapter, clip_vision=None, combine_embeds=combine_embeds, embeds_scaling=embeds_scaling, image_negative=image_negative, ipadapter_params=ipadapter_params)
 
         return (model, ipadapter)
 
