@@ -35,8 +35,8 @@
 
 **v1.1.6 (2024/4/26)**
 
-- `easy preSamplingCustom` added **alignYourSteps** to **schedulder** widget
-- `easy kSampler` & `easy fullkSampler` added **Preview&Choose** to **image_output** widget
+- Added **alignYourSteps** to **schedulder** widget in all `easy preSampling` and `easy fullkSampler`
+- Added **Preview&Choose** to **image_output** widget in `easy kSampler` & `easy fullkSampler`
 - Added `easy styleAlignedBatchAlign` - Credit of [style_aligned_comfy](https://github.com/brianfitzgerald/style_aligned_comfy)
 - Added `easy ckptNames`
 - Added `easy controlnetNames`

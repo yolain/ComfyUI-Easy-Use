@@ -2980,7 +2980,7 @@ class samplerSettings:
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['align_your_steps'],),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
@@ -3053,7 +3053,7 @@ class samplerSettingsAdvanced:
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['align_your_steps'],),
                      "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
                      "end_at_step": ("INT", {"default": 10000, "min": 0, "max": 10000}),
                      "add_noise": (["enable", "disable"],),
@@ -3137,7 +3137,7 @@ class samplerSettingsNoiseIn:
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS+['align_your_steps'],),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
@@ -3717,7 +3717,7 @@ class layerDiffusionSettings:
              "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
              "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
              "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler"}),
-             "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "normal"}),
+             "scheduler": (comfy.samplers.KSampler.SCHEDULERS+ ['align_your_steps'], {"default": "normal"}),
              "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
              "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
              },
@@ -4022,7 +4022,7 @@ class samplerFull(LayerDiffuse):
                  "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                  "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                  "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS+['align_your_steps'],),
                  "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                  "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide/Save", "Sender", "Sender/Save"],),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
@@ -4146,7 +4146,19 @@ class samplerFull(LayerDiffuse):
             # 推理初始时间
             start_time = int(time.time() * 1000)
             # 开始推理
-            samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler, samp_positive, samp_negative, samples, denoise=denoise, preview_latent=preview_latent, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, disable_noise=disable_noise, custom=samp_custom)
+            if scheduler == 'align_your_steps' and samp_custom is None:
+                try:
+                    from comfy_extras.nodes_align_your_steps import AlignYourStepsScheduler
+                    model_type = get_sd_version(samp_model)
+                    if model_type == 'unknown':
+                        raise Exception("This Model not supported")
+                    sigmas, = AlignYourStepsScheduler().get_sigmas(model_type.upper(), steps)
+                except:
+                    raise Exception("Please update your ComfyUI")
+                _sampler = comfy.samplers.sampler_object(sampler_name)
+                samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samples, disable_noise=disable_noise, preview_latent=preview_latent)
+            else:
+                samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler, samp_positive, samp_negative, samples, denoise=denoise, preview_latent=preview_latent, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, disable_noise=disable_noise, custom=samp_custom)
             # 推理结束时间
             end_time = int(time.time() * 1000)
             latent = samp_samples["samples"]

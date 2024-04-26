@@ -68,7 +68,7 @@ LAYER_DIFFUSION_VAE = {
         }
     },
     "decode": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_vae_transparent_decoder.safetensors"
         },
         "sdxl": {
@@ -78,7 +78,7 @@ LAYER_DIFFUSION_VAE = {
 }
 LAYER_DIFFUSION = {
     "Attention Injection": {
-        "sd15": {
+        "sd1": {
           "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_transparent_attn.safetensors"
         },
         "sdxl": {
@@ -89,7 +89,7 @@ LAYER_DIFFUSION = {
         "sdxl": {
             "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_xl_transparent_conv.safetensors"
         },
-        "sd15": {
+        "sd1": {
             "model_url": None
         }
     },
@@ -102,7 +102,7 @@ LAYER_DIFFUSION = {
         }
     },
     "Foreground": {
-        "sd15": {
+        "sd1": {
           "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_fg2bg.safetensors"
         },
         "sdxl": {
@@ -110,7 +110,7 @@ LAYER_DIFFUSION = {
         }
     },
     "Foreground to Background": {
-        "sd15": {
+        "sd1": {
           "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_fg2bg.safetensors"
         },
         "sdxl": {
@@ -118,7 +118,7 @@ LAYER_DIFFUSION = {
         }
     },
     "Background": {
-        "sd15": {
+        "sd1": {
           "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_bg2fg.safetensors"
         },
         "sdxl": {
@@ -126,7 +126,7 @@ LAYER_DIFFUSION = {
         }
     },
     "Background to Foreground": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_bg2fg.safetensors"
         },
         "sdxl": {

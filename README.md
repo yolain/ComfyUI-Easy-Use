@@ -39,7 +39,7 @@
 
 **v1.1.6 (2024/4/26)**
 
-- `easy preSamplingCustom` schedulder 增加 **alignYourSteps** 选项
+- 增加步调齐整适配 - 在所有的预采样和全采样器节点中的 调度器(schedulder) 增加了 **alignYourSteps** 选项
 - `easy kSampler` 和 `easy fullkSampler` 的 **image_output** 增加 **Preview&Choose**选项
 - 增加 `easy styleAlignedBatchAlign` - 风格对齐 [style_aligned_comfy](https://github.com/brianfitzgerald/style_aligned_comfy)
 - 增加 `easy ckptNames`

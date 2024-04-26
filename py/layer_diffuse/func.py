@@ -166,7 +166,7 @@ class LayerDiffuse:
         alpha = []
         if layer_diffusion_method is not None:
             sd_version = get_sd_version(model)
-            if sd_version not in ['sdxl', 'sd15']:
+            if sd_version not in ['sdxl', 'sd1']:
                 raise Exception(f"Only SDXL and SD1.5 model supported for Layer Diffusion")
             method = self.get_layer_diffusion_method(layer_diffusion_method, blend_samples is not None)
             sd15_allow = True if sd_version == 'sd1' and method in [LayerMethod.FG_ONLY_ATTN, LayerMethod.EVERYTHING, LayerMethod.BG_TO_BLEND, LayerMethod.BG_BLEND_TO_FG] else False
