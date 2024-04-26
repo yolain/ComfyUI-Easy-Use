@@ -4023,7 +4023,7 @@ class samplerFull(LayerDiffuse):
                 {"pipe": ("PIPE_LINE",),
                  "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                  "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS+['align_your_steps'],),
+                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS+['TCDScheduler'],),
                  "scheduler": (comfy.samplers.KSampler.SCHEDULERS+['align_your_steps'],),
                  "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                  "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide/Save", "Sender", "Sender/Save"],),
