@@ -58,15 +58,15 @@ class LayerDiffuse:
         except:
             pass
 
-        if method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN] and sd_version == 'sd15':
+        if method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN] and sd_version == 'sd1':
             self.frames = 1
-        elif method in [LayerMethod.BG_TO_BLEND, LayerMethod.FG_TO_BLEND, LayerMethod.BG_BLEND_TO_FG, LayerMethod.FG_BLEND_TO_BG] and sd_version == 'sd15':
+        elif method in [LayerMethod.BG_TO_BLEND, LayerMethod.FG_TO_BLEND, LayerMethod.BG_BLEND_TO_FG, LayerMethod.FG_BLEND_TO_BG] and sd_version == 'sd1':
             self.frames = 2
             batch_size, _, height, width = samples['samples'].shape
             if batch_size % 2 != 0:
                 raise Exception(f"The batch size should be a multiple of 2. 批次大小需为2的倍数")
             control_img = image
-        elif method == LayerMethod.EVERYTHING and sd_version == 'sd15':
+        elif method == LayerMethod.EVERYTHING and sd_version == 'sd1':
             batch_size, _, height, width = samples['samples'].shape
             self.frames = 3
             if batch_size % 3 != 0:
@@ -77,7 +77,7 @@ class LayerDiffuse:
         model_path = get_local_filepath(model_url, LAYER_DIFFUSION_DIR)
         layer_lora_state_dict = load_layer_model_state_dict(model_path)
         work_model = model.clone()
-        if sd_version == 'sd15':
+        if sd_version == 'sd1':
             patcher = AttentionSharingPatcher(
                 work_model, self.frames, use_control=control_img is not None
             )
@@ -97,7 +97,7 @@ class LayerDiffuse:
             else:
                 c_concat = model.model.latent_format.process_in(torch.cat([samples["samples"], blend_samples["samples"]], dim=1))
             samp_model, positive, negative = (work_model,) + self.apply_layer_c_concat(positive, negative, c_concat)
-        elif sd_version == 'sd15':
+        elif sd_version == 'sd1':
             if method in [LayerMethod.BG_TO_BLEND, LayerMethod.BG_BLEND_TO_FG]:
                 additional_cond = (additional_cond[0], None)
             elif method in [LayerMethod.FG_TO_BLEND, LayerMethod.FG_BLEND_TO_BG]:
@@ -169,7 +169,7 @@ class LayerDiffuse:
             if sd_version not in ['sdxl', 'sd15']:
                 raise Exception(f"Only SDXL and SD1.5 model supported for Layer Diffusion")
             method = self.get_layer_diffusion_method(layer_diffusion_method, blend_samples is not None)
-            sd15_allow = True if sd_version == 'sd15' and method in [LayerMethod.FG_ONLY_ATTN, LayerMethod.EVERYTHING, LayerMethod.BG_TO_BLEND, LayerMethod.BG_BLEND_TO_FG] else False
+            sd15_allow = True if sd_version == 'sd1' and method in [LayerMethod.FG_ONLY_ATTN, LayerMethod.EVERYTHING, LayerMethod.BG_TO_BLEND, LayerMethod.BG_BLEND_TO_FG] else False
             sdxl_allow = True if sd_version == 'sdxl' and method in [LayerMethod.FG_ONLY_CONV, LayerMethod.FG_ONLY_ATTN, LayerMethod.BG_BLEND_TO_FG] else False
             if sdxl_allow or sd15_allow:
                 if self.vae_transparent_decoder is None:

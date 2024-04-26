@@ -3275,7 +3275,7 @@ class samplerSettingsNoiseIn:
         return (new_pipe,)
 
 # 预采样设置（自定义）
-from comfy_extras.nodes_custom_sampler import BasicGuider, DualCFGGuider, CFGGuider, KSamplerSelect, DisableNoise, RandomNoise, BasicScheduler, KarrasScheduler, ExponentialScheduler, PolyexponentialScheduler, SDTurboScheduler, VPScheduler, FlipSigmas
+import comfy_extras.nodes_custom_sampler as custom_samplers
 from tqdm import trange
 class samplerCustomSettings:
 
@@ -3290,7 +3290,7 @@ class samplerCustomSettings:
                      "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "cfg_negative": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS + ['inversed_euler'],),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['karrasADV','exponentialADV','polyExponential', 'sdturbo', 'vp'],),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['karrasADV','exponentialADV','polyExponential', 'sdturbo', 'vp', 'alignYourSteps'],),
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "sigma_max": ("FLOAT", {"default": 14.614642, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
                      "sigma_min": ("FLOAT", {"default": 0.0291675, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
@@ -3380,6 +3380,14 @@ class samplerCustomSettings:
         ksampler = comfy.samplers.KSAMPLER(sample_inversed_euler)
         return (ksampler,)
 
+    def get_custom_cls(self, sampler_name):
+        try:
+            cls = custom_samplers.__dict__[sampler_name]
+            print(cls)
+            return cls()
+        except:
+            raise Exception(f"Custom sampler {sampler_name} not found, Please updated your ComfyUI")
+
     def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, flip_sigmas, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
         # 图生图转换
@@ -3389,7 +3397,6 @@ class samplerCustomSettings:
         negative = pipe['negative']
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         _guider, sigmas = None, None
-        print(get_sd_version(model))
         if image_to_latent is not None:
             if guider == "IP2P+DualCFG":
                 positive, negative, latent = self.ip2p(pipe['positive'], pipe['negative'], vae, image_to_latent)
@@ -3411,11 +3418,11 @@ class samplerCustomSettings:
 
         # guider
         if guider == 'CFG':
-            _guider, = CFGGuider().get_guider(model, positive, negative, cfg)
+            _guider, = self.get_custom_cls('CFGGuider').get_guider(model, positive, negative, cfg)
         elif guider in ['DualCFG', 'IP2P+DualCFG']:
-            _guider, = DualCFGGuider().get_guider(model, positive, negative, pipe['negative'], cfg, cfg_negative)
+            _guider, =  self.get_custom_cls('DualCFGGuider').get_guider(model, positive, negative, pipe['negative'], cfg, cfg_negative)
         else:
-            _guider, = BasicGuider().get_guider(model, positive)
+            _guider, = self.get_custom_cls('BasicGuider').get_guider(model, positive)
 
         # sampler
         if optional_sampler:
@@ -3424,35 +3431,42 @@ class samplerCustomSettings:
             if sampler_name == 'inversed_euler':
                 sampler, = self.get_inversed_euler_sampler()
             else:
-                sampler, = KSamplerSelect().get_sampler(sampler_name)
+                sampler, = self.get_custom_cls('KSamplerSelect').get_sampler(sampler_name)
 
         # sigmas
         if optional_sigmas:
             sigmas = optional_sigmas
         else:
             if scheduler == 'vp':
-                sigmas, = VPScheduler().get_sigmas(steps, beta_d, beta_min, eps_s)
+                sigmas, = self.get_custom_cls('VPScheduler').get_sigmas(steps, beta_d, beta_min, eps_s)
             elif scheduler == 'karrasADV':
-                sigmas, = KarrasScheduler().get_sigmas(steps, sigma_max, sigma_min, rho)
+                sigmas, = self.get_custom_cls('KarrasScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
             elif scheduler == 'exponentialADV':
-                sigmas, = ExponentialScheduler().get_sigmas(steps, sigma_max, sigma_min)
+                sigmas, = self.get_custom_cls('ExponentialScheduler').get_sigmas(steps, sigma_max, sigma_min)
             elif scheduler == 'polyExponential':
-                sigmas, = PolyexponentialScheduler().get_sigmas(steps, sigma_max, sigma_min, rho)
+                sigmas, = self.get_custom_cls('PolyexponentialScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
             elif scheduler == 'sdturbo':
-                sigmas, = SDTurboScheduler().get_sigmas(model, steps, denoise)
+                sigmas, = self.get_custom_cls('SDTurboScheduler').get_sigmas(model, steps, denoise)
             elif scheduler == 'alignYourSteps':
-                pass
+                try:
+                    from comfy_extras.nodes_align_your_steps import AlignYourStepsScheduler
+                    model_type = get_sd_version(model)
+                    if model_type == 'unknown':
+                        raise Exception("This Model not supported")
+                    sigmas, = AlignYourStepsScheduler().get_sigmas(model_type.upper(), steps)
+                except:
+                    raise Exception("Please update your ComfyUI")
             else:
-                sigmas, = BasicScheduler().get_sigmas(model, scheduler, steps, denoise)
+                sigmas, = self.get_custom_cls('BasicScheduler').get_sigmas(model, scheduler, steps, denoise)
 
             # filp_sigmas
             if flip_sigmas:
-                sigmas, = FlipSigmas().get_sigmas(sigmas)
+                sigmas, = self.get_custom_cls('FlipSigmas').get_sigmas(sigmas)
         # noise
         if add_noise == 'disable':
-            noise, = DisableNoise().get_noise()
+            noise, = self.get_custom_cls('DisableNoise').get_noise()
         else:
-            noise, = RandomNoise().get_noise(seed)
+            noise, = self.get_custom_cls('RandomNoise').get_noise(seed)
 
         new_pipe = {
             "model": pipe['model'],

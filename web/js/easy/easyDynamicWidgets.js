@@ -297,7 +297,9 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'beta_min'),true)
 			toggleWidget(node, findWidgetByName(node, 'eps_s'),true)
 		}else{
-			toggleWidget(node, findWidgetByName(node, 'denoise'),true)
+			if(widget.value == 'alignYourSteps'){
+				toggleWidget(node, findWidgetByName(node, 'denoise'))
+			}else toggleWidget(node, findWidgetByName(node, 'denoise'),true)
 			toggleWidget(node, findWidgetByName(node, 'sigma_max'))
 			toggleWidget(node, findWidgetByName(node, 'sigma_min'))
 			toggleWidget(node, findWidgetByName(node, 'beta_d'))

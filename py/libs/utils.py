@@ -98,13 +98,12 @@ import comfy.supported_models_base
 def get_sd_version(model):
     base: BaseModel = model.model
     model_config: comfy.supported_models.supported_models_base.BASE = base.model_config
-    print(model_config)
     if isinstance(model_config, comfy.supported_models.SDXL):
         return 'sdxl'
     elif isinstance(
             model_config, (comfy.supported_models.SD15, comfy.supported_models.SD20)
     ):
-        return 'sd15'
+        return 'sd1'
     elif isinstance(
             model_config, (comfy.supported_models.SVD_img2vid)
     ):
