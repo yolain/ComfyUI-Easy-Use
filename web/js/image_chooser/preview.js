@@ -1,11 +1,14 @@
 import { app } from "/scripts/app.js";
 
+const kSampler = ['easy kSampler', 'easy kSamplerTiled', 'easy fullkSampler']
+
 function display_preview_images(event) {
     const node = app.graph._nodes_by_id[event.detail.id];
     if (node) {
         node.selected = new Set();
         node.anti_selected = new Set();
-        showImages(node, event.detail.urls);
+        const image = showImages(node, event.detail.urls);
+        return {node,image,isKSampler:kSampler.includes(node.type)}
     } else {
         console.log(`Image Chooser Preview - failed to find ${event.detail.id}`)
     }
@@ -20,6 +23,7 @@ function showImages(node, urls) {
         img.src = `/view?filename=${encodeURIComponent(u.filename)}&type=temp&subfolder=${app.getPreviewFormatParam()}`
     })
     node.setSizeForImage?.();
+    return node.imgs
 }
 
 function drawRect(node, s, ctx) {

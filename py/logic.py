@@ -277,6 +277,30 @@ class imageSwitch:
         else:
             return (image_b, )
 
+class textSwitch:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "input": ("INT", {"default": 1, "min": 1, "max": 2}),
+            },
+            "optional": {
+                "text1": ("STRING", {"forceInput": True}),
+                "text2": ("STRING", {"forceInput": True}),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("STRING",)
+    CATEGORY = "EasyUse/Logic/Switch"
+    FUNCTION = "switch"
+
+    def switch(self, input, text1=None, text2=None,):
+        if input == 1:
+            return (text1,)
+        else:
+            return (text2,)
+
 # ---------------------------------------------------------------运算 开始----------------------------------------------------------------------#
 
 COMPARE_FUNCTIONS = {
@@ -549,6 +573,9 @@ class clearCacheAll:
         remove_cache('*')
         return ()
 
+
+
+
 NODE_CLASS_MAPPINGS = {
   "easy string": String,
   "easy int": Int,
@@ -558,6 +585,7 @@ NODE_CLASS_MAPPINGS = {
   "easy boolean": Boolean,
   "easy compare": Compare,
   "easy imageSwitch": imageSwitch,
+  "easy textSwitch": textSwitch,
   "easy if": If,
   "easy isSDXL": isSDXL,
   "easy xyAny": xyAny,
@@ -577,6 +605,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy boolean": "Boolean",
   "easy compare": "Compare",
   "easy imageSwitch": "Image Switch",
+  "easy textSwitch": "Text Switch",
   "easy if": "If",
   "easy isSDXL": "Is SDXL",
   "easy xyAny": "XYAny",

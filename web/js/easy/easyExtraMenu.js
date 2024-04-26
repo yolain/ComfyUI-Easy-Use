@@ -273,11 +273,11 @@ const addMenu = (content, type, nodes_include, nodeType, has_submenu=true) => {
             has_submenu: has_submenu,
             callback: (value, options, e, menu, node) => showSwapMenu(value, options, e, menu, node, type, nodes_include)
         })
-        if(type == 'loaders'){
+        if(type == 'loaders') {
             options.unshift({
                 content: $t("💎 View Lora Info..."),
                 callback: (value, options, e, menu, node) => {
-                    const widget = node.widgets.find(cate=> cate.name == 'lora_name')
+                    const widget = node.widgets.find(cate => cate.name == 'lora_name')
                     let name = widget.value;
                     if (!name || name == 'None') return
                     new LoraInfoDialog(name).show('loras', name);
@@ -522,7 +522,19 @@ app.registerExtension({
                     }
                 }
             })
+            // ckptNames
+            if(nodeData.name == 'easy ckptNames'){
+                options.unshift({
+                    content: $t("💎 View Checkpoint Info..."),
+                    callback: (value, options, e, menu, node) => {
+                        let name = node.widgets[0].value;
+                        if (!name || name == 'None') return
+                        new CheckpointInfoDialog(name).show('checkpoints', name);
+                    }
+                })
+            }
         })
+
         // Swap提示词
         if (positive_prompt.includes(nodeData.name)) {
             addMenu("↪️ Swap EasyPrompt", 'positive_prompt', positive_prompt, nodeType)

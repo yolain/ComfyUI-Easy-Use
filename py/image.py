@@ -15,6 +15,25 @@ from .libs.chooser import ChooserMessage, ChooserCancelled
 from .config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS, MEDIAPIPE_MODELS, MEDIAPIPE_DIR
 
 
+# 图像数量
+class imageCount:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+      }
+    }
+
+  CATEGORY = "EasyUse/Image"
+
+  RETURN_TYPES = ("INT",)
+  RETURN_NAMES = ("count",)
+  FUNCTION = "get_count"
+
+  def get_count(self, images):
+    return (images.size(0),)
+
 # 图像裁切
 class imageInsetCrop:
 
@@ -519,6 +538,24 @@ class imageSplitList:
           new_images[1].append(img)
     return new_images
 
+class imagesSplitImage:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+          "required": {
+              "images": ("IMAGE",),
+          }
+        }
+
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("image1", "image2", "image3", "image4", "image5")
+    FUNCTION = "split"
+    CATEGORY = "EasyUse/Image"
+
+    def split(self, images,):
+      new_images = torch.chunk(images, len(images), dim=0)
+      return new_images
+
 # 图片背景移除
 from .briaai.rembg import BriaRMBG, preprocess_image, postprocess_image
 from .libs.utils import get_local_filepath, easySave, install_package
@@ -901,7 +938,7 @@ class loadImageBase64:
   RETURN_TYPES = ("IMAGE", "MASK")
   OUTPUT_NODE = True
   FUNCTION = "load_image"
-  CATEGORY = "image"
+  CATEGORY = "EasyUse/Image/LoadImage"
 
   def convert_color(self, image,):
     if len(image.shape) > 2 and image.shape[2] >= 4:
@@ -1005,6 +1042,7 @@ class poseEditor:
 
 NODE_CLASS_MAPPINGS = {
   "easy imageInsetCrop": imageInsetCrop,
+  "easy imageCount": imageCount,
   "easy imageSize": imageSize,
   "easy imageSizeBySide": imageSizeBySide,
   "easy imageSizeByLongerSide": imageSizeByLongerSide,
@@ -1015,6 +1053,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageRatio": imageRatio,
   "easy imageToMask": imageToMask,
   "easy imageSplitList": imageSplitList,
+  "easy imagesSplitImage": imagesSplitImage,
   "easy imageSave": imageSaveSimple,
   "easy imageRemBg": imageRemBg,
   "easy imageChooser": imageChooser,
@@ -1029,6 +1068,7 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageInsetCrop": "ImageInsetCrop",
+  "easy imageCount": "ImageCount",
   "easy imageSize": "ImageSize",
   "easy imageSizeBySide": "ImageSize (Side)",
   "easy imageSizeByLongerSide": "ImageSize (LongerSide)",
@@ -1040,13 +1080,14 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageToMask": "ImageToMask",
   "easy imageHSVMask": "ImageHSVMask",
   "easy imageSplitList": "imageSplitList",
+  "easy imagesSplitImage": "imagesSplitImage",
   "easy imageSave": "SaveImage (Simple)",
   "easy imageRemBg": "Image Remove Bg",
   "easy imageChooser": "Image Chooser",
   "easy imageColorMatch": "Image Color Match",
   "easy imageInterrogator": "Image To Prompt",
   "easy joinImageBatch": "JoinImageBatch",
-  "easy loadImageBase64": "LoadImage (Base64)",
+  "easy loadImageBase64": "Load Image (Base64)",
   "easy imageToBase64": "Image To Base64",
   "easy humanSegmentation": "Human Segmentation",
   "easy poseEditor": "PoseEditor",

@@ -33,6 +33,17 @@
 - 
 ## Changelog
 
+**v1.1.6 (2024/4/26)**
+
+- Added `easy styleAlignedBatchAlign` - Credit of [style_aligned_comfy](https://github.com/brianfitzgerald/style_aligned_comfy)
+- Added `easy ckptNames`
+- Added `easy controlnetNames`
+- Added `easy imagesSplitimage` - Batch images split into single images
+- Added `easy imageCount` - Get Image Count
+- Added `easy textSwitch` - Text Switch
+- `easy kSampler` & `easy fullkSampler` added **Preview&Choose** to **image_output** widget
+
+
 **v1.1.5 (2024/4/24)**
 
 - Rewrite `easy cleanGPUUsed` - the memory usage of the comfyUI can to be cleared
@@ -60,7 +71,7 @@
 - Added `easy promptConcat`
 - `easy wildcards` Added **multiline_mode**  
 
-**v1.1.2 (39c5ccf)**
+**v1.1.2**
 
 - Optimized some of the recommended nodes for slots related to EasyUse
 - Added **Enable ContextMenu Auto Nest Subdirectories** The setting item is enabled by default, and it can be classified into subdirectories, checkpoints and loras previews
@@ -76,7 +87,7 @@
 - Fixed layerDiffuse xyplot bug
 - `easy kSamplerInpainting` add *additional* widget，you can choose 'Differential Diffusion' or 'Only InpaintModelConditioning'
 
-**v1.1.1 (2024/3/16)**
+**v1.1.1**
 
 - The issue that the seed is 0 when a node with a seed control is added and **control before generate** is fixed for the first time run queue prompt.
 - `easy preSamplingAdvanced` Added **return_with_leftover_noise**
@@ -86,7 +97,7 @@
 - Remove forced **control_before_generate** settings。 If you want to use control_before_generate, change widget_value_control_mode to before in system settings
 - Added `easy imageRemBg` - The default is BriaAI's RMBG-1.4 model, which removes the background effect more and faster
 
-**v1.1.0 (d5ff84e)**
+**v1.1.0**
 
 - Added `easy imageSplitList` - to split every N images
 - Added `easy preSamplingDiffusionADDTL` - It can modify foreground、background or blended additional prompt
@@ -102,15 +113,18 @@
 - Fixed `easy instantIDApply` mask not input right
 
 
-**v1.0.9 (ff1add1)**
+<details>
+<summary><b>v1.0.9</b></summary>
 
 - Fixed the error when ComfyUI-Impack-Pack and ComfyUI_InstantID were not installed
 - Fixed `easy pipeIn`
 - Added `easy instantIDApply` - you need installed [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID) fisrt, Workflow[Example](https://github.com/yolain/ComfyUI-Easy-Use/blob/main/README.en.md#InstantID)
 - Fixed `easy detailerFix` not added to the list of nodes available for saving images formatting extensions
 - Fixed `easy XYInputs: PromptSR` errors are reported when replacing negative prompts
+</details>
 
-**v1.0.8 (f28cbf7)**
+<details>
+<summary><b>v1.0.8</b></summary>
 
 - `easy cascadeLoader` stage_c and stage_b support the checkpoint model (Download [checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints) models) 
 - `easy styleSelector` The search box is modified to be case-insensitive
@@ -120,8 +134,10 @@
 - Fixed the error of SDXLClipModel in ComfyUI revision 2016[c2cb8e88] and above (the revision number was judged to be compatible with the old revision)
 - Fixed `easy detailerFix` generation error when batch size is greater than 1
 - Optimize the code, reduce a lot of redundant code and improve the running speed
+</details>
 
-**v1.0.7 (2024-02-19)**
+<details>
+<summary><b>v1.0.7</b></summary>
 
 - Added `easy cascadeLoader` - stable cascade Loader
 - Added `easy preSamplingCascade` - stable cascade preSampling Settings
@@ -129,22 +145,28 @@
 - Added `easy cascadeKSampler` - stable cascade stage-c ksampler simple
 - 
 - Optimize the image to image[Example](https://github.com/yolain/ComfyUI-Easy-Use/blob/main/README.en.md#image-to-image)
+</details>
 
-**v1.0.6**
+<details>
+<summary><b>v1.0.6</b></summary>
 
 - Added `easy XYInputs: Checkpoint`
 - Added `easy XYInputs: Lora`
 - `easy seed` can manually switch the random seed when increasing the fixed seed value
 - Fixed `easy fullLoader` and all loaders to automatically adjust the node size when switching LoRa
 - Removed the original ttn image saving logic and adapted to the default image saving format extension of ComfyUI
+</details>
 
-- **v1.0.5**
+<details>
+<summary><b>v1.0.5</b></summary>
 
 - Added `easy isSDXL` 
 - Added prompt word control on `easy svdLoader`, which can be used with open_clip model
 - Added **populated_text** on `easy wildcards`, wildcard populated text can be output
+</details>
 
-**v1.0.4**
+<details>
+<summary><b>v1.0.4</b></summary>
 
 - `easy showAnything` added support for converting other types (e.g., tensor conditions, images, etc.)
 - Added `easy showLoaderSettingsNames` can display the model and VAE name in the output loader assembly
@@ -164,9 +186,10 @@
 - Changing the first-time install node package no longer automatically replaces the theme, you need to manually adjust and refresh the page
 - `easy imageSave` added **only_preivew**
 - Adjust the `easy latentCompositeMaskedWithCond` node
+</details>
 
-
-**v1.0.3**
+<details>
+<summary><b>v1.0.3</b></summary>
 
 - Added `easy stylesSelector`
 - Added **scale_soft_weights** in `easy controlnetLoader` and `easy controlnetLoaderADV` 
@@ -184,9 +207,10 @@
 
 - Adjust the UI theme, divided into two sets of styles: the official default background and the dark black background, which can be switched in the color palette in the settings
 - Modify the styles path to be compatible with other environments
+</details>
 
-
-**v1.0.2**
+<details>
+<summary><b>v1.0.2</b></summary>
 
 - Added `easy XYPlotAdvanced` and some nodes about `easy XYInputs`
 - Added **Alt+1-Alt+9** Shortcut keys to quickly paste node presets for Node templates (corresponding to 1~9 sequences)
@@ -203,7 +227,7 @@
 - Removed `easy imageRemBg`
 - Remove the introductory diagram and workflow files from the package to reduce the package size
 - Replaced the font file used in the generation of XY diagrams
-
+</details>
 
 <details>
 <summary><b>v1.0.1</b></summary>
@@ -298,6 +322,7 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 | easy preSamplingLayerDiffusion | [ComfyUI-layerdiffusion](https://github.com/huchenlei/ComfyUI-layerdiffusion) | LayeredDiffusionApply... | 
 | easy dynamiCrafterLoader       | [ComfyUI-layerdiffusion](https://github.com/ExponentialML/ComfyUI_Native_DynamiCrafter) | Apply Dynamicrafter    | 
 | easy imageChooser              | [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) | Preview Chooser         | 
+| easy styleAlignedBatchAlign              | [style_aligned_comfy](https://github.com/chrisgoringe/cg-image-picker) | styleAlignedBatchAlign       | 
 
 ## Workflow Examples
 

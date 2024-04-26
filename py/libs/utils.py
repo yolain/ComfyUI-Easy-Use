@@ -98,12 +98,17 @@ import comfy.supported_models_base
 def get_sd_version(model):
     base: BaseModel = model.model
     model_config: comfy.supported_models.supported_models_base.BASE = base.model_config
+    print(model_config)
     if isinstance(model_config, comfy.supported_models.SDXL):
         return 'sdxl'
     elif isinstance(
             model_config, (comfy.supported_models.SD15, comfy.supported_models.SD20)
     ):
         return 'sd15'
+    elif isinstance(
+            model_config, (comfy.supported_models.SVD_img2vid)
+    ):
+        return 'svd'
     else:
         return 'unknown'
 
@@ -231,7 +236,7 @@ def easySave(images, filename_prefix, output_type, prompt=None, extra_pnginfo=No
     from nodes import PreviewImage, SaveImage
     if output_type == "Hide":
         return list()
-    if output_type == "Preview":
+    if output_type in ["Preview", "Preview&Choose"]:
         filename_prefix = 'easyPreview'
         results = PreviewImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
         return results['ui']['images']

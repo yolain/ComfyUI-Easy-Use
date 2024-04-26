@@ -747,6 +747,7 @@ const NODE_COLORS = {
     "easy promptReplace":"cyan",
     "easy XYInputs: Seeds++ Batch": customXYLink,
     "easy XYInputs: ModelMergeBlocks": customXYLink,
+    'easy textSwitch': "pale_blue"
 }
 
 function setNodeColors(node, theme) {

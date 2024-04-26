@@ -56,7 +56,7 @@ function widgetLogic(node, widget) {
 	    }else {
 	        toggleWidget(node, findWidgetByName(node, 'link_id'))
 	    }
-		if (widget.value === 'Hide' || widget.value === 'Preview' || widget.value == 'PreviewChooser' || widget.value === 'Sender') {
+		if (widget.value === 'Hide' || widget.value === 'Preview' || widget.value == 'Preview&Choose' || widget.value === 'Sender') {
 			toggleWidget(node, findWidgetByName(node, 'save_prefix'))
 			toggleWidget(node, findWidgetByName(node, 'output_path'))
 			toggleWidget(node, findWidgetByName(node, 'embed_workflow'))

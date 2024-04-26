@@ -1,14 +1,70 @@
 import { app } from "/scripts/app.js";
 import { api } from "/scripts/api.js";
+import { ComfyDialog, $el } from "/scripts/ui.js";
 
 import { restart_from_here } from "./prompt.js";
 import { FlowState } from "./state.js";
 import { send_cancel, send_message, send_onstart, skip_next_restart_message } from "./messaging.js";
 import { display_preview_images, additionalDrawBackground, click_is_in_image } from "./preview.js";
-import {toggleWidget} from "../common/utils.js";
+import {$t} from "../common/i18n.js";
 
-function progressButtonPressed() {
-    const node = app.graph._nodes_by_id[this.node_id];
+
+class chooserImageDialog extends ComfyDialog {
+
+    constructor() {
+		super();
+        this.node = null
+        this.select_index = []
+        this.dialog_div = null
+	}
+
+    show(image,node){
+        this.select_index = []
+        this.node = node
+
+        const images_div = image.map((img, index) => {
+            const imgEl = $el('img', {
+                src: img.src,
+                onclick: _ => {
+                    if(this.select_index.includes(index)){
+                        this.select_index = this.select_index.filter(i => i !== index)
+                        imgEl.classList.remove('selected')
+                    } else {
+                        this.select_index.push(index)
+                        imgEl.classList.add('selected')
+                    }
+                    if (node.selected.has(index)) node.selected.delete(index);
+                    else node.selected.add(index);
+                }
+            })
+            return imgEl
+        })
+        super.show($el('div.easyuse-chooser-dialog',[
+            $el('h5.easyuse-chooser-dialog-title', $t('Choose images to continue')),
+            $el('div.easyuse-chooser-dialog-images',images_div)
+        ]))
+    }
+    createButtons() {
+        const btns = super.createButtons();
+        btns[0].onclick = _ => {
+            cancelButtonPressed()
+            super.close()
+        }
+        btns.unshift($el('button', {
+            type: 'button',
+            textContent: $t('Choose Selected Images'),
+            onclick: _ => {
+                progressButtonPressed(this.node)
+                super.close()
+            }
+        }))
+        return btns
+    }
+
+}
+
+function progressButtonPressed(_node) {
+    const node = _node ? _node : app.graph._nodes_by_id[this.node_id];
     if (node) {
         if (FlowState.paused()) {
             send_message(node.id, [...node.selected, -1, ...node.anti_selected]);
@@ -29,7 +85,11 @@ app.registerExtension({
     },
     setup(app) {
         function easyuseImageChooser(event) {
-            display_preview_images(event);
+            const {node,image,isKSampler} = display_preview_images(event);
+            if(isKSampler) {
+                const dialog = new chooserImageDialog();
+                dialog.show(image,node)
+            }
         }
         api.addEventListener("easyuse-image-choose", easyuseImageChooser);
 

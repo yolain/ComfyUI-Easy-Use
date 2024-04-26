@@ -37,7 +37,17 @@
 
 ## 更新日志
 
-**v1.1.5 (2024/4/24)**
+**v1.1.6 (2024/4/26)**
+
+- 增加 `easy styleAlignedBatchAlign` - 风格对齐 [style_aligned_comfy](https://github.com/brianfitzgerald/style_aligned_comfy)
+- 增加 `easy ckptNames`
+- 增加 `easy controlnetNames`
+- 增加 `easy imagesSplitimage` - 批次图像拆分单张
+- 增加 `easy imageCount` - 图像数量
+- 增加 `easy textSwitch` - 文字切换
+- `easy kSampler` 和 `easy fullkSampler` 的 **image_output** 增加 **Preview&Choose**选项
+
+**v1.1.5**
 
 - 重写 `easy cleanGPUUsed` - 可强制清理comfyUI的模型显存占用
 - 增加 `easy humanSegmentation` - 多类分割、人像分割
@@ -47,7 +57,7 @@
 - 增加 `easy imageInterrogator` - 图像反推
 - 增加 `easy stableDiffusion3API` - 简易的Stable Diffusion 3 多账号API节点
 
-**v1.1.4 (2024/4/13)**
+**v1.1.4**
 
 - 增加 `easy imageChooser` - 从[cg-image-picker](https://github.com/chrisgoringe/cg-image-picker)简化的图片选择器
 - 增加 `easy preSamplingCustom` - 自定义预采样，可支持cosXL-edit
@@ -56,7 +66,7 @@
 - 修复 `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` 以兼容ComfyUI Revision>=2098 [0542088e] 以上版本
 - 修复 FooocusInpaint修改ModelPatcher计算权重引发的问题，理应在生成model后重置ModelPatcher为默认值
 
-**v1.1.3 (2024/4/4)**
+**v1.1.3**
 
 - `easy ipadapterApply` 增加 **COMPOSITION** 预置项
 - 增加 对[ResAdapter](https://huggingface.co/jiaxiangc/res-adapter) lora模型 的加载支持
@@ -66,7 +76,7 @@
 - `easy wildcards` 增加 **multiline_mode**属性 
 - 增加 当节点需要下载模型时，若huggingface连接超时，会切换至镜像地址下载模型
 
-**v1.1.2 (39c5ccf)**
+**v1.1.2**
 
 - 改写 EasyUse 相关节点的部分插槽推荐节点
 - 增加 **启用上下文菜单自动嵌套子目录** 设置项，默认为启用状态，可分类子目录及checkpoints、loras预览图
@@ -82,7 +92,7 @@
 - 修复 `easy pipeEdit` 提示词输入lora时报错
 - 修复 layerDiffuse xyplot相关bug
 
-**v1.1.1 (5c8af8f)**
+**v1.1.1**
 
 - 修复首次添加含seed的节点且当前模式为control_before_generate时，seed为0的问题
 - `easy preSamplingAdvanced` 增加 **return_with_leftover_noise**
@@ -93,7 +103,7 @@
 - 去除强制**control_before_generate**设定
 - 增加 `easy imageRemBg` - 默认为BriaAI的RMBG-1.4模型, 移除背景效果更加，速度更快
 
-**v1.1.0 (d5ff84e)**
+**v1.1.0**
 
 - 增加 `easy imageSplitList` - 拆分每 N 张图像
 - 增加 `easy preSamplingDiffusionADDTL` - 可配置前景、背景、blended的additional_prompt等   
@@ -107,15 +117,18 @@
 - 修复 `easy instantIDApply` mask 未传入正确值
 - 修复 在 非a1111提示词风格下 BREAK 不生效的问题
 
-**v1.0.9 (ff1add1)**
+<details>
+<summary><b>v1.0.9</b></summary>
 
 - 修复未安装 ComfyUI-Impack-Pack 和 ComfyUI_InstantID 时报错
 - 修复 `easy pipeIn` - pipe设为可不必选
 - 增加 `easy instantIDApply` - 需要先安装 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID), 工作流参考[示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#InstantID)
 - 修复 `easy detailerFix` 未添加到保存图片格式化扩展名可用节点列表
 - 修复 `easy XYInputs: PromptSR` 在替换负面提示词时报错
+</details>
 
-**v1.0.8 (f28cbf7)**
+<details>
+<summary><b>v1.0.8</b></summary>
 
 - `easy cascadeLoader` stage_c 与 stage_b 支持checkpoint模型 (需要下载[checkpoints](https://huggingface.co/stabilityai/stable-cascade/tree/main/comfyui_checkpoints)) 
 - `easy styleSelector` 搜索框修改为不区分大小写匹配
@@ -129,13 +142,16 @@
 
 （翻译对照已由 [AIGODLIKE-COMFYUI-TRANSLATION](https://github.com/AIGODLIKE/AIGODLIKE-ComfyUI-Translation) 统一维护啦！
 首次下载或者版本较早的朋友请更新 AIGODLIKE-COMFYUI-TRANSLATION 和本节点包至最新版本。）
+</details>
 
-**v1.0.7**
+<details>
+<summary><b>v1.0.7</b></summary>
 
 - 增加 `easy cascadeLoader` - stable cascade 加载器
 - 增加 `easy preSamplingCascade` - stabled cascade stage_c 预采样参数
 - 增加 `easy fullCascadeKSampler` - stable cascade stage_c 完整版采样器
 - 增加 `easy cascadeKSampler` - stable cascade stage-c ksampler simple
+</details>
 
 <details>
 <summary><b>v1.0.6</b></summary>
@@ -310,6 +326,7 @@
 | easy preSamplingLayerDiffusion | [ComfyUI-layerdiffusion](https://github.com/huchenlei/ComfyUI-layerdiffusion) | LayeredDiffusionApply等  | 
 | easy dynamiCrafterLoader       | [ComfyUI-layerdiffusion](https://github.com/ExponentialML/ComfyUI_Native_DynamiCrafter) | Apply Dynamicrafter     | 
 | easy imageChooser              | [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) | Preview Chooser         | 
+| easy styleAlignedBatchAlign              | [style_aligned_comfy](https://github.com/chrisgoringe/cg-image-picker) | styleAlignedBatchAlign       | 
 
 ## 示例
 

@@ -1,3 +1,5 @@
+__version__ = "1.1.6"
+
 import os
 import glob
 import folder_paths
@@ -85,4 +87,4 @@ WEB_DIRECTORY = "./web"
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]
 
 
-print('\033[34mComfy-Easy-Use (v1.1.5): \033[92mLoaded\033[0m')
+print(f'\033[34mComfy-Easy-Use v{__version__}: \033[92mLoaded\033[0m')

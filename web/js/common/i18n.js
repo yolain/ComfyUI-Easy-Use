@@ -59,6 +59,9 @@ const zhCN = {
     "APIKEY is not Empty": "APIKEY 不能为空",
     "Add Account": "添加账号",
     "Getting Your APIKEY": "获取您的APIKEY",
+    // choosers
+    "Choose Selected Images": "选择选中的图片",
+    "Choose images to continue": "选择图片以继续",
     // seg
     "Background": "背景",
     "Hat": "帽子",

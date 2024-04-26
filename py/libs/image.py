@@ -111,27 +111,26 @@ class CI_Inference:
 
   def image_to_prompt(self, image, mode, model_name='ViT-L-14/openai', low_vram=False):
     try:
-      install_package("clip_interrogator", "0.6.0")
       from clip_interrogator import Config, Interrogator
       global Config, Interrogator
+    except:
+      install_package("clip_interrogator", "0.6.0")
+      from clip_interrogator import Config, Interrogator
 
-      pbar = comfy.utils.ProgressBar(len(image))
+    pbar = comfy.utils.ProgressBar(len(image))
 
-      self._load_model(model_name, low_vram)
-      prompt = []
-      for i in range(len(image)):
-        im = image[i]
+    self._load_model(model_name, low_vram)
+    prompt = []
+    for i in range(len(image)):
+      im = image[i]
 
-        im = tensor2pil(im)
-        im = im.convert('RGB')
+      im = tensor2pil(im)
+      im = im.convert('RGB')
 
-        _prompt = self._interrogate(im, mode)
-        pbar.update(1)
-        prompt.append(_prompt)
+      _prompt = self._interrogate(im, mode)
+      pbar.update(1)
+      prompt.append(_prompt)
 
-      return prompt
-    except Exception as e:
-      print(e)
-      return [""]
+    return prompt
 
 ci = CI_Inference()

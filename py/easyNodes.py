@@ -22,7 +22,7 @@ from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
 from .layer_diffuse.func import LayerDiffuse, LayerMethod
 
-from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions, AlwaysEqualProxy
+from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions, AlwaysEqualProxy, get_sd_version
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler
 from .libs.xyplot import easyXYPlot
@@ -818,6 +818,39 @@ class globalSeed:
 #---------------------------------------------------------------提示词 结束------------------------------------------------------------------------#
 
 #---------------------------------------------------------------加载器 开始----------------------------------------------------------------------#
+
+class setCkptName:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+                "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
+            }
+        }
+
+    RETURN_TYPES = (AlwaysEqualProxy('*'),)
+    RETURN_NAMES = ("ckpt_name",)
+    FUNCTION = "set_name"
+    CATEGORY = "EasyUse/Utils"
+
+    def set_name(self, ckpt_name):
+        return (ckpt_name,)
+
+class setControlName:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+                "controlnet_name": (folder_paths.get_filename_list("controlnet"),),
+            }
+        }
+
+    RETURN_TYPES = (AlwaysEqualProxy('*'),)
+    RETURN_NAMES = ("controlnet_name",)
+    FUNCTION = "set_name"
+    CATEGORY = "EasyUse/Utils"
+
+    def set_name(self, controlnet_name):
+        return (controlnet_name,)
 
 # 简易加载器完整
 class fullLoader:
@@ -2084,6 +2117,27 @@ class fooocusInpaintLoader:
         return ((inpaint_head_model, inpaint_lora),)
 
 #---------------------------------------------------------------适配器 开始----------------------------------------------------------------------#
+from .libs.styleAlign import styleAlignBatch, SHARE_NORM_OPTIONS, SHARE_ATTN_OPTIONS
+class styleAlignedBatchAlign:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "share_norm": (SHARE_NORM_OPTIONS,),
+                "share_attn": (SHARE_ATTN_OPTIONS,),
+                "scale": ("FLOAT", {"default": 1, "min": 0, "max": 1.0, "step": 0.1}),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL",)
+    FUNCTION = "align"
+    CATEGORY = "EasyUse/Adapter"
+
+    def align(self, model, share_norm, share_attn, scale):
+        return (styleAlignBatch(model, share_norm, share_attn, scale),)
+
 def insightface_loader(provider):
     try:
         from insightface.app import FaceAnalysis
@@ -3236,7 +3290,7 @@ class samplerCustomSettings:
                      "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "cfg_negative": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS + ['inversed_euler'],),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['karrasADV','exponentialADV','polyExponential','sdturbo','vp'],),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['karrasADV','exponentialADV','polyExponential', 'sdturbo', 'vp'],),
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "sigma_max": ("FLOAT", {"default": 14.614642, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
                      "sigma_min": ("FLOAT", {"default": 0.0291675, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
@@ -3327,6 +3381,7 @@ class samplerCustomSettings:
         return (ksampler,)
 
     def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, flip_sigmas, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+
         # 图生图转换
         vae = pipe["vae"]
         model = pipe["model"]
@@ -3334,6 +3389,7 @@ class samplerCustomSettings:
         negative = pipe['negative']
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         _guider, sigmas = None, None
+        print(get_sd_version(model))
         if image_to_latent is not None:
             if guider == "IP2P+DualCFG":
                 positive, negative, latent = self.ip2p(pipe['positive'], pipe['negative'], vae, image_to_latent)
@@ -3384,6 +3440,8 @@ class samplerCustomSettings:
                 sigmas, = PolyexponentialScheduler().get_sigmas(steps, sigma_max, sigma_min, rho)
             elif scheduler == 'sdturbo':
                 sigmas, = SDTurboScheduler().get_sigmas(model, steps, denoise)
+            elif scheduler == 'alignYourSteps':
+                pass
             else:
                 sigmas, = BasicScheduler().get_sigmas(model, scheduler, steps, denoise)
 
@@ -3937,6 +3995,7 @@ class dynamicThresholdingFull:
 #---------------------------------------------------------------采样器 开始----------------------------------------------------------------------
 
 # 完整采样器
+from .libs.chooser import ChooserMessage, ChooserCancelled
 class samplerFull(LayerDiffuse):
 
     def __init__(self):
@@ -3951,7 +4010,7 @@ class samplerFull(LayerDiffuse):
                  "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                  "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                  "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
+                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide/Save", "Sender", "Sender/Save"],),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -4121,6 +4180,26 @@ class samplerFull(LayerDiffuse):
 
             del pipe
 
+            if image_output == 'Preview&Choose':
+                if my_unique_id not in ChooserMessage.stash:
+                    ChooserMessage.stash[my_unique_id] = {}
+                my_stash = ChooserMessage.stash[my_unique_id]
+
+                PromptServer.instance.send_sync("easyuse-image-choose", {"id": my_unique_id, "urls": results})
+                # wait for selection
+                try:
+                    selections = ChooserMessage.waitForMessage(my_unique_id, asList=True)
+                    new_images = [new_images[x] for x in selections if x >= 0] if len(selections) > 1 else [0]
+                    samp_images = [samp_images[x] for x in selections if x >= 0] if len(selections) > 1 else [0]
+                except ChooserCancelled:
+                    raise comfy.model_management.InterruptProcessingException()
+
+                new_pipe['images'] = new_images
+                new_pipe['samp_images'] = samp_images
+
+                return {"ui": {"images": results},
+                        "result": sampler.get_output(new_pipe,)}
+
             if image_output in ("Hide", "Hide/Save"):
                 return {"ui": {},
                     "result": sampler.get_output(new_pipe,)}
@@ -4272,7 +4351,7 @@ class samplerSimple:
     def INPUT_TYPES(cls):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -6946,6 +7025,7 @@ NODE_CLASS_MAPPINGS = {
     "easy ipadapterStyleComposition": ipadapterStyleComposition,
     "easy instantIDApply": instantIDApply,
     "easy instantIDApplyADV": instantIDApplyAdvanced,
+    "easy styleAlignedBatchAlign": styleAlignedBatchAlign,
     # Inpaint 内补
     "easy fooocusInpaintLoader": fooocusInpaintLoader,
     # latent 潜空间
@@ -7009,6 +7089,9 @@ NODE_CLASS_MAPPINGS = {
     "dynamicThresholdingFull": dynamicThresholdingFull,
     # api 相关
     "easy stableDiffusion3API": stableDiffusion3API,
+    # utils
+    "easy ckptNames": setCkptName,
+    "easy controlnetNames": setControlName,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -7048,6 +7131,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy ipadapterApplyFromParams": "Easy Apply IPAdapter (From Params)",
     "easy instantIDApply": "Easy Apply InstantID",
     "easy instantIDApplyADV": "Easy Apply InstantID (Advanced)",
+    "easy styleAlignedBatchAlign": "Easy Apply StyleAlign",
     # Inpaint 内补
     "easy fooocusInpaintLoader": "Load Fooocus Inpaint",
     # latent 潜空间
@@ -7111,4 +7195,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "dynamicThresholdingFull": "DynamicThresholdingFull",
     # api 相关
     "easy stableDiffusion3API": "Stable Diffusion 3 (API)",
+    # utils
+    "easy ckptNames": "Ckpt Names",
+    "easy controlnetNames": "ControlNet Names",
 }
