@@ -22,6 +22,8 @@ from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
 from .layer_diffuse.func import LayerDiffuse, LayerMethod
 
+from .scheduling_tcd import TCDScheduler
+
 from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions, AlwaysEqualProxy, get_sd_version
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler
@@ -4021,7 +4023,7 @@ class samplerFull(LayerDiffuse):
                 {"pipe": ("PIPE_LINE",),
                  "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                  "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS+['align_your_steps'],),
                  "scheduler": (comfy.samplers.KSampler.SCHEDULERS+['align_your_steps'],),
                  "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                  "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide/Save", "Sender", "Sender/Save"],),
