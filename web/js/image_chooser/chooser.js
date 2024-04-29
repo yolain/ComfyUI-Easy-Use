@@ -54,7 +54,13 @@ class chooserImageDialog extends ComfyDialog {
             type: 'button',
             textContent: $t('Choose Selected Images'),
             onclick: _ => {
-                progressButtonPressed(this.node)
+                if (FlowState.paused()) {
+                    send_message(this.node.id, [...this.node.selected, -1, ...this.node.anti_selected]);
+                }
+                if (FlowState.idle()) {
+                    skip_next_restart_message();
+                    restart_from_here(this.node.id).then(() => { send_message(this.node.id, [...this.node.selected, -1, ...this.node.anti_selected]); });
+                }
                 super.close()
             }
         }))
@@ -63,8 +69,8 @@ class chooserImageDialog extends ComfyDialog {
 
 }
 
-function progressButtonPressed(_node) {
-    const node = _node ? _node : app.graph._nodes_by_id[this.node_id];
+function progressButtonPressed() {
+    const node = app.graph._nodes_by_id[this.node_id];
     if (node) {
         if (FlowState.paused()) {
             send_message(node.id, [...node.selected, -1, ...node.anti_selected]);
