@@ -150,7 +150,6 @@ const cssCode = `
 	border-radius: 7px;
 	text-align: center;
 	text-wrap: balance;
-	text-transform: uppercase;
 }
 .hideInfo-dropdown {
 	position: absolute;

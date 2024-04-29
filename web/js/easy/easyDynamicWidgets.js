@@ -297,9 +297,7 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'beta_min'),true)
 			toggleWidget(node, findWidgetByName(node, 'eps_s'),true)
 		}else{
-			if(widget.value == 'alignYourSteps'){
-				toggleWidget(node, findWidgetByName(node, 'denoise'))
-			}else toggleWidget(node, findWidgetByName(node, 'denoise'),true)
+			toggleWidget(node, findWidgetByName(node, 'denoise'),true)
 			toggleWidget(node, findWidgetByName(node, 'sigma_max'))
 			toggleWidget(node, findWidgetByName(node, 'sigma_min'))
 			toggleWidget(node, findWidgetByName(node, 'beta_d'))
@@ -561,6 +559,7 @@ app.registerExtension({
 			case "easy dynamiCrafterLoader":
 			case "easy loraStack":
 			case "easy latentNoisy":
+			case "easy preSampling":
 			case "easy preSamplingAdvanced":
 			case "easy preSamplingNoiseIn":
 			case "easy preSamplingCustom":
@@ -808,6 +807,7 @@ app.registerExtension({
 					const pos = this.widgets.findIndex((w) => w.name === "spent_time");
 					if (pos !== -1 && this.widgets[pos]) {
 						const w = this.widgets[pos]
+						console.log(text)
 						w.value = text;
 					}
 				}

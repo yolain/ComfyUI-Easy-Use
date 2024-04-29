@@ -24,7 +24,7 @@ from .layer_diffuse.func import LayerDiffuse, LayerMethod
 
 from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions, AlwaysEqualProxy, get_sd_version
 from .libs.loader import easyLoader
-from .libs.sampler import easySampler
+from .libs.sampler import easySampler, alignYourStepsScheduler
 from .libs.xyplot import easyXYPlot
 from .libs.controlnet import easyControlnet
 from .libs.conditioning import prompt_to_cond, set_cond
@@ -830,7 +830,7 @@ class setCkptName:
     RETURN_TYPES = (AlwaysEqualProxy('*'),)
     RETURN_NAMES = ("ckpt_name",)
     FUNCTION = "set_name"
-    CATEGORY = "EasyUse/Utils"
+    CATEGORY = "EasyUse/Util"
 
     def set_name(self, ckpt_name):
         return (ckpt_name,)
@@ -847,7 +847,7 @@ class setControlName:
     RETURN_TYPES = (AlwaysEqualProxy('*'),)
     RETURN_NAMES = ("controlnet_name",)
     FUNCTION = "set_name"
-    CATEGORY = "EasyUse/Utils"
+    CATEGORY = "EasyUse/Util"
 
     def set_name(self, controlnet_name):
         return (controlnet_name,)
@@ -2599,19 +2599,20 @@ class ipadapterApplyEncoder(ipadapter):
         embeds = [embed for embed in embeds if embed is not None]
         embeds = torch.cat(embeds, dim=0)
 
-        if method == "add":
-            embeds = torch.sum(embeds, dim=0).unsqueeze(0)
-        elif method == "subtract":
-            embeds = embeds[0] - torch.mean(embeds[1:], dim=0)
-            embeds = embeds.unsqueeze(0)
-        elif method == "average":
-            embeds = torch.mean(embeds, dim=0).unsqueeze(0)
-        elif method == "norm average":
-            embeds = torch.mean(embeds / torch.norm(embeds, dim=0, keepdim=True), dim=0).unsqueeze(0)
-        elif method == "max":
-            embeds = torch.max(embeds, dim=0).values.unsqueeze(0)
-        elif method == "min":
-            embeds = torch.min(embeds, dim=0).values.unsqueeze(0)
+        match method:
+            case "add":
+                embeds = torch.sum(embeds, dim=0).unsqueeze(0)
+            case "subtract":
+                embeds = embeds[0] - torch.mean(embeds[1:], dim=0)
+                embeds = embeds.unsqueeze(0)
+            case "average":
+                embeds = torch.mean(embeds, dim=0).unsqueeze(0)
+            case "norm average":
+                embeds = torch.mean(embeds / torch.norm(embeds, dim=0, keepdim=True), dim=0).unsqueeze(0)
+            case "max":
+                embeds = torch.max(embeds, dim=0).values.unsqueeze(0)
+            case "min":
+                embeds = torch.min(embeds, dim=0).values.unsqueeze(0)
 
         return embeds
 
@@ -3383,7 +3384,6 @@ class samplerCustomSettings:
     def get_custom_cls(self, sampler_name):
         try:
             cls = custom_samplers.__dict__[sampler_name]
-            print(cls)
             return cls()
         except:
             raise Exception(f"Custom sampler {sampler_name} not found, Please updated your ComfyUI")
@@ -3434,30 +3434,30 @@ class samplerCustomSettings:
                 sampler, = self.get_custom_cls('KSamplerSelect').get_sampler(sampler_name)
 
         # sigmas
-        if optional_sigmas:
+        if optional_sigmas is not None:
             sigmas = optional_sigmas
         else:
-            if scheduler == 'vp':
-                sigmas, = self.get_custom_cls('VPScheduler').get_sigmas(steps, beta_d, beta_min, eps_s)
-            elif scheduler == 'karrasADV':
-                sigmas, = self.get_custom_cls('KarrasScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
-            elif scheduler == 'exponentialADV':
-                sigmas, = self.get_custom_cls('ExponentialScheduler').get_sigmas(steps, sigma_max, sigma_min)
-            elif scheduler == 'polyExponential':
-                sigmas, = self.get_custom_cls('PolyexponentialScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
-            elif scheduler == 'sdturbo':
-                sigmas, = self.get_custom_cls('SDTurboScheduler').get_sigmas(model, steps, denoise)
-            elif scheduler == 'alignYourSteps':
-                try:
-                    from comfy_extras.nodes_align_your_steps import AlignYourStepsScheduler
-                    model_type = get_sd_version(model)
-                    if model_type == 'unknown':
-                        raise Exception("This Model not supported")
-                    sigmas, = AlignYourStepsScheduler().get_sigmas(model_type.upper(), steps)
-                except:
-                    raise Exception("Please update your ComfyUI")
-            else:
-                sigmas, = self.get_custom_cls('BasicScheduler').get_sigmas(model, scheduler, steps, denoise)
+            match scheduler:
+                case 'vp':
+                    sigmas, = self.get_custom_cls('VPScheduler').get_sigmas(steps, beta_d, beta_min, eps_s)
+                case 'karrasADV':
+                    sigmas, = self.get_custom_cls('KarrasScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
+                case 'exponentialADV':
+                    sigmas, = self.get_custom_cls('ExponentialScheduler').get_sigmas(steps, sigma_max, sigma_min)
+                case 'polyExponential':
+                    sigmas, = self.get_custom_cls('PolyexponentialScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
+                case 'sdturbo':
+                    sigmas, = self.get_custom_cls('SDTurboScheduler').get_sigmas(model, steps, denoise)
+                case 'alignYourSteps':
+                    try:
+                        model_type = get_sd_version(model)
+                        if model_type == 'unknown':
+                            raise Exception("This Model not supported")
+                        sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
+                    except:
+                        raise Exception("Please update your ComfyUI")
+                case _:
+                    sigmas, = self.get_custom_cls('BasicScheduler').get_sigmas(model, scheduler, steps, denoise)
 
             # filp_sigmas
             if flip_sigmas:
@@ -3553,14 +3553,15 @@ class sdTurboSettings:
                 "unsharp_sigma": unsharp_sigma,
                 "unsharp_strength": unsharp_strength,
             }
-        if sampler_name == "euler_ancestral":
-            sample_function = sample_euler_ancestral
-        elif sampler_name == "dpmpp_2s_ancestral":
-            sample_function = sample_dpmpp_2s_ancestral
-        elif sampler_name == "dpmpp_2m_sde":
-            sample_function = sample_dpmpp_2m_sde
-        elif sampler_name == "lcm":
-            sample_function = sample_lcm
+        match sampler_name:
+            case "euler_ancestral":
+                sample_function = sample_euler_ancestral
+            case "dpmpp_2s_ancestral":
+                sample_function = sample_dpmpp_2s_ancestral
+            case "dpmpp_2m_sde":
+                sample_function = sample_dpmpp_2m_sde
+            case "lcm":
+                sample_function = sample_lcm
 
         if sample_function is not None:
             unsharp_kernel_size = unsharp_kernel_size if unsharp_kernel_size % 2 == 1 else unsharp_kernel_size + 1
@@ -4148,11 +4149,10 @@ class samplerFull(LayerDiffuse):
             # 开始推理
             if scheduler == 'align_your_steps' and samp_custom is None:
                 try:
-                    from comfy_extras.nodes_align_your_steps import AlignYourStepsScheduler
                     model_type = get_sd_version(samp_model)
                     if model_type == 'unknown':
                         raise Exception("This Model not supported")
-                    sigmas, = AlignYourStepsScheduler().get_sigmas(model_type.upper(), steps)
+                    sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
                 except:
                     raise Exception("Please update your ComfyUI")
                 _sampler = comfy.samplers.sampler_object(sampler_name)
@@ -4174,7 +4174,7 @@ class samplerFull(LayerDiffuse):
 
             # 推理总耗时（包含解码）
             end_decode_time = int(time.time() * 1000)
-            spent_time = '扩散:' + str((end_time-start_time)/1000)+'秒, 解码:' + str((end_decode_time-end_time)/1000)+'秒'
+            spent_time = 'Diffusion:' + str((end_time-start_time)/1000)+'″, VAEDecode:' + str((end_decode_time-end_time)/1000)+'″ '
 
             results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
             sampler.update_value_by_id("results", my_unique_id, results)
@@ -4703,8 +4703,8 @@ class samplerSDTurbo:
 
         # 推理总耗时（包含解码）
         end_decode_time = int(time.time() * 1000)
-        spent_time = '扩散:' + str((end_time - start_time) / 1000) + '秒, 解码:' + str(
-            (end_decode_time - end_time) / 1000) + '秒'
+        spent_time = 'Diffusion:' + str((end_time - start_time) / 1000) + '″, VAEDecode:' + str(
+            (end_decode_time - end_time) / 1000) + '″ '
 
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
@@ -4866,8 +4866,8 @@ class samplerCascadeFull:
 
         # 推理总耗时（包含解码）
         end_decode_time = int(time.time() * 1000)
-        spent_time = '扩散:' + str((end_time - start_time) / 1000) + '秒, 解码:' + str(
-            (end_decode_time - end_time) / 1000) + '秒'
+        spent_time = 'Diffusion:' + str((end_time - start_time) / 1000) + '″, VAEDecode:' + str(
+            (end_decode_time - end_time) / 1000) + '″ '
 
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
@@ -5548,7 +5548,7 @@ class detailerFix:
         # 细节修复结束时间
         end_time = int(time.time() * 1000)
 
-        spent_time = '细节修复:' + str((end_time - start_time) / 1000) + '秒'
+        spent_time = 'Fix:' + str((end_time - start_time) / 1000) + '"'
 
         results = easySave(result_img, save_prefix, image_output, prompt, extra_pnginfo)
         sampler.update_value_by_id("results", my_unique_id, results)
@@ -6904,7 +6904,7 @@ class showSpentTime:
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
-                "spent_time": ("INFO", {"default": '推理完成后将显示推理时间', "forceInput": False}),
+                "spent_time": ("INFO", {"default": 'Time will be displayed when reasoning is complete', "forceInput": False}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
