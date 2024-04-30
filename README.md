@@ -31,6 +31,7 @@
 - 扩展 XYplot 的可用性
 - 整合了Fooocus Inpaint功能
 - 整合了常用的逻辑计算、转换类型、展示所有类型等
+- 支持节点上checkpoint、lora模型子目录分类及预览图 (请在设置中开启上下文菜单嵌套子目录)
 - 支持BriaAI的RMBG-1.4模型的背景去除节点，[技术参考](https://huggingface.co/briaai/RMBG-1.4)
 - 支持 强制清理comfyUI模型显存占用
 - 支持Stable Diffusion 3 多账号API节点

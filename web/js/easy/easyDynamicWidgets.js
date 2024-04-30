@@ -51,7 +51,7 @@ function widgetLogic(node, widget) {
 		updateNodeHeight(node)
 	}
 	if (widget.name === 'image_output') {
-	    if (widget.value === 'Sender' || widget.value === 'Sender/Save'){
+	    if (widget.value === 'Sender' || widget.value === 'Sender&Save'){
 	        toggleWidget(node, findWidgetByName(node, 'link_id'), true)
 	    }else {
 	        toggleWidget(node, findWidgetByName(node, 'link_id'))
@@ -62,7 +62,7 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'embed_workflow'))
 			toggleWidget(node, findWidgetByName(node, 'number_padding'))
 			toggleWidget(node, findWidgetByName(node, 'overwrite_existing'))
-		} else if (widget.value === 'Save' || widget.value === 'Hide/Save' || widget.value === 'Sender/Save') {
+		} else if (widget.value === 'Save' || widget.value === 'Hide&Save' || widget.value === 'Sender&Save') {
 			toggleWidget(node, findWidgetByName(node, 'save_prefix'), true)
 			toggleWidget(node, findWidgetByName(node, 'output_path'), true)
 			toggleWidget(node, findWidgetByName(node, 'embed_workflow'), true)
@@ -70,7 +70,7 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'overwrite_existing'), true)
 		}
 
-		if(widget.value === 'Hide' || widget.value === 'Hide/Save'){
+		if(widget.value === 'Hide' || widget.value === 'Hide&Save'){
 			toggleWidget(node, findWidgetByName(node, 'decode_vae_name'))
 		}else{
 			toggleWidget(node, findWidgetByName(node, 'decode_vae_name'), true)

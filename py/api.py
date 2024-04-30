@@ -138,7 +138,7 @@ async def getModelsThumbnail(request):
     loras = folder_paths.get_filename_list("loras_thumb")
     checkpoints_full = []
     loras_full = []
-    if len(checkpoints) + len(loras) >= 300:
+    if len(checkpoints) + len(loras) >= 500:
         return web.Response(status=400)
     for index, i in enumerate(checkpoints):
         full_path = folder_paths.get_full_path('checkpoints_thumb', str(i))

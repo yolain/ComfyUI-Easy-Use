@@ -4025,7 +4025,7 @@ class samplerFull(LayerDiffuse):
                  "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                  "scheduler": (comfy.samplers.KSampler.SCHEDULERS+['align_your_steps'],),
                  "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide/Save", "Sender", "Sender/Save"],),
+                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save"],),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -4215,8 +4215,16 @@ class samplerFull(LayerDiffuse):
                 # wait for selection
                 try:
                     selections = ChooserMessage.waitForMessage(my_unique_id, asList=True)
-                    new_images = [new_images[x] for x in selections if x >= 0] if len(selections) > 1 else [0]
-                    samp_images = [samp_images[x] for x in selections if x >= 0] if len(selections) > 1 else [0]
+                    samples = samp_samples['samples']
+                    samples = [samples[x] for x in selections if x >= 0] if len(selections) > 1 else [samples[0]]
+                    new_images = [new_images[x] for x in selections if x >= 0] if len(selections) > 1 else [new_images[0]]
+                    samp_images = [samp_images[x] for x in selections if x >= 0] if len(selections) > 1 else [samp_images[0]]
+                    new_images = torch.stack(new_images, dim=0)
+                    samp_images = torch.stack(samp_images, dim=0)
+                    samples = torch.stack(samples, dim=0)
+                    samp_samples = {"samples": samples}
+                    new_pipe['samples'] = samp_samples
+                    new_pipe['loader_settings']['batch_size'] = len(new_images)
                 except ChooserCancelled:
                     raise comfy.model_management.InterruptProcessingException()
 
@@ -4226,11 +4234,11 @@ class samplerFull(LayerDiffuse):
                 return {"ui": {"images": results},
                         "result": sampler.get_output(new_pipe,)}
 
-            if image_output in ("Hide", "Hide/Save"):
+            if image_output in ("Hide", "Hide&Save"):
                 return {"ui": {},
                     "result": sampler.get_output(new_pipe,)}
 
-            if image_output in ("Sender", "Sender/Save"):
+            if image_output in ("Sender", "Sender&Save"):
                 PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
             ModelPatcher.calculate_weight = default_calculate_weight
@@ -4347,14 +4355,14 @@ class samplerFull(LayerDiffuse):
 
             del pipe
 
-            if image_output in ("Hide", "Hide/Save"):
+            if image_output in ("Hide", "Hide&Save"):
                 return sampler.get_output(new_pipe)
 
             ModelPatcher.calculate_weight = default_calculate_weight
             return {"ui": {"images": results}, "result": (sampler.get_output(new_pipe))}
 
         preview_latent = True
-        if image_output in ("Hide", "Hide/Save"):
+        if image_output in ("Hide", "Hide&Save"):
             preview_latent = False
 
         xyplot_id = next((x for x in prompt if "XYPlot" in str(prompt[x]["class_type"])), None)
@@ -4377,7 +4385,7 @@ class samplerSimple:
     def INPUT_TYPES(cls):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
-                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -4414,7 +4422,7 @@ class samplerSimpleTiled:
         return {"required":
                 {"pipe": ("PIPE_LINE",),
                  "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"})
                  },
@@ -4448,7 +4456,7 @@ class samplerSimpleLayerDiffusion:
     def INPUT_TYPES(cls):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"})
                  },
@@ -4495,7 +4503,7 @@ class samplerSimpleDownscaleUnet:
                  "downscale_after_skip": ("BOOLEAN", {"default": True}),
                  "downscale_method": (s.upscale_methods,),
                  "upscale_method": (s.upscale_methods,),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -4552,7 +4560,7 @@ class samplerSimpleInpainting:
         return {"required":
                 {"pipe": ("PIPE_LINE",),
                  "grow_mask_by": ("INT", {"default": 6, "min": 0, "max": 64, "step": 1}),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  "additional": (["None", "Differential Diffusion", "Only InpaintModelConditioning"],{"default": "None"})
@@ -4637,7 +4645,7 @@ class samplerSDTurbo:
     def INPUT_TYPES(cls):
         return {"required":
                     {"pipe": ("PIPE_LINE",),
-                     "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                     "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
                      "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                      "save_prefix": ("STRING", {"default": "ComfyUI"}),
                      },
@@ -4682,7 +4690,7 @@ class samplerSDTurbo:
         disable_noise = False
 
         preview_latent = True
-        if image_output in ("Hide", "Hide/Save"):
+        if image_output in ("Hide", "Hide&Save"):
             preview_latent = False
 
         # 推理初始时间
@@ -4733,11 +4741,11 @@ class samplerSDTurbo:
 
         del pipe
 
-        if image_output in ("Hide", "Hide/Save"):
+        if image_output in ("Hide", "Hide&Save"):
             return {"ui": {},
                     "result": sampler.get_output(new_pipe, )}
 
-        if image_output in ("Sender", "Sender/Save"):
+        if image_output in ("Sender", "Sender&Save"):
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
 
@@ -4762,7 +4770,7 @@ class samplerCascadeFull:
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default":"euler_ancestral"}),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default":"simple"}),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],),
+                     "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],),
                      "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                      "save_prefix": ("STRING", {"default": "ComfyUI"}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
@@ -4854,7 +4862,7 @@ class samplerCascadeFull:
         stage_c = samp_samples["samples"]
         results = None
 
-        if image_output not in ['Hide', 'Hide/Save']:
+        if image_output not in ['Hide', 'Hide&Save']:
             if decode_vae_name != 'None':
                 decode_vae = easyCache.load_vae(decode_vae_name)
             else:
@@ -4908,11 +4916,11 @@ class samplerCascadeFull:
 
         del pipe
 
-        if image_output in ("Hide", "Hide/Save"):
+        if image_output in ("Hide", "Hide&Save"):
             return {"ui": {},
                     "result": sampler.get_output(new_pipe, )}
 
-        if image_output in ("Sender", "Sender/Save") and results is not None:
+        if image_output in ("Sender", "Sender&Save") and results is not None:
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
         return {"ui": {"images": results}, "result": (new_pipe, new_pipe['model'], new_pipe['samples'])}
@@ -4927,7 +4935,7 @@ class samplerCascadeSimple:
     def INPUT_TYPES(cls):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"], {"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"], {"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -5066,7 +5074,7 @@ class hiresFix:
                  "height": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
                  "longer_side": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
                  "crop": (s.crop_methods,),
-                 "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                 },
@@ -5176,10 +5184,10 @@ class hiresFix:
 
         results = easySave(s, save_prefix, image_output, prompt, extra_pnginfo)
 
-        if image_output in ("Sender", "Sender/Save"):
+        if image_output in ("Sender", "Sender&Save"):
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
-        if image_output in ("Hide", "Hide/Save"):
+        if image_output in ("Hide", "Hide&Save"):
             return (new_pipe, s, {"samples": t},)
 
         return {"ui": {"images": results},
@@ -5442,7 +5450,7 @@ class detailerFix:
     def INPUT_TYPES(s):
         return {"required": {
             "pipe": ("PIPE_LINE",),
-            "image_output": (["Hide", "Preview", "Save", "Hide/Save", "Sender", "Sender/Save"],{"default": "Preview"}),
+            "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
             "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
             "save_prefix": ("STRING", {"default": "ComfyUI"}),
         },
@@ -5584,11 +5592,11 @@ class detailerFix:
         del sam_pipe
         del pipe
 
-        if image_output in ("Hide", "Hide/Save"):
+        if image_output in ("Hide", "Hide&Save"):
             return {"ui": {},
                     "result": (new_pipe, result_img, result_cropped_enhanced, result_cropped_enhanced_alpha, result_mask, result_cnet_images )}
 
-        if image_output in ("Sender", "Sender/Save"):
+        if image_output in ("Sender", "Sender&Save"):
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
         return {"ui": {"images": results}, "result": (new_pipe, result_img, result_cropped_enhanced, result_cropped_enhanced_alpha, result_mask, result_cnet_images )}

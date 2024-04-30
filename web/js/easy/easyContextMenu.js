@@ -39,7 +39,7 @@ app.registerExtension({
         }
         const existingContextMenu = LiteGraph.ContextMenu;
         LiteGraph.ContextMenu = function(values,options){
-            const threshold = 15;
+            const threshold = 10;
             const enabled = getEnableMenuNestSub();
             if(!enabled || (values?.length || 0) <= threshold || !(options?.callback) || values.some(i => typeof i !== 'string')){
                 if(enabled){
