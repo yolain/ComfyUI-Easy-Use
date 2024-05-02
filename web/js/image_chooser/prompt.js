@@ -1,4 +1,4 @@
-import { app } from "/scripts/app.js";
+import { app } from "../../../../scripts/app.js";
 
 function links_with(p, node_id, down, up) {
     const links_with = [];

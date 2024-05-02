@@ -1,6 +1,6 @@
-import { app } from "/scripts/app.js";
-import { api } from "/scripts/api.js";
-import { $el, ComfyDialog } from "/scripts/ui.js";
+import { app } from "../../../../scripts/app.js";
+import { api } from "../../../../scripts/api.js";
+import { $el, ComfyDialog } from "../../../../scripts/ui.js";
 import { $t } from '../common/i18n.js'
 import { toast } from "../common/toast.js";
 import {sleep, accSub} from "../common/utils.js";

@@ -1,6 +1,6 @@
-import { app } from "/scripts/app.js";
-import { api } from "/scripts/api.js";
-import { ComfyDialog, $el } from "/scripts/ui.js";
+import { app } from "../../../../scripts/app.js";
+import { api } from "../../../../scripts/api.js";
+import { ComfyDialog, $el } from "../../../../scripts/ui.js";
 
 import { restart_from_here } from "./prompt.js";
 import { FlowState } from "./state.js";

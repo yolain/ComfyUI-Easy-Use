@@ -2,6 +2,9 @@ import {getLocale} from './utils.js'
 const locale = getLocale()
 
 const zhCN = {
+    "Workflow created by": "工作流创建者",
+    "Watch more video content": "观看更多视频内容",
+    "Workflow Guide":"工作流指南",
     // ExtraMenu
     "💎 View Checkpoint Info...": "💎 查看 Checkpoint 信息...",
     "💎 View Lora Info...": "💎 查看 Lora 信息...",
@@ -14,6 +17,10 @@ const zhCN = {
     "No notes": "当前还没有备注内容",
     "Saving Notes...": "正在保存备注...",
     "Type your notes here":"在这里输入备注内容",
+    "ModelName":"模型名称",
+    "Models Required":"所需模型",
+    "Download Model": "下载模型",
+    "Source Url": "模型源地址",
     "Notes": "备注",
     "Type": "类型",
     "Trained Words": "训练词",
@@ -30,9 +37,8 @@ const zhCN = {
     "Reboot ComfyUI":"重启ComfyUI",
     "Are you sure you'd like to reboot the server?": "是否要重启ComfyUI？",
     // GroupMap
-    "Groups Map (EasyUse)": "管理组 (EasyUse)",
-    "Reboot ComfyUI (EasyUse)": "重启服务 (EasyUse)",
-    "Forced Cleanup Of GPU Usage (EasyUse)": "强制清理GPU占用 (EasyUse)",
+    "Groups Map": "管理组",
+    "Cleanup Of GPU Usage": "清理GPU占用",
     "Please stop all running tasks before cleaning GPU": "请在清理GPU之前停止所有运行中的任务",
     "Always": "启用中",
     "Bypass": "已忽略",
@@ -43,6 +49,7 @@ const zhCN = {
     "Enable ALT+1~9 to paste nodes from nodes template (ComfyUI-Easy-Use)": "启用ALT1~9从节点模板粘贴到工作流 (ComfyUI-Easy-Use)",
     "Enable process bar in queue button (ComfyUI-Easy-Use)": "启用提示词队列进度显示条 (ComfyUI-Easy-Use）",
     "Enable ContextMenu Auto Nest Subdirectories (ComfyUI-Easy-Use)": "启用上下文菜单自动嵌套子目录 (ComfyUI-Easy-Use)",
+    "Enable tool bar fixed on the left-bottom (ComfyUI-Easy-Use)": "启用工具栏固定在左下角 (ComfyUI-Easy-Use)",
     "Too many thumbnails, have closed the display": "模型缩略图太多啦，为您关闭了显示",
     // selector
     "Empty All": "清空所有",

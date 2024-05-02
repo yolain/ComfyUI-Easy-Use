@@ -1,5 +1,4 @@
 import { app } from "../../../scripts/app.js";
-import { ComfyWidgets } from '/scripts/widgets.js'
 
 // Node that allows you to tunnel connections for cleaner graphs
 

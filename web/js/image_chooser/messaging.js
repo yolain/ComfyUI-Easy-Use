@@ -1,4 +1,4 @@
-import { api } from "/scripts/api.js";
+import { api } from "../../../../scripts/api.js";
 import { FlowState } from "./state.js";
 
 function send_message_from_pausing_node(message) {

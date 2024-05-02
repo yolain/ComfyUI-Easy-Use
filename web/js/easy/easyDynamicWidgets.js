@@ -1,6 +1,6 @@
-import { app } from "/scripts/app.js";
-import { api } from "/scripts/api.js";
-import { ComfyWidgets } from "/scripts/widgets.js";
+import { app } from "../../../../scripts/app.js";
+import { api } from "../../../../scripts/api.js";
+import { ComfyWidgets } from "../../../../scripts/widgets.js";
 import { toast} from "../common/toast.js";
 import { $t } from '../common/i18n.js';
 

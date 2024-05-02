@@ -1,7 +1,7 @@
 // 1.0.3
-import { app } from "/scripts/app.js";
-import { api } from "/scripts/api.js";
-import { $el } from "/scripts/ui.js";
+import { app } from "../../../../scripts/app.js";
+import { api } from "../../../../scripts/api.js";
+import { $el } from "../../../../scripts/ui.js";
 import { $t } from "../common/i18n.js";
 
 // 获取风格列表

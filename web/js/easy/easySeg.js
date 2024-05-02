@@ -1,5 +1,5 @@
-import {app} from "/scripts/app.js";
-import {$el} from "/scripts/ui.js";
+import {app} from "../../../../scripts/app.js";
+import {$el} from "../../../../scripts/ui.js";
 import {$t} from "../common/i18n.js";
 import {findWidgetByName, toggleWidget} from "../common/utils.js";
 

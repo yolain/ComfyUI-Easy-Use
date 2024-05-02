@@ -1,7 +1,7 @@
 // 1.0.2
-import { app } from "/scripts/app.js";
-import { GroupNodeConfig } from "/extensions/core/groupNode.js";
-import { api } from "/scripts/api.js";
+import { app } from "../../../../scripts/app.js";
+import { GroupNodeConfig } from "../../../../extensions/core/groupNode.js";
+import { api } from "../../../../scripts/api.js";
 import { $t } from "../common/i18n.js"
 
 const nodeTemplateShortcutId = "Comfy.EasyUse.NodeTemplateShortcut"

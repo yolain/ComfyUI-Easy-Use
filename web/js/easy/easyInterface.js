@@ -1,12 +1,12 @@
-import { app } from "/scripts/app.js";
-import { api } from "/scripts/api.js";
-import { $el } from "/scripts/ui.js";
+import { app } from "../../../../scripts/app.js";
+import { api } from "../../../../scripts/api.js";
+import { $el } from "../../../../scripts/ui.js";
 import {addPreconnect, addCss} from "../common/utils.js";
 
 const locale = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
 
 const customThemeColor = "#3f3eed"
-const customThemeColorLight = "#006691"
+const customThemeColorLight = "#008ecb"
 // 增加Slot颜色
 const customPipeLineLink = "#7737AA"
 const customPipeLineSDXLLink = "#7737AA"

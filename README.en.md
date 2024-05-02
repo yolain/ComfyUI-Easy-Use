@@ -33,7 +33,7 @@
 - 
 ## Changelog
 
-**v1.1.6 (2024/4/26)**
+**v1.1.6**
 
 - Added **alignYourSteps** to **schedulder** widget in all `easy preSampling` and `easy fullkSampler`
 - Added **Preview&Choose** to **image_output** widget in `easy kSampler` & `easy fullkSampler`
@@ -44,7 +44,7 @@
 - Added `easy imageCount` - Get Image Count
 - Added `easy textSwitch` - Text Switch
 
-**v1.1.5 (2024/4/24)**
+**v1.1.5**
 
 - Rewrite `easy cleanGPUUsed` - the memory usage of the comfyUI can to be cleared
 - Added `easy humanSegmentation` - Human Part Segmentation
@@ -54,7 +54,7 @@
 - Added `easy imageInterrogator` - Image To Prompt
 - Added `easy stableDiffusion3API` - Easy Stable Diffusion 3 Multiple accounts API Node
 
-**v1.1.4 (2024/4/10)**
+**v1.1.4**
 
 - Added `easy preSamplingCustom` - Custom-PreSampling, can be supported cosXL-edit
 - Added `easy ipadapterStyleComposition`
@@ -62,7 +62,7 @@
 - Fixed `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` compatible with ComfyUI Revision>=2098 [0542088e] or later
  
 
-**v1.1.3 (2024/4/4)**
+**v1.1.3**
 
 - `easy ipadapterApply` Added **COMPOSITION** preset
 - Supported [ResAdapter](https://huggingface.co/jiaxiangc/res-adapter) when load ResAdapter lora

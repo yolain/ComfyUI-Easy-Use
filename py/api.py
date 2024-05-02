@@ -9,7 +9,7 @@ from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .logic import ConvertAnything
 from .libs.model import easyModelManager
-from .libs.utils import getMetadata,cleanGPUUsedForce
+from .libs.utils import getMetadata, cleanGPUUsedForce, get_local_filepath
 
 try:
     import aiohttp
@@ -267,6 +267,20 @@ async def save_preview(request):
     return web.json_response({
         "image":  type + "/" + os.path.basename(image_path)
     })
+
+@PromptServer.instance.routes.post("/easyuse/model/download")
+async def download_model(request):
+    post = await request.post()
+    url = post.get("url")
+    local_dir = post.get("local_dir")
+    if local_dir not in ['checkpoints', 'loras', 'controlnet', 'onnx', 'instantid', 'ipadapter', 'dynamicrafter_models', 'mediapipe', 'rembg', 'layer_model']:
+        return web.Response(status=400)
+    local_path = os.path.join(folder_paths.models_dir, local_dir)
+    try:
+        get_local_filepath(url, local_path)
+        return web.Response(status=200)
+    except:
+        return web.Response(status=500)
 
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}

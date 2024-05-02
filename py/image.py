@@ -10,7 +10,7 @@ from server import PromptServer
 from nodes import MAX_RESOLUTION
 from torchvision.transforms.functional import to_pil_image
 from .log import log_node_info
-from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask
+from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask, blendImage
 from .libs.colorfix import adain_color_fix, wavelet_color_fix
 from .libs.chooser import ChooserMessage, ChooserCancelled
 from .config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS, MEDIAPIPE_MODELS, MEDIAPIPE_DIR
@@ -1062,9 +1062,9 @@ NODE_CLASS_MAPPINGS = {
   "easy imageChooser": imageChooser,
   "easy imageColorMatch": imageColorMatch,
   "easy imageInterrogator": imageInterrogator,
-  "easy joinImageBatch": JoinImageBatch,
   "easy loadImageBase64": loadImageBase64,
   "easy imageToBase64": imageToBase64,
+  "easy joinImageBatch": JoinImageBatch,
   "easy humanSegmentation": humanSegmentation,
   "easy poseEditor": poseEditor
 }

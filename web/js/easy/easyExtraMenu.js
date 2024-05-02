@@ -1,4 +1,4 @@
-import {app} from "/scripts/app.js";
+import {app} from "../../../../scripts/app.js";
 import {$t} from '../common/i18n.js'
 import {CheckpointInfoDialog, LoraInfoDialog} from "../common/model.js";
 

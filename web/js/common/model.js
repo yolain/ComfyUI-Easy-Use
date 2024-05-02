@@ -1,5 +1,5 @@
-import { $el, ComfyDialog } from "/scripts/ui.js";
-import { api } from "/scripts/api.js";
+import { $el, ComfyDialog } from "../../../../scripts/ui.js";
+import { api } from "../../../../scripts/api.js";
 import {formatTime} from './utils.js';
 import {$t} from "./i18n.js";
 import {toast} from "./toast.js";

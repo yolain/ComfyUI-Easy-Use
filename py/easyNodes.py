@@ -4631,10 +4631,13 @@ class samplerSimpleInpainting:
             new_pipe = pipe
         del pipe
 
-        return samplerFull().run(new_pipe, None, None,None,None,None, image_output, link_id, save_prefix,
+        results = samplerFull().run(new_pipe, None, None,None,None,None, image_output, link_id, save_prefix,
                                None, None, None, None, None, None, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
+        result = results['result']
+
+        return {"ui":results['ui'],"result":(result[0], result[1], result[0]['vae'],)}
 # SDTurbo采样器
 class samplerSDTurbo:
 

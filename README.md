@@ -38,7 +38,7 @@
 
 ## 更新日志
 
-**v1.1.6 (2024/4/26)**
+**v1.1.6**
 
 - 增加步调齐整适配 - 在所有的预采样和全采样器节点中的 调度器(schedulder) 增加了 **alignYourSteps** 选项
 - `easy kSampler` 和 `easy fullkSampler` 的 **image_output** 增加 **Preview&Choose**选项

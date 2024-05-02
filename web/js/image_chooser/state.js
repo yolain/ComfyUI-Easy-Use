@@ -1,4 +1,4 @@
-import { app } from "/scripts/app.js";
+import { app } from "../../../../scripts/app.js";
 
 export class FlowState {
     constructor(){}

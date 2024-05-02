@@ -1,6 +1,6 @@
-import {app} from "/scripts/app.js";
-import {api} from "/scripts/api.js";
-import {$el} from "/scripts/ui.js";
+import {app} from "../../../../scripts/app.js";
+import {api} from "../../../../scripts/api.js";
+import {$el} from "../../../../scripts/ui.js";
 import {$t} from "../common/i18n.js";
 import {getExtension, spliceExtension} from '../common/utils.js'
 import {toast} from "../common/toast.js";
@@ -22,6 +22,7 @@ export function addMenuNestSubSetting(app) {
 }
 
 const getEnableMenuNestSub = _ => app.ui.settings.getSettingValue(setting_id, enableMenuNestSub)
+
 
 const Loaders = ['easy fullLoader','easy a1111Loader','easy comfyLoader']
 app.registerExtension({

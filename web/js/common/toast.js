@@ -1,4 +1,5 @@
 import {sleep} from "./utils.js";
+import {$t} from "./i18n.js";
 
 class Toast{
 
@@ -68,6 +69,14 @@ class Toast{
         container && (container.innerHTML = "");
     }
 
+    async copyright(duration = 5000, actions = []) {
+        this.showToast({
+            id: `toast-info`,
+            content: `${this.info_icon} ${$t('Workflow created by')} <a href="https://github.com/yolain/">Yolain</a> , ${$t('Watch more video content')} <a href="https://space.bilibili.com/1840885116">B站乱乱呀</a>`,
+            duration,
+            actions
+        });
+    }
     async info(content, duration = 3000, actions = []) {
         this.showToast({
             id: `toast-info`,
