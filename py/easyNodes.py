@@ -16,7 +16,7 @@ from PIL import Image
 
 from server import PromptServer
 from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint, InpaintModelConditioning
-from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS
+from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
@@ -2087,22 +2087,54 @@ class LLLiteLoader:
 # FooocusInpaint
 from .fooocus import InpaintHead, InpaintWorker
 inpaint_head_model = None
-class fooocusInpaintLoader:
+# class fooocusInpaintLoader:
+#     @classmethod
+#     def INPUT_TYPES(s):
+#         return {
+#             "required": {
+#                 "head": (list(FOOOCUS_INPAINT_HEAD.keys()),),
+#                 "patch": (list(FOOOCUS_INPAINT_PATCH.keys()),),
+#             }
+#         }
+#
+#     RETURN_TYPES = ("INPAINT_PATCH",)
+#     RETURN_NAMES = ("patch",)
+#     CATEGORY = "EasyUse/Inpaint"
+#     FUNCTION = "apply"
+#
+#     def apply(self, head, patch):
+#         global inpaint_head_model
+#
+#         head_file = get_local_filepath(FOOOCUS_INPAINT_HEAD[head]["model_url"], INPAINT_DIR)
+#         if inpaint_head_model is None:
+#             inpaint_head_model = InpaintHead()
+#             sd = torch.load(head_file, map_location='cpu')
+#             inpaint_head_model.load_state_dict(sd)
+#
+#         patch_file = get_local_filepath(FOOOCUS_INPAINT_PATCH[patch]["model_url"], INPAINT_DIR)
+#         inpaint_lora = comfy.utils.load_torch_file(patch_file, safe_load=True)
+#
+#         return ((inpaint_head_model, inpaint_lora),)
+
+class applyFooocusInpaint:
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
+                "model": ("MODEL",),
+                "latent": ("LATENT",),
                 "head": (list(FOOOCUS_INPAINT_HEAD.keys()),),
                 "patch": (list(FOOOCUS_INPAINT_PATCH.keys()),),
-            }
+            },
         }
 
-    RETURN_TYPES = ("INPAINT_PATCH",)
-    RETURN_NAMES = ("patch",)
+    RETURN_TYPES = ("MODEL",)
+    RETURN_NAMES = ("model",)
     CATEGORY = "EasyUse/Inpaint"
     FUNCTION = "apply"
 
-    def apply(self, head, patch):
+    def apply(self, model, latent, head, patch):
+
         global inpaint_head_model
 
         head_file = get_local_filepath(FOOOCUS_INPAINT_HEAD[head]["model_url"], INPAINT_DIR)
@@ -2114,7 +2146,13 @@ class fooocusInpaintLoader:
         patch_file = get_local_filepath(FOOOCUS_INPAINT_PATCH[patch]["model_url"], INPAINT_DIR)
         inpaint_lora = comfy.utils.load_torch_file(patch_file, safe_load=True)
 
-        return ((inpaint_head_model, inpaint_lora),)
+        patch = (inpaint_head_model, inpaint_lora)
+        worker = InpaintWorker(node_name="easy kSamplerInpainting")
+        cloned = model.clone()
+
+        m, = worker.patch(cloned, latent, patch)
+        return (m,)
+
 
 #---------------------------------------------------------------适配器 开始----------------------------------------------------------------------#
 from .libs.styleAlign import styleAlignBatch, SHARE_NORM_OPTIONS, SHARE_ATTN_OPTIONS
@@ -4183,7 +4221,7 @@ class samplerFull(LayerDiffuse):
             easyCache.update_loaded_objects(prompt)
 
             new_pipe = {
-                "model": samp_model,
+                **pipe,
                 "positive": samp_positive,
                 "negative": samp_negative,
                 "vae": samp_vae,
@@ -4335,7 +4373,7 @@ class samplerFull(LayerDiffuse):
             easyCache.update_loaded_objects(prompt)
 
             new_pipe = {
-                "model": samp_model,
+                **pipe,
                 "positive": samp_positive,
                 "negative": samp_negative,
                 "vae": samp_vae,
@@ -4563,12 +4601,11 @@ class samplerSimpleInpainting:
                  "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
-                 "additional": (["None", "Differential Diffusion", "Only InpaintModelConditioning"],{"default": "None"})
+                 "additional": (["None", "InpaintModelCond", "Differential Diffusion", "Fooocus Inpaint", "Fooocus Inpaint + DD", "Brushnet Random", "Brushnet Random + DD", "Brushnet Segmentation", "Brushnet Segmentation + DD"],{"default": "None"})
                  },
                 "optional": {
                     "model": ("MODEL",),
                     "mask": ("MASK",),
-                    "patch": ("INPAINT_PATCH",),
                 },
                 "hidden":
                   {"tile_size": "INT", "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
@@ -4582,57 +4619,99 @@ class samplerSimpleInpainting:
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
-    def run(self, pipe, grow_mask_by, image_output, link_id, save_prefix, additional, model=None, mask=None, patch=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
-        fooocus_model = None
+    def dd(self, model, positive, negative, pixels, vae, mask):
+        positive, negative, latent = InpaintModelConditioning().encode(positive, negative, pixels, vae, mask)
+        cls = ALL_NODE_CLASS_MAPPINGS['DifferentialDiffusion']
+        if cls is not None:
+            model, = cls().apply(model)
+        else:
+            raise Exception("Differential Diffusion not found,please update comfyui")
+        return positive, negative, latent, model
+
+    def get_brushnet_model(self, type, model):
+        model_type = 'sdxl' if isinstance(model.model.model_config, comfy.supported_models.SDXL) else 'sd1'
+        if type == 'random':
+            brush_model = BRUSHNET_MODELS['random_mask'][model_type]['model_url']
+            if model_type == 'sdxl':
+                pattern = 'brushnet.random.mask.sdxl.*\.(safetensors|bin)$'
+            else:
+                pattern = 'brushnet.random.mask.*\.(safetensors|bin)$'
+        elif type == 'segmentation':
+            brush_model = BRUSHNET_MODELS['segmentation_mask'][model_type]['model_url']
+            if model_type == 'sdxl':
+                pattern = 'brushnet.segmentation.mask.sdxl.*\.(safetensors|bin)$'
+            else:
+                pattern = 'brushnet.segmentation.mask.*\.(safetensors|bin)$'
+
+        brushfile = [e for e in folder_paths.get_filename_list('inpaint') if re.search(pattern, e, re.IGNORECASE)]
+        brushname = brushfile[0] if brushfile else None
+        if not brushname:
+            from urllib.parse import urlparse
+            get_local_filepath(brush_model, INPAINT_DIR)
+            parsed_url = urlparse(brush_model)
+            brushname = os.path.basename(parsed_url.path)
+        return brushname
+
+    def apply_brushnet(self, brushname, model, vae, image, mask, positive, negative, scale=1.0, start_at=0.0, end_at=1.0):
+        cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
+        if not cls:
+            raise Exception("BrushNetLoader not found,please install ComfyUI-BrushNet")
+        brushnet, = cls().brushnet_loading(brushname)
+        cls = ALL_NODE_CLASS_MAPPINGS['BrushNet']
+
+        m, latent = cls().model_update(model=model, vae=vae, image=image, mask=mask, brushnet=brushnet, positive=positive, negative=negative, scale=scale, start_at=start_at, end_at=end_at)
+        return m, latent
+
+    def run(self, pipe, grow_mask_by, image_output, link_id, save_prefix, additional, model=None, mask=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
         model = model if model is not None else pipe['model']
         latent = pipe['samples'] if 'samples' in pipe else None
         positive = pipe['positive']
         negative = pipe['negative']
-        pixels = pipe["images"] if pipe and "images" in pipe else None
+        images = pipe["images"] if pipe and "images" in pipe else None
         vae = pipe["vae"] if pipe and "vae" in pipe else None
         if 'noise_mask' in latent and mask is None:
             mask = latent['noise_mask']
-        else:
-            if pixels is None:
+        elif mask is not None:
+            if images is None:
                 raise Exception("No Images found")
             if vae is None:
                 raise Exception("No VAE found")
-            latent, = VAEEncodeForInpaint().encode(vae, pixels, mask, grow_mask_by)
-            mask = latent['noise_mask']
 
-        if mask is not None:
-            if additional != "None":
+        match additional:
+            case 'Differential Diffusion':
+                positive, negative, latent, model = self.dd(model, positive, negative, images, vae, mask)
+            case 'InpaintModelCond':
+                positive, negative, latent = InpaintModelConditioning().encode(positive, negative, images, vae, mask)
+            case 'Fooocus Inpaint':
+                head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
+                patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
+                if mask is not None:
+                    latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
+                model, = applyFooocusInpaint().apply(model, latent, head, patch)
+            case 'Fooocus Inpaint + DD':
+                head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
+                patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
+                model, = applyFooocusInpaint().apply(model, latent, head, patch)
+                positive, negative, latent, model = self.dd(model, positive, negative, images, vae, mask)
+            case 'Brushnet Random':
+                brush_name = self.get_brushnet_model('random', model)
+                model, latent = self.apply_brushnet(brush_name, model, vae, images, mask, positive, negative)
+            case 'Brushnet Random + DD':
+                brush_name = self.get_brushnet_model('random', model)
+                model, latent = self.apply_brushnet(brush_name, model, vae, images, mask, positive, negative)
+                positive, negative, latent, model = self.dd(model, positive, negative, images, vae, mask)
+            case 'Brushnet Segmentation':
+                brush_name = self.get_brushnet_model('segmentation', model)
+                model, latent = self.apply_brushnet(brush_name, model, vae, images, mask, positive, negative)
+            case 'Brushnet Segmentation + DD':
+                brush_name = self.get_brushnet_model('segmentation', model)
+                model, latent = self.apply_brushnet(brush_name, model, vae, images, mask, positive, negative)
+                positive, negative, latent, model = self.dd(model, positive, negative, images, vae, mask)
+            case _:
+                latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
 
-                positive, negative, latent = InpaintModelConditioning().encode(positive, negative, pixels, vae, mask)
-                if additional == "Differential Diffusion":
-                    cls = ALL_NODE_CLASS_MAPPINGS['DifferentialDiffusion']
-                    if cls is not None:
-                        model, = cls().apply(model)
-                    else:
-                        raise Exception("Differential Diffusion not found,please update comfyui")
-
-            # when patch was linked
-            fooocus_model = None
-            if patch is not None:
-                worker = InpaintWorker(node_name="easy kSamplerInpainting")
-                fooocus_model, = worker.patch(model, latent, patch)
-
-            new_pipe = {
-                **pipe,
-                "model": fooocus_model if fooocus_model else model,
-                "positive": positive,
-                "negative": negative,
-                "vae": vae,
-                "samples": latent,
-                "loader_settings": pipe["loader_settings"],
-            }
-
-        else:
-            new_pipe = pipe
-        del pipe
-
-        results = samplerFull().run(new_pipe, None, None,None,None,None, image_output, link_id, save_prefix,
-                               None, None, None, None, None, None, None, None,
+        results = samplerFull().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
+                               None, model, positive, negative, latent, vae, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
         result = results['result']
@@ -7064,7 +7143,8 @@ NODE_CLASS_MAPPINGS = {
     "easy instantIDApplyADV": instantIDApplyAdvanced,
     "easy styleAlignedBatchAlign": styleAlignedBatchAlign,
     # Inpaint 内补
-    "easy fooocusInpaintLoader": fooocusInpaintLoader,
+    # "easy fooocusInpaintLoader": fooocusInpaintLoader,
+    "easy applyFooocusInpaint": applyFooocusInpaint,
     # latent 潜空间
     "easy latentNoisy": latentNoisy,
     "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
@@ -7170,7 +7250,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy instantIDApplyADV": "Easy Apply InstantID (Advanced)",
     "easy styleAlignedBatchAlign": "Easy Apply StyleAlign",
     # Inpaint 内补
-    "easy fooocusInpaintLoader": "Load Fooocus Inpaint",
+    # "easy fooocusInpaintLoader": "Load Fooocus Inpaint(Removed)",
+    "easy applyFooocusInpaint": "Apply Fooocus Inpaint",
     # latent 潜空间
     "easy latentNoisy": "LatentNoisy",
     "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",

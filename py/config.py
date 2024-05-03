@@ -38,7 +38,7 @@ MAX_SEED_NUM = 1125899906842624
 
 RESOURCES_DIR = os.path.join(Path(__file__).parent.parent, "resources")
 
-# fooocus
+# inpaint
 INPAINT_DIR = os.path.join(folder_paths.models_dir, "inpaint")
 FOOOCUS_STYLES_DIR = os.path.join(Path(__file__).parent.parent, "styles")
 FOOOCUS_STYLES_SAMPLES = 'https://raw.githubusercontent.com/lllyasviel/Fooocus/main/sdxl_styles/samples/'
@@ -57,6 +57,24 @@ FOOOCUS_INPAINT_PATCH = {
     "inpaint (1.32GB)": {
         "model_url": "https://huggingface.co/lllyasviel/fooocus_inpaint/resolve/main/inpaint.fooocus.patch"
     },
+}
+BRUSHNET_MODELS = {
+    "random_mask": {
+        "sd1": {
+            "model_url": "https://huggingface.co/Kijai/BrushNet-fp16/resolve/main/brushnet_random_mask_fp16.safetensors"
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/yolain/brushnet/resolve/main/brushnet_random_mask_sdxl.safetensors"
+        }
+    },
+    "segmentation_mask": {
+        "sd1": {
+            "model_url": "https://huggingface.co/Kijai/BrushNet-fp16/resolve/main/brushnet_segmentation_mask_fp16.safetensors"
+        },
+        "sdxl": {
+            "model_url": "https://huggingface.co/yolain/brushnet/resolve/main/brushnet_segmentation_mask_sdxl.safetensors"
+        }
+    }
 }
 
 # layerDiffuse

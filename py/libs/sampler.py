@@ -47,6 +47,14 @@ class easySampler:
             parts.append('None')
         return parts
 
+    def add_model_patch_option(self,model):
+        if 'transformer_options' not in model.model_options:
+            model.model_options['transformer_options'] = {}
+        to = model.model_options['transformer_options']
+        if "model_patch" not in to:
+            to["model_patch"] = {}
+        return to
+
     def common_ksampler(self, model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=1.0,
                         disable_noise=False, start_step=None, last_step=None, force_full_denoise=False,
                         preview_latent=True, disable_pbar=False, custom=None):
@@ -90,6 +98,22 @@ class easySampler:
             else:
                 batch_inds = latent["batch_index"] if "batch_index" in latent else None
                 noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
+
+            #######################################################################################
+            # brushnet
+            transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
+            if 'model_patch' in transformer_options and 'brushnet_model' in transformer_options['model_patch']:
+                latent_preview_callback = latent_preview.prepare_callback(model, steps)
+                to = self.add_model_patch_option(model)
+                to['model_patch']['step'] = 0
+                to['model_patch']['total_steps'] = steps
+
+                def callback(step, x0, x, total_steps):
+                    to['model_patch']['step'] = step + 1
+                    latent_preview_callback(steps, x0, x, total_steps)
+            #
+            #######################################################################################
+
 
             samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
                                           latent_image,

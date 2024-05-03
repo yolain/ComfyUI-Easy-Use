@@ -33,6 +33,13 @@
 - 
 ## Changelog
 
+**v1.1.7**
+
+- `easy kSamplerInpainting` added options such as different diffusion and brushnet in **additional** widget
+- Support for brushnet model loading - [ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet)
+- Added `easy applyFooocusInpaint` - Replace FooocusInpaintLoader
+- Removed `easy fooocusInpaintLoader`
+
 **v1.1.6**
 
 - Added **alignYourSteps** to **schedulder** widget in all `easy preSampling` and `easy fullkSampler`

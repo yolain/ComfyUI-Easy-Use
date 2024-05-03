@@ -237,8 +237,8 @@ def encode_token_weights_g(model, token_weight_pairs):
 
 
 def encode_token_weights_l(model, token_weight_pairs):
-    l_out, _ = model.clip_l.encode_token_weights(token_weight_pairs)
-    return l_out, None
+    l_out, pooled = model.clip_l.encode_token_weights(token_weight_pairs)
+    return l_out, pooled
 
 
 def encode_token_weights(model, token_weight_pairs, encode_func):
@@ -316,8 +316,8 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
             embeddings_final, pooled = advanced_encode_from_tokens(tokenized['l'],
                                                                    token_normalization,
                                                                    weight_interpretation,
-                                                                   lambda x: (clip.encode_from_tokens({'l': x}), None),
-                                                                   w_max=w_max)
+                                                                   lambda x: encode_token_weights(clip, x, encode_token_weights_l),
+                                                                   w_max=w_max,return_pooled=True,)
             cond = [[embeddings_final, {"pooled_output": pooled}]]
 
         if conditioning is not None:

@@ -38,6 +38,14 @@
 
 ## 更新日志
 
+**v1.1.7**
+
+- `easy kSamplerInpainting` 的 **additional** 属性增加差异扩散和brushnet等相关选项 
+- 增加 brushnet模型加载的支持 - [ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet)
+- 增加 `easy applyFooocusInpaint` - Fooocus内补节点 替代原有的 FooocusInpaintLoader
+- 移除 `easy fooocusInpaintLoader` - 容易bug，不再使用
+- 修改 easy kSampler等采样器中并联的model 不再替换pipe中model
+
 **v1.1.6**
 
 - 增加步调齐整适配 - 在所有的预采样和全采样器节点中的 调度器(schedulder) 增加了 **alignYourSteps** 选项
@@ -387,3 +395,5 @@
 [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) - pyssss 小蛇🐍脚本
 
 [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) - 图片选择器
+
+[ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet) - BrushNet 内补节点
