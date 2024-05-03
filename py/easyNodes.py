@@ -33,7 +33,6 @@ from .libs.easing import EasingBase
 
 sampler = easySampler()
 easyCache = easyLoader()
-default_calculate_weight = copy.copy(ModelPatcher.calculate_weight)
 
 image_suffixs = set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".svg", ".ico", ".apng", ".tif", ".hdr", ".exr"])
 
@@ -52,6 +51,7 @@ add_folder_path_and_extensions("rembg", [os.path.join(model_path, "rembg")], fol
 add_folder_path_and_extensions("ipadapter", [os.path.join(model_path, "ipadapter")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("dynamicrafter_models", [os.path.join(model_path, "dynamicrafter_models")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("mediapipe", [os.path.join(model_path, "mediapipe")], set(['.tflite','.pth']))
+add_folder_path_and_extensions("t5", [os.path.join(model_path, "t5")], set(['.safetensors','.bin','.json']))
 
 add_folder_path_and_extensions("checkpoints_thumb", [os.path.join(model_path, "checkpoints")], image_suffixs)
 add_folder_path_and_extensions("loras_thumb", [os.path.join(model_path, "loras")], image_suffixs)
@@ -233,8 +233,8 @@ class stylesPromptSelector:
             positive_prompt = positive + ', '
 
         # 去重
-        positive_prompt = self.replace_repeat(positive_prompt) if positive_prompt else ''
-        negative_prompt = self.replace_repeat(negative_prompt) if negative_prompt else ''
+        # positive_prompt = self.replace_repeat(positive_prompt) if positive_prompt else ''
+        # negative_prompt = self.replace_repeat(negative_prompt) if negative_prompt else ''
 
         return (positive_prompt, negative_prompt)
 
@@ -4090,6 +4090,14 @@ class samplerFull(LayerDiffuse):
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
+    def clear_model_config(self, samp_model):
+        if hasattr(samp_model.model.diffusion_model, 'original_forward'):
+            samp_model.model.diffusion_model.forward = samp_model.model.diffusion_model.original_forward
+            samp_model.model_options['transformer_options'] = {}
+            del samp_model.model.diffusion_model.original_forward
+        if hasattr(ModelPatcher, "original_calculate_weight"):
+            ModelPatcher.calculate_weight = ModelPatcher.original_calculate_weight
+
     def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None):
 
         # Clean loaded_objects
@@ -4279,7 +4287,9 @@ class samplerFull(LayerDiffuse):
             if image_output in ("Sender", "Sender&Save"):
                 PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
-            ModelPatcher.calculate_weight = default_calculate_weight
+
+            self.clear_model_config(samp_model)
+
             return {"ui": {"images": results},
                     "result": sampler.get_output(new_pipe,)}
 
@@ -4393,10 +4403,11 @@ class samplerFull(LayerDiffuse):
 
             del pipe
 
+            self.clear_model_config(samp_model)
+
             if image_output in ("Hide", "Hide&Save"):
                 return sampler.get_output(new_pipe)
 
-            ModelPatcher.calculate_weight = default_calculate_weight
             return {"ui": {"images": results}, "result": (sampler.get_output(new_pipe))}
 
         preview_latent = True
@@ -4480,6 +4491,7 @@ class samplerSimpleTiled:
     CATEGORY = "EasyUse/Sampler"
 
     def run(self, pipe, tile_size=512, image_output='preview', link_id=0, save_prefix='ComfyUI', model=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+
         return samplerFull().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
                                None, model, None, None, None, None, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
@@ -4515,6 +4527,7 @@ class samplerSimpleLayerDiffusion:
     CATEGORY = "EasyUse/Sampler"
 
     def run(self, pipe, image_output='preview', link_id=0, save_prefix='ComfyUI', model=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+
         result = samplerFull().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
                                None, model, None, None, None, None, None, None,
                                None, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
@@ -4663,7 +4676,7 @@ class samplerSimpleInpainting:
         return m, latent
 
     def run(self, pipe, grow_mask_by, image_output, link_id, save_prefix, additional, model=None, mask=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
-        model = model if model is not None else pipe['model']
+        _model = model if model is not None else pipe['model']
         latent = pipe['samples'] if 'samples' in pipe else None
         positive = pipe['positive']
         negative = pipe['negative']
@@ -4679,39 +4692,42 @@ class samplerSimpleInpainting:
 
         match additional:
             case 'Differential Diffusion':
-                positive, negative, latent, model = self.dd(model, positive, negative, images, vae, mask)
+                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
             case 'InpaintModelCond':
+                if mask is not None:
+                    latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
+                    mask = latent['noise_mask']
                 positive, negative, latent = InpaintModelConditioning().encode(positive, negative, images, vae, mask)
             case 'Fooocus Inpaint':
                 head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
                 patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
                 if mask is not None:
                     latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
-                model, = applyFooocusInpaint().apply(model, latent, head, patch)
+                _model, = applyFooocusInpaint().apply(_model, latent, head, patch)
             case 'Fooocus Inpaint + DD':
                 head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
                 patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
-                model, = applyFooocusInpaint().apply(model, latent, head, patch)
-                positive, negative, latent, model = self.dd(model, positive, negative, images, vae, mask)
+                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
+                _model, = applyFooocusInpaint().apply(_model, latent, head, patch)
             case 'Brushnet Random':
-                brush_name = self.get_brushnet_model('random', model)
-                model, latent = self.apply_brushnet(brush_name, model, vae, images, mask, positive, negative)
+                brush_name = self.get_brushnet_model('random', _model)
+                _model, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive, negative)
             case 'Brushnet Random + DD':
-                brush_name = self.get_brushnet_model('random', model)
-                model, latent = self.apply_brushnet(brush_name, model, vae, images, mask, positive, negative)
-                positive, negative, latent, model = self.dd(model, positive, negative, images, vae, mask)
+                brush_name = self.get_brushnet_model('random', _model)
+                _model, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive, negative)
+                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
             case 'Brushnet Segmentation':
-                brush_name = self.get_brushnet_model('segmentation', model)
-                model, latent = self.apply_brushnet(brush_name, model, vae, images, mask, positive, negative)
+                brush_name = self.get_brushnet_model('segmentation', _model)
+                _model, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive, negative)
             case 'Brushnet Segmentation + DD':
-                brush_name = self.get_brushnet_model('segmentation', model)
-                model, latent = self.apply_brushnet(brush_name, model, vae, images, mask, positive, negative)
-                positive, negative, latent, model = self.dd(model, positive, negative, images, vae, mask)
+                brush_name = self.get_brushnet_model('segmentation', _model)
+                _model, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive, negative)
+                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
             case _:
                 latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
 
         results = samplerFull().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
-                               None, model, positive, negative, latent, vae, None, None,
+                               None, _model, positive, negative, latent, vae, None, None,
                                tile_size, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
         result = results['result']

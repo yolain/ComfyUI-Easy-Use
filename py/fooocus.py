@@ -19,6 +19,8 @@ class InpaintWorker:
     def __init__(self, node_name):
         self.node_name = node_name if node_name is not None else ""
         self.original_calculate_weight = ModelPatcher.calculate_weight
+        if not hasattr(ModelPatcher, "original_calculate_weight"):
+            ModelPatcher.original_calculate_weight = self.original_calculate_weight
         self.injected_model_patcher_calculate_weight = False
 
     def load_fooocus_patch(self, lora: dict, to_load: dict):

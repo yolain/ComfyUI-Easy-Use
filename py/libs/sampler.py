@@ -47,7 +47,7 @@ class easySampler:
             parts.append('None')
         return parts
 
-    def add_model_patch_option(self,model):
+    def add_model_patch_option(self, model):
         if 'transformer_options' not in model.model_options:
             model.model_options['transformer_options'] = {}
         to = model.model_options['transformer_options']
@@ -103,17 +103,19 @@ class easySampler:
             # brushnet
             transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
             if 'model_patch' in transformer_options and 'brushnet_model' in transformer_options['model_patch']:
-                latent_preview_callback = latent_preview.prepare_callback(model, steps)
                 to = self.add_model_patch_option(model)
                 to['model_patch']['step'] = 0
                 to['model_patch']['total_steps'] = steps
 
                 def callback(step, x0, x, total_steps):
-                    to['model_patch']['step'] = step + 1
-                    latent_preview_callback(steps, x0, x, total_steps)
+                    if to is not None and "model_patch" in to:
+                        to['model_patch']['step'] = step + 1
+                    preview_bytes = None
+                    if previewer:
+                        preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
+                    pbar.update_absolute(step + 1, total_steps, preview_bytes)
             #
             #######################################################################################
-
 
             samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
                                           latent_image,
@@ -153,8 +155,22 @@ class easySampler:
 
         pbar = comfy.utils.ProgressBar(steps)
 
+        #######################################################################################
+        # brushnet
+        to = None
+        transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
+        if 'model_patch' in transformer_options and 'brushnet_model' in transformer_options['model_patch']:
+            to = self.add_model_patch_option(model)
+            to['model_patch']['step'] = 0
+            to['model_patch']['total_steps'] = steps
+
+        #
+        #######################################################################################
+
         def callback(step, x0, x, total_steps):
             preview_bytes = None
+            if to is not None and "model_patch" in to:
+                to['model_patch']['step'] = step + 1
             if previewer:
                 preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
             pbar.update_absolute(step + 1, total_steps, preview_bytes)

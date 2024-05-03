@@ -309,7 +309,7 @@ function widgetLogic(node, widget) {
 	}
 
 	if(widget.name == 'additional'){
-		if(['None','Fooocus Inpaint'].includes(widget.value)){
+		if(['None','Fooocus Inpaint','InpaintModelCond'].includes(widget.value)){
 			toggleWidget(node, findWidgetByName(node,'grow_mask_by'), true)
 		}else{
 			toggleWidget(node, findWidgetByName(node,'grow_mask_by'))
