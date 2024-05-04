@@ -4666,12 +4666,11 @@ class samplerSimpleInpainting:
         return brushname
 
     def apply_brushnet(self, brushname, model, vae, image, mask, positive, negative, scale=1.0, start_at=0.0, end_at=1.0):
-        cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
-        if not cls:
+        if "BrushNetLoader" not in ALL_NODE_CLASS_MAPPINGS:
             raise Exception("BrushNetLoader not found,please install ComfyUI-BrushNet")
+        cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
         brushnet, = cls().brushnet_loading(brushname)
         cls = ALL_NODE_CLASS_MAPPINGS['BrushNet']
-
         m, latent = cls().model_update(model=model, vae=vae, image=image, mask=mask, brushnet=brushnet, positive=positive, negative=negative, scale=scale, start_at=start_at, end_at=end_at)
         return m, latent
 
