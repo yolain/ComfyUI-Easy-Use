@@ -112,7 +112,7 @@ LAYER_DIFFUSION = {
         }
     },
     "Everything": {
-        "sd15": {
+        "sd1": {
           "model_url": "https://huggingface.co/LayerDiffusion/layerdiffusion-v1/resolve/main/layer_sd15_joint.safetensors"
         },
         "sdxl": {
