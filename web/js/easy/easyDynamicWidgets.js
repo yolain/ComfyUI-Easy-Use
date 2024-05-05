@@ -307,14 +307,6 @@ function widgetLogic(node, widget) {
 		}
 		updateNodeHeight(node)
 	}
-
-	if(widget.name == 'additional'){
-		if(['None','Fooocus Inpaint','InpaintModelCond'].includes(widget.value)){
-			toggleWidget(node, findWidgetByName(node,'grow_mask_by'), true)
-		}else{
-			toggleWidget(node, findWidgetByName(node,'grow_mask_by'))
-		}
-	}
 }
 
 function widgetLogic2(node, widget) {
@@ -1114,7 +1106,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale',
 						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter',
 	'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode',
 	'lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch', 'num_embeds',
-	"easing_mode", "guider", "scheduler", "additional"
+	"easing_mode", "guider", "scheduler"
 ]
 
 function getSetters(node) {

@@ -44,7 +44,7 @@
 - 增加 brushnet模型加载的支持 - [ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet)
 - 增加 `easy applyFooocusInpaint` - Fooocus内补节点 替代原有的 FooocusInpaintLoader
 - 移除 `easy fooocusInpaintLoader` - 容易bug，不再使用
-- 修改 easy kSampler等采样器中并联的model 不再替换pipe中model
+- 修改 easy kSampler等采样器中并联的model 不再替换输出中pipe里的model
 
 **v1.1.6**
 

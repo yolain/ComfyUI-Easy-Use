@@ -106,6 +106,7 @@ class easySampler:
                 to = self.add_model_patch_option(model)
                 to['model_patch']['step'] = 0
                 to['model_patch']['total_steps'] = steps
+                to['model_patch']['cfg'] = cfg
 
                 def callback(step, x0, x, total_steps):
                     if to is not None and "model_patch" in to:
@@ -163,7 +164,7 @@ class easySampler:
             to = self.add_model_patch_option(model)
             to['model_patch']['step'] = 0
             to['model_patch']['total_steps'] = steps
-
+            to['model_patch']['cfg'] = cfg
         #
         #######################################################################################
 
