@@ -1,7 +1,7 @@
 import { api } from "../../../../scripts/api.js";
 import { app } from "../../../../scripts/app.js";
 import {deepEqual, addCss, isLocalNetwork} from "../common/utils.js";
-import {quesitonIcon, rocketIcon, groupIcon, rebootIcon} from "../common/icon.js";
+import {quesitonIcon, rocketIcon, groupIcon, rebootIcon, closeIcon} from "../common/icon.js";
 import {$t} from '../common/i18n.js';
 import {toast} from "../common/toast.js";
 import {$el, ComfyDialog} from "../../../../scripts/ui.js";
@@ -44,18 +44,15 @@ function createGroupMap(){
         align-items: center;
         padding: 0 6px;
         height: 44px;`
-    let hideBtn = document.createElement('button')
+    let hideBtn = $el('button.closeBtn',{
+        innerHTML:closeIcon,
+        onclick:_=>div.style.display = 'none'
+    })
     let textB = document.createElement('p')
     btn.appendChild(textB)
     btn.appendChild(hideBtn)
     textB.style.fontSize = '11px'
     textB.innerHTML =  `<b>${$t('Groups Map')} (EasyUse)</b>`
-    hideBtn.style = `float: right;color: var(--input-text);border-radius:6px;font-size:9px;
-        background-color: var(--comfy-input-bg); border: 1px solid var(--border-color);cursor: pointer;padding: 5px;aspect-ratio: 1 / 1;`
-    hideBtn.addEventListener('click', () => {
-        div.style.display = 'none'
-    })
-    hideBtn.innerText = '❌'
     div.appendChild(btn)
 
     div.addEventListener('mousedown', function (e) {
@@ -301,10 +298,12 @@ function download_model(url,local_dir){
     })
 
 }
-class GuideDialog extends ComfyDialog {
-    show(note, need_models){
+class GuideDialog {
 
-        let modelsDiv = null
+    constructor(note, need_models){
+        this.dialogDiv = null
+        this.modelsDiv = null
+
         if(need_models?.length>0){
             let tbody = []
 
@@ -313,18 +312,17 @@ class GuideDialog extends ComfyDialog {
                     $el('td',{innerHTML:need_models[i].title || need_models[i].name || ''}),
                     $el('td',[
                         need_models[i]['download_url'] ? $el('a',{onclick:_=>download_model(need_models[i]['download_url'],need_models[i]['local_dir']), target:"_blank", textContent:$t('Download Model')}) : '',
-                         need_models[i]['source_url'] ? $el('a',{href:need_models[i]['source_url'], target:"_blank", textContent:$t('Source Url')}) : '',
+                        need_models[i]['source_url'] ? $el('a',{href:need_models[i]['source_url'], target:"_blank", textContent:$t('Source Url')}) : '',
+                        need_models[i]['desciption'] ? $el('span',{textContent:need_models[i]['desciption']}) : '',
                     ]),
-                    $el('td',{innerHTML:need_models[i].description || ''}),
                 ]))
             }
-            modelsDiv = $el('div.easyuse-guide-dialog-models.markdown-body',[
+            this.modelsDiv = $el('div.easyuse-guide-dialog-models.markdown-body',[
                 $el('h3',{textContent:$t('Models Required')}),
                 $el('table',{cellpadding:0,cellspacing:0},[
                     $el('thead',[
                         $el('tr',[
                             $el('th',{innerHTML:$t('ModelName')}),
-                            $el('th',{innerHTML:$t('Details')}),
                             $el('th',{innerHTML:$t('Description')}),
                         ])
                     ]),
@@ -333,29 +331,53 @@ class GuideDialog extends ComfyDialog {
             ])
         }
 
-        super.show(
-           $el('div.easyuse-guide-dialog',[
-               $el('div.easyuse-guide-dialog-header',[
-                     $el('div.easyuse-guide-dialog-title',{
+        this.dialogDiv = $el('div.easyuse-guide-dialog.hidden',[
+           $el('div.easyuse-guide-dialog-header',[
+                 $el('div.easyuse-guide-dialog-top',[
+                    $el('div.easyuse-guide-dialog-title',{
                         innerHTML:$t('Workflow Guide')
-                     }),
-                     $el('div.easyuse-guide-dialog-remark',{
-                        innerHTML:`${$t('Workflow created by')} <a href="https://github.com/yolain/" target="_blank">Yolain</a> , ${$t('Watch more video content')} <a href="https://space.bilibili.com/1840885116" target="_blank">B站乱乱呀</a>`
-                     })
-               ]),
-               $el('div.easyuse-guide-dialog-content.markdown-body',[
-                   $el('div.easyuse-guide-dialog-note',{
-                       innerHTML:note
-                   }),
-                   modelsDiv
-               ])
+                    }),
+                    $el('button.closeBtn',{innerHTML:closeIcon,onclick:_=>this.close()})
+                 ]),
+
+                 $el('div.easyuse-guide-dialog-remark',{
+                    innerHTML:`${$t('Workflow created by')} <a href="https://github.com/yolain/" target="_blank">Yolain</a> , ${$t('Watch more video content')} <a href="https://space.bilibili.com/1840885116" target="_blank">B站乱乱呀</a>`
+                 })
+           ]),
+           $el('div.easyuse-guide-dialog-content.markdown-body',[
+               $el('div.easyuse-guide-dialog-note',{
+                   innerHTML:note
+               }),
+               ...this.modelsDiv ? [this.modelsDiv] : []
            ])
-        )
+        ])
+
+        if(disableRenderInfo){
+            this.dialogDiv.classList.add('disable-render-info')
+        }
+        document.body.appendChild(this.dialogDiv)
+    }
+    show(){
+        if(this.dialogDiv) this.dialogDiv.classList.remove('hidden')
     }
 
     close(){
-        guideDialog = null
-        super.close()
+        if(this.dialogDiv){
+            this.dialogDiv.classList.add('hidden')
+        }
+    }
+    toggle(){
+        if(this.dialogDiv){
+            if(this.dialogDiv.classList.contains('hidden')){
+                this.show()
+            }else{
+                this.close()
+            }
+        }
+    }
+
+    remove(){
+        if(this.dialogDiv) document.body.removeChild(this.dialogDiv)
     }
 }
 
@@ -469,16 +491,15 @@ app.registerExtension({
             // }
             if(data?.extra?.note){
                  if(guideDialog) {
-                     guideDialog.close()
+                     guideDialog.remove()
                      guideDialog = null
                  }
                  if(note && toolbar) toolbar.removeChild(note)
+                 const need_models = data.extra?.need_models || null
+                 guideDialog = new GuideDialog(data.extra.note, need_models)
                  note = $el('div.easyuse-toolbar-item',{
                     onclick:async()=>{
-                        if(guideDialog) return
-                        guideDialog = new GuideDialog()
-                        const need_models = data.extra?.need_models || null
-                        guideDialog.show(data.extra.note, need_models)
+                        guideDialog.toggle()
                     }
                 },[
                     $el('div.easyuse-toolbar-icon.question',{innerHTML:quesitonIcon}),

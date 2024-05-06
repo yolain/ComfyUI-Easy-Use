@@ -5,6 +5,7 @@ import numpy as np
 from enum import Enum
 from PIL import Image
 from io import BytesIO
+from typing import List, Union
 
 import folder_paths
 from .utils import install_package
@@ -15,6 +16,17 @@ def pil2tensor(image):
 # Tensor to PIL
 def tensor2pil(image):
     return Image.fromarray(np.clip(255. * image.cpu().numpy().squeeze(), 0, 255).astype(np.uint8))
+# np to Tensor
+def np2tensor(img_np: Union[np.ndarray, List[np.ndarray]]) -> torch.Tensor:
+  if isinstance(img_np, list):
+    return torch.cat([np2tensor(img) for img in img_np], dim=0)
+  return torch.from_numpy(img_np.astype(np.float32) / 255.0).unsqueeze(0)
+# Tensor to np
+def tensor2np(tensor: torch.Tensor) -> List[np.ndarray]:
+  if len(tensor.shape) == 3:  # Single image
+    return np.clip(255.0 * tensor.cpu().numpy(), 0, 255).astype(np.uint8)
+  else:  # Batch of images
+    return [np.clip(255.0 * t.cpu().numpy(), 0, 255).astype(np.uint8) for t in tensor]
 
 def pil2byte(pil_image, format='PNG'):
   byte_arr = BytesIO()
@@ -48,6 +60,14 @@ def image2mask(image: Image) -> torch.Tensor:
   ret_mask = torch.tensor([pil2tensor(_image)[0, :, :, 3].tolist()])
   return ret_mask
 
+def mask2image(mask: torch.Tensor) -> Image:
+  masks = tensor2np(mask)
+  for m in masks:
+    _mask = Image.fromarray(m).convert("L")
+    _image = Image.new("RGBA", _mask.size, color='white')
+    _image = Image.composite(
+      _image, Image.new("RGBA", _mask.size, color='black'), _mask)
+  return _image
 
 # 图像融合
 class blendImage:

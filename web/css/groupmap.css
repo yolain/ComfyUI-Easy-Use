@@ -11,3 +11,22 @@
   padding: 10px 4px;
   border: 1px solid var(--border-color);z-index: 999999999;padding-top: 0;
 }
+#easyuse_groups_map .icon{
+  width: 12px;
+  height:12px;
+}
+#easyuse_groups_map .closeBtn{
+  float: right;
+  color: var(--input-text);
+  border-radius:30px;
+  background-color: var(--comfy-input-bg);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+#easyuse_groups_map .closeBtn:hover{
+  filter:brightness(120%);
+}

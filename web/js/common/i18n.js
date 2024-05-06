@@ -26,6 +26,7 @@ const zhCN = {
     "Trained Words": "训练词",
     "BaseModel": "基础算法",
     "Details": "详情",
+    "Description": "描述",
     "Download": "下载量",
     "Source": "来源",
     "Saving Preview...": "正在保存预览图...",

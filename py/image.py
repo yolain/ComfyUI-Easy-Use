@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 import os
 import hashlib
 import folder_paths
@@ -8,9 +8,10 @@ import comfy.model_management
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
 from nodes import MAX_RESOLUTION
+from torchvision.transforms import Resize, CenterCrop, InterpolationMode
 from torchvision.transforms.functional import to_pil_image
 from .log import log_node_info
-from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask, blendImage
+from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask, mask2image, blendImage
 from .libs.colorfix import adain_color_fix, wavelet_color_fix
 from .libs.chooser import ChooserMessage, ChooserCancelled
 from .config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS, MEDIAPIPE_MODELS, MEDIAPIPE_DIR
@@ -794,6 +795,7 @@ class humanSegmentation:
             "image": ("IMAGE",),
             "method": (["selfie_multiclass_256x256", "human_parsing_lip"],),
             "confidence": ("FLOAT", {"default": 0.4, "min": 0.05, "max": 0.95, "step": 0.01},),
+            "crop_multi": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.001},),
           },
           "hidden": {
               "prompt": "PROMPT",
@@ -801,8 +803,8 @@ class humanSegmentation:
           }
         }
 
-    RETURN_TYPES = ("IMAGE", "MASK",)
-    RETURN_NAMES = ("image", "mask",)
+    RETURN_TYPES = ("IMAGE", "MASK", "BBOX")
+    RETURN_NAMES = ("image", "mask", "bbox")
     FUNCTION = "parsing"
     CATEGORY = "EasyUse/Segmentation"
 
@@ -819,7 +821,7 @@ class humanSegmentation:
         numpy_image = cv2.cvtColor(numpy_image, cv2.COLOR_BGR2RGB)
       return mp.Image(image_format=image_format, data=numpy_image)
 
-    def parsing(self, image, confidence, method, prompt=None, my_unique_id=None):
+    def parsing(self, image, confidence, method, crop_multi, prompt=None, my_unique_id=None):
       mask_components = []
       if my_unique_id in prompt:
         if prompt[my_unique_id]["inputs"]['mask_components']:
@@ -919,7 +921,253 @@ class humanSegmentation:
 
         output_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
 
-      return (output_image, mask)
+      # use crop
+      bbox = [[0, 0, 0, 0]]
+      if crop_multi > 0.0:
+        output_image, mask, bbox = imageCropFromMask().crop(output_image, mask, crop_multi, crop_multi, 1.0)
+
+      return (output_image, mask, bbox)
+
+
+class imageCropFromMask:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+          "required": {
+              "image": ("IMAGE",),
+              "mask": ("MASK",),
+              "image_crop_multi": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.001}),
+              "mask_crop_multi": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.001}),
+              "bbox_smooth_alpha": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+          },
+        }
+
+    RETURN_TYPES = ("IMAGE", "MASK", "BBOX",)
+    RETURN_NAMES = ("crop_image", "crop_mask", "bbox",)
+    FUNCTION = "crop"
+    CATEGORY = "EasyUse/Image"
+
+    def smooth_bbox_size(self, prev_bbox_size, curr_bbox_size, alpha):
+        if alpha == 0:
+            return prev_bbox_size
+        return round(alpha * curr_bbox_size + (1 - alpha) * prev_bbox_size)
+
+    def smooth_center(self, prev_center, curr_center, alpha=0.5):
+        if alpha == 0:
+            return prev_center
+        return (
+            round(alpha * curr_center[0] + (1 - alpha) * prev_center[0]),
+            round(alpha * curr_center[1] + (1 - alpha) * prev_center[1])
+        )
+
+    def image2mask(self, image):
+      return image[:, :, :, 0]
+
+    def mask2image(self, mask):
+      return mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])).movedim(1, -1).expand(-1, -1, -1, 3)
+
+    def cropimage(self, original_images, masks, crop_size_mult, bbox_smooth_alpha):
+
+      bounding_boxes = []
+      cropped_images = []
+
+      self.max_bbox_width = 0
+      self.max_bbox_height = 0
+
+      # First, calculate the maximum bounding box size across all masks
+      curr_max_bbox_width = 0
+      curr_max_bbox_height = 0
+      for mask in masks:
+        _mask = tensor2pil(mask)
+        non_zero_indices = np.nonzero(np.array(_mask))
+        min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
+        min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
+        width = max_x - min_x
+        height = max_y - min_y
+        curr_max_bbox_width = max(curr_max_bbox_width, width)
+        curr_max_bbox_height = max(curr_max_bbox_height, height)
+
+      # Smooth the changes in the bounding box size
+      self.max_bbox_width = self.smooth_bbox_size(self.max_bbox_width, curr_max_bbox_width, bbox_smooth_alpha)
+      self.max_bbox_height = self.smooth_bbox_size(self.max_bbox_height, curr_max_bbox_height, bbox_smooth_alpha)
+
+      # Apply the crop size multiplier
+      self.max_bbox_width = round(self.max_bbox_width * crop_size_mult)
+      self.max_bbox_height = round(self.max_bbox_height * crop_size_mult)
+      bbox_aspect_ratio = self.max_bbox_width / self.max_bbox_height
+
+      # Then, for each mask and corresponding image...
+      for i, (mask, img) in enumerate(zip(masks, original_images)):
+        _mask = tensor2pil(mask)
+        non_zero_indices = np.nonzero(np.array(_mask))
+        min_x, max_x = np.min(non_zero_indices[1]), np.max(non_zero_indices[1])
+        min_y, max_y = np.min(non_zero_indices[0]), np.max(non_zero_indices[0])
+
+        # Calculate center of bounding box
+        center_x = np.mean(non_zero_indices[1])
+        center_y = np.mean(non_zero_indices[0])
+        curr_center = (round(center_x), round(center_y))
+
+        # If this is the first frame, initialize prev_center with curr_center
+        if not hasattr(self, 'prev_center'):
+          self.prev_center = curr_center
+
+        # Smooth the changes in the center coordinates from the second frame onwards
+        if i > 0:
+          center = self.smooth_center(self.prev_center, curr_center, bbox_smooth_alpha)
+        else:
+          center = curr_center
+
+        # Update prev_center for the next frame
+        self.prev_center = center
+
+        # Create bounding box using max_bbox_width and max_bbox_height
+        half_box_width = round(self.max_bbox_width / 2)
+        half_box_height = round(self.max_bbox_height / 2)
+        min_x = max(0, center[0] - half_box_width)
+        max_x = min(img.shape[1], center[0] + half_box_width)
+        min_y = max(0, center[1] - half_box_height)
+        max_y = min(img.shape[0], center[1] + half_box_height)
+
+        # Append bounding box coordinates
+        bounding_boxes.append((min_x, min_y, max_x - min_x, max_y - min_y))
+
+        # Crop the image from the bounding box
+        cropped_img = img[min_y:max_y, min_x:max_x, :]
+
+        # Calculate the new dimensions while maintaining the aspect ratio
+        new_height = min(cropped_img.shape[0], self.max_bbox_height)
+        new_width = round(new_height * bbox_aspect_ratio)
+
+        # Resize the image
+        resize_transform = Resize((new_height, new_width))
+        resized_img = resize_transform(cropped_img.permute(2, 0, 1))
+
+        # Perform the center crop to the desired size
+        crop_transform = CenterCrop((self.max_bbox_height, self.max_bbox_width))  # swap the order here if necessary
+        cropped_resized_img = crop_transform(resized_img)
+
+        cropped_images.append(cropped_resized_img.permute(1, 2, 0))
+
+      return cropped_images, bounding_boxes
+
+    def crop(self, image, mask, image_crop_multi, mask_crop_multi, bbox_smooth_alpha):
+      cropped_images, bounding_boxes = self.cropimage(image, mask, image_crop_multi, bbox_smooth_alpha)
+      cropped_mask_image, _ = self.cropimage(self.mask2image(mask), mask, mask_crop_multi, bbox_smooth_alpha)
+
+      cropped_image_out = torch.stack(cropped_images, dim=0)
+      cropped_mask_out = torch.stack(cropped_mask_image, dim=0)
+
+      return (cropped_image_out, cropped_mask_out[:, :, :, 0], bounding_boxes)
+
+
+class imageUncropFromBBOX:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+          "required": {
+              "original_image": ("IMAGE",),
+              "crop_image": ("IMAGE",),
+              "bbox": ("BBOX",),
+              "border_blending": ("FLOAT", {"default": 0.25, "min": 0.0, "max": 1.0, "step": 0.01},),
+              "use_square_mask": ("BOOLEAN", {"default": True}),
+          },
+          "optional":{
+            "optional_mask": ("MASK",)
+          }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "uncrop"
+    CATEGORY = "EasyUse/Image"
+
+    def bbox_check(self, bbox, target_size=None):
+      if not target_size:
+        return bbox
+
+      new_bbox = (
+        bbox[0],
+        bbox[1],
+        min(target_size[0] - bbox[0], bbox[2]),
+        min(target_size[1] - bbox[1], bbox[3]),
+      )
+      return new_bbox
+
+    def bbox_to_region(self, bbox, target_size=None):
+      bbox = self.bbox_check(bbox, target_size)
+      return (bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3])
+
+    def uncrop(self, original_image, crop_image, bbox, border_blending, use_square_mask, optional_mask=None):
+      def inset_border(image, border_width=20, border_color=(0)):
+        width, height = image.size
+        bordered_image = Image.new(image.mode, (width, height), border_color)
+        bordered_image.paste(image, (0, 0))
+        draw = ImageDraw.Draw(bordered_image)
+        draw.rectangle((0, 0, width - 1, height - 1), outline=border_color, width=border_width)
+        return bordered_image
+
+      if len(original_image) != len(crop_image):
+        raise ValueError(
+          f"The number of original_images ({len(original_image)}) and cropped_images ({len(crop_image)}) should be the same")
+
+        # Ensure there are enough bboxes, but drop the excess if there are more bboxes than images
+      if len(bbox) > len(original_image):
+        print(f"Warning: Dropping excess bounding boxes. Expected {len(original_image)}, but got {len(bbox)}")
+        bbox = bbox[:len(original_image)]
+      elif len(bbox) < len(original_image):
+        raise ValueError("There should be at least as many bboxes as there are original and cropped images")
+
+
+      out_images = []
+
+      for i in range(len(original_image)):
+        img = tensor2pil(original_image[i])
+        crop = tensor2pil(crop_image[i])
+        _bbox = bbox[i]
+
+        bb_x, bb_y, bb_width, bb_height = _bbox
+        paste_region = self.bbox_to_region((bb_x, bb_y, bb_width, bb_height), img.size)
+        
+        # rescale the crop image to fit the paste_region
+        crop = crop.resize((round(paste_region[2] - paste_region[0]), round(paste_region[3] - paste_region[1])))
+        crop_img = crop.convert("RGB")
+
+        # border blending
+        if border_blending > 1.0:
+          border_blending = 1.0
+        elif border_blending < 0.0:
+          border_blending = 0.0
+
+        blend_ratio = (max(crop_img.size) / 2) * float(border_blending)
+        blend = img.convert("RGBA")
+
+        if use_square_mask:
+          mask = Image.new("L", img.size, 0)
+          mask_block = Image.new("L", (paste_region[2] - paste_region[0], paste_region[3] - paste_region[1]), 255)
+          mask_block = inset_border(mask_block, round(blend_ratio / 2), (0))
+          mask.paste(mask_block, paste_region)
+        else:
+          if optional_mask is None:
+            raise ValueError("optional_mask is required when use_square_mask is False")
+          original_mask = tensor2pil(optional_mask)
+          original_mask = original_mask.resize((paste_region[2] - paste_region[0], paste_region[3] - paste_region[1]))
+          mask = Image.new("L", img.size, 0)
+          mask.paste(original_mask, paste_region)
+
+        mask = mask.filter(ImageFilter.BoxBlur(radius=blend_ratio / 4))
+        mask = mask.filter(ImageFilter.GaussianBlur(radius=blend_ratio / 4))
+
+        blend.paste(crop_img, paste_region)
+        blend.putalpha(mask)
+
+        img = Image.alpha_composite(img.convert("RGBA"), blend)
+        out_images.append(img.convert("RGB"))
+
+      output_images = torch.cat([pil2tensor(img) for img in out_images], dim=0)
+      return (output_images,)
+
+
 
 import cv2
 import base64
@@ -1001,6 +1249,35 @@ class imageToBase64:
       base64_str = base64.b64encode(image_bytes).decode("utf-8")
       return {"result": (base64_str,)}
 
+class removeLocalImage:
+  @classmethod
+  def INPUT_TYPES(s):
+      return {
+        "required": {
+          "file_name": ("STRING",{"default":""}),
+        },
+      }
+
+  RETURN_TYPES = ()
+  OUTPUT_NODE = True
+  FUNCTION = "remove"
+  CATEGORY = "EasyUse/Image"
+
+  def remove(self, file_name):
+    hasFile = False
+    for file in os.listdir(folder_paths.input_directory):
+      name_without_extension, file_extension = os.path.splitext(file)
+      if name_without_extension == file_name or file == file_name:
+        os.remove(os.path.join(folder_paths.input_directory, file))
+        hasFile = True
+        break
+    if hasFile:
+      PromptServer.instance.send_sync("easyuse-toast", {"content": "Removed SuccessFully", "type":'success'})
+    else:
+      PromptServer.instance.send_sync("easyuse-toast", {"content": "Removed Failed", "type": 'error'})
+    return ()
+
+
 # 姿势编辑器
 class poseEditor:
   @classmethod
@@ -1057,6 +1334,8 @@ NODE_CLASS_MAPPINGS = {
   "easy imageToMask": imageToMask,
   "easy imageSplitList": imageSplitList,
   "easy imagesSplitImage": imagesSplitImage,
+  "easy imageCropFromMask": imageCropFromMask,
+  "easy imageUncropFromBBOX": imageUncropFromBBOX,
   "easy imageSave": imageSaveSimple,
   "easy imageRemBg": imageRemBg,
   "easy imageChooser": imageChooser,
@@ -1066,6 +1345,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageToBase64": imageToBase64,
   "easy joinImageBatch": JoinImageBatch,
   "easy humanSegmentation": humanSegmentation,
+  "easy removeLocalImage": removeLocalImage,
   "easy poseEditor": poseEditor
 }
 
@@ -1084,6 +1364,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageHSVMask": "ImageHSVMask",
   "easy imageSplitList": "imageSplitList",
   "easy imagesSplitImage": "imagesSplitImage",
+  "easy imageCropFromMask": "imageCropFromMask",
+  "easy imageUncropFromBBOX": "imageUncropFromBBOX",
   "easy imageSave": "SaveImage (Simple)",
   "easy imageRemBg": "Image Remove Bg",
   "easy imageChooser": "Image Chooser",
@@ -1093,5 +1375,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy loadImageBase64": "Load Image (Base64)",
   "easy imageToBase64": "Image To Base64",
   "easy humanSegmentation": "Human Segmentation",
+  "easy removeLocalImage": "Remove Local Image",
   "easy poseEditor": "PoseEditor",
 }

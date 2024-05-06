@@ -63,10 +63,10 @@ app.registerExtension({
                             selector.element.children[0].innerHTML = ''
                             if(method_values == 'selfie_multiclass_256x256'){
                                 toggleWidget(this, findWidgetByName(this, 'confidence'), true)
-                                this.setSize([300, 200]);
+                                this.setSize([300, 260]);
                             }else{
                                 toggleWidget(this, findWidgetByName(this, 'confidence'))
-                                this.setSize([300, 400]);
+                                this.setSize([300, 500]);
                             }
                             let list = getTagList(tags[method_values]);
                             selector.element.children[0].append(...list)
@@ -122,10 +122,10 @@ app.registerExtension({
                     }
                     if(method_values == 'selfie_multiclass_256x256'){
                         toggleWidget(this, findWidgetByName(this, 'confidence'), true)
-                        this.setSize([300, 200]);
+                        this.setSize([300, 260]);
                     }else{
                         toggleWidget(this, findWidgetByName(this, 'confidence'))
-                        this.setSize([300, 420]);
+                        this.setSize([300, 500]);
                     }
                 },1)
 
