@@ -28,3 +28,8 @@
 .easyuse-chooser-dialog-images img.selected{
     border: 4px solid var(--success-color);
 }
+
+.easyuse-chooser-hidden{
+    display: none;
+    height:0;
+}

@@ -540,6 +540,41 @@ class imageSplitList:
           new_images[1].append(img)
     return new_images
 
+class imageSplitGrid:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+        "row": ("INT", {"default": 1,"min": 1,"max": 10,"step": 1,}),
+        "column": ("INT", {"default": 1,"min": 1,"max": 10,"step": 1,}),
+      }
+    }
+
+  RETURN_TYPES = ("IMAGE",)
+  RETURN_NAMES = ("images",)
+  FUNCTION = "doit"
+  CATEGORY = "EasyUse/Image"
+
+  def crop(self, image, width, height, x, y):
+    x = min(x, image.shape[2] - 1)
+    y = min(y, image.shape[1] - 1)
+    to_x = width + x
+    to_y = height + y
+    img = image[:, y:to_y, x:to_x, :]
+    return img
+
+  def doit(self, images, row, column):
+    _, height, width, _ = images.shape
+    sub_width = width // column
+    sub_height = height // row
+    new_images = []
+    for i in range(row):
+        for j in range(column):
+          new_images.append(self.crop(images, sub_width, sub_height, j * sub_width, i * sub_height))
+
+    return (torch.cat(new_images, dim=0),)
+
 class imagesSplitImage:
     @classmethod
     def INPUT_TYPES(s):
@@ -557,6 +592,34 @@ class imagesSplitImage:
     def split(self, images,):
       new_images = torch.chunk(images, len(images), dim=0)
       return new_images
+
+
+class imageConcat:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required": {
+      "image1": ("IMAGE",),
+      "image2": ("IMAGE",),
+      "direction": (['right','down','left','up',],{"default": 'right'}),
+      "match_image_size": ("BOOLEAN", {"default": False}),
+    }}
+
+  RETURN_TYPES = ("IMAGE",)
+  FUNCTION = "concat"
+  CATEGORY = "EasyUse/image"
+
+  def concat(self, image1, image2, direction, match_image_size):
+    if match_image_size:
+      image2 = torch.nn.functional.interpolate(image2, size=(image1.shape[2], image1.shape[3]), mode="bilinear")
+    if direction == 'right':
+      row = torch.cat((image1, image2), dim=2)
+    elif direction == 'down':
+      row = torch.cat((image1, image2), dim=1)
+    elif direction == 'left':
+      row = torch.cat((image2, image1), dim=2)
+    elif direction == 'up':
+      row = torch.cat((image2, image1), dim=1)
+    return (row,)
 
 # 图片背景移除
 from .briaai.rembg import BriaRMBG, preprocess_image, postprocess_image
@@ -633,12 +696,12 @@ class imageChooser(PreviewImage):
   def INPUT_TYPES(self):
     return {
       "required":{
-
+        "mode": (['Always Pause', 'Keep Last Selection'], {"default": "Always Pause"}),
       },
       "optional": {
         "images": ("IMAGE",),
       },
-      "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"},
+      "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"},
     }
 
   RETURN_TYPES = ("IMAGE",)
@@ -661,8 +724,7 @@ class imageChooser(PreviewImage):
     else:
       return None
 
-  def chooser(self, prompt=None, my_unique_id=None, **kwargs):
-
+  def chooser(self, prompt=None, my_unique_id=None, extra_pnginfo=None, **kwargs):
     id = my_unique_id[0]
     if id not in ChooserMessage.stash:
       ChooserMessage.stash[id] = {}
@@ -685,9 +747,19 @@ class imageChooser(PreviewImage):
     images = result['ui']['images']
     PromptServer.instance.send_sync("easyuse-image-choose", {"id": id, "urls": images})
 
+    # 获取上次选择
+    mode = kwargs.pop('mode', 'Always Pause')
+    last_choosen = None
+    if mode == 'Keep Last Selection':
+      if id and extra_pnginfo[0] and "workflow" in extra_pnginfo[0]:
+        workflow = extra_pnginfo[0]["workflow"]
+        node = next((x for x in workflow["nodes"] if str(x["id"]) == id), None)
+        if node:
+          last_choosen = node['properties']['values']
+
     # wait for selection
     try:
-      selections = ChooserMessage.waitForMessage(id, asList=True)
+      selections = ChooserMessage.waitForMessage(id, asList=True) if last_choosen is None or len(last_choosen)<1 else last_choosen
       choosen = [x for x in selections if x >= 0] if len(selections)>1 else [0]
     except ChooserCancelled:
       raise comfy.model_management.InterruptProcessingException()
@@ -1332,7 +1404,9 @@ NODE_CLASS_MAPPINGS = {
   "easy imageScaleDownToSize": imageScaleDownToSize,
   "easy imageRatio": imageRatio,
   "easy imageToMask": imageToMask,
+  "easy imageConcat": imageConcat,
   "easy imageSplitList": imageSplitList,
+  "easy imageSplitGrid": imageSplitGrid,
   "easy imagesSplitImage": imagesSplitImage,
   "easy imageCropFromMask": imageCropFromMask,
   "easy imageUncropFromBBOX": imageUncropFromBBOX,
@@ -1362,7 +1436,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageRatio": "ImageRatio",
   "easy imageToMask": "ImageToMask",
   "easy imageHSVMask": "ImageHSVMask",
+  "easy imageConcat": "imageConcat",
   "easy imageSplitList": "imageSplitList",
+  "easy imageSplitGrid": "imageSplitGrid",
   "easy imagesSplitImage": "imagesSplitImage",
   "easy imageCropFromMask": "imageCropFromMask",
   "easy imageUncropFromBBOX": "imageUncropFromBBOX",

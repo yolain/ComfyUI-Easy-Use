@@ -153,6 +153,20 @@ LAYER_DIFFUSION = {
     },
 }
 
+# IC Light
+IC_LIGHT_DIR = os.path.join(folder_paths.models_dir, "ic_light")
+IC_LIGHT_MODELS = {
+    "iclight_fc": {
+        "sd1": {
+            "model_url": "https://huggingface.co/lllyasviel/ic-light/resolve/main/iclight_sd15_fc.safetensors"
+        },
+        "sdxl": {
+            "model_url": None
+        }
+    }
+}
+
+
 # REMBG
 REMBG_DIR = os.path.join(folder_paths.models_dir, "rembg")
 REMBG_MODELS = {

@@ -139,7 +139,7 @@
 }
 .easyuse-guide-dialog p{
     margin:4px 0;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 300;
 }
 .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6 {
@@ -161,7 +161,7 @@
     font-size: 14px;
 }
 .markdown-body h4{
-    font-size: 12px;
+    font-size: 13px;
 }
 .markdown-body table {
     display: block;
@@ -183,7 +183,7 @@
     border-bottom: 1px solid var(--border-color);
 }
 .markdown-body table td {
-    font-size: 10px;
+    font-size: 12px;
 }
 .markdown-body table th:last-child, .markdown-body table td:last-child{
     border-right: none;
@@ -198,9 +198,6 @@
 }
 .markdown-body table th:last-child{
     width:100%;
-}
-.markdown-body a{
-    margin-right: 10px;
 }
 .markdown-body .warning{
     color:var(--warning-color)

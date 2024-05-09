@@ -72,6 +72,10 @@ class chooserImageDialog extends ComfyDialog {
 function progressButtonPressed() {
     const node = app.graph._nodes_by_id[this.node_id];
     if (node) {
+        const selected = [...node.selected]
+        if(selected?.length>0){
+            node.setProperty('values',selected)
+        }
         if (FlowState.paused()) {
             send_message(node.id, [...node.selected, -1, ...node.anti_selected]);
         }
@@ -79,10 +83,26 @@ function progressButtonPressed() {
             skip_next_restart_message();
             restart_from_here(node.id).then(() => { send_message(node.id, [...node.selected, -1, ...node.anti_selected]); });
         }
+        const maxlength = node.imgs.length;
+        if (FlowState.paused_here(node.id) && selected>0) {
+            node.send_button_widget.name = (selected>1) ? "Progress selected (" + selected + '/' + maxlength  +")" : "Progress selected image";
+        } else if (FlowState.idle() && selected>0) {
+            node.send_button_widget.name = (selected>1) ? "Progress selected (" + selected + '/' + maxlength  +")" : "Progress selected image as restart";
+        }
+        else {
+            node.send_button_widget.name = "";
+        }
     }
 }
 
-function cancelButtonPressed() { if (FlowState.running()) { send_cancel(); } }
+function cancelButtonPressed() {
+    if (FlowState.running()) { send_cancel();}
+    const node = app.graph._nodes_by_id[this.node_id];
+    if (node) {
+        node.send_button_widget.name = "";
+        node.cancel_button_widget.name = "";
+    }
+}
 
 app.registerExtension({
     name:'comfy.easyuse.imageChooser',
@@ -126,9 +146,12 @@ app.registerExtension({
     },
 
     async nodeCreated(node, app) {
+
         if(node.comfyClass == 'easy imageChooser'){
             node.send_button_widget = node.addWidget("button", "", "", progressButtonPressed, {serialize: false});
             node.cancel_button_widget = node.addWidget("button", "", "", cancelButtonPressed, {serialize: false});
+            node.setProperty('values',[])
+
             /* Capture clicks */
             const org_onMouseDown = node.onMouseDown;
 

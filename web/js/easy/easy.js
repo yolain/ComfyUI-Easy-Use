@@ -29,12 +29,15 @@ api.addEventListener("easyuse-toast",event=>{
 let draggerEl = null
 let isGroupMapcanMove = true
 function createGroupMap(){
+    let div = document.querySelector('#easyuse_groups_map')
+    if(div){
+        div.style.display = div.style.display == 'none' ? 'flex' : 'none'
+        return
+    }
     let groups = app.canvas.graph._groups
     let nodes = app.canvas.graph._nodes
     let old_nodes = groups.length
-    let div =
-        document.querySelector('#easyuse_groups_map') ||
-        document.createElement('div')
+    div = document.createElement('div')
     div.id = 'easyuse_groups_map'
     div.innerHTML = ''
     let btn = document.createElement('div')
@@ -381,10 +384,11 @@ class GuideDialog {
     }
 }
 
+const getEnableToolBar = _ => app.ui.settings.getSettingValue(toolBarId, true)
 
 const toolBarId = "Comfy.EasyUse.toolBar"
 
-let enableToolBar = true
+let enableToolBar = getEnableToolBar()
 let disableRenderInfo = localStorage['Comfy.Settings.Comfy.EasyUse.disableRenderInfo'] ? true : false
 export function addToolBar(app) {
 	app.ui.settings.addSetting({
@@ -400,7 +404,6 @@ export function addToolBar(app) {
 		},
 	});
 }
-const getEnableToolBar = _ => app.ui.settings.getSettingValue(toolBarId, true)
 
 let note = null
 let toolbar = null

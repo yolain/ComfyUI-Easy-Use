@@ -40,6 +40,7 @@
 
 **v1.1.7**
 
+- 增加 `easy imageSplitGrid` - 图像网格拆分
 - `easy kSamplerInpainting` 的 **additional** 属性增加差异扩散和brushnet等相关选项 
 - 增加 brushnet模型加载的支持 - [ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet)
 - 增加 `easy applyFooocusInpaint` - Fooocus内补节点 替代原有的 FooocusInpaintLoader

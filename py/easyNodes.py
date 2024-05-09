@@ -1,4 +1,4 @@
-import sys, os, re, json, time, math, copy
+import sys, os, re, json, time
 import torch
 import folder_paths
 import comfy.utils, comfy.sample, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
@@ -16,7 +16,7 @@ from PIL import Image
 
 from server import PromptServer
 from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint, InpaintModelConditioning
-from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS
+from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS, IC_LIGHT_DIR, IC_LIGHT_MODELS
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
@@ -52,6 +52,7 @@ add_folder_path_and_extensions("ipadapter", [os.path.join(model_path, "ipadapter
 add_folder_path_and_extensions("dynamicrafter_models", [os.path.join(model_path, "dynamicrafter_models")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("mediapipe", [os.path.join(model_path, "mediapipe")], set(['.tflite','.pth']))
 add_folder_path_and_extensions("t5", [os.path.join(model_path, "t5")], set(['.safetensors','.bin','.json']))
+add_folder_path_and_extensions("ic_light", [os.path.join(model_path, "ic_light")], set(['.safetensors','.bin','.json']))
 
 add_folder_path_and_extensions("checkpoints_thumb", [os.path.join(model_path, "checkpoints")], image_suffixs)
 add_folder_path_and_extensions("loras_thumb", [os.path.join(model_path, "loras")], image_suffixs)
@@ -2087,34 +2088,6 @@ class LLLiteLoader:
 # FooocusInpaint
 from .fooocus import InpaintHead, InpaintWorker
 inpaint_head_model = None
-# class fooocusInpaintLoader:
-#     @classmethod
-#     def INPUT_TYPES(s):
-#         return {
-#             "required": {
-#                 "head": (list(FOOOCUS_INPAINT_HEAD.keys()),),
-#                 "patch": (list(FOOOCUS_INPAINT_PATCH.keys()),),
-#             }
-#         }
-#
-#     RETURN_TYPES = ("INPAINT_PATCH",)
-#     RETURN_NAMES = ("patch",)
-#     CATEGORY = "EasyUse/Inpaint"
-#     FUNCTION = "apply"
-#
-#     def apply(self, head, patch):
-#         global inpaint_head_model
-#
-#         head_file = get_local_filepath(FOOOCUS_INPAINT_HEAD[head]["model_url"], INPAINT_DIR)
-#         if inpaint_head_model is None:
-#             inpaint_head_model = InpaintHead()
-#             sd = torch.load(head_file, map_location='cpu')
-#             inpaint_head_model.load_state_dict(sd)
-#
-#         patch_file = get_local_filepath(FOOOCUS_INPAINT_PATCH[patch]["model_url"], INPAINT_DIR)
-#         inpaint_lora = comfy.utils.load_torch_file(patch_file, safe_load=True)
-#
-#         return ((inpaint_head_model, inpaint_lora),)
 
 class applyFooocusInpaint:
     @classmethod
@@ -2155,6 +2128,8 @@ class applyFooocusInpaint:
 
 
 #---------------------------------------------------------------适配器 开始----------------------------------------------------------------------#
+
+# 风格对齐
 from .libs.styleAlign import styleAlignBatch, SHARE_NORM_OPTIONS, SHARE_ATTN_OPTIONS
 class styleAlignedBatchAlign:
 
@@ -2175,6 +2150,33 @@ class styleAlignedBatchAlign:
 
     def align(self, model, share_norm, share_attn, scale):
         return (styleAlignBatch(model, share_norm, share_attn, scale),)
+
+# 光照对齐
+from .ic_light.func import ICLight
+class icLightApply:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "mode": (list(IC_LIGHT_MODELS.keys()),),
+                "model": ("MODEL",),
+                "latent": ("LATENT",),
+            },
+        }
+
+    RETURN_TYPES = ("MODEL",)
+    FUNCTION = "apply"
+    CATEGORY = "EasyUse/Adapter"
+
+    def apply(self, mode, model, latent):
+        model_type = get_sd_version(model)
+        if model_type == 'sdxl':
+            raise Exception("IC Light model is not supported for SDXL")
+        model_path = get_local_filepath(IC_LIGHT_MODELS[mode]['sd1']["model_url"], IC_LIGHT_DIR)
+        m = ICLight().apply(model_path, model, latent)
+        return (m,)
+
 
 def insightface_loader(provider):
     try:
@@ -5687,8 +5689,7 @@ class detailerFix:
         del pipe
 
         if image_output in ("Hide", "Hide&Save"):
-            return {"ui": {},
-                    "result": (new_pipe, result_img, result_cropped_enhanced, result_cropped_enhanced_alpha, result_mask, result_cnet_images )}
+            return (new_pipe, result_img, result_cropped_enhanced, result_cropped_enhanced_alpha, result_mask, result_cnet_images)
 
         if image_output in ("Sender", "Sender&Save"):
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
@@ -7154,6 +7155,7 @@ NODE_CLASS_MAPPINGS = {
     "easy instantIDApply": instantIDApply,
     "easy instantIDApplyADV": instantIDApplyAdvanced,
     "easy styleAlignedBatchAlign": styleAlignedBatchAlign,
+    "easy icLightApply": icLightApply,
     # Inpaint 内补
     # "easy fooocusInpaintLoader": fooocusInpaintLoader,
     "easy applyFooocusInpaint": applyFooocusInpaint,
@@ -7261,6 +7263,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy instantIDApply": "Easy Apply InstantID",
     "easy instantIDApplyADV": "Easy Apply InstantID (Advanced)",
     "easy styleAlignedBatchAlign": "Easy Apply StyleAlign",
+    "easy icLightApply": "Easy Apply ICLight",
     # Inpaint 内补
     # "easy fooocusInpaintLoader": "Load Fooocus Inpaint(Removed)",
     "easy applyFooocusInpaint": "Apply Fooocus Inpaint",

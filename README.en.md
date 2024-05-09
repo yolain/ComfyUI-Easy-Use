@@ -35,6 +35,7 @@
 
 **v1.1.7**
 
+- Added `easy imageSplitGrid`
 - `easy kSamplerInpainting` added options such as different diffusion and brushnet in **additional** widget
 - Support for brushnet model loading - [ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet)
 - Added `easy applyFooocusInpaint` - Replace FooocusInpaintLoader
