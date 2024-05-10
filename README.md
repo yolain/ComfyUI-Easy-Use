@@ -35,11 +35,14 @@
 - 支持BriaAI的RMBG-1.4模型的背景去除节点，[技术参考](https://huggingface.co/briaai/RMBG-1.4)
 - 支持 强制清理comfyUI模型显存占用
 - 支持Stable Diffusion 3 多账号API节点
+- 支持IC-Light的应用，[代码整合来源](https://github.com/huchenlei/ComfyUI-IC-Light), [技术参考](https://github.com/lllyasviel/IC-Light)
 
 ## 更新日志
 
 **v1.1.7**
 
+- 增加 `easy prompt` - 主体和光影预置项，后期可能会调整
+- 增加 `easy icLightApply` - 光影迁移, 从[ComfyUI-IC-Light](https://github.com/huchenlei/ComfyUI-IC-Light)优化
 - 增加 `easy imageSplitGrid` - 图像网格拆分
 - `easy kSamplerInpainting` 的 **additional** 属性增加差异扩散和brushnet等相关选项 
 - 增加 brushnet模型加载的支持 - [ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet)
@@ -337,7 +340,8 @@
 | easy preSamplingLayerDiffusion | [ComfyUI-layerdiffusion](https://github.com/huchenlei/ComfyUI-layerdiffusion) | LayeredDiffusionApply等  | 
 | easy dynamiCrafterLoader       | [ComfyUI-layerdiffusion](https://github.com/ExponentialML/ComfyUI_Native_DynamiCrafter) | Apply Dynamicrafter     | 
 | easy imageChooser              | [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) | Preview Chooser         | 
-| easy styleAlignedBatchAlign              | [style_aligned_comfy](https://github.com/chrisgoringe/cg-image-picker) | styleAlignedBatchAlign       | 
+| easy styleAlignedBatchAlign    | [style_aligned_comfy](https://github.com/chrisgoringe/cg-image-picker) | styleAlignedBatchAlign  | 
+| easy icLightApply              | [ComfyUI-IC-Light](https://github.com/huchenlei/ComfyUI-IC-Light) | ICLightApply等           | 
 
 ## 示例
 

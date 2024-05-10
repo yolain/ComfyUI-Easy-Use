@@ -35,6 +35,8 @@
 
 **v1.1.7**
 
+- Added `easy prompt` - Subject and light presets, maybe adjusted later
+- Added `easy icLightApply` - Light and shadow migration, Code based on [ComfyUI-IC-Light](https://github.com/huchenlei/ComfyUI-IC-Light)
 - Added `easy imageSplitGrid`
 - `easy kSamplerInpainting` added options such as different diffusion and brushnet in **additional** widget
 - Support for brushnet model loading - [ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet)

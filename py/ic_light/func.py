@@ -1,21 +1,36 @@
-import os
 import torch
-import safetensors.torch
-from typing import Tuple, TypedDict, Callable, NamedTuple
+import numpy as np
+import matplotlib.pyplot as plt
+from typing import Tuple, TypedDict, Callable
 
-import folder_paths
 import comfy.model_management
-from comfy.diffusers_convert import convert_unet_state_dict
-from comfy.model_patcher import ModelPatcher
-from comfy.ldm.modules.diffusionmodules.openaimodel import UNetModel
-from comfy.model_base import BaseModel
+from comfy.sd import load_unet
+from comfy.ldm.models.autoencoder import AutoencoderKL
 from comfy.conds import CONDRegular
+from comfy.model_base import BaseModel
+from PIL import Image
+from nodes import VAEEncode
+
+from ..layer_diffuse.model import ModelPatcher, calculate_weight_adjust_channel
+from ..libs.image import np2tensor, pil2tensor
 
 class UnetParams(TypedDict):
     input: torch.Tensor
     timestep: torch.Tensor
     c: dict
     cond_or_uncond: torch.Tensor
+
+
+class VAEEncodeArgMax(VAEEncode):
+    def encode(self, vae, pixels):
+        assert isinstance(
+            vae.first_stage_model, AutoencoderKL
+        ), "ArgMax only supported for AutoencoderKL"
+        original_sample_mode = vae.first_stage_model.regularization.sample
+        vae.first_stage_model.regularization.sample = False
+        ret = super().encode(vae, pixels)
+        vae.first_stage_model.regularization.sample = original_sample_mode
+        return ret
 
 class ICLight:
 
@@ -52,44 +67,121 @@ class ICLight:
             new_conv_in.bias = original_conv.bias
             return new_conv_in.to(dtype=dtype, device=device)
 
+    def generate_lighting_image(self, original_image, direction):
+        _, image_height, image_width, _ = original_image.shape
+        match direction:
+            case 'Left Light':
+                gradient = np.linspace(255, 0, image_width)
+                image = np.tile(gradient, (image_height, 1))
+                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+                return np2tensor(input_bg)
+            case 'Right Light':
+                gradient = np.linspace(0, 255, image_width)
+                image = np.tile(gradient, (image_height, 1))
+                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+                return np2tensor(input_bg)
+            case 'Top Light':
+                gradient = np.linspace(255, 0, image_height)[:, None]
+                image = np.tile(gradient, (1, image_width))
+                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+                return np2tensor(input_bg)
+            case 'Bottom Light':
+                gradient = np.linspace(0, 255, image_height)[:, None]
+                image = np.tile(gradient, (1, image_width))
+                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+                return np2tensor(input_bg)
+            case 'Circle Light':
+                x = np.linspace(-1, 1, image_width)
+                y = np.linspace(-1, 1, image_height)
+                x, y = np.meshgrid(x, y)
+                r = np.sqrt(x ** 2 + y ** 2)
+                r = r / r.max()
+                color1 = np.array([0, 0, 0])[np.newaxis, np.newaxis, :]
+                color2 = np.array([255, 255, 255])[np.newaxis, np.newaxis, :]
+                gradient = (color1 * r[..., np.newaxis] + color2 * (1 - r)[..., np.newaxis]).astype(np.uint8)
+                image = pil2tensor(Image.fromarray(gradient))
+                return image
+            case _:
+                image = pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
+                return image
 
-    def apply(self, model_path, model: ModelPatcher, c_concat: dict,) -> Tuple[ModelPatcher]:
+    def generate_source_image(self, original_image, source):
+        batch_size, image_height, image_width, _ = original_image.shape
+        match source:
+            case 'Use Flipped Background Image':
+                if batch_size < 2:
+                    raise ValueError('Must be at least 2 image to use flipped background image.')
+                original_image = [img.unsqueeze(0) for img in original_image]
+                image = torch.flip(original_image[1], [2])
+                return image
+            case 'Ambient':
+                input_bg = np.zeros(shape=(image_height, image_width, 3), dtype=np.uint8) + 64
+                return np2tensor(input_bg)
+            case 'Left Light':
+                gradient = np.linspace(224, 32, image_width)
+                image = np.tile(gradient, (image_height, 1))
+                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+                return np2tensor(input_bg)
+            case 'Right Light':
+                gradient = np.linspace(32, 224, image_width)
+                image = np.tile(gradient, (image_height, 1))
+                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+                return np2tensor(input_bg)
+            case 'Top Light':
+                gradient = np.linspace(224, 32, image_height)[:, None]
+                image = np.tile(gradient, (1, image_width))
+                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+                return np2tensor(input_bg)
+            case 'Bottom Light':
+                gradient = np.linspace(32, 224, image_height)[:, None]
+                image = np.tile(gradient, (1, image_width))
+                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+                return np2tensor(input_bg)
+            case _:
+                image = pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
+                return image
+
+
+    def apply(self, ic_model_path, model: ModelPatcher, c_concat: dict,) -> Tuple[ModelPatcher]:
+        try:
+            ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
+        except:
+            pass
 
         device = comfy.model_management.get_torch_device()
         dtype = comfy.model_management.unet_dtype()
         work_model = model.clone()
-        c_concat_samples: torch.Tensor = c_concat["samples"]
+
+        # Apply scale factor.
+        base_model: BaseModel = work_model.model
+        scale_factor = base_model.model_config.latent_format.scale_factor
+
+        # [B, 4, H, W]
+        concat_conds: torch.Tensor = c_concat["samples"] * scale_factor
+        # [1, 4 * B, H, W]
+        concat_conds = torch.cat([c[None, ...] for c in concat_conds], dim=1)
+
 
         def wrapped_unet(unet_apply: Callable, params: UnetParams):
             # Apply concat.
             sample = params["input"]
             params["c"]["c_concat"] = torch.cat(
                 (
-                        [c_concat_samples.to(sample.device)]
-                        * (sample.shape[0] // c_concat_samples.shape[0])
-                )
-                + params["c"].get("c_concat", []),
+                    [concat_conds.to(sample.device)]
+                    * (sample.shape[0] // concat_conds.shape[0])
+                ),
                 dim=0,
             )
             return unet_apply(x=sample, t=params["timestep"], **params["c"])
 
-        work_model.add_object_patch(
-            "diffusion_model.input_blocks.0.0",
-            self.create_custom_conv(
-                original_conv=work_model.get_model_object("diffusion_model.input_blocks.0.0"),
-                dtype=dtype,
-                device=device,
-            ),
-        )
         work_model.set_model_unet_function_wrapper(wrapped_unet)
-        sd_offset = convert_unet_state_dict(safetensors.torch.load_file(model_path))
+        ic_model = load_unet(ic_model_path)
+        ic_model_state_dict = ic_model.model.diffusion_model.state_dict()
 
         work_model.add_patches(
             patches={
-                ("diffusion_model." + key): (
-                    sd_offset[key].to(dtype=dtype, device=device),
-                )
-                for key in sd_offset.keys()
+                ("diffusion_model." + key): (value.to(dtype=dtype, device=device),)
+                for key, value in ic_model_state_dict.items()
             }
         )
 

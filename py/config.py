@@ -154,11 +154,18 @@ LAYER_DIFFUSION = {
 }
 
 # IC Light
-IC_LIGHT_DIR = os.path.join(folder_paths.models_dir, "ic_light")
 IC_LIGHT_MODELS = {
-    "iclight_fc": {
+    "Foreground": {
         "sd1": {
-            "model_url": "https://huggingface.co/lllyasviel/ic-light/resolve/main/iclight_sd15_fc.safetensors"
+            "model_url": "https://huggingface.co/huchenlei/IC-Light-ldm/resolve/main/iclight_sd15_fc_unet_ldm.safetensors"
+        },
+        "sdxl": {
+            "model_url": None
+        }
+    },
+    "Foreground&Background": {
+        "sd1": {
+            "model_url": "https://huggingface.co/huchenlei/IC-Light-ldm/resolve/main/iclight_sd15_fbc_unet_ldm.safetensors"
         },
         "sdxl": {
             "model_url": None

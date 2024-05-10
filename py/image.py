@@ -606,7 +606,7 @@ class imageConcat:
 
   RETURN_TYPES = ("IMAGE",)
   FUNCTION = "concat"
-  CATEGORY = "EasyUse/image"
+  CATEGORY = "EasyUse/Image"
 
   def concat(self, image1, image2, direction, match_image_size):
     if match_image_size:

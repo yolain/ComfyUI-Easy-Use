@@ -1,6 +1,7 @@
 import sys, os, re, json, time
 import torch
 import folder_paths
+import numpy as np
 import comfy.utils, comfy.sample, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
 try:
     import comfy.sampler_helpers
@@ -10,13 +11,14 @@ from comfy.sd import CLIP, VAE
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
 from comfy_extras.nodes_mask import LatentCompositeMasked, GrowMask
+from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from comfy.clip_vision import load as load_clip_vision
 from urllib.request import urlopen
 from PIL import Image
 
 from server import PromptServer
 from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint, InpaintModelConditioning
-from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS, IC_LIGHT_DIR, IC_LIGHT_MODELS
+from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS, IC_LIGHT_MODELS
 from .log import log_node_info, log_node_error, log_node_warn
 from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
@@ -52,11 +54,9 @@ add_folder_path_and_extensions("ipadapter", [os.path.join(model_path, "ipadapter
 add_folder_path_and_extensions("dynamicrafter_models", [os.path.join(model_path, "dynamicrafter_models")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("mediapipe", [os.path.join(model_path, "mediapipe")], set(['.tflite','.pth']))
 add_folder_path_and_extensions("t5", [os.path.join(model_path, "t5")], set(['.safetensors','.bin','.json']))
-add_folder_path_and_extensions("ic_light", [os.path.join(model_path, "ic_light")], set(['.safetensors','.bin','.json']))
 
 add_folder_path_and_extensions("checkpoints_thumb", [os.path.join(model_path, "checkpoints")], image_suffixs)
 add_folder_path_and_extensions("loras_thumb", [os.path.join(model_path, "loras")], image_suffixs)
-
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 
 # 正面提示词
@@ -239,6 +239,59 @@ class stylesPromptSelector:
 
         return (positive_prompt, negative_prompt)
 
+#prompt
+class prompt:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "prompt": ("STRING", {"default": "", "multiline": True, "placeholder": "Prompt"}),
+            "main": ([
+                'none',
+                'beautiful woman, detailed face',
+                'handsome man, detailed face',
+                'pretty girl',
+                'handsome boy',
+                'dog',
+                'cat',
+                'Buddha',
+                'toy'
+            ], {"default": "none"}),
+            "lighting": ([
+                'none',
+                'sunshine from window',
+                'neon light, city',
+                'sunset over sea',
+                'golden time',
+                'sci-fi RGB glowing, cyberpunk',
+                'natural lighting',
+                'warm atmosphere, at home, bedroom',
+                'magic lit',
+                'evil, gothic, Yharnam',
+                'light and shadow',
+                'shadow from window',
+                'soft studio lighting',
+                'home atmosphere, cozy bedroom illumination',
+                'neon, Wong Kar-wai, warm',
+                'cinemative lighting',
+                'neo punk lighting, cyberpunk',
+            ],{"default":'none'})
+        }}
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("prompt",)
+    FUNCTION = "doit"
+
+    CATEGORY = "EasyUse/Prompt"
+
+    def doit(self, prompt, main, lighting):
+        if lighting != 'none' and main != 'none':
+            prompt = main + ',' + lighting + ',' + prompt
+        elif lighting != 'none' and main == 'none':
+            prompt = prompt + ',' + lighting
+        elif main != 'none':
+            prompt = main + ',' + prompt
+
+        return prompt,
 #promptList
 class promptList:
     @classmethod
@@ -2152,7 +2205,7 @@ class styleAlignedBatchAlign:
         return (styleAlignBatch(model, share_norm, share_attn, scale),)
 
 # 光照对齐
-from .ic_light.func import ICLight
+from .ic_light.func import ICLight, VAEEncodeArgMax
 class icLightApply:
 
     @classmethod
@@ -2161,21 +2214,68 @@ class icLightApply:
             "required": {
                 "mode": (list(IC_LIGHT_MODELS.keys()),),
                 "model": ("MODEL",),
-                "latent": ("LATENT",),
+                "image": ("IMAGE",),
+                "vae": ("VAE",),
+                "lighting": (['None', 'Left Light', 'Right Light', 'Top Light', 'Bottom Light', 'Circle Light'],{"default": "None"}),
+                "source": (['Use Background Image', 'Use Flipped Background Image', 'Left Light', 'Right Light', 'Top Light', 'Bottom Light', 'Ambient'],{"default": "Use Background Image"})
             },
         }
 
-    RETURN_TYPES = ("MODEL",)
+    RETURN_TYPES = ("MODEL", "IMAGE")
+    RETURN_NAMES = ("model", "lighting_image")
     FUNCTION = "apply"
+    OUTPUT_NODE = True
     CATEGORY = "EasyUse/Adapter"
 
-    def apply(self, mode, model, latent):
+    def batch(self, image1, image2):
+        if image1.shape[1:] != image2.shape[1:]:
+            image2 = comfy.utils.common_upscale(image2.movedim(-1, 1), image1.shape[2], image1.shape[1], "bilinear",
+                                                "center").movedim(1, -1)
+        s = torch.cat((image1, image2), dim=0)
+        return s
+
+    def removebg(self, image):
+        if "easy imageRemBg" not in ALL_NODE_CLASS_MAPPINGS:
+            raise Exception("Please re-install ComfyUI-Easy-Use")
+        cls = ALL_NODE_CLASS_MAPPINGS['easy imageRemBg']
+        results = cls().remove('RMBG-1.4', image, 'Hide', 'ComfyUI')
+        if "result" in results:
+            image, _ = results['result']
+            return image
+
+    def apply(self, mode, model, image, vae, lighting, source):
         model_type = get_sd_version(model)
         if model_type == 'sdxl':
-            raise Exception("IC Light model is not supported for SDXL")
-        model_path = get_local_filepath(IC_LIGHT_MODELS[mode]['sd1']["model_url"], IC_LIGHT_DIR)
-        m = ICLight().apply(model_path, model, latent)
-        return (m,)
+            raise Exception("IC Light model is not supported for SDXL now")
+
+        batch_size = image.shape[0]
+        if image.shape[3] == 3:
+            # remove bg
+            if mode == 'Foreground' or batch_size == 1:
+                image = self.removebg(image)
+
+        iclight = ICLight()
+        if mode == 'Foreground':
+          lighting_image = iclight.generate_lighting_image(image, lighting)
+        else:
+          lighting_image = iclight.generate_source_image(image, source)
+          if source != 'Use Background Image':
+              _, height, width, _ = lighting_image.shape
+              mask = torch.full((1, height, width), 1.0, dtype=torch.float32, device="cpu")
+              lighting_image, = JoinImageWithAlpha().join_image_with_alpha(lighting_image, mask)
+              if batch_size < 2:
+                image = self.batch(image, lighting_image)
+              else:
+                original_image = [img.unsqueeze(0) for img in image]
+                original_image = self.removebg(original_image[0])
+                image = self.batch(original_image, lighting_image)
+
+        latent, = VAEEncodeArgMax().encode(vae, image)
+        model_path = get_local_filepath(IC_LIGHT_MODELS[mode]['sd1']["model_url"], os.path.join(folder_paths.models_dir, "unet"))
+
+        m = iclight.apply(model_path, model, latent)
+
+        return (m, lighting_image)
 
 
 def insightface_loader(provider):
@@ -3045,9 +3145,14 @@ class samplerSettings:
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         if image_to_latent is not None:
-            samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
-            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
-            images = image_to_latent
+            _, height, width, _ = image_to_latent.shape
+            if height == 1 and width == 1:
+                samples = pipe["samples"]
+                images = pipe["images"]
+            else:
+                samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
+                samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+                images = image_to_latent
         elif latent is not None:
             samples = latent
             images = pipe["images"]
@@ -3121,9 +3226,14 @@ class samplerSettingsAdvanced:
         vae = pipe["vae"]
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         if image_to_latent is not None:
-            samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
-            samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
-            images = image_to_latent
+            _, height, width, _ = image_to_latent.shape
+            if height == 1 and width == 1:
+                samples = pipe["samples"]
+                images = pipe["images"]
+            else:
+                samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
+                samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+                images = image_to_latent
         elif latent is not None:
             samples = latent
             images = pipe["images"]
@@ -3226,7 +3336,6 @@ class samplerSettingsNoiseIn:
 
     def expand_mask(self, mask, expand, tapered_corners):
         try:
-            import numpy as np
             import scipy
 
             c = 0 if tapered_corners else 1
@@ -3438,13 +3547,18 @@ class samplerCustomSettings:
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         _guider, sigmas = None, None
         if image_to_latent is not None:
-            if guider == "IP2P+DualCFG":
-                positive, negative, latent = self.ip2p(pipe['positive'], pipe['negative'], vae, image_to_latent)
-                samples = latent
+            _, height, width, _ = image_to_latent.shape
+            if height == 1 and width == 1:
+                samples = pipe["samples"]
+                images = pipe["images"]
             else:
-                samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
-                samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
-            images = image_to_latent
+                if guider == "IP2P+DualCFG":
+                    positive, negative, latent = self.ip2p(pipe['positive'], pipe['negative'], vae, image_to_latent)
+                    samples = latent
+                else:
+                    samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
+                    samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
+                images = image_to_latent
         elif latent is not None:
             if guider == "IP2P+DualCFG":
                 positive, negative, latent = self.ip2p(pipe['positive'], pipe['negative'], latent=latent)
@@ -7125,6 +7239,7 @@ NODE_CLASS_MAPPINGS = {
     "easy positive": positivePrompt,
     "easy negative": negativePrompt,
     "easy wildcards": wildcardsPrompt,
+    "easy prompt": prompt,
     "easy promptList": promptList,
     "easy promptLine": promptLine,
     "easy promptConcat": promptConcat,
@@ -7233,6 +7348,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy positive": "Positive",
     "easy negative": "Negative",
     "easy wildcards": "Wildcards",
+    "easy prompt": "Prompt",
     "easy promptList": "PromptList",
     "easy promptLine": "PromptLine",
     "easy promptConcat": "PromptConcat",

@@ -111,16 +111,29 @@ function widgetLogic(node, widget) {
 		updateNodeHeight(node)
 	}
 	if (widget.name === 'mode') {
-		let number_to_show = findWidgetByName(node, 'num_loras').value + 1
-		for (let i = 0; i < number_to_show; i++) {
-			if (widget.value === "simple") {
-				toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_strength'), true)
-				toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_model_strength'))
-				toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_clip_strength'))
-			} else {
-				toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_strength'))
-				toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_model_strength'), true)
-				toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_clip_strength'), true)}
+		switch (node.comfyClass) {
+			case 'easy loraStack':
+				let number_to_show = findWidgetByName(node, 'num_loras').value + 1
+				for (let i = 0; i < number_to_show; i++) {
+					if (widget.value === "simple") {
+						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_strength'), true)
+						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_model_strength'))
+						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_clip_strength'))
+					} else {
+						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_strength'))
+						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_model_strength'), true)
+						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_clip_strength'), true)}
+				}
+				break
+			case 'easy icLightApply':
+				if (widget.value === "Foreground") {
+					toggleWidget(node, findWidgetByName(node, 'lighting'), true)
+					toggleWidget(node, findWidgetByName(node, 'source'))
+				} else {
+					toggleWidget(node, findWidgetByName(node, 'lighting'))
+					toggleWidget(node, findWidgetByName(node, 'source'), true)
+				}
+				break
 		}
 		updateNodeHeight(node)
 	}
@@ -590,6 +603,7 @@ app.registerExtension({
 			case "easy rangeFloat":
 			case 'easy latentCompositeMaskedWithCond':
 			case 'easy pipeEdit':
+			case 'easy icLightApply':
 			case 'easy ipadapterApply':
 			case 'easy ipadapterApplyADV':
 			case 'easy ipadapterApplyEncoder':
