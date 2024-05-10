@@ -2217,7 +2217,8 @@ class icLightApply:
                 "image": ("IMAGE",),
                 "vae": ("VAE",),
                 "lighting": (['None', 'Left Light', 'Right Light', 'Top Light', 'Bottom Light', 'Circle Light'],{"default": "None"}),
-                "source": (['Use Background Image', 'Use Flipped Background Image', 'Left Light', 'Right Light', 'Top Light', 'Bottom Light', 'Ambient'],{"default": "Use Background Image"})
+                "source": (['Use Background Image', 'Use Flipped Background Image', 'Left Light', 'Right Light', 'Top Light', 'Bottom Light', 'Ambient'],{"default": "Use Background Image"}),
+                "remove_bg": ("BOOLEAN", {"default": True}),
             },
         }
 
@@ -2243,16 +2244,20 @@ class icLightApply:
             image, _ = results['result']
             return image
 
-    def apply(self, mode, model, image, vae, lighting, source):
+    def apply(self, mode, model, image, vae, lighting, source, remove_bg):
         model_type = get_sd_version(model)
         if model_type == 'sdxl':
             raise Exception("IC Light model is not supported for SDXL now")
 
-        batch_size = image.shape[0]
-        if image.shape[3] == 3:
+        batch_size, height, width, channel = image.shape
+        if channel == 3:
             # remove bg
             if mode == 'Foreground' or batch_size == 1:
-                image = self.removebg(image)
+                if remove_bg:
+                    image = self.removebg(image)
+                else:
+                    mask = torch.full((1, height, width), 1.0, dtype=torch.float32, device="cpu")
+                    image, = JoinImageWithAlpha().join_image_with_alpha(image, mask)
 
         iclight = ICLight()
         if mode == 'Foreground':

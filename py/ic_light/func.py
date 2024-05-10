@@ -35,18 +35,17 @@ class VAEEncodeArgMax(VAEEncode):
 class ICLight:
 
     @staticmethod
-    def apply_c_concat(cond, uncond, c_concat: torch.Tensor):
-        def write_c_concat(cond):
-            new_cond = []
-            for t in cond:
-                n = [t[0], t[1].copy()]
-                if "model_conds" not in n[1]:
-                    n[1]["model_conds"] = {}
-                n[1]["model_conds"]["c_concat"] = CONDRegular(c_concat)
-                new_cond.append(n)
-            return new_cond
-
-        return (write_c_concat(cond), write_c_concat(uncond))
+    def apply_c_concat(params: UnetParams, concat_conds) -> UnetParams:
+        """Apply c_concat on unet call."""
+        sample = params["input"]
+        params["c"]["c_concat"] = torch.cat(
+            (
+                    [concat_conds.to(sample.device)]
+                    * (sample.shape[0] // concat_conds.shape[0])
+            ),
+            dim=0,
+        )
+        return params
 
     @staticmethod
     def create_custom_conv(
@@ -161,20 +160,19 @@ class ICLight:
         # [1, 4 * B, H, W]
         concat_conds = torch.cat([c[None, ...] for c in concat_conds], dim=1)
 
+        def unet_dummy_apply(unet_apply: Callable, params: UnetParams):
+            """A dummy unet apply wrapper serving as the endpoint of wrapper
+            chain."""
+            return unet_apply(x=params["input"], t=params["timestep"], **params["c"])
 
-        def wrapped_unet(unet_apply: Callable, params: UnetParams):
-            # Apply concat.
-            sample = params["input"]
-            params["c"]["c_concat"] = torch.cat(
-                (
-                    [concat_conds.to(sample.device)]
-                    * (sample.shape[0] // concat_conds.shape[0])
-                ),
-                dim=0,
-            )
-            return unet_apply(x=sample, t=params["timestep"], **params["c"])
+        existing_wrapper = work_model.model_options.get(
+            "model_function_wrapper", unet_dummy_apply
+        )
 
-        work_model.set_model_unet_function_wrapper(wrapped_unet)
+        def wrapper_func(unet_apply: Callable, params: UnetParams):
+            return existing_wrapper(unet_apply, params=self.apply_c_concat(params, concat_conds))
+
+        work_model.set_model_unet_function_wrapper(wrapper_func)
         ic_model = load_unet(ic_model_path)
         ic_model_state_dict = ic_model.model.diffusion_model.state_dict()
 

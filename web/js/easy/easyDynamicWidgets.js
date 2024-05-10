@@ -128,10 +128,12 @@ function widgetLogic(node, widget) {
 			case 'easy icLightApply':
 				if (widget.value === "Foreground") {
 					toggleWidget(node, findWidgetByName(node, 'lighting'), true)
+					toggleWidget(node, findWidgetByName(node, 'remove_bg'), true)
 					toggleWidget(node, findWidgetByName(node, 'source'))
 				} else {
 					toggleWidget(node, findWidgetByName(node, 'lighting'))
 					toggleWidget(node, findWidgetByName(node, 'source'), true)
+					toggleWidget(node, findWidgetByName(node, 'remove_bg'))
 				}
 				break
 		}
