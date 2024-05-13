@@ -244,10 +244,10 @@ def encode_token_weights_l(model, token_weight_pairs):
 def encode_token_weights(model, token_weight_pairs, encode_func):
     if model.layer_idx is not None:
         # 2016 [c2cb8e88] 及以上版本去除了sdxl clip的clip_layer方法
-        if compare_revision(2016):
-            model.cond_stage_model.set_clip_options({'layer': model.layer_idx})
-        else:
-            model.cond_stage_model.clip_layer(model.layer_idx)
+        # if compare_revision(2016):
+        model.cond_stage_model.set_clip_options({'layer': model.layer_idx})
+        # else:
+        # model.cond_stage_model.clip_layer(model.layer_idx)
 
     model_management.load_model_gpu(model.patcher)
     return encode_func(model.cond_stage_model, token_weight_pairs)
