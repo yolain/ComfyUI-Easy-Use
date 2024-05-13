@@ -81,16 +81,6 @@ def find_tags(string: str, sep="/") -> list[str]:
         return string.split(sep)[:-1]
     return []
 
-import folder_paths
-def add_folder_path_and_extensions(folder_name, full_folder_paths, extensions):
-    for full_folder_path in full_folder_paths:
-        folder_paths.add_model_folder_path(folder_name, full_folder_path)
-    if folder_name in folder_paths.folder_names_and_paths:
-        current_paths, current_extensions = folder_paths.folder_names_and_paths[folder_name]
-        updated_extensions = current_extensions | extensions
-        folder_paths.folder_names_and_paths[folder_name] = (current_paths, updated_extensions)
-    else:
-        folder_paths.folder_names_and_paths[folder_name] = (full_folder_paths, extensions)
 
 from comfy.model_base import BaseModel
 import comfy.supported_models

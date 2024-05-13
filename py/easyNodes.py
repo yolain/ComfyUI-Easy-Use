@@ -24,7 +24,7 @@ from .wildcards import process_with_loras, get_wildcard_list, process
 from .adv_encode import advanced_encode
 from .layer_diffuse.func import LayerDiffuse, LayerMethod
 
-from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, add_folder_path_and_extensions, AlwaysEqualProxy, get_sd_version
+from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, AlwaysEqualProxy, get_sd_version
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler, alignYourStepsScheduler
 from .libs.xyplot import easyXYPlot
@@ -35,28 +35,6 @@ from .libs.easing import EasingBase
 
 sampler = easySampler()
 easyCache = easyLoader()
-
-image_suffixs = set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".svg", ".ico", ".apng", ".tif", ".hdr", ".exr"])
-
-model_path = folder_paths.models_dir
-add_folder_path_and_extensions("ultralytics_bbox", [os.path.join(model_path, "ultralytics", "bbox")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("ultralytics_segm", [os.path.join(model_path, "ultralytics", "segm")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("ultralytics", [os.path.join(model_path, "ultralytics")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("mmdets_bbox", [os.path.join(model_path, "mmdets", "bbox")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("mmdets_segm", [os.path.join(model_path, "mmdets", "segm")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("mmdets", [os.path.join(model_path, "mmdets")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("sams", [os.path.join(model_path, "sams")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("onnx", [os.path.join(model_path, "onnx")], {'.onnx'})
-add_folder_path_and_extensions("instantid", [os.path.join(model_path, "instantid")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("layer_model", [os.path.join(model_path, "layer_model")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("rembg", [os.path.join(model_path, "rembg")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("ipadapter", [os.path.join(model_path, "ipadapter")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("dynamicrafter_models", [os.path.join(model_path, "dynamicrafter_models")], folder_paths.supported_pt_extensions)
-add_folder_path_and_extensions("mediapipe", [os.path.join(model_path, "mediapipe")], set(['.tflite','.pth']))
-add_folder_path_and_extensions("t5", [os.path.join(model_path, "t5")], set(['.safetensors','.bin','.json']))
-
-add_folder_path_and_extensions("checkpoints_thumb", [os.path.join(model_path, "checkpoints")], image_suffixs)
-add_folder_path_and_extensions("loras_thumb", [os.path.join(model_path, "loras")], image_suffixs)
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 
 # 正面提示词
@@ -4819,9 +4797,10 @@ class samplerSimpleInpainting:
             case 'Fooocus Inpaint + DD':
                 head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
                 patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
-                mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
-                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
+                if mask is not None:
+                    latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
                 _model, = applyFooocusInpaint().apply(_model, latent, head, patch)
+                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
             case 'Brushnet Random':
                 mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
                 brush_name = self.get_brushnet_model('random', _model)
