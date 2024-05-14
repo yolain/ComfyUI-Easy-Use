@@ -12,7 +12,7 @@
 
 **ComfyUI-Easy-Use** 是一个化繁为简的节点整合包, 在 [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes) 的基础上进行延展，并针对了诸多主流的节点包做了整合与优化，以达到更快更方便使用ComfyUI的目的，在保证自由度的同时还原了本属于Stable Diffusion的极致畅快出图体验。
 
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Docs/workflow_node_compare.png">
+[![ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Easy-Use/assets/73304135/9a3f54bc-a677-4bf1-a196-8845dd57c942)](https://github.com/yolain/ComfyUI-Yolain-Workflows)
 
 ## 特色介绍
 
@@ -23,10 +23,10 @@
 - 可多选的风格化提示词选择器，默认是Fooocus的样式json，可自定义json放在styles底下，samples文件夹里可放预览图(名称和name一致,图片文件名如有空格需转为下划线'_')
 - 加载器可开启A1111提示词风格模式，可重现与webui生成近乎相同的图像，需先安装 [ComfyUI_smZNodes](https://github.com/shiimizu/ComfyUI_smZNodes)
 - 可使用`easy latentNoisy`或`easy preSamplingNoiseIn`节点实现对潜空间的噪声注入
-- 简化 SD1.x、SD2.x、SDXL、SVD、Zero123等流程 [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableDiffusion)
-- 简化 Stable Cascade [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#StableCascade)
-- 简化 Layer Diffuse [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#LayerDiffusion)， 首次使用您可能需要运行 `pip install -r requirements.txt` 安装所需依赖
-- 简化 InstantID [示例参考](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#InstantID), 需先保证自定义节点包中安装了 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID)
+- 简化 SD1.x、SD2.x、SDXL、SVD、Zero123等流程 
+- 简化 Stable Cascade [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows?tab=readme-ov-file#1-13-stable-cascade)
+- 简化 Layer Diffuse [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows?tab=readme-ov-file#2-3-layerdiffusion)
+- 简化 InstantID [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows?tab=readme-ov-file#2-2-instantid), 需先保证自定义节点包中安装了 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID)
 - 简化 IPAdapter, 需先保证自定义节点包中安装最新版v2的 [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus)
 - 扩展 XYplot 的可用性
 - 整合了Fooocus Inpaint功能
@@ -35,14 +35,14 @@
 - 支持BriaAI的RMBG-1.4模型的背景去除节点，[技术参考](https://huggingface.co/briaai/RMBG-1.4)
 - 支持 强制清理comfyUI模型显存占用
 - 支持Stable Diffusion 3 多账号API节点
-- 支持IC-Light的应用，[代码整合来源](https://github.com/huchenlei/ComfyUI-IC-Light), [技术参考](https://github.com/lllyasviel/IC-Light)
+- 支持IC-Light的应用 [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows?tab=readme-ov-file#2-5-ic-light) | [代码整合来源](https://github.com/huchenlei/ComfyUI-IC-Light) | [技术参考](https://github.com/lllyasviel/IC-Light)
 
 ## 更新日志
 
 **v1.1.7**
 
 - 增加 `easy prompt` - 主体和光影预置项，后期可能会调整
-- 增加 `easy icLightApply` - 光影迁移, 从[ComfyUI-IC-Light](https://github.com/huchenlei/ComfyUI-IC-Light)优化
+- 增加 `easy icLightApply` - 重绘光影, 从[ComfyUI-IC-Light](https://github.com/huchenlei/ComfyUI-IC-Light)优化
 - 增加 `easy imageSplitGrid` - 图像网格拆分
 - `easy kSamplerInpainting` 的 **additional** 属性增加差异扩散和brushnet等相关选项 
 - 增加 brushnet模型加载的支持 - [ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet)
@@ -136,7 +136,7 @@
 
 - 修复未安装 ComfyUI-Impack-Pack 和 ComfyUI_InstantID 时报错
 - 修复 `easy pipeIn` - pipe设为可不必选
-- 增加 `easy instantIDApply` - 需要先安装 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID), 工作流参考[示例](https://github.com/yolain/ComfyUI-Easy-Use?tab=readme-ov-file#InstantID)
+- 增加 `easy instantIDApply` - 需要先安装 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID), 工作流参考[示例](https://github.com/yolain/ComfyUI-Yolain-Workflows?tab=readme-ov-file#2-2-instantid)
 - 修复 `easy detailerFix` 未添加到保存图片格式化扩展名可用节点列表
 - 修复 `easy XYInputs: PromptSR` 在替换负面提示词时报错
 </details>
@@ -341,39 +341,7 @@
 | easy dynamiCrafterLoader       | [ComfyUI-layerdiffusion](https://github.com/ExponentialML/ComfyUI_Native_DynamiCrafter) | Apply Dynamicrafter     | 
 | easy imageChooser              | [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) | Preview Chooser         | 
 | easy styleAlignedBatchAlign    | [style_aligned_comfy](https://github.com/chrisgoringe/cg-image-picker) | styleAlignedBatchAlign  | 
-| easy icLightApply              | [ComfyUI-IC-Light](https://github.com/huchenlei/ComfyUI-IC-Light) | ICLightApply等           | 
-
-## 示例
-
-导入后请自行更换您目录里的大模型
-
-### StableDiffusion
-#### 文生图
-
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/text_to_image.png">
-
-#### 图生图+controlnet
-
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/image_to_image_controlnet.png">
-
-#### InstantID
-
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/instantID.png">
-
-### LayerDiffusion
-#### SD15
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/layer_diffusion_sd15.png">
-
-#### SDXL
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/layer_diffusion_example.png">
-
-### StableCascade
-#### 文生图
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/StableCascade/text_to_image.png">
-
-#### 图生图
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/StableCascade/image_to_image.png">
-
+| easy icLightApply              | [ComfyUI-IC-Light](https://github.com/huchenlei/ComfyUI-IC-Light) | ICLightApply等           |
 
 ## Credits
 
