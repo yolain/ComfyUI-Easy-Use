@@ -1,12 +1,10 @@
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 from typing import Tuple, TypedDict, Callable
 
 import comfy.model_management
 from comfy.sd import load_unet
 from comfy.ldm.models.autoencoder import AutoencoderKL
-from comfy.conds import CONDRegular
 from comfy.model_base import BaseModel
 from PIL import Image
 from nodes import VAEEncode
