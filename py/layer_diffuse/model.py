@@ -17,7 +17,7 @@ try:
     from diffusers.models.modeling_utils import ModelMixin
     from diffusers import __version__
     if __version__:
-        if version.parse(__version__) < version.parse("0.27.0"):
+        if version.parse(__version__) < version.parse("0.26.0"):
             from diffusers.models.unet_2d_blocks import UNetMidBlock2D, get_down_block, get_up_block
         else:
             from diffusers.models.unets.unet_2d_blocks import UNetMidBlock2D, get_down_block, get_up_block
