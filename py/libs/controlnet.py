@@ -7,26 +7,12 @@ class easyControlnet:
     def __init__(self):
         pass
 
-    def load_controlnet(self, control_net_name, control_net, scale_soft_weights):
-        if control_net is None:
-            if scale_soft_weights < 1:
-                if "ScaledSoftControlNetWeights" in NODE_CLASS_MAPPINGS:
-                    soft_weight_cls = NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
-                    (weights, timestep_keyframe) = soft_weight_cls().load_weights(scale_soft_weights, False)
-                    cn_adv_cls = NODE_CLASS_MAPPINGS['ControlNetLoaderAdvanced']
-                    control_net, = cn_adv_cls().load_controlnet(control_net_name, timestep_keyframe)
-                else:
-                    raise Exception(f"[Advanced-ControlNet Not Found] you need to install 'COMFYUI-Advanced-ControlNet'")
-            else:
-                controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
-                control_net = comfy.controlnet.load_controlnet(controlnet_path)
-        return control_net
-
-    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None):
+    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None, easyCache=None):
         if strength == 0:
             return (positive, negative)
 
-        control_net = self.load_controlnet(control_net_name, control_net, scale_soft_weights)
+        if control_net is None:
+            control_net = easyCache.load_controlnet(control_net_name, scale_soft_weights)
 
         if mask is not None:
             mask = mask.to(self.device)

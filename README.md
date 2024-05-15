@@ -41,6 +41,7 @@
 
 **v1.1.7**
 
+- 修复 一些模型(如controlnet模型等)未成功写入缓存，导致修改前置节点束参数（如提示词）需要二次载入模型的问题
 - 增加 `easy prompt` - 主体和光影预置项，后期可能会调整
 - 增加 `easy icLightApply` - 重绘光影, 从[ComfyUI-IC-Light](https://github.com/huchenlei/ComfyUI-IC-Light)优化
 - 增加 `easy imageSplitGrid` - 图像网格拆分

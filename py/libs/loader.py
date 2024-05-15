@@ -1,16 +1,19 @@
 import time, os, psutil
 import comfy.utils
 import comfy.sd
+import comfy.controlnet
 import folder_paths
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from ..log import log_node_info, log_node_error
 
-stable_diffusion_loaders = ["easy a1111Loader", "easy comfyLoader", "easy zero123Loader", "easy svdLoader"]
+stable_diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy zero123Loader", "easy svdLoader"]
 stable_cascade_loaders = ["easy cascadeLoader"]
+controlnet_loaders = ["easy controlnetLoader", "easy controlnetLoaderADV"]
+instant_loaders = ["easy instantIDApply", "easy instantIDApplyADV"]
 cascade_vae_node = ["easy preSamplingCascade", "easy fullCascadeKSampler"]
 model_merge_node = ["easy XYInputs: ModelMergeBlocks"]
-lora_widget = ["easy a1111Loader", "easy comfyLoader"]
+lora_widget = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader"]
 
 class easyLoader:
     def __init__(self):
@@ -22,8 +25,9 @@ class easyLoader:
             "bvae": defaultdict(tuple),
             "vae": defaultdict(object),
             "lora": defaultdict(dict),  # {lora_name: {UID: (model_lora, clip_lora)}}
+            "controlnet": defaultdict(dict),
         }
-        self.memory_threshold = self.determine_memory_threshold(0.7)
+        self.memory_threshold = self.determine_memory_threshold(0.9)
         self.lora_name_cache = []
 
     def clean_values(self, values: str):
@@ -50,9 +54,17 @@ class easyLoader:
         for key in keys - desired_names:
             del self.loaded_objects[object_type][key]
 
-    def get_input_value(self, entry, key):
+    def get_input_value(self, entry, key, prompt=None):
         val = entry["inputs"][key]
-        return val if isinstance(val, str) else val[0]
+        if isinstance(val, str):
+            return val
+        elif isinstance(val, list):
+            if prompt is not None and val[0]:
+                return prompt[val[0]]['inputs'][key]
+            else:
+                return val[0]
+        else:
+            return str(val)
 
     def process_pipe_loader(self, entry, desired_ckpt_names, desired_vae_names, desired_lora_names, desired_lora_settings, num_loras=3, suffix=""):
         for idx in range(1, num_loras + 1):
@@ -71,10 +83,10 @@ class easyLoader:
         desired_vae_names = set()
         desired_lora_names = set()
         desired_lora_settings = set()
+        desired_controlnet_names = set()
 
         for entry in prompt.values():
             class_type = entry["class_type"]
-
             if class_type in lora_widget:
                 lora_name = self.get_input_value(entry, "lora_name")
                 desired_lora_names.add(lora_name)
@@ -82,7 +94,7 @@ class easyLoader:
                 desired_lora_settings.add(setting)
 
             if class_type in stable_diffusion_loaders:
-                desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name"))
+                desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name", prompt))
                 desired_vae_names.add(self.get_input_value(entry, "vae_name"))
 
             elif class_type in stable_cascade_loaders:
@@ -99,6 +111,16 @@ class easyLoader:
                 if decode_vae_name and decode_vae_name != 'None':
                     desired_vae_names.add(decode_vae_name)
 
+            elif class_type in controlnet_loaders:
+                control_net_name = self.get_input_value(entry, "control_net_name", prompt)
+                scale_soft_weights = self.get_input_value(entry, "scale_soft_weights")
+                desired_controlnet_names.add(f'{control_net_name};{scale_soft_weights}')
+
+            elif class_type in instant_loaders:
+                control_net_name = self.get_input_value(entry, "control_net_name", prompt)
+                scale_soft_weights = self.get_input_value(entry, "cn_soft_weights")
+                desired_controlnet_names.add(f'{control_net_name};{scale_soft_weights}')
+
             elif class_type in model_merge_node:
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name_1"))
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name_2"))
@@ -106,7 +128,7 @@ class easyLoader:
                 if vae_use != 'Use Model 1' and vae_use != 'Use Model 2':
                     desired_vae_names.add(vae_use)
 
-        object_types = ["ckpt", "unet", "clip", "bvae", "vae", "lora"]
+        object_types = ["ckpt", "unet", "clip", "bvae", "vae", "lora", "controlnet"]
         for object_type in object_types:
             if object_type == 'unet':
                 desired_names = desired_unet_names
@@ -117,6 +139,8 @@ class easyLoader:
                     desired_names = desired_ckpt_names
             elif object_type == "vae":
                 desired_names = desired_vae_names
+            elif object_type == "controlnet":
+                desired_names = desired_controlnet_names
             else:
                 desired_names = desired_lora_names
             self.clear_unused_objects(desired_names, object_type)
@@ -155,7 +179,7 @@ class easyLoader:
         current_memory = self.get_memory_usage()
         if current_memory < self.memory_threshold:
             return
-        eviction_order = ["vae", "lora", "bvae", "clip", "ckpt"]
+        eviction_order = ["vae", "lora", "bvae", "clip", "ckpt", "controlnet"]
         for obj_type in eviction_order:
             if current_memory < self.memory_threshold:
                 break
@@ -225,6 +249,25 @@ class easyLoader:
 
         return model
 
+    def load_controlnet(self, control_net_name, scale_soft_weights=1):
+        unique_id = f'{control_net_name};{str(scale_soft_weights)}'
+        if unique_id in self.loaded_objects["controlnet"]:
+            return self.loaded_objects["controlnet"][unique_id][0]
+        if scale_soft_weights < 1:
+            if "ScaledSoftControlNetWeights" in NODE_CLASS_MAPPINGS:
+                soft_weight_cls = NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
+                (weights, timestep_keyframe) = soft_weight_cls().load_weights(scale_soft_weights, False)
+                cn_adv_cls = NODE_CLASS_MAPPINGS['ControlNetLoaderAdvanced']
+                control_net, = cn_adv_cls().load_controlnet(control_net_name, timestep_keyframe)
+            else:
+                raise Exception(
+                    f"[Advanced-ControlNet Not Found] you need to install 'COMFYUI-Advanced-ControlNet'")
+        else:
+            controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
+            control_net = comfy.controlnet.load_controlnet(controlnet_path)
+        self.add_to_cache("controlnet", unique_id, control_net)
+        self.eviction_based_on_memory()
+        return control_net
     def load_clip(self, clip_name, type='stable_diffusion'):
         if type == 'stable_diffusion':
             clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION

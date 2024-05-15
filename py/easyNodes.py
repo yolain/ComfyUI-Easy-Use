@@ -1942,7 +1942,7 @@ class loraStackLoader:
                 loras.append((lora_name, model_strength, clip_strength))
         return (loras,)
 
-class controlnetNameStack:
+class controlnetStack:
 
     def get_file_list(filenames):
         return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
@@ -1959,7 +1959,7 @@ class controlnetNameStack:
                 "start_percent_1": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "end_percent_1": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "switch_2": (["Off", "On"],),
-                "controlnet_2": (s.controlnets,),
+                "`controlnet`_2": (s.controlnets,),
                 "controlnet_strength_2": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
                 "start_percent_2": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "end_percent_2": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
@@ -2003,7 +2003,7 @@ class controlnetSimple:
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, scale_soft_weights=1):
 
-        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"], strength, 0, 1, control_net, scale_soft_weights)
+        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"], strength, 0, 1, control_net, scale_soft_weights, None, easyCache)
 
         new_pipe = {
             "model": pipe['model'],
@@ -2055,7 +2055,7 @@ class controlnetAdvanced:
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=1):
         positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"],
-                                                    strength, start_percent, end_percent, control_net, scale_soft_weights)
+                                                    strength, start_percent, end_percent, control_net, scale_soft_weights, None, easyCache)
 
         new_pipe = {
             "model": pipe['model'],
@@ -2972,7 +2972,8 @@ class instantID:
         # Apply InstantID
         if "ApplyInstantID" in ALL_NODE_CLASS_MAPPINGS:
             instantid_apply = ALL_NODE_CLASS_MAPPINGS['ApplyInstantID']
-            control_net = easyControlnet().load_controlnet(control_net_name, control_net, cn_soft_weights)
+            if control_net is None:
+                control_net = easyCache.load_controlnet(control_net_name, cn_soft_weights)
             model, positive, negative = instantid_apply().apply_instantid(instantid_model, insightface_model, control_net, image, model, positive, negative, start_at, end_at, weight=weight, ip_weight=None, cn_strength=cn_strength, noise=noise, image_kps=image_kps, mask=mask)
         else:
             self.error()
@@ -4191,9 +4192,6 @@ class samplerFull(LayerDiffuse):
 
     def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None):
 
-        # Clean loaded_objects
-        easyCache.update_loaded_objects(prompt)
-
         samp_model = model.clone() if model is not None else pipe["model"].clone()
         samp_positive = positive if positive is not None else pipe["positive"]
         samp_negative = negative if negative is not None else pipe["negative"]
@@ -4314,10 +4312,6 @@ class samplerFull(LayerDiffuse):
             spent_time = 'Diffusion:' + str((end_time-start_time)/1000)+'″, VAEDecode:' + str((end_decode_time-end_time)/1000)+'″ '
 
             results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
-            sampler.update_value_by_id("results", my_unique_id, results)
-
-            # Clean loaded_objects
-            easyCache.update_loaded_objects(prompt)
 
             new_pipe = {
                 **pipe,
@@ -4338,8 +4332,6 @@ class samplerFull(LayerDiffuse):
                     "spent_time": spent_time
                 }
             }
-
-            sampler.update_value_by_id("pipe_line", my_unique_id, new_pipe)
 
             del pipe
 
@@ -4468,10 +4460,6 @@ class samplerFull(LayerDiffuse):
                                                                          output_images, samp_model)
 
             results = easySave(images, save_prefix, image_output, prompt, extra_pnginfo)
-            sampler.update_value_by_id("results", my_unique_id, results)
-
-            # Clean loaded_objects
-            easyCache.update_loaded_objects(prompt)
 
             new_pipe = {
                 **pipe,
@@ -4489,8 +4477,6 @@ class samplerFull(LayerDiffuse):
 
                 "loader_settings": pipe["loader_settings"],
             }
-
-            sampler.update_value_by_id("pipe_line", my_unique_id, new_pipe)
 
             del pipe
 
