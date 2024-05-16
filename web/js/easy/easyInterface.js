@@ -12,6 +12,7 @@ const customPipeLineLink = "#7737AA"
 const customPipeLineSDXLLink = "#7737AA"
 const customIntLink = "#29699C"
 const customXYPlotLink = "#74DA5D"
+const customLoraStackLink = "#94dccd"
 const customXYLink = "#38291f"
 
 var customLinkColors = JSON.parse(localStorage.getItem('Comfy.Settings.ttN.customLinkColors')) || {};
@@ -20,6 +21,8 @@ if (!customLinkColors["PIPE_LINE_SDXL"] || !LGraphCanvas.link_type_colors["PIPE_
 if (!customLinkColors["INT"] || !LGraphCanvas.link_type_colors["INT"]) {customLinkColors["INT"] = customIntLink;}
 if (!customLinkColors["XYPLOT"] || !LGraphCanvas.link_type_colors["XYPLOT"]) {customLinkColors["XYPLOT"] = customXYPlotLink;}
 if (!customLinkColors["X_Y"] || !LGraphCanvas.link_type_colors["X_Y"]) {customLinkColors["X_Y"] = customXYLink;}
+if (!customLinkColors["LORA_STACK"] || !LGraphCanvas.link_type_colors["LORA_STACK"]) {customLinkColors["LORA_STACK"] = customLoraStackLink;}
+if (!customLinkColors["CONTROL_NET_STACK"] || !LGraphCanvas.link_type_colors["CONTROL_NET_STACK"]) {customLinkColors["CONTROL_NET_STACK"] = customLoraStackLink;}
 
 localStorage.setItem('Comfy.Settings.easyUse.customLinkColors', JSON.stringify(customLinkColors));
 

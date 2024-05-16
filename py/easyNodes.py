@@ -2254,9 +2254,15 @@ class icLightApply:
                 image = self.batch(original_image, lighting_image)
 
         latent, = VAEEncodeArgMax().encode(vae, image)
-        model_path = get_local_filepath(IC_LIGHT_MODELS[mode]['sd1']["model_url"], os.path.join(folder_paths.models_dir, "unet"))
-
-        m = iclight.apply(model_path, model, latent)
+        key = 'iclight_' + mode + '_' + model_type
+        if key in backend_cache.cache:
+            log_node_info("easy icLightApply", f"Using icLightModel {mode+'_'+model_type} Cached")
+            _, m = backend_cache.cache[key][1]
+        else:
+            model_path = get_local_filepath(IC_LIGHT_MODELS[mode]['sd1']["model_url"],
+                                            os.path.join(folder_paths.models_dir, "unet"))
+            m = iclight.apply(model_path, model, latent)
+            backend_cache.update_cache(key, 'iclight', (False, m))
 
         return (m, lighting_image)
 
@@ -2519,7 +2525,7 @@ class ipadapterApply(ipadapter):
                 "weight_faceidv2": ("FLOAT", { "default": 1.0, "min": -1, "max": 5.0, "step": 0.05 }),
                 "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-                "cache_mode": (["insightface only", "clip_vision only", "ipadapter only", "all", "none"], {"default": "insightface only"},),
+                "cache_mode": (["insightface only", "clip_vision only", "ipadapter only", "all", "none"], {"default": "all"},),
                 "use_tiled": ("BOOLEAN", {"default": False},),
             },
 
@@ -2581,7 +2587,7 @@ class ipadapterApplyAdvanced(ipadapter):
                 "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "embeds_scaling": (['V only', 'K+V', 'K+V w/ C penalty', 'K+mean(V) w/ C penalty'],),
-                "cache_mode": (["insightface only", "clip_vision only","ipadapter only", "all", "none"], {"default": "insightface only"},),
+                "cache_mode": (["insightface only", "clip_vision only","ipadapter only", "all", "none"], {"default": "all"},),
                 "use_tiled": ("BOOLEAN", {"default": False},),
                 "use_batch": ("BOOLEAN", {"default": False},),
                 "sharpening": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
@@ -2650,7 +2656,7 @@ class ipadapterStyleComposition(ipadapter):
                 "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
                 "embeds_scaling": (['V only', 'K+V', 'K+V w/ C penalty', 'K+mean(V) w/ C penalty'],),
                 "cache_mode": (["insightface only", "clip_vision only", "ipadapter only", "all", "none"],
-                               {"default": "insightface only"},),
+                               {"default": "all"},),
             },
             "optional": {
                 "image_composition": ("IMAGE",),
