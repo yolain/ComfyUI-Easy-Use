@@ -21,6 +21,8 @@ def get_comfyui_revision():
 import sys
 import importlib.util
 import importlib.metadata
+import comfy.model_management as mm
+import gc
 from packaging import version
 from server import PromptServer
 def is_package_installed(package):
@@ -249,8 +251,6 @@ def getMetadata(filepath):
         return header
 
 def cleanGPUUsedForce():
-    import torch.cuda
-    import comfy.model_management
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-    comfy.model_management.unload_all_models()
+    gc.collect()
+    mm.unload_all_models()
+    mm.soft_empty_cache()
