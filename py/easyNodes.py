@@ -2255,15 +2255,16 @@ class icLightApply:
 
         latent, = VAEEncodeArgMax().encode(vae, image)
         key = 'iclight_' + mode + '_' + model_type
+        model_path = get_local_filepath(IC_LIGHT_MODELS[mode]['sd1']["model_url"],
+                                        os.path.join(folder_paths.models_dir, "unet"))
+        ic_model = None
         if key in backend_cache.cache:
             log_node_info("easy icLightApply", f"Using icLightModel {mode+'_'+model_type} Cached")
-            _, m = backend_cache.cache[key][1]
+            _, ic_model = backend_cache.cache[key][1]
+            m, _ = iclight.apply(model_path, model, latent, ic_model)
         else:
-            model_path = get_local_filepath(IC_LIGHT_MODELS[mode]['sd1']["model_url"],
-                                            os.path.join(folder_paths.models_dir, "unet"))
-            m = iclight.apply(model_path, model, latent)
-            backend_cache.update_cache(key, 'iclight', (False, m))
-
+            m, ic_model = iclight.apply(model_path, model, latent, ic_model)
+            backend_cache.update_cache(key, 'iclight', (False, ic_model))
         return (m, lighting_image)
 
 

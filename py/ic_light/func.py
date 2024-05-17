@@ -139,7 +139,7 @@ class ICLight:
                 return image
 
 
-    def apply(self, ic_model_path, model: ModelPatcher, c_concat: dict,) -> Tuple[ModelPatcher]:
+    def apply(self, ic_model_path, model: ModelPatcher, c_concat: dict, ic_model=None) -> Tuple[ModelPatcher]:
         try:
             ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
         except:
@@ -171,7 +171,8 @@ class ICLight:
             return existing_wrapper(unet_apply, params=self.apply_c_concat(params, concat_conds))
 
         work_model.set_model_unet_function_wrapper(wrapper_func)
-        ic_model = load_unet(ic_model_path)
+        if not ic_model:
+            ic_model = load_unet(ic_model_path)
         ic_model_state_dict = ic_model.model.diffusion_model.state_dict()
 
         work_model.add_patches(
@@ -181,4 +182,4 @@ class ICLight:
             }
         )
 
-        return work_model
+        return (work_model, ic_model)
