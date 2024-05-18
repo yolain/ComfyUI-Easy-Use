@@ -92,10 +92,11 @@ async function displayImage(imgName, styleName) {
             img.src = empty_img
         }
     }
-    var x = e.pageX-pxy.x-100;
-    var y = e.pageY-pxy.y+25;
-    img.style.left =  x+"px";
-    img.style.top =  y+"px";
+    var scale = app?.canvas?.ds?.scale || 1;
+    var x = (e.pageX-pxy.x-100)/scale;
+    var y = (e.pageY-pxy.y+25)/scale;
+    img.style.left = x+"px";
+    img.style.top = y+"px";
     img.style.display = "block";
     img.style.borderRadius = "10px";
     img.style.borderColor = "var(--fg-color)"
