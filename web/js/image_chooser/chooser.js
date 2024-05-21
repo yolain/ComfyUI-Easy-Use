@@ -47,7 +47,7 @@ class chooserImageDialog extends ComfyDialog {
     createButtons() {
         const btns = super.createButtons();
         btns[0].onclick = _ => {
-            cancelButtonPressed()
+            if (FlowState.running()) { send_cancel();}
             super.close()
         }
         btns.unshift($el('button', {
