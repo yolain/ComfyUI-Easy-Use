@@ -4197,7 +4197,7 @@ class samplerFull(LayerDiffuse):
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
-    def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None):
+    def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None, image=None):
 
         samp_model = model.clone() if model is not None else pipe["model"].clone()
         samp_positive = positive if positive is not None else pipe["positive"]
@@ -4219,6 +4219,9 @@ class samplerFull(LayerDiffuse):
         denoise = denoise if denoise is not None else pipe['loader_settings']['denoise']
         add_noise = pipe['loader_settings']['add_noise'] if 'add_noise' in pipe['loader_settings'] else 'enabled'
         force_full_denoise = pipe['loader_settings']['force_full_denoise'] if 'force_full_denoise' in pipe['loader_settings'] else True
+
+        if image is not None and latent is None:
+            samp_samples = {"samples": samp_vae.encode(image[:, :, :, :3])}
 
         disable_noise = False
         if add_noise == "disable":
