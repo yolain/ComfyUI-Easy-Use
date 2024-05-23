@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-easy-use"
 description = "To enhance the usability of ComfyUI, optimizations and integrations have been implemented for several commonly used nodes."
-version = "1.0.0"
+version = "1.1.7"
 license = "LICENSE"
 dependencies = ["diffusers>=0.25.0", "clip_interrogator>=0.6.0", "onnxruntime", "aiohttp"]
 
@@ -10,6 +10,6 @@ Repository = "https://github.com/yolain/ComfyUI-Easy-Use"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "yolain"
 DisplayName = "ComfyUI-Easy-Use"
 Icon = ""
