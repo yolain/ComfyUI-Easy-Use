@@ -102,22 +102,23 @@ class easySampler:
             #######################################################################################
             # brushnet
             transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
-            if 'model_patch' in transformer_options and 'brushnet_model' in transformer_options['model_patch']:
+            if 'model_patch' in transformer_options and 'brushnet' in transformer_options['model_patch']:
                 to = self.add_model_patch_option(model)
-                to['model_patch']['step'] = 0
-                to['model_patch']['total_steps'] = steps
-                to['model_patch']['cfg'] = cfg
+                mp = to['model_patch']
+                if isinstance(model.model.model_config, comfy.supported_models.SD15):
+                    mp['SDXL'] = False
+                elif isinstance(model.model.model_config, comfy.supported_models.SDXL):
+                    mp['SDXL'] = True
+                else:
+                    print('Base model type: ', type(model.model.model_config))
+                    raise Exception("Unsupported model type: ", type(model.model.model_config))
 
-                def callback(step, x0, x, total_steps):
-                    if to is not None and "model_patch" in to:
-                        to['model_patch']['step'] = step + 1
-                    preview_bytes = None
-                    if previewer:
-                        preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
-                    pbar.update_absolute(step + 1, total_steps, preview_bytes)
+                mp['unet'] = model.model.diffusion_model
+                mp['step'] = 0
+                mp['total_steps'] = 1
+
             #
             #######################################################################################
-
             samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
                                           latent_image,
                                           denoise=denoise, disable_noise=disable_noise, start_step=start_step,
@@ -162,9 +163,18 @@ class easySampler:
         transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
         if 'model_patch' in transformer_options and 'brushnet_model' in transformer_options['model_patch']:
             to = self.add_model_patch_option(model)
-            to['model_patch']['step'] = 0
-            to['model_patch']['total_steps'] = steps
-            to['model_patch']['cfg'] = cfg
+            mp = to['model_patch']
+            if isinstance(model.model.model_config, comfy.supported_models.SD15):
+                mp['SDXL'] = False
+            elif isinstance(model.model.model_config, comfy.supported_models.SDXL):
+                mp['SDXL'] = True
+            else:
+                print('Base model type: ', type(model.model.model_config))
+                raise Exception("Unsupported model type: ", type(model.model.model_config))
+
+            mp['unet'] = model.model.diffusion_model
+            mp['step'] = 0
+            mp['total_steps'] = 1
         #
         #######################################################################################
 

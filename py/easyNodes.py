@@ -4744,6 +4744,7 @@ class samplerSimpleInpainting:
             else:
                 pattern = 'brushnet.segmentation.mask.*\.(safetensors|bin)$'
 
+
         brushfile = [e for e in folder_paths.get_filename_list('inpaint') if re.search(pattern, e, re.IGNORECASE)]
         brushname = brushfile[0] if brushfile else None
         if not brushname:
