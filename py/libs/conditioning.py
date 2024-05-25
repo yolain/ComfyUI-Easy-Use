@@ -8,7 +8,7 @@ from nodes import ConditioningConcat, ConditioningCombine, ConditioningAverage, 
 def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_normalization, prompt_weight_interpretation, a1111_prompt_style ,my_unique_id, prompt, easyCache, can_load_lora=True, steps=None):
     styles_selector = is_linked_styles_selector(prompt, my_unique_id, type)
     title = "正面提示词" if type == 'positive' else "负面提示词"
-    log_node_warn("正在处理" + title + "...")
+    log_node_warn("正在进行" + title + "...")
     positive_seed = find_wildcards_seed(my_unique_id, text, prompt)
     model, clip, text, cond_decode, show_prompt, pipe_lora_stack = process_with_loras(
         text, model, clip, type, positive_seed, can_load_lora, lora_stack, easyCache)
@@ -18,7 +18,7 @@ def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_
     if clip_skip != 0:
         clipped.clip_layer(clip_skip)
 
-    log_node_warn("正在处理" + title + "编码...")
+    log_node_warn("正在进行" + title + "编码...")
     steps = steps if steps is not None else find_nearest_steps(my_unique_id, prompt)
     return (advanced_encode(clipped, text, prompt_token_normalization,
                             prompt_weight_interpretation, w_max=1.0,

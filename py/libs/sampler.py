@@ -12,6 +12,7 @@ class easySampler:
             "results": [],
             "pipe_line": [],
         }
+        self.device = comfy.model_management.intermediate_device()
 
     @staticmethod
     def tensor2pil(image: torch.Tensor) -> Image.Image:
@@ -47,6 +48,26 @@ class easySampler:
             parts.append('None')
         return parts
 
+    def emptyLatent(self, resolution, empty_latent_width, empty_latent_height, batch_size=1, compression=0):
+        if resolution != "自定义 x 自定义":
+            try:
+                width, height = map(int, resolution.split(' x '))
+                empty_latent_width = width
+                empty_latent_height = height
+            except ValueError:
+                raise ValueError("Invalid base_resolution format.")
+
+        if compression == 0:
+            latent = torch.zeros([batch_size, 4, empty_latent_height // 8, empty_latent_width // 8], device=self.device)
+            samples = {"samples": latent}
+        else:
+            latent_c = torch.zeros(
+                [batch_size, 16, empty_latent_height // compression, empty_latent_width // compression])
+            latent_b = torch.zeros([batch_size, 4, empty_latent_height // 4, empty_latent_width // 4])
+
+            samples = ({"samples": latent_c}, {"samples": latent_b})
+        return samples
+
     def add_model_patch_option(self, model):
         if 'transformer_options' not in model.model_options:
             model.model_options['transformer_options'] = {}
@@ -54,6 +75,7 @@ class easySampler:
         if "model_patch" not in to:
             to["model_patch"] = {}
         return to
+
 
     def common_ksampler(self, model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=1.0,
                         disable_noise=False, start_step=None, last_step=None, force_full_denoise=False,

@@ -1,8 +1,10 @@
 import time, os, psutil
+import folder_paths
 import comfy.utils
 import comfy.sd
 import comfy.controlnet
-import folder_paths
+
+from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
@@ -374,3 +376,61 @@ class easyLoader:
                     return x
 
             return None
+
+    def load_main(self, ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt):
+        model: ModelPatcher | None = None
+        clip: comfy.sd.CLIP | None = None
+        vae: comfy.sd.VAE | None = None
+        clip_vision = None
+        pipe_lora_stack = []
+
+        can_load_lora = True
+        # 判断是否存在 模型或Lora叠加xyplot, 若存在优先缓存第一个模型
+        xy_model_id = next((x for x in prompt if str(prompt[x]["class_type"]) in ["easy XYInputs: ModelMergeBlocks",
+                                                                                  "easy XYInputs: Checkpoint"]), None)
+        xy_lora_id = next((x for x in prompt if str(prompt[x]["class_type"]) == "easy XYInputs: Lora"), None)
+        if xy_lora_id is not None:
+            can_load_lora = False
+        if xy_model_id is not None:
+            node = prompt[xy_model_id]
+            if "ckpt_name_1" in node["inputs"]:
+                ckpt_name_1 = node["inputs"]["ckpt_name_1"]
+                model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name_1)
+                can_load_lora = False
+        # Load models
+        elif model_override is not None and clip_override is not None and vae_override is not None:
+            model = model_override
+            clip = clip_override
+            vae = vae_override
+        elif model_override is not None:
+            raise Exception(f"[ERROR] clip or vae is missing")
+        elif vae_override is not None:
+            raise Exception(f"[ERROR] model or clip is missing")
+        elif clip_override is not None:
+            raise Exception(f"[ERROR] model or vae is missing")
+        else:
+            model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name, config_name)
+
+        if optional_lora_stack is not None and can_load_lora:
+            for lora in optional_lora_stack:
+                lora = {"lora_name": lora[0], "model": model, "clip": clip, "model_strength": lora[1],
+                        "clip_strength": lora[2]}
+                model, clip = self.load_lora(lora)
+                lora['model'] = model
+                lora['clip'] = clip
+                pipe_lora_stack.append(lora)
+
+        if lora_name != "None" and can_load_lora:
+            lora = {"lora_name": lora_name, "model": model, "clip": clip, "model_strength": lora_model_strength,
+                    "clip_strength": lora_clip_strength}
+            model, clip = self.load_lora(lora)
+            pipe_lora_stack.append(lora)
+
+        # Check for custom VAE
+        if vae_name not in ["Baked VAE", "Baked-VAE"]:
+            vae = self.load_vae(vae_name)
+        # CLIP skip
+        if not clip:
+            raise Exception("No CLIP found")
+
+        return model, clip, vae, clip_vision, pipe_lora_stack

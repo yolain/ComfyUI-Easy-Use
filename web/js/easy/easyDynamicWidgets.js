@@ -148,7 +148,6 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'empty_latent_width'), false)
 			toggleWidget(node, findWidgetByName(node, 'empty_latent_height'), false)
 		}
-		updateNodeHeight(node)
 	}
 	if (widget.name === 'downscale_mode') {
 		const widget_names = ['block_number', 'downscale_factor', 'start_percent', 'end_percent', 'downscale_after_skip', 'downscale_method', 'upscale_method']

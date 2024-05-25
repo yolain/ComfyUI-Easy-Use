@@ -935,80 +935,21 @@ class fullLoader:
                        my_unique_id=None
                        ):
 
-        model: ModelPatcher | None = None
-        clip: CLIP | None = None
-        vae: VAE | None = None
-        can_load_lora = True
-        pipe_lora_stack = []
-
-        # resolution
-        if resolution != "自定义 x 自定义":
-            try:
-                width, height = map(int, resolution.split(' x '))
-                empty_latent_width = width
-                empty_latent_height = height
-            except ValueError:
-                raise ValueError("Invalid base_resolution format.")
-
-        # Create Empty Latent
-        latent = torch.zeros([batch_size, 4, empty_latent_height // 8, empty_latent_width // 8]).cpu()
-        samples = {"samples": latent}
-
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        log_node_warn("正在处理模型...")
-        # 判断是否存在 模型或Lora叠加xyplot, 若存在优先缓存第一个模型
-        xy_model_id = next((x for x in prompt if str(prompt[x]["class_type"]) in ["easy XYInputs: ModelMergeBlocks", "easy XYInputs: Checkpoint"]), None)
-        xy_lora_id = next((x for x in prompt if str(prompt[x]["class_type"]) == "easy XYInputs: Lora"), None)
-        if xy_lora_id is not None:
-            can_load_lora = False
-        if xy_model_id is not None:
-            node = prompt[xy_model_id]
-            if "ckpt_name_1" in node["inputs"]:
-                ckpt_name_1 = node["inputs"]["ckpt_name_1"]
-                model, clip, vae, clip_vision = easyCache.load_checkpoint(ckpt_name_1)
-                can_load_lora = False
+        # Create Empty Latent
+        samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size)
+
         # Load models
-        elif model_override is not None and clip_override is not None and vae_override is not None:
-            model = model_override
-            clip = clip_override
-            vae = vae_override
-        elif model_override is not None:
-            raise Exception(f"[ERROR] clip or vae is missing")
-        elif vae_override is not None:
-            raise Exception(f"[ERROR] model or clip is missing")
-        elif clip_override is not None:
-            raise Exception(f"[ERROR] model or vae is missing")
-        else:
-            model, clip, vae, clip_vision = easyCache.load_checkpoint(ckpt_name, config_name)
+        log_node_warn("正在加载模型...")
+        model, clip, vae, clip_vision, pipe_lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt)
 
-        if optional_lora_stack is not None and can_load_lora:
-            for lora in optional_lora_stack:
-                lora = {"lora_name": lora[0], "model": model, "clip": clip, "model_strength": lora[1], "clip_strength": lora[2]}
-                model, clip = easyCache.load_lora(lora)
-                lora['model'] = model
-                lora['clip'] = clip
-                pipe_lora_stack.append(lora)
-
-        if lora_name != "None" and can_load_lora:
-            lora = {"lora_name": lora_name, "model": model, "clip": clip, "model_strength": lora_model_strength,
-                    "clip_strength": lora_clip_strength}
-            model, clip = easyCache.load_lora(lora)
-            pipe_lora_stack.append(lora)
-
-        # Check for custom VAE
-        if vae_name not in ["Baked VAE", "Baked-VAE"]:
-            vae = easyCache.load_vae(vae_name)
-        # CLIP skip
-        if not clip:
-            raise Exception("No CLIP found")
-
+        # Prompt to Conditioning
         positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, pipe_lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
         negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, pipe_lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
-        image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
 
-        log_node_warn("处理结束...")
+        log_node_warn("加载完毕...")
         pipe = {"model": model,
                 "positive": positive_embeddings_final,
                 "negative": negative_embeddings_final,
@@ -1016,42 +957,26 @@ class fullLoader:
                 "clip": clip,
 
                 "samples": samples,
-                "images": image,
-                "seed": 0,
+                "images": None,
 
                 "loader_settings": {"ckpt_name": ckpt_name,
                                     "vae_name": vae_name,
-
                                     "lora_name": lora_name,
                                     "lora_model_strength": lora_model_strength,
                                     "lora_clip_strength": lora_clip_strength,
-
                                     "lora_stack": pipe_lora_stack,
-
-                                    "refiner_ckpt_name": None,
-                                    "refiner_vae_name": None,
-                                    "refiner_lora_name": None,
-                                    "refiner_lora_model_strength": None,
-                                    "refiner_lora_clip_strength": None,
 
                                     "clip_skip": clip_skip,
                                     "a1111_prompt_style": a1111_prompt_style,
                                     "positive": positive,
-                                    "positive_l": None,
-                                    "positive_g": None,
                                     "positive_token_normalization": positive_token_normalization,
                                     "positive_weight_interpretation": positive_weight_interpretation,
-                                    "positive_balance": None,
                                     "negative": negative,
-                                    "negative_l": None,
-                                    "negative_g": None,
                                     "negative_token_normalization": negative_token_normalization,
                                     "negative_weight_interpretation": negative_weight_interpretation,
-                                    "negative_balance": None,
                                     "empty_latent_width": empty_latent_width,
                                     "empty_latent_height": empty_latent_height,
                                     "batch_size": batch_size,
-                                    "seed": 0,
                                     "empty_samples": samples, }
                 }
 
@@ -1211,23 +1136,11 @@ class cascadeLoader:
         can_load_lora = True
         pipe_lora_stack = []
 
-        # resolution
-        if resolution != "自定义 x 自定义":
-            try:
-                width, height = map(int, resolution.split(' x '))
-                empty_latent_width = width
-                empty_latent_height = height
-            except ValueError:
-                raise ValueError("Invalid base_resolution format.")
-
-        # Create Empty Latent
-        latent_c = torch.zeros([batch_size, 16, empty_latent_height // compression, empty_latent_width // compression])
-        latent_b = torch.zeros([batch_size, 4, empty_latent_height // 4, empty_latent_width // 4])
-
-        samples = ({"samples": latent_c}, {"samples": latent_b})
-
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
+
+        # Create Empty Latent
+        samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size, compression)
 
         if self.is_ckpt(stage_c):
             model_c, clip, vae_c, clip_vision = easyCache.load_checkpoint(stage_c)
@@ -1311,31 +1224,20 @@ class cascadeLoader:
 
             "loader_settings": {
                 "vae_name": stage_a,
-
+                "lora_name": lora_name,
+                "lora_model_strength": lora_model_strength,
+                "lora_clip_strength": lora_clip_strength,
                 "lora_stack": pipe_lora_stack,
 
-                "refiner_ckpt_name": None,
-                "refiner_vae_name": None,
-                "refiner_lora_name": None,
-                "refiner_lora_model_strength": None,
-                "refiner_lora_clip_strength": None,
-
                 "positive": positive,
-                "positive_l": None,
-                "positive_g": None,
                 "positive_token_normalization": 'none',
                 "positive_weight_interpretation": 'comfy',
-                "positive_balance": None,
                 "negative": negative,
-                "negative_l": None,
-                "negative_g": None,
                 "negative_token_normalization": 'none',
                 "negative_weight_interpretation": 'comfy',
-                "negative_balance": None,
                 "empty_latent_width": empty_latent_width,
                 "empty_latent_height": empty_latent_height,
                 "batch_size": batch_size,
-                "seed": 0,
                 "empty_samples": samples,
                 "compression": compression
             }
@@ -1419,13 +1321,7 @@ class zero123Loader:
                                     "vae_name": vae_name,
 
                                     "positive": positive,
-                                    "positive_l": None,
-                                    "positive_g": None,
-                                    "positive_balance": None,
                                     "negative": negative,
-                                    "negative_l": None,
-                                    "negative_g": None,
-                                    "negative_balance": None,
                                     "empty_latent_width": empty_latent_width,
                                     "empty_latent_height": empty_latent_height,
                                     "batch_size": batch_size,
@@ -1577,13 +1473,7 @@ class sv3DLoader(EasingBase):
                                     "vae_name": vae_name,
 
                                     "positive": positive,
-                                    "positive_l": None,
-                                    "positive_g": None,
-                                    "positive_balance": None,
                                     "negative": negative,
-                                    "negative_l": None,
-                                    "negative_g": None,
-                                    "negative_balance": None,
                                     "empty_latent_width": empty_latent_width,
                                     "empty_latent_height": empty_latent_height,
                                     "batch_size": batch_size,
@@ -2373,7 +2263,7 @@ class icLightApply:
           lighting_image = iclight.generate_lighting_image(image, lighting)
         else:
           lighting_image = iclight.generate_source_image(image, source)
-          if source != 'Use Background Image':
+          if source not in ['Use Background Image', 'Use Flipped Background Image']:
               _, height, width, _ = lighting_image.shape
               mask = torch.full((1, height, width), 1.0, dtype=torch.float32, device="cpu")
               lighting_image, = JoinImageWithAlpha().join_image_with_alpha(lighting_image, mask)
@@ -4287,10 +4177,7 @@ class dynamicThresholdingFull:
 
 # 完整采样器
 from .libs.chooser import ChooserMessage, ChooserCancelled
-class samplerFull(LayerDiffuse):
-
-    def __init__(self):
-        super().__init__()
+class samplerFull:
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -4399,22 +4286,24 @@ class samplerFull(LayerDiffuse):
                                  preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise, samp_custom=None):
 
             # LayerDiffusion
-            if "layer_diffusion_method" in pipe['loader_settings']:
+            layerDiffuse = None
+            layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
+            if layer_diffusion_method is not None:
+                layerDiffuse = LayerDiffuse()
                 samp_blend_samples = pipe["blend_samples"] if "blend_samples" in pipe else None
                 additional_cond = pipe["loader_settings"]['layer_diffusion_cond'] if "layer_diffusion_cond" in pipe[
                     'loader_settings'] else (None, None, None)
-                method = self.get_layer_diffusion_method(pipe['loader_settings']['layer_diffusion_method'],
+                method = layerDiffuse.get_layer_diffusion_method(pipe['loader_settings']['layer_diffusion_method'],
                                                          samp_blend_samples is not None)
                 images = pipe["images"].movedim(-1, 1) if "images" in pipe else None
                 weight = pipe['loader_settings']['layer_diffusion_weight'] if 'layer_diffusion_weight' in pipe[
                     'loader_settings'] else 1.0
-                samp_model, samp_positive, samp_negative = self.apply_layer_diffusion(samp_model, method, weight,
+                samp_model, samp_positive, samp_negative = layerDiffuse.apply_layer_diffusion(samp_model, method, weight,
                                                                                       samp_samples, samp_blend_samples,
                                                                                       samp_positive, samp_negative,
                                                                                       images, additional_cond)
 
             blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
-            layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
             empty_samples = pipe["loader_settings"]["empty_samples"] if "empty_samples" in pipe["loader_settings"] else None
             samples = empty_samples if layer_diffusion_method is not None and empty_samples is not None else samp_samples
             # Downscale Model Unet
@@ -4446,7 +4335,11 @@ class samplerFull(LayerDiffuse):
                 samp_images = samp_vae.decode(latent).cpu()
 
             # LayerDiffusion Decode
-            new_images, samp_images, alpha = self.layer_diffusion_decode(layer_diffusion_method, latent, blend_samples, samp_images, samp_model)
+            if layerDiffuse is not None:
+                new_images, samp_images, alpha = layerDiffuse.layer_diffusion_decode(layer_diffusion_method, latent, blend_samples, samp_images, samp_model)
+            else:
+                new_images = samp_images
+                alpha = None
 
             # 推理总耗时（包含解码）
             end_decode_time = int(time.time() * 1000)
@@ -4533,7 +4426,6 @@ class samplerFull(LayerDiffuse):
             if samp_model is not None:
                 samp_model = downscale_model_unet(samp_model)
 
-            alpha = None
             blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
             layer_diffusion_method = pipe['loader_settings']['layer_diffusion_method'] if 'layer_diffusion_method' in pipe['loader_settings'] else None
 
@@ -4597,8 +4489,14 @@ class samplerFull(LayerDiffuse):
             # Generate output_images
             output_images = torch.stack([tensor.squeeze() for tensor in image_list])
 
-            new_images, samp_images, alpha = self.layer_diffusion_decode(layer_diffusion_method, latents_plot, blend_samples,
-                                                                         output_images, samp_model)
+            if layer_diffusion_method is not None:
+                layerDiffuse = LayerDiffuse()
+                new_images, samp_images, alpha = layerDiffuse.layer_diffusion_decode(layer_diffusion_method, latents_plot, blend_samples,
+                                                                             output_images, samp_model)
+            else:
+                new_images = output_images
+                samp_images = output_images
+                alpha = None
 
             results = easySave(images, save_prefix, image_output, prompt, extra_pnginfo)
 
