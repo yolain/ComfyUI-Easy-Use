@@ -5,7 +5,7 @@ import comfy.controlnet
 import folder_paths
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
-from ..log import log_node_info, log_node_error
+from .log import log_node_info, log_node_error
 
 stable_diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy zero123Loader", "easy svdLoader"]
 stable_cascade_loaders = ["easy cascadeLoader"]
@@ -268,7 +268,7 @@ class easyLoader:
         self.add_to_cache("controlnet", unique_id, control_net)
         self.eviction_based_on_memory()
         return control_net
-    def load_clip(self, clip_name, type='stable_diffusion'):
+    def load_clip(self, clip_name, type='stable_diffusion', load_clip=None):
         if type == 'stable_diffusion':
             clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION
         else:

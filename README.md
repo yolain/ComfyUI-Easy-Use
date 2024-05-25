@@ -39,6 +39,11 @@
 
 ## 更新日志
 
+**v1.1.8**
+
+- 增加 `easy applyBrushNet` - [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows/blob/main/workflows/2_advanced/2-4inpainting/2-4brushnet_1.1.8.json)
+- 增加 `easy applyPowerPaint` - [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows/blob/main/workflows/2_advanced/2-4inpainting/2-4powerpaint_outpaint_1.1.8.json)
+
 **v1.1.7**
 
 - 修复 一些模型(如controlnet模型等)未成功写入缓存，导致修改前置节点束参数（如提示词）需要二次载入模型的问题

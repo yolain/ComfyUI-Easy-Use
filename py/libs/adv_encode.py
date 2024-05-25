@@ -4,9 +4,7 @@ import itertools
 
 from comfy import model_management
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
-from nodes import NODE_CLASS_MAPPINGS, ConditioningConcat, CLIPTextEncode
-
-from .libs.utils import compare_revision
+from nodes import NODE_CLASS_MAPPINGS, ConditioningConcat
 
 def _grouper(n, iterable):
     it = iter(iterable)

@@ -6,7 +6,7 @@ import pathlib
 from aiohttp import web
 from server import PromptServer
 from .image import tensor2pil, pil2tensor, image2base64, pil2byte
-from ..log import log_node_error
+from .log import log_node_error
 
 
 root_path = pathlib.Path(__file__).parent.parent.parent

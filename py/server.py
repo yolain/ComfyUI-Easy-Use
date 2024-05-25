@@ -2,9 +2,6 @@ import random
 import server
 from enum import Enum
 
-
-seed_nodes = ["easy wildcards","easy preSampling","easy preSamplingAdvanced","easy preSamplingSdTurbo","easy preSamplingDynamicCFG","easy preSamplingLayerDiffusion","easy preSamplingCascade","easy fullCascadeKSampler","easy fullkSampler","easy seed","easy latentNoisy", "easy preSamplingNoiseIn"]
-
 class SGmode(Enum):
     FIX = 1
     INCR = 2
@@ -123,41 +120,6 @@ def prompt_seed_update(json_data):
         # control after generated
         if mode is not None and not mode:
             control_seed(node[1], action, seed_is_global)
-    # else:
-    #     prompts = json_data['prompt'].items()
-    #     for k, v in prompts:
-    #         if 'class_type' not in v:
-    #             continue
-    #         cls = v['class_type']
-    #         if cls in seed_nodes:
-    #             extra_data = next((x for x in workflow["nodes"] if str(x["id"]) == k), None)
-    #             if extra_data is not None:
-    #                 inputs = extra_data.get('inputs')
-    #                 widgets_value = extra_data.get('widgets_values')
-    #                 widgets_length = len(widgets_value)
-    #                 if "disable" in widgets_value:
-    #                     break
-    #                 if inputs is not None and inputs != []:
-    #                     seed_num_input = next((x for x in inputs if x['name'] == 'seed_num' and x['type'] == 'INT'), None)
-    #                     if seed_num_input is not None:
-    #                         action = 'fixed'
-    #                     else:
-    #                         action = widgets_value[widgets_length - 1]
-    #                 else:
-    #                     control_index = widgets_length - 2 if cls == 'easy seed' else widgets_length - 1
-    #                     action = widgets_value[control_index]
-    #
-    #                 # print(action)
-    #                 node = k, v
-    #                 value = control_seed(node[1], action, False)
-    #
-    #                 if k not in seed_widget_map:
-    #                     continue
-    #
-    #                 if 'seed_num' in v['inputs']:
-    #                     if isinstance(v['inputs']['seed_num'], int):
-    #                         v['inputs']['seed_num'] = value
-
 
     return value is not None
 

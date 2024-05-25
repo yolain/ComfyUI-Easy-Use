@@ -8,10 +8,10 @@ import comfy.model_management
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
 from nodes import MAX_RESOLUTION
-from torchvision.transforms import Resize, CenterCrop, InterpolationMode
+from torchvision.transforms import Resize, CenterCrop
 from torchvision.transforms.functional import to_pil_image
-from .log import log_node_info
-from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask, mask2image, blendImage
+from .libs.log import log_node_info
+from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask
 from .libs.colorfix import adain_color_fix, wavelet_color_fix
 from .libs.chooser import ChooserMessage, ChooserCancelled
 from .config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS, MEDIAPIPE_MODELS, MEDIAPIPE_DIR

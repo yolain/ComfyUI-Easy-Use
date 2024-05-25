@@ -12,3 +12,4 @@ docs/**
 .idea/
 mmb-preset.custom.txt
 config.yaml
+node.tar.gz

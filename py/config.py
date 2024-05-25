@@ -76,6 +76,11 @@ BRUSHNET_MODELS = {
         }
     }
 }
+POWERPAINT_CLIP = {
+    "base_fp16":{
+        "model_url":"https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/text_encoder/model.fp16.safetensors"
+    }
+}
 
 # layerDiffuse
 LAYER_DIFFUSION_DIR = os.path.join(folder_paths.models_dir, "layer_model")

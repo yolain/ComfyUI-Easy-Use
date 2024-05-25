@@ -18,20 +18,20 @@ from PIL import Image
 
 from server import PromptServer
 from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint, InpaintModelConditioning
-from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS, IC_LIGHT_MODELS
-from .log import log_node_info, log_node_error, log_node_warn
-from .wildcards import process_with_loras, get_wildcard_list, process
-from .adv_encode import advanced_encode
+from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, POWERPAINT_CLIP, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS, IC_LIGHT_MODELS
 from .layer_diffuse.func import LayerDiffuse, LayerMethod
 
+from .libs.log import log_node_info, log_node_error, log_node_warn
+from .libs.adv_encode import advanced_encode
+from .libs.wildcards import process_with_loras, get_wildcard_list, process
 from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, AlwaysEqualProxy, get_sd_version
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler, alignYourStepsScheduler
 from .libs.xyplot import easyXYPlot
 from .libs.controlnet import easyControlnet
 from .libs.conditioning import prompt_to_cond, set_cond
-from .libs import cache as backend_cache
 from .libs.easing import EasingBase
+from .libs import cache as backend_cache
 
 sampler = easySampler()
 easyCache = easyLoader()
@@ -2076,7 +2076,7 @@ class controlnetAdvanced:
         return (new_pipe, positive, negative)
 
 # LLLiteLoader
-from .lllite import load_control_net_lllite_patch
+from .libs.lllite import load_control_net_lllite_patch
 class LLLiteLoader:
     def __init__(self):
         pass
@@ -2117,7 +2117,7 @@ class LLLiteLoader:
 #---------------------------------------------------------------Inpaint 开始----------------------------------------------------------------------#
 
 # FooocusInpaint
-from .fooocus import InpaintHead, InpaintWorker
+from .libs.fooocus import InpaintHead, InpaintWorker
 inpaint_head_model = None
 
 class applyFooocusInpaint:
@@ -2157,6 +2157,137 @@ class applyFooocusInpaint:
         m, = worker.patch(cloned, latent, patch)
         return (m,)
 
+# brushnet
+class applyBrushNet:
+
+    def __init__(self):
+        self.inpaint_path = os.path.join(folder_paths.models_dir, 'inpaint')
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "image": ("IMAGE",),
+                "mask": ("MASK",),
+                "brushnet": (folder_paths.get_filename_list('inpaint'),),
+                "dtype": (['float16', 'bfloat16', 'float32', 'float64'], ),
+                "scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0}),
+                "start_at": ("INT", {"default": 0, "min": 0, "max": 10000}),
+                "end_at": ("INT", {"default": 10000, "min": 0, "max": 10000}),
+            },
+        }
+
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
+    CATEGORY = "EasyUse/Inpaint"
+    FUNCTION = "apply"
+
+    def apply(self, pipe, image, mask, brushnet, dtype, scale, start_at, end_at):
+
+        model = pipe['model']
+        vae = pipe['vae']
+        positive = pipe['positive']
+        negative = pipe['negative']
+        if brushnet in backend_cache.cache:
+            log_node_info("easy brushnetApply", f"Using {brushnet} Cached")
+            _, brushnet_model = backend_cache.cache[brushnet][1]
+        else:
+            if "BrushNetLoader" not in ALL_NODE_CLASS_MAPPINGS:
+                raise Exception("BrushNetLoader not found,please install ComfyUI-BrushNet")
+            cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
+            brushnet_model, = cls.brushnet_loading(self, brushnet, dtype)
+            backend_cache.update_cache(brushnet, 'brushnet', (False, brushnet_model))
+        cls = ALL_NODE_CLASS_MAPPINGS['BrushNet']
+        m, positive, negative, latent = cls().model_update(model=model, vae=vae, image=image, mask=mask,
+                                                           brushnet=brushnet_model, positive=positive,
+                                                           negative=negative, scale=scale, start_at=start_at,
+                                                           end_at=end_at)
+        new_pipe = {
+            **pipe,
+            "model": m,
+            "positive": positive,
+            "negative": negative,
+            "samples": latent,
+        }
+        del pipe
+        return (new_pipe,)
+
+#powerpaint
+class applyPowerPaint:
+
+    def __init__(self):
+        self.inpaint_path = os.path.join(folder_paths.models_dir, 'inpaint')
+        self.clip_path = os.path.join(folder_paths.models_dir, 'clip')
+
+    def get_file_list(filenames, ext='.bin'):
+        return [file for file in filenames if file.lower().endswith(ext)]
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "image": ("IMAGE",),
+                "mask": ("MASK",),
+                "powerpaint_model": (s.get_file_list(folder_paths.get_filename_list('inpaint'),'.safetensors'),),
+                "powerpaint_clip": (s.get_file_list(folder_paths.get_filename_list('inpaint')),),
+                "dtype": (['float16', 'bfloat16', 'float32', 'float64'],),
+                "fitting": ("FLOAT", {"default": 1.0, "min": 0.3, "max": 1.0}),
+                "function": (['text guided', 'shape guided', 'object removal', 'context aware', 'image outpainting'],),
+                "scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0}),
+                "start_at": ("INT", {"default": 0, "min": 0, "max": 10000}),
+                "end_at": ("INT", {"default": 10000, "min": 0, "max": 10000}),
+            },
+        }
+
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
+    CATEGORY = "EasyUse/Inpaint"
+    FUNCTION = "apply"
+
+    def apply(self, pipe, image, mask, powerpaint_model, powerpaint_clip, dtype, fitting, function, scale, start_at, end_at):
+        model = pipe['model']
+        vae = pipe['vae']
+        positive = pipe['positive']
+        negative = pipe['negative']
+        # load powerpaint clip
+        if powerpaint_clip in backend_cache.cache:
+            log_node_info("easy powerpaintApply", f"Using {powerpaint_clip} Cached")
+            _, ppclip = backend_cache.cache[powerpaint_clip][1]
+        else:
+            if "PowerPaintCLIPLoader" not in ALL_NODE_CLASS_MAPPINGS:
+                raise Exception("PowerPaintCLIPLoader not found,please install ComfyUI-Brushnet")
+            cls = ALL_NODE_CLASS_MAPPINGS['PowerPaintCLIPLoader']
+            model_url = POWERPAINT_CLIP['base_fp16']['model_url']
+            base_clip = get_local_filepath(model_url, os.path.join(folder_paths.models_dir, 'clip'))
+            base = os.path.basename(base_clip)
+            ppclip, = cls.ppclip_loading(self, base, powerpaint_clip)
+            backend_cache.update_cache(powerpaint_clip, 'ppclip', (False,ppclip))
+        # load powerpaint model
+        if powerpaint_model in backend_cache.cache:
+            log_node_info("easy powerpaintApply", f"Using {powerpaint_model} Cached")
+            _, powerpaint = backend_cache.cache[powerpaint_model][1]
+        else:
+            if "BrushNetLoader" not in ALL_NODE_CLASS_MAPPINGS:
+                raise Exception("BrushNetLoader not found,please install ComfyUI-Brushnet")
+            cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
+            powerpaint, = cls.brushnet_loading(self, powerpaint_model, dtype)
+            backend_cache.update_cache(powerpaint_model, 'powerpaint', (False, powerpaint))
+        cls = ALL_NODE_CLASS_MAPPINGS['PowerPaint']
+        m, positive, negative, latent = cls().model_update(model=model, vae=vae, image=image, mask=mask, powerpaint=powerpaint,
+                                                           clip=ppclip, positive=positive,
+                                                           negative=negative, fitting=fitting, function=function,
+                                                           scale=scale, start_at=start_at, end_at=end_at)
+        new_pipe = {
+            **pipe,
+            "model": m,
+            "positive": positive,
+            "negative": negative,
+            "samples": latent,
+        }
+        del pipe
+        return (new_pipe,)
 
 #---------------------------------------------------------------适配器 开始----------------------------------------------------------------------#
 
@@ -3645,7 +3776,7 @@ class samplerCustomSettings:
         return {"ui": {"value": [seed]}, "result": (new_pipe,)}
 
 # 预采样设置（SDTurbo）
-from .gradual_latent_hires_fix import sample_dpmpp_2s_ancestral, sample_dpmpp_2m_sde, sample_lcm, sample_euler_ancestral
+from .libs.gradual_latent_hires_fix import sample_dpmpp_2s_ancestral, sample_dpmpp_2m_sde, sample_lcm, sample_euler_ancestral
 class sdTurboSettings:
     def __init__(self):
         pass
@@ -4014,7 +4145,7 @@ class layerDiffusionSettingsADDTL:
         return (new_pipe,)
 
 # 预采样设置（动态CFG）
-from .dynthres_core import DynThresh
+from .libs.dynthres_core import DynThresh
 class dynamicCFGSettings:
     def __init__(self):
         pass
@@ -7253,8 +7384,9 @@ NODE_CLASS_MAPPINGS = {
     "easy styleAlignedBatchAlign": styleAlignedBatchAlign,
     "easy icLightApply": icLightApply,
     # Inpaint 内补
-    # "easy fooocusInpaintLoader": fooocusInpaintLoader,
     "easy applyFooocusInpaint": applyFooocusInpaint,
+    "easy applyBrushNet": applyBrushNet,
+    "easy applyPowerPaint": applyPowerPaint,
     # latent 潜空间
     "easy latentNoisy": latentNoisy,
     "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
@@ -7362,8 +7494,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy styleAlignedBatchAlign": "Easy Apply StyleAlign",
     "easy icLightApply": "Easy Apply ICLight",
     # Inpaint 内补
-    # "easy fooocusInpaintLoader": "Load Fooocus Inpaint(Removed)",
-    "easy applyFooocusInpaint": "Apply Fooocus Inpaint",
+    "easy applyFooocusInpaint": "Easy Apply Fooocus Inpaint",
+    "easy applyBrushNet": "Easy Apply BrushNet",
+    "easy applyPowerPaint": "Easy Apply PowerPaint",
     # latent 潜空间
     "easy latentNoisy": "LatentNoisy",
     "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",

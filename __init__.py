@@ -1,4 +1,4 @@
-__version__ = "1.1.7"
+__version__ = "1.1.8"
 
 import os
 import glob
@@ -26,7 +26,7 @@ cwd_path = os.path.dirname(os.path.realpath(__file__))
 comfy_path = folder_paths.base_path
 
 #Wildcards读取
-from .py.wildcards import read_wildcard_dict
+from .py.libs.wildcards import read_wildcard_dict
 wildcards_path = os.path.join(os.path.dirname(__file__), "wildcards")
 if os.path.exists(wildcards_path):
     read_wildcard_dict(wildcards_path)
