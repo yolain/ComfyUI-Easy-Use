@@ -251,9 +251,9 @@ class easyLoader:
 
         return model
 
-    def load_controlnet(self, control_net_name, scale_soft_weights=1):
+    def load_controlnet(self, control_net_name, scale_soft_weights=1, use_cache=True):
         unique_id = f'{control_net_name};{str(scale_soft_weights)}'
-        if unique_id in self.loaded_objects["controlnet"]:
+        if use_cache and unique_id in self.loaded_objects["controlnet"]:
             return self.loaded_objects["controlnet"][unique_id][0]
         if scale_soft_weights < 1:
             if "ScaledSoftControlNetWeights" in NODE_CLASS_MAPPINGS:
@@ -267,8 +267,9 @@ class easyLoader:
         else:
             controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
             control_net = comfy.controlnet.load_controlnet(controlnet_path)
-        self.add_to_cache("controlnet", unique_id, control_net)
-        self.eviction_based_on_memory()
+        if use_cache:
+            self.add_to_cache("controlnet", unique_id, control_net)
+            self.eviction_based_on_memory()
         return control_net
     def load_clip(self, clip_name, type='stable_diffusion', load_clip=None):
         if type == 'stable_diffusion':
@@ -382,7 +383,7 @@ class easyLoader:
         clip: comfy.sd.CLIP | None = None
         vae: comfy.sd.VAE | None = None
         clip_vision = None
-        pipe_lora_stack = []
+        lora_stack = []
 
         can_load_lora = True
         # 判断是否存在 模型或Lora叠加xyplot, 若存在优先缓存第一个模型
@@ -418,13 +419,13 @@ class easyLoader:
                 model, clip = self.load_lora(lora)
                 lora['model'] = model
                 lora['clip'] = clip
-                pipe_lora_stack.append(lora)
+                lora_stack.append(lora)
 
         if lora_name != "None" and can_load_lora:
             lora = {"lora_name": lora_name, "model": model, "clip": clip, "model_strength": lora_model_strength,
                     "clip_strength": lora_clip_strength}
             model, clip = self.load_lora(lora)
-            pipe_lora_stack.append(lora)
+            lora_stack.append(lora)
 
         # Check for custom VAE
         if vae_name not in ["Baked VAE", "Baked-VAE"]:
@@ -433,4 +434,4 @@ class easyLoader:
         if not clip:
             raise Exception("No CLIP found")
 
-        return model, clip, vae, clip_vision, pipe_lora_stack
+        return model, clip, vae, clip_vision, lora_stack

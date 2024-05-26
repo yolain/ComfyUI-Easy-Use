@@ -516,7 +516,7 @@ app.registerExtension({
                     note = null
                 }
             }
-            return loadGraphDataEvent.apply(this, [...arguments])
+            return await loadGraphDataEvent.apply(this, [...arguments])
         }
 
         addToolBar(app)

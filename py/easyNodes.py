@@ -906,17 +906,17 @@ class fullLoader:
             "empty_latent_width": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
             "empty_latent_height": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
 
-            "positive": ("STRING", {"default": "Positive", "multiline": True}),
+            "positive": ("STRING", {"default":"", "placeholder": "Positive", "multiline": True}),
             "positive_token_normalization": (["none", "mean", "length", "length+mean"],),
             "positive_weight_interpretation": (["comfy",  "A1111", "comfy++", "compel", "fixed attention"],),
 
-            "negative": ("STRING", {"default": "Negative", "multiline": True}),
+            "negative": ("STRING", {"default":"", "placeholder": "Negative", "multiline": True}),
             "negative_token_normalization": (["none", "mean", "length", "length+mean"],),
             "negative_weight_interpretation": (["comfy",  "A1111", "comfy++", "compel", "fixed attention"],),
 
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
-            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",), "optional_lora_stack": ("LORA_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),},
+            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",), "optional_lora_stack": ("LORA_STACK",), "optional_controlnet_stack": ("CONTROL_NET_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),},
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
@@ -931,7 +931,7 @@ class fullLoader:
                        resolution, empty_latent_width, empty_latent_height,
                        positive, positive_token_normalization, positive_weight_interpretation,
                        negative, negative_token_normalization, negative_weight_interpretation,
-                       batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, a1111_prompt_style=False, prompt=None,
+                       batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, prompt=None,
                        my_unique_id=None
                        ):
 
@@ -943,11 +943,16 @@ class fullLoader:
 
         # Load models
         log_node_warn("正在加载模型...")
-        model, clip, vae, clip_vision, pipe_lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt)
+        model, clip, vae, clip_vision, lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt)
 
         # Prompt to Conditioning
-        positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, pipe_lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
-        negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, pipe_lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
+        positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
+        negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
+
+        # Conditioning add controlnet
+        if optional_controlnet_stack is not None and len(optional_controlnet_stack) > 0:
+            for controlnet in optional_controlnet_stack:
+                positive_embeddings_final, negative_embeddings_final = easyControlnet().apply(controlnet[0], controlnet[5], positive_embeddings_final, negative_embeddings_final, controlnet[1], start_percent=controlnet[2], end_percent=controlnet[3], control_net=None, scale_soft_weights=controlnet[4], mask=None, easyCache=easyCache, use_cache=True)
 
         log_node_warn("加载完毕...")
         pipe = {"model": model,
@@ -964,7 +969,7 @@ class fullLoader:
                                     "lora_name": lora_name,
                                     "lora_model_strength": lora_model_strength,
                                     "lora_clip_strength": lora_clip_strength,
-                                    "lora_stack": pipe_lora_stack,
+                                    "lora_stack": lora_stack,
 
                                     "clip_skip": clip_skip,
                                     "a1111_prompt_style": a1111_prompt_style,
@@ -1003,11 +1008,15 @@ class a1111Loader:
             "empty_latent_width": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
             "empty_latent_height": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
 
-            "positive": ("STRING", {"default": "Positive", "multiline": True}),
-            "negative": ("STRING", {"default": "Negative", "multiline": True}),
+            "positive": ("STRING", {"default":"", "placeholder": "Positive", "multiline": True}),
+            "negative": ("STRING", {"default":"", "placeholder": "Negative", "multiline": True}),
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
-            "optional": {"optional_lora_stack": ("LORA_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default})},
+            "optional": {
+                "optional_lora_stack": ("LORA_STACK",),
+                "optional_controlnet_stack": ("CONTROL_NET_STACK",),
+                "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),
+            },
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
@@ -1020,7 +1029,7 @@ class a1111Loader:
     def adv_pipeloader(self, ckpt_name, vae_name, clip_skip,
                        lora_name, lora_model_strength, lora_clip_strength,
                        resolution, empty_latent_width, empty_latent_height,
-                       positive, negative, batch_size, optional_lora_stack=None, a1111_prompt_style=False, prompt=None,
+                       positive, negative, batch_size, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, prompt=None,
                        my_unique_id=None):
 
         return fullLoader.adv_pipeloader(self, ckpt_name, 'Default', vae_name, clip_skip,
@@ -1028,8 +1037,8 @@ class a1111Loader:
              resolution, empty_latent_width, empty_latent_height,
              positive, 'mean', 'A1111',
              negative,'mean','A1111',
-             batch_size, None, None, None, optional_lora_stack, a1111_prompt_style, prompt,
-             my_unique_id
+             batch_size, None, None, None, optional_lora_stack=optional_lora_stack, optional_controlnet_stack=optional_controlnet_stack,a1111_prompt_style=a1111_prompt_style, prompt=prompt,
+             my_unique_id=my_unique_id
         )
 
 # Comfy简易加载器
@@ -1050,12 +1059,12 @@ class comfyLoader:
             "empty_latent_width": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
             "empty_latent_height": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
 
-            "positive": ("STRING", {"default": "Positive", "multiline": True}),
-            "negative": ("STRING", {"default": "Negative", "multiline": True}),
+            "positive": ("STRING", {"default": "", "placeholder": "Positive", "multiline": True}),
+            "negative": ("STRING", {"default": "", "placeholder": "Negative", "multiline": True}),
 
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
-            "optional": {"optional_lora_stack": ("LORA_STACK",)},
+            "optional": {"optional_lora_stack": ("LORA_STACK",),"optional_controlnet_stack": ("CONTROL_NET_STACK",),},
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}}
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
@@ -1067,15 +1076,15 @@ class comfyLoader:
     def adv_pipeloader(self, ckpt_name, vae_name, clip_skip,
                        lora_name, lora_model_strength, lora_clip_strength,
                        resolution, empty_latent_width, empty_latent_height,
-                       positive, negative, batch_size, optional_lora_stack=None, prompt=None,
+                       positive, negative, batch_size, optional_lora_stack=None, optional_controlnet_stack=None, prompt=None,
                       my_unique_id=None):
         return fullLoader.adv_pipeloader(self, ckpt_name, 'Default', vae_name, clip_skip,
              lora_name, lora_model_strength, lora_clip_strength,
              resolution, empty_latent_width, empty_latent_height,
              positive, 'none', 'comfy',
              negative, 'none', 'comfy',
-             batch_size, None, None, None, optional_lora_stack, False, prompt,
-             my_unique_id
+             batch_size, None, None, None, optional_lora_stack=optional_lora_stack,optional_controlnet_stack=optional_controlnet_stack, a1111_prompt_style=False, prompt=prompt,
+             my_unique_id=my_unique_id
          )
 
 # stable Cascade
@@ -1102,8 +1111,8 @@ class cascadeLoader:
             "empty_latent_height": ("INT", {"default": 1024, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
             "compression": ("INT", {"default": 42, "min": 32, "max": 64, "step": 1}),
 
-            "positive": ("STRING", {"default": "Positive", "multiline": True}),
-            "negative": ("STRING", {"default": "", "multiline": True}),
+            "positive": ("STRING", {"default":"", "placeholder": "Positive", "multiline": True}),
+            "negative": ("STRING", {"default":"", "placeholder": "Negative", "multiline": True}),
 
             "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
         },
@@ -1770,7 +1779,7 @@ class dynamiCrafterLoader(DynamiCrafter):
 
 
 # lora
-class loraStackLoader:
+class loraStack:
     def __init__(self):
         pass
 
@@ -1779,9 +1788,9 @@ class loraStackLoader:
         max_lora_num = 10
         inputs = {
             "required": {
-                "toggle": ([True, False],),
+                "toggle": ("BOOLEAN", {"label_on": "enabled", "label_off": "disabled"}),
                 "mode": (["simple", "advanced"],),
-                "num_loras": ("INT", {"default": 1, "min": 0, "max": max_lora_num}),
+                "num_loras": ("INT", {"default": 1, "min": 1, "max": max_lora_num}),
             },
             "optional": {
                 "optional_lora_stack": ("LORA_STACK",),
@@ -1806,15 +1815,15 @@ class loraStackLoader:
 
     CATEGORY = "EasyUse/Loaders"
 
-    def stack(self, toggle, mode, num_loras, lora_stack=None, **kwargs):
+    def stack(self, toggle, mode, num_loras, optional_lora_stack=None, **kwargs):
         if (toggle in [False, None, "False"]) or not kwargs:
             return (None,)
 
         loras = []
 
         # Import Stack values
-        if lora_stack is not None:
-            loras.extend([l for l in lora_stack if l[0] != "None"])
+        if optional_lora_stack is not None:
+            loras.extend([l for l in optional_lora_stack if l[0] != "None"])
 
         # Import Lora values
         for i in range(1, num_loras + 1):
@@ -1837,33 +1846,60 @@ class controlnetStack:
     def get_file_list(filenames):
         return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
 
-    controlnets = ["None"] + get_file_list(folder_paths.get_filename_list("controlnet"))
-
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {},
-            "optional": {
-                "switch_1": (["Off", "On"],),
-                "controlnet_1": (s.controlnets,),
-                "controlnet_strength_1": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
-                "start_percent_1": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-                "end_percent_1": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-                "switch_2": (["Off", "On"],),
-                "`controlnet`_2": (s.controlnets,),
-                "controlnet_strength_2": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
-                "start_percent_2": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-                "end_percent_2": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-                "switch_3": (["Off", "On"],),
-                "controlnet_3": (s.controlnets,),
-                "controlnet_strength_3": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
-                "start_percent_3": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-                "end_percent_3": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
-                "image_1": ("IMAGE",),
-                "image_2": ("IMAGE",),
-                "image_3": ("IMAGE",),
-                "controlnet_stack": ("CONTROL_NET_STACK",)
+        max_cn_num = 3
+        inputs = {
+            "required": {
+                "toggle": ("BOOLEAN", {"label_on": "enabled", "label_off": "disabled"}),
+                "mode": (["simple", "advanced"],),
+                "num_controlnet": ("INT", {"default": 1, "min": 1, "max": max_cn_num}),
             },
+            "optional": {
+                "optional_controlnet_stack": ("CONTROL_NET_STACK",),
+            }
         }
+
+        for i in range(1, max_cn_num+1):
+            inputs["optional"][f"controlnet_{i}"] = (["None"] + s.get_file_list(folder_paths.get_filename_list("controlnet")), {"default": "None"})
+            inputs["optional"][f"controlnet_{i}_strength"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01},)
+            inputs["optional"][f"start_percent_{i}"] = ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001},)
+            inputs["optional"][f"end_percent_{i}"] = ("FLOAT",{"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},)
+            inputs["optional"][f"scale_soft_weight_{i}"] = ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},)
+            inputs["optional"][f"image_{i}"] = ("IMAGE",)
+        return inputs
+
+    RETURN_TYPES = ("CONTROL_NET_STACK",)
+    RETURN_NAMES = ("controlnet_stack",)
+    FUNCTION = "stack"
+    CATEGORY = "EasyUse/Loaders"
+
+    def stack(self, toggle, mode, num_controlnet, optional_controlnet_stack=None, **kwargs):
+        if (toggle in [False, None, "False"]) or not kwargs:
+            return (None,)
+
+        controlnets = []
+
+        # Import Stack values
+        if optional_controlnet_stack is not None:
+            controlnets.extend([l for l in optional_controlnet_stack if l[0] != "None"])
+
+        # Import Controlnet values
+        for i in range(1, num_controlnet+1):
+            controlnet_name = kwargs.get(f"controlnet_{i}")
+
+            if not controlnet_name or controlnet_name == "None":
+                continue
+
+            controlnet_strength = float(kwargs.get(f"controlnet_{i}_strength"))
+            start_percent = float(kwargs.get(f"start_percent_{i}")) if mode == "advanced" else 0
+            end_percent = float(kwargs.get(f"end_percent_{i}")) if mode == "advanced" else 1.0
+            scale_soft_weights = float(kwargs.get(f"scale_soft_weight_{i}"))
+            image = kwargs.get(f"image_{i}")
+
+            controlnets.append((controlnet_name, controlnet_strength, start_percent, end_percent, scale_soft_weights, image, True))
+
+        return (controlnets,)
 # controlnet
 class controlnetSimple:
     @classmethod
@@ -7265,7 +7301,8 @@ NODE_CLASS_MAPPINGS = {
     "easy zero123Loader": zero123Loader,
     "easy dynamiCrafterLoader": dynamiCrafterLoader,
     "easy cascadeLoader": cascadeLoader,
-    "easy loraStack": loraStackLoader,
+    "easy loraStack": loraStack,
+    "easy controlnetStack": controlnetStack,
     "easy controlnetLoader": controlnetSimple,
     "easy controlnetLoaderADV": controlnetAdvanced,
     "easy LLLiteLoader": LLLiteLoader,
@@ -7376,6 +7413,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy dynamiCrafterLoader": "EasyLoader (DynamiCrafter)",
     "easy cascadeLoader": "EasyCascadeLoader",
     "easy loraStack": "EasyLoraStack",
+    "easy controlnetStack": "EasyControlnetStack",
     "easy controlnetLoader": "EasyControlnet",
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
     "easy LLLiteLoader": "EasyLLLite",

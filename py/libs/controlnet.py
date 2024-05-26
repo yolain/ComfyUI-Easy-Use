@@ -7,12 +7,12 @@ class easyControlnet:
     def __init__(self):
         pass
 
-    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None, easyCache=None):
+    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None, easyCache=None, use_cache=True):
         if strength == 0:
             return (positive, negative)
 
         if control_net is None:
-            control_net = easyCache.load_controlnet(control_net_name, scale_soft_weights)
+            control_net = easyCache.load_controlnet(control_net_name, scale_soft_weights, use_cache)
 
         if mask is not None:
             mask = mask.to(self.device)

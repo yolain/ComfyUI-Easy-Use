@@ -1,14 +1,15 @@
-from PIL import Image, ImageDraw, ImageFilter
 import os
 import hashlib
 import folder_paths
 import torch
 import numpy as np
+import comfy.utils
 import comfy.model_management
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
 from nodes import MAX_RESOLUTION
-from torchvision.transforms import Resize, CenterCrop
+from PIL import Image, ImageDraw, ImageFilter
+from torchvision.transforms import Resize, CenterCrop, GaussianBlur
 from torchvision.transforms.functional import to_pil_image
 from .libs.log import log_node_info
 from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask
@@ -831,6 +832,94 @@ class imageColorMatch(PreviewImage):
     return {"ui": {"images": results},
             "result": (new_images,)}
 
+class imageDetailTransfer:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "target": ("IMAGE",),
+        "source": ("IMAGE",),
+        "mode": (["add", "multiply", "screen", "overlay", "soft_light", "hard_light", "color_dodge", "color_burn", "difference", "exclusion", "divide",],{"default": "add"}),
+        "blur_sigma": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 100.0, "step": 0.01}),
+        "blend_factor": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.001, "round": 0.001}),
+        "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
+        "save_prefix": ("STRING", {"default": "ComfyUI"}),
+      },
+      "optional": {
+        "mask": ("MASK",),
+      },
+      "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+    }
+
+  RETURN_TYPES = ("IMAGE",)
+  RETURN_NAMES = ("image",)
+  OUTPUT_NODE = True
+  FUNCTION = "transfer"
+  CATEGORY = "EasyUse/Image"
+
+
+
+  def transfer(self, target, source, mode, blur_sigma, blend_factor, image_output, save_prefix, mask=None, prompt=None, extra_pnginfo=None):
+    batch_size, height, width, _ = target.shape
+    device = comfy.model_management.get_torch_device()
+    target_tensor = target.permute(0, 3, 1, 2).clone().to(device)
+    source_tensor = source.permute(0, 3, 1, 2).clone().to(device)
+
+    if target.shape[1:] != source.shape[1:]:
+      source_tensor = comfy.utils.common_upscale(source_tensor, width, height, "bilinear", "disabled")
+
+    if source.shape[0] < batch_size:
+      source = source[0].unsqueeze(0).repeat(batch_size, 1, 1, 1)
+
+    kernel_size = int(6 * int(blur_sigma) + 1)
+
+    gaussian_blur = GaussianBlur(kernel_size=(kernel_size, kernel_size), sigma=(blur_sigma, blur_sigma))
+
+    blurred_target = gaussian_blur(target_tensor)
+    blurred_source = gaussian_blur(source_tensor)
+
+    if mode == "add":
+      new_image = (source_tensor - blurred_source) + blurred_target
+    elif mode == "multiply":
+      new_image = source_tensor * blurred_target
+    elif mode == "screen":
+      new_image = 1 - (1 - source_tensor) * (1 - blurred_target)
+    elif mode == "overlay":
+      new_image = torch.where(blurred_target < 0.5, 2 * source_tensor * blurred_target,
+                               1 - 2 * (1 - source_tensor) * (1 - blurred_target))
+    elif mode == "soft_light":
+      new_image = (1 - 2 * blurred_target) * source_tensor ** 2 + 2 * blurred_target * source_tensor
+    elif mode == "hard_light":
+      new_image = torch.where(source_tensor < 0.5, 2 * source_tensor * blurred_target,
+                               1 - 2 * (1 - source_tensor) * (1 - blurred_target))
+    elif mode == "difference":
+      new_image = torch.abs(blurred_target - source_tensor)
+    elif mode == "exclusion":
+      new_image = 0.5 - 2 * (blurred_target - 0.5) * (source_tensor - 0.5)
+    elif mode == "color_dodge":
+      new_image = blurred_target / (1 - source_tensor)
+    elif mode == "color_burn":
+      new_image = 1 - (1 - blurred_target) / source_tensor
+    elif mode == "divide":
+      new_image = (source_tensor / blurred_source) * blurred_target
+    else:
+      new_image = source_tensor
+
+    new_image = torch.lerp(target_tensor, new_image, blend_factor)
+    if mask is not None:
+      mask = mask.to(device)
+      new_image = torch.lerp(target_tensor, new_image, mask)
+    new_image = torch.clamp(new_image, 0, 1)
+    new_image = new_image.permute(0, 2, 3, 1).cpu().float()
+
+    results = easySave(new_image, save_prefix, image_output, prompt, extra_pnginfo)
+
+    if image_output in ("Hide", "Hide/Save"):
+      return {"ui": {},
+              "result": (new_image,)}
+
+    return {"ui": {"images": results},
+            "result": (new_image,)}
 
 # 图像反推
 from .libs.image import ci
@@ -1414,6 +1503,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageRemBg": imageRemBg,
   "easy imageChooser": imageChooser,
   "easy imageColorMatch": imageColorMatch,
+  "easy imageDetailTransfer": imageDetailTransfer,
   "easy imageInterrogator": imageInterrogator,
   "easy loadImageBase64": loadImageBase64,
   "easy imageToBase64": imageToBase64,
@@ -1446,6 +1536,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageRemBg": "Image Remove Bg",
   "easy imageChooser": "Image Chooser",
   "easy imageColorMatch": "Image Color Match",
+  "easy imageDetailTransfer": "Image Detail Transfer",
   "easy imageInterrogator": "Image To Prompt",
   "easy joinImageBatch": "JoinImageBatch",
   "easy loadImageBase64": "Load Image (Base64)",

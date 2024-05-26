@@ -110,11 +110,34 @@ function widgetLogic(node, widget) {
 		}
 		updateNodeHeight(node)
 	}
+	if (widget.name === 'num_controlnet') {
+		let number_to_show = widget.value + 1
+		for (let i = 0; i < number_to_show; i++) {
+			toggleWidget(node, findWidgetByName(node, 'controlnet_'+i), true)
+			toggleWidget(node, findWidgetByName(node, 'controlnet_'+i+'_strength'), true)
+			toggleWidget(node, findWidgetByName(node, 'scale_soft_weight_'+i),true)
+			if (findWidgetByName(node, 'mode').value === "simple") {
+				toggleWidget(node, findWidgetByName(node, 'start_percent_'+i))
+				toggleWidget(node, findWidgetByName(node, 'end_percent_'+i))
+			} else {
+				toggleWidget(node, findWidgetByName(node, 'start_percent_'+i),true)
+				toggleWidget(node, findWidgetByName(node, 'end_percent_'+i), true)
+			}
+		}
+		for (let i = number_to_show; i < 10; i++) {
+			toggleWidget(node, findWidgetByName(node, 'controlnet_'+i))
+			toggleWidget(node, findWidgetByName(node, 'controlnet_'+i+'_strength'))
+			toggleWidget(node, findWidgetByName(node, 'start_percent_'+i))
+			toggleWidget(node, findWidgetByName(node, 'end_percent_'+i))
+			toggleWidget(node, findWidgetByName(node, 'scale_soft_weight_'+i))
+		}
+		updateNodeHeight(node)
+	}
+
 	if (widget.name === 'mode') {
 		switch (node.comfyClass) {
 			case 'easy loraStack':
-				let number_to_show = findWidgetByName(node, 'num_loras').value + 1
-				for (let i = 0; i < number_to_show; i++) {
+				for (let i = 0; i < (findWidgetByName(node, 'num_loras').value + 1); i++) {
 					if (widget.value === "simple") {
 						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_strength'), true)
 						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_model_strength'))
@@ -124,6 +147,19 @@ function widgetLogic(node, widget) {
 						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_model_strength'), true)
 						toggleWidget(node, findWidgetByName(node, 'lora_'+i+'_clip_strength'), true)}
 				}
+				updateNodeHeight(node)
+				break
+			case 'easy controlnetStack':
+				for (let i = 0; i < (findWidgetByName(node, 'num_controlnet').value + 1); i++) {
+					if (widget.value === "simple") {
+						toggleWidget(node, findWidgetByName(node, 'start_percent_'+i))
+						toggleWidget(node, findWidgetByName(node, 'end_percent_'+i))
+					} else {
+						toggleWidget(node, findWidgetByName(node, 'start_percent_' + i), true)
+						toggleWidget(node, findWidgetByName(node, 'end_percent_' + i), true)
+					}
+				}
+				updateNodeHeight(node)
 				break
 			case 'easy icLightApply':
 				if (widget.value === "Foreground") {
@@ -135,9 +171,9 @@ function widgetLogic(node, widget) {
 					toggleWidget(node, findWidgetByName(node, 'source'), true)
 					toggleWidget(node, findWidgetByName(node, 'remove_bg'))
 				}
+				updateNodeHeight(node)
 				break
 		}
-		updateNodeHeight(node)
 	}
 
 	if (widget.name === 'resolution') {
@@ -572,6 +608,7 @@ app.registerExtension({
 			case "easy svdLoader":
 			case "easy dynamiCrafterLoader":
 			case "easy loraStack":
+			case "easy controlnetStack":
 			case "easy latentNoisy":
 			case "easy preSampling":
 			case "easy preSamplingAdvanced":
@@ -593,6 +630,7 @@ app.registerExtension({
 			case "easy detailerFix":
 			case "easy imageRemBg":
 			case "easy imageColorMatch":
+			case "easy imageDetailTransfer":
 			case "easy loadImageBase64":
 			case "easy XYInputs: Steps":
 			case "easy XYInputs: Sampler/Scheduler":
@@ -1118,7 +1156,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'mode', 'toggle', 'resolution', 'target_parameter',
+						'num_loras', 'num_controlnet', 'mode', 'toggle', 'resolution', 'target_parameter',
 	'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode',
 	'lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch', 'num_embeds',
 	"easing_mode", "guider", "scheduler"
