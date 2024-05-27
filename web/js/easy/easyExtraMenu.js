@@ -9,6 +9,7 @@ const controlnet = ['easy controlnetLoader', 'easy controlnetLoaderADV', 'easy i
 const ipadapter = ['easy ipadapterApply', 'easy ipadapterApplyADV', 'easy ipadapterStyleComposition', 'easy ipadapterApplyFromParams']
 const positive_prompt = ['easy positive', 'easy wildcards']
 const imageNode = ['easy loadImageBase64', 'LoadImage', 'LoadImageMask']
+const brushnet = ['easy applyBrushNet', 'easy applyPowerPaint']
 const widgetMapping = {
     "positive_prompt":{
         "text": "positive",
@@ -64,6 +65,12 @@ const widgetMapping = {
         "image":"image",
         "base64_data":"base64_data",
         "channel": "channel"
+    },
+    "brushnet":{
+        "dtype": "dtype",
+        "scale": "scale",
+        "start_at": "start_at",
+        "end_at": "end_at"
     }
 }
 const inputMapping = {
@@ -99,6 +106,11 @@ const inputMapping = {
         "image_style": "image",
         "attn_mask":"attn_mask",
         "optional_ipadapter":"optional_ipadapter"
+    },
+    "brushnet":{
+        "pipe": "pipe",
+        "image": "image",
+        "mask": "mask"
     }
 };
 
@@ -138,6 +150,9 @@ const outputMapping = {
         "masks":"masks",
         "ipadapter":"ipadapter"
     },
+    "brushnet":{
+        "pipe": "pipe",
+    }
 };
 
 // 替换节点
@@ -562,6 +577,10 @@ app.registerExtension({
         // Swap Image
         if (imageNode.includes(nodeData.name)) {
             addMenu("↪️ Swap LoadImage", 'load_image', imageNode, nodeType)
+        }
+        // Swap Brushnet
+        if (brushnet.includes(nodeData.name)) {
+            addMenu("↪️ Swap BrushNet", 'brushnet', brushnet, nodeType)
         }
     }
 });
