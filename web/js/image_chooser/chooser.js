@@ -84,10 +84,10 @@ function progressButtonPressed() {
             restart_from_here(node.id).then(() => { send_message(node.id, [...node.selected, -1, ...node.anti_selected]); });
         }
         const maxlength = node.imgs.length;
-        if (FlowState.paused_here(node.id) && selected>0) {
-            node.send_button_widget.name = (selected>1) ? "Progress selected (" + selected + '/' + maxlength  +")" : "Progress selected image";
-        } else if (FlowState.idle() && selected>0) {
-            node.send_button_widget.name = (selected>1) ? "Progress selected (" + selected + '/' + maxlength  +")" : "Progress selected image as restart";
+        if (FlowState.paused_here(node.id) && selected.length>0) {
+            node.send_button_widget.name = (selected.length>1) ? "Progress selected (" + selected.length + '/' + maxlength  +")" : "Progress selected image";
+        } else if (FlowState.idle() && selected.length>0) {
+            node.send_button_widget.name = (selected.length>1) ? "Progress selected (" + selected.length + '/' + maxlength  +")" : "Progress selected image as restart";
         }
         else {
             node.send_button_widget.name = "";

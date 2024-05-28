@@ -4331,7 +4331,7 @@ class samplerFull:
                     'loader_settings'] else (None, None, None)
                 method = layerDiffuse.get_layer_diffusion_method(pipe['loader_settings']['layer_diffusion_method'],
                                                          samp_blend_samples is not None)
-                images = pipe["images"].movedim(-1, 1) if "images" in pipe else None
+                images = pipe["images"].movedim(-1, 1) if "images" in pipe and pipe['images'] else None
                 weight = pipe['loader_settings']['layer_diffusion_weight'] if 'layer_diffusion_weight' in pipe[
                     'loader_settings'] else 1.0
                 samp_model, samp_positive, samp_negative = layerDiffuse.apply_layer_diffusion(samp_model, method, weight,
