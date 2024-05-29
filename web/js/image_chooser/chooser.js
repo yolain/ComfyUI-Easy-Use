@@ -3,7 +3,7 @@ import { api } from "../../../../scripts/api.js";
 import { ComfyDialog, $el } from "../../../../scripts/ui.js";
 
 import { restart_from_here } from "./prompt.js";
-import { FlowState } from "./state.js";
+import { hud, FlowState } from "./state.js";
 import { send_cancel, send_message, send_onstart, skip_next_restart_message } from "./messaging.js";
 import { display_preview_images, additionalDrawBackground, click_is_in_image } from "./preview.js";
 import {$t} from "../common/i18n.js";
@@ -83,25 +83,24 @@ function progressButtonPressed() {
             skip_next_restart_message();
             restart_from_here(node.id).then(() => { send_message(node.id, [...node.selected, -1, ...node.anti_selected]); });
         }
-        const maxlength = node.imgs.length;
-        if (FlowState.paused_here(node.id) && selected.length>0) {
-            node.send_button_widget.name = (selected.length>1) ? "Progress selected (" + selected.length + '/' + maxlength  +")" : "Progress selected image";
-        } else if (FlowState.idle() && selected.length>0) {
-            node.send_button_widget.name = (selected.length>1) ? "Progress selected (" + selected.length + '/' + maxlength  +")" : "Progress selected image as restart";
-        }
-        else {
-            node.send_button_widget.name = "";
-        }
     }
 }
 
 function cancelButtonPressed() {
+
     if (FlowState.running()) { send_cancel();}
-    const node = app.graph._nodes_by_id[this.node_id];
-    if (node) {
-        node.send_button_widget.name = "";
-        node.cancel_button_widget.name = "";
-    }
+}
+
+function enable_disabling(button) {
+    Object.defineProperty(button, 'clicked', {
+        get : function() { return this._clicked; },
+        set : function(v) { this._clicked = (v && this.name!=''); }
+    })
+}
+
+function disable_serialize(widget) {
+    if (!widget.options) widget.options = {  };
+    widget.options.serialize = false;
 }
 
 app.registerExtension({
@@ -110,6 +109,16 @@ app.registerExtension({
         window.addEventListener("beforeunload", send_cancel, true);
     },
     setup(app) {
+
+        const draw = LGraphCanvas.prototype.draw;
+        LGraphCanvas.prototype.draw = function() {
+            if (hud.update()) {
+                app.graph._nodes.forEach((node)=> { if (node.update) { node.update(); } })
+            }
+            draw.apply(this,arguments);
+        }
+
+
         function easyuseImageChooser(event) {
             const {node,image,isKSampler} = display_preview_images(event);
             if(isKSampler) {
@@ -148,12 +157,7 @@ app.registerExtension({
     async nodeCreated(node, app) {
 
         if(node.comfyClass == 'easy imageChooser'){
-            node.send_button_widget = node.addWidget("button", "", "", progressButtonPressed, {serialize: false});
-            node.cancel_button_widget = node.addWidget("button", "", "", cancelButtonPressed, {serialize: false});
             node.setProperty('values',[])
-
-            /* Capture clicks */
-            const org_onMouseDown = node.onMouseDown;
 
             /* A property defining the top of the image when there is just one */
             if(node?.imageIndex === undefined){
@@ -169,6 +173,8 @@ app.registerExtension({
                 })
             }
 
+            /* Capture clicks */
+            const org_onMouseDown = node.onMouseDown;
             node.onMouseDown = function( e, pos, canvas ) {
                 if (e.isPrimary) {
                     const i = click_is_in_image(node, pos);
@@ -176,6 +182,13 @@ app.registerExtension({
                 }
                 return (org_onMouseDown && org_onMouseDown.apply(this, arguments));
             }
+
+            node.send_button_widget = node.addWidget("button", "", "", progressButtonPressed);
+            node.cancel_button_widget = node.addWidget("button", "", "", cancelButtonPressed);
+            enable_disabling(node.cancel_button_widget);
+            enable_disabling(node.send_button_widget);
+            disable_serialize(node.cancel_button_widget);
+            disable_serialize(node.send_button_widget);
 
         }
     },
@@ -190,9 +203,11 @@ app.registerExtension({
             }
 
             nodeType.prototype.imageClicked = function (imageIndex) {
-                if (this.selected.has(imageIndex)) this.selected.delete(imageIndex);
-                else this.selected.add(imageIndex);
-                this.update();
+                if (nodeType?.comfyClass==="easy imageChooser") {
+                    if (this.selected.has(imageIndex)) this.selected.delete(imageIndex);
+                    else this.selected.add(imageIndex);
+                    this.update();
+                }
             }
 
             const update = nodeType.prototype.update;
@@ -204,7 +219,7 @@ app.registerExtension({
                     const maxlength = this.imgs?.length || 0;
                     if (FlowState.paused_here(this.id) && selection>0) {
                         this.send_button_widget.name = (selection>1) ? "Progress selected (" + selection + '/' + maxlength  +")" : "Progress selected image";
-                    } else if (FlowState.idle() && selection>0) {
+                    } else if (selection>0) {
                         this.send_button_widget.name = (selection>1) ? "Progress selected (" + selection + '/' + maxlength  +")" : "Progress selected image as restart";
                     }
                     else {

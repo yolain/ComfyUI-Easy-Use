@@ -984,24 +984,15 @@ app.registerExtension({
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
 			nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
-				// const values = ["randomize", "fixed", "increment", "decrement"]
-				// const seed_widget = this.widgets.find(w => w.name == 'seed_num')
-				// const seed_control = this.addWidget("combo", "control_before_generate", values[0], () => {
-				// }, {
-				// 	values,
-				// 	serialize: false
-				// })
-				// seed_widget.linkedWidgets = [seed_control]
 				const seed_widget = this.widgets.find(w => ['seed_num','seed'].includes(w.name))
 				const seed_control = this.widgets.find(w=> ['control_before_generate','control_after_generate'].includes(w.name))
 				if(nodeData.name == 'easy seed'){
-					this.addWidget("button", "🎲 Manual Random Seed", null, _=>{
-						if(seed_control.value != 'fixed'){
-							seed_control.value = 'fixed'
-						}
+					const randomSeedButton = this.addWidget("button", "🎲 Manual Random Seed", null, _=>{
+						if(seed_control.value != 'fixed') seed_control.value = 'fixed'
 						seed_widget.value = Math.floor(Math.random() * 1125899906842624)
 						app.queuePrompt(0, 1)
-					})
+					},{ serialize:false})
+					seed_widget.linkedWidgets = [randomSeedButton, seed_control];
 				}
 			}
 			const onAdded = nodeType.prototype.onAdded;

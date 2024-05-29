@@ -1,6 +1,33 @@
 import { app } from "../../../../scripts/app.js";
 
-export class FlowState {
+
+class HUD {
+    constructor() {
+        this.current_node_id = undefined;
+        this.class_of_current_node = null;
+        this.current_node_is_chooser = false;
+    }
+
+    update() {
+        if (app.runningNodeId==this.current_node_id) return false;
+
+        this.current_node_id = app.runningNodeId;
+
+        if (this.current_node_id) {
+            this.class_of_current_node = app.graph?._nodes_by_id[app.runningNodeId.toString()]?.comfyClass;
+            this.current_node_is_chooser = this.class_of_current_node === "easy imageChooser"
+        } else {
+            this.class_of_current_node = undefined;
+            this.current_node_is_chooser = false;
+        }
+        return true;
+    }
+}
+
+const hud = new HUD();
+
+
+class FlowState {
     constructor(){}
     static idle() {
         return (!app.runningNodeId);
@@ -24,3 +51,5 @@ export class FlowState {
     }
     static cancelling = false;
 }
+
+export { hud, FlowState}

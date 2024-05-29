@@ -15,9 +15,9 @@ function send_message(id, message) {
 
 function send_cancel() {
     send_message(-1,'__cancel__');
-    //FlowState.cancelling = true;
-    //api.interrupt();
-    //FlowState.cancelling = false;
+    FlowState.cancelling = true;
+    api.interrupt();
+    FlowState.cancelling = false;
 }
 
 var skip_next = 0;
