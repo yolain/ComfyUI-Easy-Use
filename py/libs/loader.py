@@ -29,7 +29,7 @@ class easyLoader:
             "lora": defaultdict(dict),  # {lora_name: {UID: (model_lora, clip_lora)}}
             "controlnet": defaultdict(dict),
         }
-        self.memory_threshold = self.determine_memory_threshold(0.9)
+        self.memory_threshold = self.determine_memory_threshold(0.7)
         self.lora_name_cache = []
 
     def clean_values(self, values: str):

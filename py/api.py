@@ -10,6 +10,7 @@ from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .logic import ConvertAnything
 from .libs.model import easyModelManager
 from .libs.utils import getMetadata, cleanGPUUsedForce, get_local_filepath
+from .libs.cache import remove_cache
 
 try:
     import aiohttp
@@ -23,6 +24,7 @@ except ImportError:
 def cleanGPU(request):
     try:
         cleanGPUUsedForce()
+        remove_cache('*')
         return web.Response(status=200)
     except Exception as e:
         return web.Response(status=500)

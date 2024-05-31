@@ -53,6 +53,9 @@ class LayerDiffuse:
         sd_version = get_sd_version(model)
         model_url = LAYER_DIFFUSION[method.value][sd_version]["model_url"]
 
+        if image is not None:
+            image = image.movedim(-1, 1)
+
         try:
             ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
         except:

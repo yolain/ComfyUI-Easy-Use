@@ -2,6 +2,7 @@ from typing import Iterator, List, Tuple, Dict, Any, Union, Optional
 from _decimal import Context, getcontext
 from decimal import Decimal
 from .libs.utils import AlwaysEqualProxy, cleanGPUUsedForce
+from .libs.cache import remove_cache
 import numpy as np
 import json
 
@@ -531,9 +532,9 @@ class cleanGPUUsed:
 
     def empty_cache(self, anything, unique_id=None, extra_pnginfo=None):
         cleanGPUUsedForce()
+        remove_cache('*')
         return ()
 
-from .libs.cache import remove_cache
 class clearCacheKey:
     @classmethod
     def INPUT_TYPES(s):
