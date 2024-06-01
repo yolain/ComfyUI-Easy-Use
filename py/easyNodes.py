@@ -4,7 +4,7 @@ import folder_paths
 import numpy as np
 import comfy.utils, comfy.sample, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
 try:
-    import comfy.sampler_helpers
+    import comfy.sampler_helpers, comfy.supported_models
 except:
     pass
 from comfy.sd import CLIP, VAE
@@ -3614,6 +3614,14 @@ class samplerCustomSettings:
         except:
             raise Exception(f"Custom sampler {sampler_name} not found, Please updated your ComfyUI")
 
+    def add_model_patch_option(self, model):
+        if 'transformer_options' not in model.model_options:
+            model.model_options['transformer_options'] = {}
+        to = model.model_options['transformer_options']
+        if "model_patch" not in to:
+            to["model_patch"] = {}
+        return to
+
     def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, flip_sigmas, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
         # 图生图转换
@@ -3623,6 +3631,60 @@ class samplerCustomSettings:
         negative = pipe['negative']
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
         _guider, sigmas = None, None
+
+        # sigmas
+        if optional_sigmas is not None:
+            sigmas = optional_sigmas
+        else:
+            match scheduler:
+                case 'vp':
+                    sigmas, = self.get_custom_cls('VPScheduler').get_sigmas(steps, beta_d, beta_min, eps_s)
+                case 'karrasADV':
+                    sigmas, = self.get_custom_cls('KarrasScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
+                case 'exponentialADV':
+                    sigmas, = self.get_custom_cls('ExponentialScheduler').get_sigmas(steps, sigma_max, sigma_min)
+                case 'polyExponential':
+                    sigmas, = self.get_custom_cls('PolyexponentialScheduler').get_sigmas(steps, sigma_max, sigma_min,
+                                                                                         rho)
+                case 'sdturbo':
+                    sigmas, = self.get_custom_cls('SDTurboScheduler').get_sigmas(model, steps, denoise)
+                case 'alignYourSteps':
+                    try:
+                        model_type = get_sd_version(model)
+                        if model_type == 'unknown':
+                            raise Exception("This Model not supported")
+                        sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
+                    except:
+                        raise Exception("Please update your ComfyUI")
+                case _:
+                    sigmas, = self.get_custom_cls('BasicScheduler').get_sigmas(model, scheduler, steps, denoise)
+
+            # filp_sigmas
+            if flip_sigmas:
+                sigmas, = self.get_custom_cls('FlipSigmas').get_sigmas(sigmas)
+
+        #######################################################################################
+        # brushnet
+        to = None
+        transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
+        if 'model_patch' in transformer_options and 'brushnet' in transformer_options['model_patch']:
+            to = self.add_model_patch_option(model)
+            mp = to['model_patch']
+            if isinstance(model.model.model_config, comfy.supported_models.SD15):
+                mp['SDXL'] = False
+            elif isinstance(model.model.model_config, comfy.supported_models.SDXL):
+                mp['SDXL'] = True
+            else:
+                print('Base model type: ', type(model.model.model_config))
+                raise Exception("Unsupported model type: ", type(model.model.model_config))
+
+            mp['all_sigmas'] = sigmas
+            mp['unet'] = model.model.diffusion_model
+            mp['step'] = 0
+            mp['total_steps'] = 1
+        #
+        #######################################################################################
+
         if image_to_latent is not None:
             _, height, width, _ = image_to_latent.shape
             if height == 1 and width == 1:
@@ -3664,35 +3726,6 @@ class samplerCustomSettings:
             else:
                 sampler, = self.get_custom_cls('KSamplerSelect').get_sampler(sampler_name)
 
-        # sigmas
-        if optional_sigmas is not None:
-            sigmas = optional_sigmas
-        else:
-            match scheduler:
-                case 'vp':
-                    sigmas, = self.get_custom_cls('VPScheduler').get_sigmas(steps, beta_d, beta_min, eps_s)
-                case 'karrasADV':
-                    sigmas, = self.get_custom_cls('KarrasScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
-                case 'exponentialADV':
-                    sigmas, = self.get_custom_cls('ExponentialScheduler').get_sigmas(steps, sigma_max, sigma_min)
-                case 'polyExponential':
-                    sigmas, = self.get_custom_cls('PolyexponentialScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
-                case 'sdturbo':
-                    sigmas, = self.get_custom_cls('SDTurboScheduler').get_sigmas(model, steps, denoise)
-                case 'alignYourSteps':
-                    try:
-                        model_type = get_sd_version(model)
-                        if model_type == 'unknown':
-                            raise Exception("This Model not supported")
-                        sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
-                    except:
-                        raise Exception("Please update your ComfyUI")
-                case _:
-                    sigmas, = self.get_custom_cls('BasicScheduler').get_sigmas(model, scheduler, steps, denoise)
-
-            # filp_sigmas
-            if flip_sigmas:
-                sigmas, = self.get_custom_cls('FlipSigmas').get_sigmas(sigmas)
         # noise
         if add_noise == 'disable':
             noise, = self.get_custom_cls('DisableNoise').get_noise()
@@ -4384,13 +4417,7 @@ class samplerFull:
                 _sampler = samp_custom['sampler'] if 'sampler' in samp_custom else None
                 sigmas = samp_custom['sigmas'] if 'sigmas' in samp_custom else None
                 noise = samp_custom['noise'] if 'noise' in samp_custom else None
-                noise_mask = None
-                if "noise_mask" in samp_samples:
-                    noise_mask = samp_samples["noise_mask"]
-                samp_samples = guider.sample(noise.generate_noise(samp_samples), samp_samples['samples'], sampler, sigmas,
-                                        denoise_mask=noise_mask, seed=noise.seed)
-                samp_samples = samp_samples.to(comfy.model_management.intermediate_device())
-                samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent)
+                samp_samples, _ = sampler.custom_advanced_ksampler(noise, guider, _sampler, sigmas, samp_samples)
             elif scheduler == 'align_your_steps':
                 try:
                     model_type = get_sd_version(samp_model)
