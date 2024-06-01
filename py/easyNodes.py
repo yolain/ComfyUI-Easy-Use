@@ -2080,16 +2080,55 @@ class applyFooocusInpaint:
         return (m,)
 
 # brushnet
+def get_files_with_extension(folder_name, extension=['.safetensors']):
+
+    try:
+        folders = folder_paths.get_folder_paths(folder_name)
+    except:
+        folders = []
+
+    if not folders:
+        folders = [os.path.join(folder_paths.models_dir, folder_name)]
+    if not os.path.isdir(folders[0]):
+        folders = [os.path.join(folder_paths.base_path, folder_name)]
+    if not os.path.isdir(folders[0]):
+        return {}
+
+    filtered_folders = []
+    for x in folders:
+        if not os.path.isdir(x):
+            continue
+        the_same = False
+        for y in filtered_folders:
+            if os.path.samefile(x, y):
+                the_same = True
+                break
+        if not the_same:
+            filtered_folders.append(x)
+
+    if not filtered_folders:
+        return {}
+
+    output = {}
+    for x in filtered_folders:
+        files, folders_all = folder_paths.recursive_search(x, excluded_dir_names=[".git"])
+        filtered_files = folder_paths.filter_files_extensions(files, extension)
+
+        for f in filtered_files:
+            output[f] = x
+
+    return output
 class applyBrushNet:
 
     @classmethod
     def INPUT_TYPES(s):
+        s.inpaint_files = get_files_with_extension('inpaint')
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
                 "image": ("IMAGE",),
                 "mask": ("MASK",),
-                "brushnet": (folder_paths.get_filename_list('inpaint'),),
+                "brushnet": ([file for file in s.inpaint_files],),
                 "dtype": (['float16', 'bfloat16', 'float32', 'float64'], ),
                 "scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0}),
                 "start_at": ("INT", {"default": 0, "min": 0, "max": 10000}),
@@ -2115,7 +2154,7 @@ class applyBrushNet:
             if "BrushNetLoader" not in ALL_NODE_CLASS_MAPPINGS:
                 raise Exception("BrushNetLoader not found,please install ComfyUI-BrushNet")
             cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
-            brushnet_model, = cls().brushnet_loading(brushnet, dtype)
+            brushnet_model, = cls.brushnet_loading(self, brushnet, dtype)
             backend_cache.update_cache(brushnet, 'brushnet', (False, brushnet_model))
         cls = ALL_NODE_CLASS_MAPPINGS['BrushNet']
         m, positive, negative, latent = cls().model_update(model=model, vae=vae, image=image, mask=mask,
@@ -2135,24 +2174,25 @@ class applyBrushNet:
 #powerpaint
 class applyPowerPaint:
 
-    def get_file_list(filenames, ext='.bin'):
-        return [file for file in filenames if file.lower().endswith(ext)]
-
     @classmethod
     def INPUT_TYPES(s):
+        s.models_files = get_files_with_extension('inpaint')
+        s.inpaint_files = get_files_with_extension('inpaint', ['.bin'])
+        s.clip_files = get_files_with_extension('clip')
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
                 "image": ("IMAGE",),
                 "mask": ("MASK",),
-                "powerpaint_model": (s.get_file_list(folder_paths.get_filename_list('inpaint'),'.safetensors'),),
-                "powerpaint_clip": (s.get_file_list(folder_paths.get_filename_list('inpaint')),),
+                "powerpaint_model": ([file for file in s.models_files],),
+                "powerpaint_clip": ([file for file in s.inpaint_files],),
                 "dtype": (['float16', 'bfloat16', 'float32', 'float64'],),
                 "fitting": ("FLOAT", {"default": 1.0, "min": 0.3, "max": 1.0}),
                 "function": (['text guided', 'shape guided', 'object removal', 'context aware', 'image outpainting'],),
                 "scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0}),
                 "start_at": ("INT", {"default": 0, "min": 0, "max": 10000}),
                 "end_at": ("INT", {"default": 10000, "min": 0, "max": 10000}),
+                "save_memory": (['none', 'auto', 'max'],),
             },
         }
 
@@ -2161,7 +2201,7 @@ class applyPowerPaint:
     CATEGORY = "EasyUse/Inpaint"
     FUNCTION = "apply"
 
-    def apply(self, pipe, image, mask, powerpaint_model, powerpaint_clip, dtype, fitting, function, scale, start_at, end_at):
+    def apply(self, pipe, image, mask, powerpaint_model, powerpaint_clip, dtype, fitting, function, scale, start_at, end_at, save_memory='none'):
         model = pipe['model']
         vae = pipe['vae']
         positive = pipe['positive']
@@ -2177,8 +2217,8 @@ class applyPowerPaint:
             model_url = POWERPAINT_CLIP['base_fp16']['model_url']
             base_clip = get_local_filepath(model_url, os.path.join(folder_paths.models_dir, 'clip'))
             base = os.path.basename(base_clip)
-            ppclip, = cls().ppclip_loading(base, powerpaint_clip)
-            backend_cache.update_cache(powerpaint_clip, 'ppclip', (False,ppclip))
+            ppclip, = cls.ppclip_loading(self, base, powerpaint_clip)
+            backend_cache.update_cache(powerpaint_clip, 'ppclip', (False, ppclip))
         # load powerpaint model
         if powerpaint_model in backend_cache.cache:
             log_node_info("easy powerpaintApply", f"Using {powerpaint_model} Cached")
@@ -2186,14 +2226,14 @@ class applyPowerPaint:
         else:
             if "BrushNetLoader" not in ALL_NODE_CLASS_MAPPINGS:
                 raise Exception("BrushNetLoader not found,please install ComfyUI-Brushnet")
-            cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
-            powerpaint, = cls().brushnet_loading(powerpaint_model, dtype)
+            brushnet_cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
+            powerpaint, = brushnet_cls().brushnet_loading(powerpaint_model, dtype)
             backend_cache.update_cache(powerpaint_model, 'powerpaint', (False, powerpaint))
         cls = ALL_NODE_CLASS_MAPPINGS['PowerPaint']
         m, positive, negative, latent = cls().model_update(model=model, vae=vae, image=image, mask=mask, powerpaint=powerpaint,
                                                            clip=ppclip, positive=positive,
                                                            negative=negative, fitting=fitting, function=function,
-                                                           scale=scale, start_at=start_at, end_at=end_at)
+                                                           scale=scale, start_at=start_at, end_at=end_at, save_memory=save_memory)
         new_pipe = {
             **pipe,
             "model": m,
