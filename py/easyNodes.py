@@ -4529,7 +4529,7 @@ class samplerFull:
                                             extra_pnginfo, my_unique_id, preview_latent, samp_custom=samp_custom)
 
             # Downscale Model Unet
-            if samp_model is not None:
+            if samp_model is not None and downscale_options is not None:
                 samp_model = downscale_model_unet(samp_model)
 
             blend_samples = pipe['blend_samples'] if "blend_samples" in pipe else None
