@@ -1,5 +1,6 @@
 from .utils import find_wildcards_seed, find_nearest_steps, is_linked_styles_selector
 from .log import log_node_warn
+from .translate import zh_to_en, has_chinese
 from .wildcards import process_with_loras
 from .adv_encode import advanced_encode
 
@@ -9,6 +10,11 @@ def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_
     styles_selector = is_linked_styles_selector(prompt, my_unique_id, type)
     title = "正面提示词" if type == 'positive' else "负面提示词"
     log_node_warn("正在进行" + title + "...")
+
+    # Translate cn to en
+    if has_chinese(text):
+        text = zh_to_en([text])[0]
+
     positive_seed = find_wildcards_seed(my_unique_id, text, prompt)
     model, clip, text, cond_decode, show_prompt, pipe_lora_stack = process_with_loras(
         text, model, clip, type, positive_seed, can_load_lora, lora_stack, easyCache)

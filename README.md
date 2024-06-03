@@ -36,11 +36,13 @@
 - 支持 强制清理comfyUI模型显存占用
 - 支持Stable Diffusion 3 多账号API节点
 - 支持IC-Light的应用 [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows?tab=readme-ov-file#2-5-ic-light) | [代码整合来源](https://github.com/huchenlei/ComfyUI-IC-Light) | [技术参考](https://github.com/lllyasviel/IC-Light)
+- 中文提示词自动识别，使用[opus-mt-zh-en模型](https://huggingface.co/Helsinki-NLP/opus-mt-zh-en)
 
 ## 更新日志
 
 **v1.1.8**
 
+- 增加中文提示词自动翻译，使用[opus-mt-zh-en模型](https://huggingface.co/Helsinki-NLP/opus-mt-zh-en), 默认已对wildcard、lora正则处理, 其他需要保留的中文，可使用`@你的提示词@`包裹 (若依赖安装完成后报错, 请重启)，测算大约会占0.3GB显存
 - 增加 `easy controlnetStack` - controlnet堆
 - 增加 `easy applyBrushNet` - [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows/blob/main/workflows/2_advanced/2-4inpainting/2-4brushnet_1.1.8.json)
 - 增加 `easy applyPowerPaint` - [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows/blob/main/workflows/2_advanced/2-4inpainting/2-4powerpaint_outpaint_1.1.8.json)

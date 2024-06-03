@@ -11,6 +11,7 @@ from .logic import ConvertAnything
 from .libs.model import easyModelManager
 from .libs.utils import getMetadata, cleanGPUUsedForce, get_local_filepath
 from .libs.cache import remove_cache
+from .libs.translate import has_chinese, zh_to_en
 
 try:
     import aiohttp
@@ -29,6 +30,15 @@ def cleanGPU(request):
     except Exception as e:
         return web.Response(status=500)
         pass
+
+@PromptServer.instance.routes.post("/easyuse/translate")
+async def translate(request):
+    post = await request.post()
+    text = post.get("text")
+    if has_chinese(text):
+        return web.json_response({"text": zh_to_en([text])[0]})
+    else:
+        return web.json_response({"text": text})
 
 @PromptServer.instance.routes.get("/easyuse/reboot")
 def reboot(request):

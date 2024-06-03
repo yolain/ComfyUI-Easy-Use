@@ -31,6 +31,7 @@ from .libs.xyplot import easyXYPlot
 from .libs.controlnet import easyControlnet
 from .libs.conditioning import prompt_to_cond, set_cond
 from .libs.easing import EasingBase
+from .libs.translate import has_chinese, zh_to_en
 from .libs import cache as backend_cache
 
 sampler = easySampler()
@@ -57,6 +58,8 @@ class positivePrompt:
 
     @staticmethod
     def main(positive):
+        if has_chinese(positive):
+            return zh_to_en([positive])
         return positive,
 
 # 通配符提示词
@@ -86,8 +89,13 @@ class wildcardsPrompt:
 
     CATEGORY = "EasyUse/Prompt"
 
-    @staticmethod
-    def main(*args, **kwargs):
+    def translate(self, text):
+        if has_chinese(text):
+            return zh_to_en([text])[0]
+        else:
+            return text
+
+    def main(self, *args, **kwargs):
         prompt = kwargs["prompt"] if "prompt" in kwargs else None
         seed = kwargs["seed"]
 
@@ -98,10 +106,15 @@ class wildcardsPrompt:
         text = kwargs['text']
         if "multiline_mode" in kwargs and kwargs["multiline_mode"]:
             populated_text = []
+            _text = []
             text = text.split("\n")
             for t in text:
+                t = self.translate(t)
+                _text.append(t)
                 populated_text.append(process(t, seed))
+            text = _text
         else:
+            text = self.translate(text)
             populated_text = [process(text, seed)]
             text = [text]
         return {"ui": {"value": [seed]}, "result": (text, populated_text)}
@@ -126,7 +139,10 @@ class negativePrompt:
 
     @staticmethod
     def main(negative):
-        return negative,
+        if has_chinese(negative):
+            return zh_to_en([negative])
+        else:
+            return negative,
 
 # 风格提示词选择器
 class stylesPromptSelector:
@@ -262,6 +278,8 @@ class prompt:
     CATEGORY = "EasyUse/Prompt"
 
     def doit(self, prompt, main, lighting):
+        if has_chinese(prompt):
+            prompt = zh_to_en([prompt])[0]
         if lighting != 'none' and main != 'none':
             prompt = main + ',' + lighting + ',' + prompt
         elif lighting != 'none' and main == 'none':
@@ -305,6 +323,8 @@ class promptList:
 
             # Only process string input ports.
             if isinstance(v, str) and v != '':
+                if has_chinese(v):
+                    v = zh_to_en([v])[0]
                 prompts.append(v)
 
         return (prompts, prompts)
@@ -332,13 +352,13 @@ class promptLine:
 
     def generate_strings(self, prompt, start_index, max_rows, workflow_prompt=None, my_unique_id=None):
         lines = prompt.split('\n')
+        lines = [zh_to_en([v])[0] if has_chinese(v) else v for v in lines]
 
         start_index = max(0, min(start_index, len(lines) - 1))
 
         end_index = min(start_index + max_rows, len(lines))
 
         rows = lines[start_index:end_index]
-
 
         return (rows, rows)
 
@@ -906,11 +926,11 @@ class fullLoader:
             "empty_latent_width": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
             "empty_latent_height": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
 
-            "positive": ("STRING", {"default":"", "placeholder": "Positive", "multiline": True}),
+            "positive": ("STRING", {"default": "", "placeholder": "Positive", "multiline": True}),
             "positive_token_normalization": (["none", "mean", "length", "length+mean"],),
             "positive_weight_interpretation": (["comfy",  "A1111", "comfy++", "compel", "fixed attention"],),
 
-            "negative": ("STRING", {"default":"", "placeholder": "Negative", "multiline": True}),
+            "negative": ("STRING", {"default": "", "placeholder": "Negative", "multiline": True}),
             "negative_token_normalization": (["none", "mean", "length", "length+mean"],),
             "negative_weight_interpretation": (["comfy",  "A1111", "comfy++", "compel", "fixed attention"],),
 
@@ -1197,6 +1217,9 @@ class cascadeLoader:
 
         log_node_warn("正在处理提示词...")
         positive_seed = find_wildcards_seed(my_unique_id, positive, prompt)
+        # Translate cn to en
+        if has_chinese(positive):
+            positive = zh_to_en([positive])[0]
         model_c, clip, positive, positive_decode, show_positive_prompt, pipe_lora_stack = process_with_loras(positive,
                                                                                                            model_c, clip,
                                                                                                            "positive",
@@ -1206,6 +1229,9 @@ class cascadeLoader:
                                                                                                            easyCache)
         positive_wildcard_prompt = positive_decode if show_positive_prompt or is_positive_linked_styles_selector else ""
         negative_seed = find_wildcards_seed(my_unique_id, negative, prompt)
+        # Translate cn to en
+        if has_chinese(negative):
+            negative = zh_to_en([negative])[0]
         model_c, clip, negative, negative_decode, show_negative_prompt, pipe_lora_stack = process_with_loras(negative,
                                                                                                            model_c, clip,
                                                                                                            "negative",
@@ -1572,11 +1598,15 @@ class svdLoader:
             if clip_name == 'None':
                 raise Exception("You need choose a open_clip model when positive is not empty")
             clip = easyCache.load_clip(clip_name)
+            if has_chinese(optional_positive):
+                optional_positive = zh_to_en([optional_positive])[0]
             positive_embeddings_final, = CLIPTextEncode().encode(clip, optional_positive)
             positive, = ConditioningConcat().concat(positive, positive_embeddings_final)
         if optional_negative is not None and optional_negative != '':
             if clip_name == 'None':
                 raise Exception("You need choose a open_clip model when negative is not empty")
+            if has_chinese(optional_negative):
+                optional_positive = zh_to_en([optional_negative])[0]
             negative_embeddings_final, = CLIPTextEncode().encode(clip, optional_negative)
             negative, = ConditioningConcat().concat(negative, negative_embeddings_final)
 
@@ -1741,8 +1771,12 @@ class dynamiCrafterLoader(DynamiCrafter):
             clipped.clip_layer(clip_skip)
 
         if positive is not None and positive != '':
+            if has_chinese(positive):
+                positive = zh_to_en([positive])[0]
             positive_embeddings_final, = CLIPTextEncode().encode(clipped, positive)
         if negative is not None and negative != '':
+            if has_chinese(negative):
+                negative = zh_to_en([negative])[0]
             negative_embeddings_final, = CLIPTextEncode().encode(clipped, negative)
 
         image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))

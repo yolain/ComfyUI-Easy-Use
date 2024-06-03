@@ -30,7 +30,7 @@
 - Background removal nodes for the RMBG-1.4 model supporting BriaAI, [BriaAI Guide](https://huggingface.co/briaai/RMBG-1.4)
 - Forcibly cleared the memory usage of the comfy UI model are supported
 - Stable Diffusion 3 multi-account API nodes are supported
-- 
+
 ## Changelog
 
 **v1.1.8**
