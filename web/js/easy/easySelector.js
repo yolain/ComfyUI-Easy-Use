@@ -180,6 +180,7 @@ app.registerExtension({
                                 selector.element.children[1].innerHTML=''
                                 if(styles_list_cache[styles_values]){
                                     let tags = styles_list_cache[styles_values]
+                                    this.properties["values"] = []
                                     // 重新排序
                                     if(selector.value) tags = tags.sort((a,b)=> selector.value.includes(b.name) - selector.value.includes(a.name))
                                     let list = getTagList(tags, value, language);
