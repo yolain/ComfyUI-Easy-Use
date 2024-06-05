@@ -1,3 +1,5 @@
+#credit to huchenlei for this module
+#from https://github.com/huchenlei/ComfyUI-IC-Light-Native
 import torch
 import numpy as np
 from typing import Tuple, TypedDict, Callable

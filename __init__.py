@@ -42,7 +42,7 @@ else:
     os.mkdir(styles_path)
     os.mkdir(samples_path)
 
-# ComfyUI-Easy-PS相关 (需要把模型预览图暴露给PS读取，此处借鉴了 AIGODLIKE-ComfyUI-Studio 的部分代码)
+# 需要把模型预览图暴露给PS读取，此处借鉴了 AIGODLIKE-ComfyUI-Studio 的部分代码
 from .py.libs.add_resources import add_static_resource
 from .py.libs.model import easyModelManager
 model_config = easyModelManager().models_config

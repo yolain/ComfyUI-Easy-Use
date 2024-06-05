@@ -5,7 +5,7 @@ from .utils import easySave
 from .adv_encode import advanced_encode
 from .controlnet import easyControlnet
 from .log import log_node_warn
-from ..layer_diffuse.func import LayerDiffuse
+from ..layer_diffuse import LayerDiffuse
 from ..config import RESOURCES_DIR
 
 class easyXYPlot():

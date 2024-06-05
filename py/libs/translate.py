@@ -1,3 +1,5 @@
+#credit to shadowcz007 for this module
+#from https://github.com/shadowcz007/comfyui-mixlab-nodes/blob/main/nodes/TextGenerateNode.py
 import re
 import os
 import folder_paths
@@ -125,8 +127,6 @@ class ChinesePromptTranslate(Transformer):
     def embedding(self, *args):
         print('prompt embedding', args[0])
         if len(args) == 1:
-            # print('prompt embedding',str(args[0]))
-            # 只传递了一个参数，意味着只有embedding名称没有数字
             embedding_name = str(args[0])
             return f"embedding:{embedding_name}"
         elif len(args) > 1:
