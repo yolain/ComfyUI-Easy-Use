@@ -2095,55 +2095,20 @@ class applyFooocusInpaint:
         return (m,)
 
 # brushnet
-def get_files_with_extension(folder_name, extension=['.safetensors']):
-
-    try:
-        folders = folder_paths.get_folder_paths(folder_name)
-    except:
-        folders = []
-
-    if not folders:
-        folders = [os.path.join(folder_paths.models_dir, folder_name)]
-    if not os.path.isdir(folders[0]):
-        folders = [os.path.join(folder_paths.base_path, folder_name)]
-    if not os.path.isdir(folders[0]):
-        return {}
-
-    filtered_folders = []
-    for x in folders:
-        if not os.path.isdir(x):
-            continue
-        the_same = False
-        for y in filtered_folders:
-            if os.path.samefile(x, y):
-                the_same = True
-                break
-        if not the_same:
-            filtered_folders.append(x)
-
-    if not filtered_folders:
-        return {}
-
-    output = {}
-    for x in filtered_folders:
-        files, folders_all = folder_paths.recursive_search(x, excluded_dir_names=[".git"])
-        filtered_files = folder_paths.filter_files_extensions(files, extension)
-
-        for f in filtered_files:
-            output[f] = x
-
-    return output
+from .brushnet import BrushNet
 class applyBrushNet:
+
+    def get_files_with_extension(folder='inpaint', extensions='.safetensors'):
+        return [file for file in folder_paths.get_filename_list(folder) if file.endswith(extensions)]
 
     @classmethod
     def INPUT_TYPES(s):
-        s.inpaint_files = get_files_with_extension('inpaint')
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
                 "image": ("IMAGE",),
                 "mask": ("MASK",),
-                "brushnet": ([file for file in s.inpaint_files],),
+                "brushnet": (s.get_files_with_extension(),),
                 "dtype": (['float16', 'bfloat16', 'float32', 'float64'], ),
                 "scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0}),
                 "start_at": ("INT", {"default": 0, "min": 0, "max": 10000}),
@@ -2162,17 +2127,15 @@ class applyBrushNet:
         vae = pipe['vae']
         positive = pipe['positive']
         negative = pipe['negative']
+        cls = BrushNet()
         if brushnet in backend_cache.cache:
             log_node_info("easy brushnetApply", f"Using {brushnet} Cached")
             _, brushnet_model = backend_cache.cache[brushnet][1]
         else:
-            if "BrushNetLoader" not in ALL_NODE_CLASS_MAPPINGS:
-                raise Exception("BrushNetLoader not found,please install ComfyUI-BrushNet")
-            cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
-            brushnet_model, = cls.brushnet_loading(self, brushnet, dtype)
+            brushnet_file = os.path.join(folder_paths.get_full_path("inpaint", brushnet))
+            brushnet_model, = cls.load_brushnet_model(brushnet_file, dtype)
             backend_cache.update_cache(brushnet, 'brushnet', (False, brushnet_model))
-        cls = ALL_NODE_CLASS_MAPPINGS['BrushNet']
-        m, positive, negative, latent = cls().model_update(model=model, vae=vae, image=image, mask=mask,
+        m, positive, negative, latent = cls.brushnet_model_update(model=model, vae=vae, image=image, mask=mask,
                                                            brushnet=brushnet_model, positive=positive,
                                                            negative=negative, scale=scale, start_at=start_at,
                                                            end_at=end_at)
@@ -2186,21 +2149,20 @@ class applyBrushNet:
         del pipe
         return (new_pipe,)
 
-#powerpaint
+# #powerpaint
 class applyPowerPaint:
+    def get_files_with_extension(folder='inpaint', extensions='.safetensors'):
+        return [file for file in folder_paths.get_filename_list(folder) if file.endswith(extensions)]
 
     @classmethod
     def INPUT_TYPES(s):
-        s.models_files = get_files_with_extension('inpaint')
-        s.inpaint_files = get_files_with_extension('inpaint', ['.bin'])
-        s.clip_files = get_files_with_extension('clip')
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
                 "image": ("IMAGE",),
                 "mask": ("MASK",),
-                "powerpaint_model": ([file for file in s.models_files],),
-                "powerpaint_clip": ([file for file in s.inpaint_files],),
+                "powerpaint_model": (s.get_files_with_extension(),),
+                "powerpaint_clip": (s.get_files_with_extension(extensions='.bin'),),
                 "dtype": (['float16', 'bfloat16', 'float32', 'float64'],),
                 "fitting": ("FLOAT", {"default": 1.0, "min": 0.3, "max": 1.0}),
                 "function": (['text guided', 'shape guided', 'object removal', 'context aware', 'image outpainting'],),
@@ -2221,31 +2183,26 @@ class applyPowerPaint:
         vae = pipe['vae']
         positive = pipe['positive']
         negative = pipe['negative']
+
+        cls = BrushNet()
         # load powerpaint clip
         if powerpaint_clip in backend_cache.cache:
             log_node_info("easy powerpaintApply", f"Using {powerpaint_clip} Cached")
             _, ppclip = backend_cache.cache[powerpaint_clip][1]
         else:
-            if "PowerPaintCLIPLoader" not in ALL_NODE_CLASS_MAPPINGS:
-                raise Exception("PowerPaintCLIPLoader not found,please install ComfyUI-Brushnet")
-            cls = ALL_NODE_CLASS_MAPPINGS['PowerPaintCLIPLoader']
             model_url = POWERPAINT_CLIP['base_fp16']['model_url']
             base_clip = get_local_filepath(model_url, os.path.join(folder_paths.models_dir, 'clip'))
-            base = os.path.basename(base_clip)
-            ppclip, = cls.ppclip_loading(self, base, powerpaint_clip)
+            ppclip, = cls.load_powerpaint_clip(base_clip, os.path.join(folder_paths.get_full_path("inpaint", powerpaint_clip)))
             backend_cache.update_cache(powerpaint_clip, 'ppclip', (False, ppclip))
         # load powerpaint model
         if powerpaint_model in backend_cache.cache:
             log_node_info("easy powerpaintApply", f"Using {powerpaint_model} Cached")
             _, powerpaint = backend_cache.cache[powerpaint_model][1]
         else:
-            if "BrushNetLoader" not in ALL_NODE_CLASS_MAPPINGS:
-                raise Exception("BrushNetLoader not found,please install ComfyUI-Brushnet")
-            brushnet_cls = ALL_NODE_CLASS_MAPPINGS['BrushNetLoader']
-            powerpaint, = brushnet_cls().brushnet_loading(powerpaint_model, dtype)
+            powerpaint_file = os.path.join(folder_paths.get_full_path("inpaint", powerpaint_model))
+            powerpaint, = cls.load_brushnet_model(powerpaint_file, dtype)
             backend_cache.update_cache(powerpaint_model, 'powerpaint', (False, powerpaint))
-        cls = ALL_NODE_CLASS_MAPPINGS['PowerPaint']
-        m, positive, negative, latent = cls().model_update(model=model, vae=vae, image=image, mask=mask, powerpaint=powerpaint,
+        m, positive, negative, latent = cls.powerpaint_model_update(model=model, vae=vae, image=image, mask=mask, powerpaint=powerpaint,
                                                            clip=ppclip, positive=positive,
                                                            negative=negative, fitting=fitting, function=function,
                                                            scale=scale, start_at=start_at, end_at=end_at, save_memory=save_memory)

@@ -1,3 +1,5 @@
+#credit to ExponentialML for this module
+#from https://github.com/ExponentialML/ComfyUI_Native_DynamiCrafter
 import os
 import torch
 import comfy
