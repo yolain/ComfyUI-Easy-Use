@@ -9,7 +9,7 @@ const controlnet = ['easy controlnetLoader', 'easy controlnetLoaderADV', 'easy i
 const ipadapter = ['easy ipadapterApply', 'easy ipadapterApplyADV', 'easy ipadapterStyleComposition', 'easy ipadapterApplyFromParams']
 const positive_prompt = ['easy positive', 'easy wildcards']
 const imageNode = ['easy loadImageBase64', 'LoadImage', 'LoadImageMask']
-const brushnet = ['easy applyBrushNet', 'easy applyPowerPaint', 'easy applyInpaint']
+const inpaint = ['easy applyBrushNet', 'easy applyPowerPaint', 'easy applyInpaint']
 const widgetMapping = {
     "positive_prompt":{
         "text": "positive",
@@ -66,7 +66,7 @@ const widgetMapping = {
         "base64_data":"base64_data",
         "channel": "channel"
     },
-    "brushnet":{
+    "inpaint":{
         "dtype": "dtype",
         "fitting": "fitting",
         "function": "function",
@@ -109,7 +109,7 @@ const inputMapping = {
         "attn_mask":"attn_mask",
         "optional_ipadapter":"optional_ipadapter"
     },
-    "brushnet":{
+    "inpaint":{
         "pipe": "pipe",
         "image": "image",
         "mask": "mask"
@@ -152,7 +152,7 @@ const outputMapping = {
         "masks":"masks",
         "ipadapter":"ipadapter"
     },
-    "brushnet":{
+    "inpaint":{
         "pipe": "pipe",
     }
 };
@@ -580,9 +580,9 @@ app.registerExtension({
         if (imageNode.includes(nodeData.name)) {
             addMenu("↪️ Swap LoadImage", 'load_image', imageNode, nodeType)
         }
-        // Swap Brushnet
-        if (brushnet.includes(nodeData.name)) {
-            addMenu("↪️ Swap BrushNet", 'brushnet', brushnet, nodeType)
+        // Swap inpaint
+        if (inpaint.includes(nodeData.name)) {
+            addMenu("↪️ Swap InpaintNode", 'inpaint', inpaint, nodeType)
         }
     }
 });

@@ -1,11 +1,12 @@
 import comfy
+import comfy.model_management
+import comfy.samplers
 import torch
 import numpy as np
 import latent_preview
 from nodes import MAX_RESOLUTION
 from PIL import Image
 from typing import Dict, List, Optional, Tuple, Union, Any
-from ..brushnet.model_patch import add_model_patch
 
 class easySampler:
     def __init__(self):
@@ -105,18 +106,8 @@ class easySampler:
             batch_inds = latent["batch_index"] if "batch_index" in latent else None
             noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
 
-        #######################################################################################
-        # brushnet
-        add_model_patch(model)
-        #
-        #######################################################################################
-        samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
-                                      latent_image,
-                                      denoise=denoise, disable_noise=disable_noise, start_step=start_step,
-                                      last_step=last_step,
-                                      force_full_denoise=force_full_denoise, noise_mask=noise_mask, callback=callback,
-                                      disable_pbar=disable_pbar, seed=seed)
-
+        kSampler = comfy.samplers.KSampler(model=model, steps=steps, device=device)
+        samples = kSampler.sample(noise, positive, negative, cfg, latent_image=latent_image, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, denoise_mask=noise_mask, sigmas=None, callback=callback, disable_pbar=disable_pbar, seed=seed)
         out = latent.copy()
         out["samples"] = samples
         return out
@@ -148,20 +139,18 @@ class easySampler:
 
         pbar = comfy.utils.ProgressBar(steps)
 
-        #######################################################################################
-        # brushnet
-        add_model_patch(model)
-        #######################################################################################
-
         def callback(step, x0, x, total_steps):
             preview_bytes = None
             if previewer:
                 preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
             pbar.update_absolute(step + 1, total_steps, preview_bytes)
 
-        samples = comfy.sample.sample_custom(model, noise, cfg, _sampler, sigmas, positive, negative, latent_image,
-                                             noise_mask=noise_mask, callback=callback, disable_pbar=disable_pbar,
-                                             seed=seed)
+        # samples = comfy.sample.sample_custom(model, noise, cfg, _sampler, sigmas, positive, negative, latent_image,
+        #                                      noise_mask=noise_mask, callback=callback, disable_pbar=disable_pbar,
+        #                                      seed=seed)
+
+        samples = comfy.samplers.sample(model, noise, positive, negative, cfg, device, _sampler, sigmas, latent_image=latent_image,
+               denoise_mask=noise_mask, callback=callback, disable_pbar=disable_pbar, seed=seed)
 
         out = latent.copy()
         out["samples"] = samples

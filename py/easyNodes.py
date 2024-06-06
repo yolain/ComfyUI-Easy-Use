@@ -2225,7 +2225,7 @@ class applyInpaint:
                 "image": ("IMAGE",),
                 "mask": ("MASK",),
                 "inpaint_mode": (('normal', 'fooocus_inpaint', 'brushnet_random', 'brushnet_segmentation', 'powerpaint'),),
-                "encode": (('vae_encode_inpaint', 'inpaint_model_conditioning', 'different_diffusion'),),
+                "encode": (('none', 'vae_encode_inpaint', 'inpaint_model_conditioning', 'different_diffusion'), {"default": "none"}),
                 "grow_mask_by": ("INT", {"default": 6, "min": 0, "max": 64, "step": 1}),
                 "dtype": (['float16', 'bfloat16', 'float32', 'float64'],),
                 "fitting": ("FLOAT", {"default": 1.0, "min": 0.3, "max": 1.0}),
@@ -2306,7 +2306,13 @@ class applyInpaint:
             new_pipe, = applyPowerPaint().apply(new_pipe, image, mask, powerpaint_model, powerpaint_clip, dtype, fitting, function, scale, start_at, end_at)
 
         vae = new_pipe['vae']
-        if encode == 'vae_encode_inpaint':
+        if encode == 'none':
+            if inpaint_mode == 'fooocus_inpaint':
+                model, = applyFooocusInpaint().apply(new_pipe['model'], new_pipe['samples'],
+                                                     list(FOOOCUS_INPAINT_HEAD.keys())[0],
+                                                     list(FOOOCUS_INPAINT_PATCH.keys())[0])
+                new_pipe['model'] = model
+        elif encode == 'vae_encode_inpaint':
             latent, = VAEEncodeForInpaint().encode(vae, image, mask, grow_mask_by)
             new_pipe['samples'] = latent
             if inpaint_mode == 'fooocus_inpaint':

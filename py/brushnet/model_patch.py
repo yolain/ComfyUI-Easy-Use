@@ -119,19 +119,3 @@ def modified_apply_control(h, control, name):
             except:
                 print.warning("warning control could not be applied {} {}".format(h.shape, ctrl.shape))
     return h
-
-def add_model_patch(model):
-    to = add_model_patch_option(model)
-    mp = to['model_patch']
-    if "brushnet" in mp:
-        if isinstance(model.model.model_config, comfy.supported_models.SD15):
-            mp['SDXL'] = False
-        elif isinstance(model.model.model_config, comfy.supported_models.SDXL):
-            mp['SDXL'] = True
-        else:
-            print('Base model type: ', type(model.model.model_config))
-            raise Exception("Unsupported model type: ", type(model.model.model_config))
-
-        mp['unet'] = model.model.diffusion_model
-        mp['step'] = 0
-        mp['total_steps'] = 1
