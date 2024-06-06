@@ -2561,7 +2561,7 @@ class ipadapter:
                 # if v11 is not found, try with the old version
                 if not [e for e in ipadapter_list if re.search(pattern, e, re.IGNORECASE)]:
                     pattern = 'portrait.sd15\.(safetensors|bin)$'
-                is_insightface = True
+            is_insightface = True
         elif preset == "faceid":
             if is_sdxl:
                 pattern = 'faceid.sdxl\.(safetensors|bin)$'
