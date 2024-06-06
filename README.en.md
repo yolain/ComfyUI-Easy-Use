@@ -31,7 +31,20 @@
 - Forcibly cleared the memory usage of the comfy UI model are supported
 - Stable Diffusion 3 multi-account API nodes are supported
 
+## Installation
+Clone the repo into the **custom_nodes** directory and install the requirements:
+```shell
+#1. Clone the repo
+git clone https://github.com/yolain/ComfyUI-Easy-Use
+#2. Install the requirements
+Double-click install.bat to install the required dependencies
+```
+
 ## Changelog
+
+**v1.1.9**
+
+- Added `easy applyInpaint` - All inpainting mode in this node
 
 **v1.1.8**
 
