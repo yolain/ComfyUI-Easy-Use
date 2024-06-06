@@ -9,7 +9,7 @@ const controlnet = ['easy controlnetLoader', 'easy controlnetLoaderADV', 'easy i
 const ipadapter = ['easy ipadapterApply', 'easy ipadapterApplyADV', 'easy ipadapterStyleComposition', 'easy ipadapterApplyFromParams']
 const positive_prompt = ['easy positive', 'easy wildcards']
 const imageNode = ['easy loadImageBase64', 'LoadImage', 'LoadImageMask']
-const brushnet = ['easy applyBrushNet', 'easy applyPowerPaint']
+const brushnet = ['easy applyBrushNet', 'easy applyPowerPaint', 'easy applyInpaint']
 const widgetMapping = {
     "positive_prompt":{
         "text": "positive",
@@ -68,6 +68,8 @@ const widgetMapping = {
     },
     "brushnet":{
         "dtype": "dtype",
+        "fitting": "fitting",
+        "function": "function",
         "scale": "scale",
         "start_at": "start_at",
         "end_at": "end_at"
