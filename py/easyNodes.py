@@ -18,7 +18,7 @@ from PIL import Image
 
 from server import PromptServer
 from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint, InpaintModelConditioning
-from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, POWERPAINT_CLIP, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS, IC_LIGHT_MODELS
+from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, POWERPAINT_MODELS, IPADAPTER_DIR, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS, IC_LIGHT_MODELS
 from .layer_diffuse import LayerDiffuse, LayerMethod
 from .xyplot import XYplot_ModelMergeBlocks, XYplot_CFG, XYplot_Lora, XYplot_Checkpoint, XYplot_Denoise, XYplot_Steps, XYplot_PromptSR, XYplot_Positive_Cond, XYplot_Negative_Cond, XYplot_Positive_Cond_List, XYplot_Negative_Cond_List, XYplot_SeedsBatch, XYplot_Control_Net, XYplot_Sampler_Scheduler
 
@@ -2190,7 +2190,7 @@ class applyPowerPaint:
             log_node_info("easy powerpaintApply", f"Using {powerpaint_clip} Cached")
             _, ppclip = backend_cache.cache[powerpaint_clip][1]
         else:
-            model_url = POWERPAINT_CLIP['base_fp16']['model_url']
+            model_url = POWERPAINT_MODELS['base_fp16']['model_url']
             base_clip = get_local_filepath(model_url, os.path.join(folder_paths.models_dir, 'clip'))
             ppclip, = cls.load_powerpaint_clip(base_clip, os.path.join(folder_paths.get_full_path("inpaint", powerpaint_clip)))
             backend_cache.update_cache(powerpaint_clip, 'ppclip', (False, ppclip))
@@ -2282,8 +2282,8 @@ class applyInpaint:
         if model_type == 'sdxl':
             raise Exception("Powerpaint not supported for SDXL models")
 
-        powerpaint_model = POWERPAINT_CLIP['v2.1']['model_url']
-        powerpaint_clip = POWERPAINT_CLIP['v2.1']['clip_url']
+        powerpaint_model = POWERPAINT_MODELS['v2.1']['model_url']
+        powerpaint_clip = POWERPAINT_MODELS['v2.1']['clip_url']
 
         from urllib.parse import urlparse
         get_local_filepath(powerpaint_model, os.path.join(INPAINT_DIR, 'powerpaint'))
