@@ -5,7 +5,8 @@ import latent_preview
 from nodes import MAX_RESOLUTION
 from PIL import Image
 from typing import Dict, List, Optional, Tuple, Union, Any
-from .utils import get_sd_version
+from ..brushnet.model_patch import add_model_patch
+
 class easySampler:
     def __init__(self):
         self.last_helds: dict[str, list] = {
@@ -68,14 +69,6 @@ class easySampler:
             samples = ({"samples": latent_c}, {"samples": latent_b})
         return samples
 
-    def add_model_patch_option(self, model):
-        if 'transformer_options' not in model.model_options:
-            model.model_options['transformer_options'] = {}
-        to = model.model_options['transformer_options']
-        if "model_patch" not in to:
-            to["model_patch"] = {}
-        return to
-
 
     def common_ksampler(self, model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=1.0,
                         disable_noise=False, start_step=None, last_step=None, force_full_denoise=False,
@@ -114,22 +107,7 @@ class easySampler:
 
         #######################################################################################
         # brushnet
-        transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
-        if 'model_patch' in transformer_options and 'brushnet' in transformer_options['model_patch']:
-            to = self.add_model_patch_option(model)
-            mp = to['model_patch']
-            if isinstance(model.model.model_config, comfy.supported_models.SD15):
-                mp['SDXL'] = False
-            elif isinstance(model.model.model_config, comfy.supported_models.SDXL):
-                mp['SDXL'] = True
-            else:
-                print('Base model type: ', type(model.model.model_config))
-                raise Exception("Unsupported model type: ", type(model.model.model_config))
-
-            mp['unet'] = model.model.diffusion_model
-            mp['step'] = 0
-            mp['total_steps'] = 1
-
+        add_model_patch(model)
         #
         #######################################################################################
         samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
@@ -172,29 +150,11 @@ class easySampler:
 
         #######################################################################################
         # brushnet
-        to = None
-        transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
-        if 'model_patch' in transformer_options and 'brushnet' in transformer_options['model_patch']:
-            to = self.add_model_patch_option(model)
-            mp = to['model_patch']
-            if isinstance(model.model.model_config, comfy.supported_models.SD15):
-                mp['SDXL'] = False
-            elif isinstance(model.model.model_config, comfy.supported_models.SDXL):
-                mp['SDXL'] = True
-            else:
-                print('Base model type: ', type(model.model.model_config))
-                raise Exception("Unsupported model type: ", type(model.model.model_config))
-
-            mp['unet'] = model.model.diffusion_model
-            mp['step'] = 0
-            mp['total_steps'] = 1
-        #
+        add_model_patch(model)
         #######################################################################################
 
         def callback(step, x0, x, total_steps):
             preview_bytes = None
-            if to is not None and "model_patch" in to:
-                to['model_patch']['step'] = step + 1
             if previewer:
                 preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
             pbar.update_absolute(step + 1, total_steps, preview_bytes)

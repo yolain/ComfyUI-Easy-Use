@@ -357,6 +357,38 @@ function widgetLogic(node, widget) {
 		}
 		updateNodeHeight(node)
 	}
+
+	if(widget.name === 'inpaint_mode'){
+		switch (widget.value){
+			case 'normal':
+			case 'fooocus_inpaint':
+				toggleWidget(node, findWidgetByName(node, 'dtype'))
+				toggleWidget(node, findWidgetByName(node, 'fitting'))
+				toggleWidget(node, findWidgetByName(node, 'function'))
+				toggleWidget(node, findWidgetByName(node, 'scale'))
+				toggleWidget(node, findWidgetByName(node, 'start_at'))
+				toggleWidget(node, findWidgetByName(node, 'end_at'))
+				break
+			case 'brushnet_random':
+			case 'brushnet_segmentation':
+				toggleWidget(node, findWidgetByName(node, 'dtype'), true)
+				toggleWidget(node, findWidgetByName(node, 'fitting'))
+				toggleWidget(node, findWidgetByName(node, 'function'))
+				toggleWidget(node, findWidgetByName(node, 'scale'), true)
+				toggleWidget(node, findWidgetByName(node, 'start_at'), true)
+				toggleWidget(node, findWidgetByName(node, 'end_at'), true)
+				break
+			case 'powerpaint':
+				toggleWidget(node, findWidgetByName(node, 'dtype'), true)
+				toggleWidget(node, findWidgetByName(node, 'fitting'),true)
+				toggleWidget(node, findWidgetByName(node, 'function'),true)
+				toggleWidget(node, findWidgetByName(node, 'scale'), true)
+				toggleWidget(node, findWidgetByName(node, 'start_at'), true)
+				toggleWidget(node, findWidgetByName(node, 'end_at'), true)
+				break
+		}
+		updateNodeHeight(node)
+	}
 }
 
 function widgetLogic2(node, widget) {
@@ -646,6 +678,7 @@ app.registerExtension({
 			case 'easy ipadapterApply':
 			case 'easy ipadapterApplyADV':
 			case 'easy ipadapterApplyEncoder':
+			case 'easy applyInpaint':
 				getSetters(node)
 				break
 			case "easy wildcards":
@@ -1150,7 +1183,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale',
 						'num_loras', 'num_controlnet', 'mode', 'toggle', 'resolution', 'target_parameter',
 	'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode',
 	'lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch', 'num_embeds',
-	"easing_mode", "guider", "scheduler"
+	"easing_mode", "guider", "scheduler", "inpaint_mode",
 ]
 
 function getSetters(node) {

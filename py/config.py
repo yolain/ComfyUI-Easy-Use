@@ -77,8 +77,12 @@ BRUSHNET_MODELS = {
     }
 }
 POWERPAINT_CLIP = {
-    "base_fp16":{
-        "model_url":"https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/text_encoder/model.fp16.safetensors"
+    "base_fp16": {
+        "model_url": "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/text_encoder/model.fp16.safetensors"
+    },
+    "v2.1": {
+        "model_url": "https://huggingface.co/JunhaoZhuang/PowerPaint-v2-1/resolve/main/PowerPaint_Brushnet/diffusion_pytorch_model.safetensors",
+        "clip_url": "https://huggingface.co/JunhaoZhuang/PowerPaint-v2-1/resolve/main/PowerPaint_Brushnet/pytorch_model.bin",
     }
 }
 
