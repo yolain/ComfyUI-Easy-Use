@@ -2349,7 +2349,6 @@ class applyInpaint:
             else:
                 raise Exception("Differential Diffusion not found,please update comfyui")
 
-
         return (new_pipe,)
 # ---------------------------------------------------------------Inpaint 结束----------------------------------------------------------------------#
 

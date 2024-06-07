@@ -12,6 +12,7 @@ from PIL import Image, ImageDraw, ImageFilter
 from torchvision.transforms import Resize, CenterCrop, GaussianBlur
 from torchvision.transforms.functional import to_pil_image
 from .libs.log import log_node_info
+from .libs.utils import AlwaysEqualProxy
 from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask
 from .libs.colorfix import adain_color_fix, wavelet_color_fix
 from .libs.chooser import ChooserMessage, ChooserCancelled
@@ -1411,10 +1412,15 @@ class imageToBase64:
       return {"result": (base64_str,)}
 
 class removeLocalImage:
+
+  def __init__(self):
+    self.hasFile = False
+
   @classmethod
   def INPUT_TYPES(s):
       return {
         "required": {
+          "any": (AlwaysEqualProxy("*"),),
           "file_name": ("STRING",{"default":""}),
         },
       }
@@ -1424,15 +1430,27 @@ class removeLocalImage:
   FUNCTION = "remove"
   CATEGORY = "EasyUse/Image"
 
-  def remove(self, file_name):
-    hasFile = False
-    for file in os.listdir(folder_paths.input_directory):
-      name_without_extension, file_extension = os.path.splitext(file)
-      if name_without_extension == file_name or file == file_name:
-        os.remove(os.path.join(folder_paths.input_directory, file))
-        hasFile = True
-        break
-    if hasFile:
+
+
+  def remove(self, any, file_name):
+    self.hasFile = False
+    def listdir(path, dir_name=''):
+      for file in os.listdir(path):
+        file_path = os.path.join(path, file)
+        if os.path.isdir(file_path):
+          dir_name = os.path.basename(file_path)
+          listdir(file_path, dir_name)
+        else:
+          file = os.path.join(dir_name, file)
+          name_without_extension, file_extension = os.path.splitext(file)
+          if name_without_extension == file_name or file == file_name:
+            os.remove(os.path.join(folder_paths.input_directory, file))
+            self.hasFile = True
+            break
+
+    listdir(folder_paths.input_directory, '')
+
+    if self.hasFile:
       PromptServer.instance.send_sync("easyuse-toast", {"content": "Removed SuccessFully", "type":'success'})
     else:
       PromptServer.instance.send_sync("easyuse-toast", {"content": "Removed Failed", "type": 'error'})

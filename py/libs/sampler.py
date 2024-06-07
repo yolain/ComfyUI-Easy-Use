@@ -98,7 +98,6 @@ class easySampler:
                 preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
             pbar.update_absolute(step + 1, total_steps, preview_bytes)
 
-
         if disable_noise:
             noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout,
                                 device="cpu")
@@ -106,7 +105,10 @@ class easySampler:
             batch_inds = latent["batch_index"] if "batch_index" in latent else None
             noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
 
-        kSampler = comfy.samplers.KSampler(model=model, steps=steps, device=device)
+        comfy.model_management.load_model_gpu(model)
+        model_patcher = comfy.model_patcher.ModelPatcher(model.model, load_device=device,
+                                                         offload_device=comfy.model_management.unet_offload_device())
+        kSampler = comfy.samplers.KSampler(model_patcher, steps=steps, device=model.load_device, sampler=sampler_name, scheduler=scheduler, denoise=denoise, model_options=model.model_options)
         samples = kSampler.sample(noise, positive, negative, cfg, latent_image=latent_image, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, denoise_mask=noise_mask, sigmas=None, callback=callback, disable_pbar=disable_pbar, seed=seed)
         out = latent.copy()
         out["samples"] = samples
