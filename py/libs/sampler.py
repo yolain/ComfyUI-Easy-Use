@@ -106,9 +106,9 @@ class easySampler:
             noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
 
         comfy.model_management.load_model_gpu(model)
-        model_patcher = comfy.model_patcher.ModelPatcher(model.model, load_device=device,
-                                                         offload_device=comfy.model_management.unet_offload_device())
-        kSampler = comfy.samplers.KSampler(model_patcher, steps=steps, device=model.load_device, sampler=sampler_name, scheduler=scheduler, denoise=denoise, model_options=model.model_options)
+        # model_patcher = comfy.model_patcher.ModelPatcher(model.model, load_device=device,
+        #                                                  offload_device=comfy.model_management.unet_offload_device())
+        kSampler = comfy.samplers.KSampler(model, steps=steps, device=model.load_device, sampler=sampler_name, scheduler=scheduler, denoise=denoise, model_options=model.model_options)
         samples = kSampler.sample(noise, positive, negative, cfg, latent_image=latent_image, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, denoise_mask=noise_mask, sigmas=None, callback=callback, disable_pbar=disable_pbar, seed=seed)
         out = latent.copy()
         out["samples"] = samples
