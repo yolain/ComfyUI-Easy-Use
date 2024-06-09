@@ -6,7 +6,7 @@
 
 # ComfyUI Easy Use
 
-[![Bilibili Badge](https://img.shields.io/badge/1.0版本-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white&link=https://www.bilibili.com/video/BV1Wi4y1h76G)](https://www.bilibili.com/video/BV1Wi4y1h76G)
+[![Bilibili Badge](https://img.shields.io/badge/1.1版本-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white&link=https://www.bilibili.com/video/BV1w6421F7Uv)](https://www.bilibili.com/video/BV1w6421F7Uv)
 [![Bilibili Badge](https://img.shields.io/badge/基本介绍-00A1D6?style=for-the-badge&logo=bilibili&logoColor=white&link=https://www.bilibili.com/video/BV1vQ4y1G7z7)](https://www.bilibili.com/video/BV1vQ4y1G7z7/)
 </div>
 

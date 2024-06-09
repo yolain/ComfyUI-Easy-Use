@@ -4257,7 +4257,7 @@ class dynamicCFGSettings:
                      "cfg_mode": (DynThresh.Modes,),
                      "cfg_scale_min": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0, "step": 0.5}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS+['align_your_steps'],),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
