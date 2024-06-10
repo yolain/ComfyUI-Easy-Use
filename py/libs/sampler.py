@@ -7,6 +7,7 @@ import latent_preview
 from nodes import MAX_RESOLUTION
 from PIL import Image
 from typing import Dict, List, Optional, Tuple, Union, Any
+from ..brushnet.model_patch import add_model_patch
 
 class easySampler:
     def __init__(self):
@@ -105,11 +106,18 @@ class easySampler:
             batch_inds = latent["batch_index"] if "batch_index" in latent else None
             noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
 
-        comfy.model_management.load_model_gpu(model)
-        # model_patcher = comfy.model_patcher.ModelPatcher(model.model, load_device=device,
-        #                                                  offload_device=comfy.model_management.unet_offload_device())
-        kSampler = comfy.samplers.KSampler(model, steps=steps, device=model.load_device, sampler=sampler_name, scheduler=scheduler, denoise=denoise, model_options=model.model_options)
-        samples = kSampler.sample(noise, positive, negative, cfg, latent_image=latent_image, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, denoise_mask=noise_mask, sigmas=None, callback=callback, disable_pbar=disable_pbar, seed=seed)
+        #######################################################################################
+        # brushnet
+        add_model_patch(model)
+        #
+        #######################################################################################
+        samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
+                                      latent_image,
+                                      denoise=denoise, disable_noise=disable_noise, start_step=start_step,
+                                      last_step=last_step,
+                                      force_full_denoise=force_full_denoise, noise_mask=noise_mask,
+                                      callback=callback,
+                                      disable_pbar=disable_pbar, seed=seed)
         out = latent.copy()
         out["samples"] = samples
         return out
