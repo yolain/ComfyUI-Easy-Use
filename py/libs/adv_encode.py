@@ -4,6 +4,11 @@ import itertools
 
 from comfy import model_management
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
+try:
+    from comfy.sd3_clip import SD3ClipModel, SDT5XXLModel
+except:
+    SD3ClipModel, SDT5XXLModel = None, None
+    pass
 from nodes import NODE_CLASS_MAPPINGS, ConditioningConcat
 
 def _grouper(n, iterable):
@@ -238,6 +243,9 @@ def encode_token_weights_l(model, token_weight_pairs):
     l_out, pooled = model.clip_l.encode_token_weights(token_weight_pairs)
     return l_out, pooled
 
+def encode_token_weights_t5(model, token_weight_pairs):
+    return model.t5xxl.encode_token_weights(token_weight_pairs)
+
 
 def encode_token_weights(model, token_weight_pairs, encode_func):
     if model.layer_idx is not None:
@@ -257,6 +265,14 @@ def prepareXL(embs_l, embs_g, pooled, clip_balance):
         return torch.cat([embs_l * l_w, embs_g * g_w], dim=-1), pooled
     else:
         return embs_g, pooled
+
+def prepareSD3(out, pooled, clip_balance):
+    lg_w = 1 - max(0, clip_balance - .5) * 2
+    t5_w = 1 - max(0, .5 - clip_balance) * 2
+    if out.shape[0] > 1:
+        return torch.cat([out[0] * lg_w, out[1] * t5_w], dim=-1), pooled
+    else:
+        return out, pooled
 
 def advanced_encode(clip, text, token_normalization, weight_interpretation, w_max=1.0, clip_balance=.5,
                     apply_to_pooled=True, width=1024, height=1024, crop_w=0, crop_h=0, target_width=1024, target_height=1024, a1111_prompt_style=False, steps=1):
@@ -283,7 +299,62 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
 
     for text in pass3:
         tokenized = clip.tokenize(text, return_word_ids=True)
-        if isinstance(clip.cond_stage_model, (SDXLClipModel, SDXLRefinerClipModel, SDXLClipG)):
+        if SD3ClipModel and isinstance(clip.cond_stage_model, SD3ClipModel):
+            lg_out = None
+            pooled = None
+            out = None
+
+            if len(tokenized['l']) > 0 or len(tokenized['g']) > 0:
+                if 'l' in tokenized:
+                    lg_out, l_pooled = advanced_encode_from_tokens(tokenized['l'],
+                                                                           token_normalization,
+                                                                           weight_interpretation,
+                                                                           lambda x: encode_token_weights(clip, x, encode_token_weights_l),
+                                                                           w_max=w_max, return_pooled=True,)
+                else:
+                    l_pooled = torch.zeros((1, 768), device=model_management.intermediate_device())
+
+                if 'g' in tokenized:
+                    g_out, g_pooled = advanced_encode_from_tokens(tokenized['g'],
+                               token_normalization,
+                               weight_interpretation,
+                               lambda x: encode_token_weights(clip, x, encode_token_weights_g),
+                               w_max=w_max, return_pooled=True)
+                    if lg_out is not None:
+                        lg_out = torch.cat([lg_out, g_out], dim=-1)
+                    else:
+                        lg_out = torch.nn.functional.pad(g_out, (768, 0))
+                else:
+                    g_out = None
+                    g_pooled = torch.zeros((1, 1280), device=model_management.intermediate_device())
+
+                if lg_out is not None:
+                    lg_out = torch.nn.functional.pad(lg_out, (0, 4096 - lg_out.shape[-1]))
+                    out = lg_out
+                pooled = torch.cat((l_pooled, g_pooled), dim=-1)
+
+            # t5xxl not working, need to fix
+            if 't5xxl' in tokenized and clip.cond_stage_model.t5xxl is not None:
+                t5_out, t5_pooled = advanced_encode_from_tokens(tokenized['t5xxl'],
+                               token_normalization,
+                               weight_interpretation,
+                               lambda x: encode_token_weights(clip, x, encode_token_weights_t5),
+                               w_max=w_max, return_pooled=True)
+                if lg_out is not None:
+                    out = torch.cat([lg_out, t5_out], dim=-2)
+                else:
+                    out = t5_out
+
+            if out is None:
+                out = torch.zeros((1, 77, 4096), device=model_management.intermediate_device())
+
+            if pooled is None:
+                pooled = torch.zeros((1, 768 + 1280), device=model_management.intermediate_device())
+
+            embeddings_final, pooled = prepareSD3(out, pooled, clip_balance)
+            cond = [[embeddings_final, {"pooled_output": pooled}]]
+
+        elif isinstance(clip.cond_stage_model, (SDXLClipModel, SDXLRefinerClipModel, SDXLClipG)):
             embs_l = None
             embs_g = None
             pooled = None

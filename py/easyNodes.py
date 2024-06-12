@@ -938,12 +938,13 @@ class fullLoader:
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        # Create Empty Latent
-        samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size)
-
         # Load models
         log_node_warn("正在加载模型...")
         model, clip, vae, clip_vision, lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt)
+
+        # Create Empty Latent
+        sd3 = True if get_sd_version(model) == 'sd3' else False
+        samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size, sd3=sd3)
 
         # Prompt to Conditioning
         positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)

@@ -51,6 +51,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.1.9**
 
+- 支持 sd3_medium_incl_clips 模型 
 - 增加 `easy applyInpaint` - 局部重绘全模式节点 (相比与之前的kSamplerInpating节点逻辑会更合理些)
 
 **v1.1.8**
