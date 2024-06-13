@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import re
 import itertools
 
 from comfy import model_management
@@ -9,7 +10,7 @@ try:
 except:
     SD3ClipModel, SDT5XXLModel = None, None
     pass
-from nodes import NODE_CLASS_MAPPINGS, ConditioningConcat
+from nodes import NODE_CLASS_MAPPINGS, ConditioningConcat, ConditioningZeroOut, ConditioningSetTimestepRange, ConditioningCombine
 
 def _grouper(n, iterable):
     it = iter(iterable)
@@ -286,6 +287,25 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
         else:
             raise Exception(f"[smzNodes Not Found] you need to install 'ComfyUI-smzNodes'")
 
+    time_start = 0
+    time_end = 1
+    match = re.search(r'TIMESTEP.*$', text)
+    if match:
+        timestep = match.group()
+        timestep = timestep.split(' ')
+        timestep = timestep[0]
+        text = text.replace(timestep, '')
+        value = timestep.split(':')
+        if len(value) >= 3:
+            time_start = float(value[1])
+            time_end = float(value[2])
+        elif len(value) == 2:
+            time_start = float(value[1])
+            time_end = 1
+        elif len(value) == 1:
+            time_start = 0.1
+            time_end = 1
+
     pass3 = [x.strip() for x in text.split("BREAK")]
     pass3 = [x for x in pass3 if x != '']
 
@@ -393,6 +413,13 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
             conditioning = ConditioningConcat().concat(conditioning, cond)[0]
         else:
             conditioning = cond
+
+    # setTimeRange
+    if time_start > 0 or time_end < 1:
+        conditioning_2, = ConditioningSetTimestepRange().set_range(conditioning, 0, time_start)
+        conditioning_1, = ConditioningZeroOut().zero_out(conditioning)
+        conditioning_1, = ConditioningSetTimestepRange().set_range(conditioning_1, time_start, time_end)
+        conditioning, = ConditioningCombine().combine(conditioning_1, conditioning_2)
 
     return conditioning
 
