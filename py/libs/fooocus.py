@@ -1,3 +1,5 @@
+#credit to Acly for this module
+#from https://github.com/Acly/comfyui-inpaint-nodes
 import torch
 import comfy
 from comfy.model_patcher import ModelPatcher
@@ -32,16 +34,18 @@ class InpaintWorker:
                 loaded_keys.add(key)
 
         not_loaded = sum(1 for x in lora if x not in loaded_keys)
-        log_node_info(self.node_name,
-            f"{len(loaded_keys)} Lora keys loaded, {not_loaded} remaining keys not found in model."
-        )
+        if not_loaded > 0:
+            log_node_info(self.node_name,
+                f"{len(loaded_keys)} Lora keys loaded, {not_loaded} remaining keys not found in model."
+            )
         return patch_dict
 
     def calculate_weight_patched(self: ModelPatcher, patches, weight, key):
         remaining = []
 
         for p in patches:
-            alpha, v, strength_model = p
+            alpha = p[0]
+            v = p[1]
 
             is_fooocus_patch = isinstance(v, tuple) and len(v) == 2 and v[0] == "fooocus"
             if not is_fooocus_patch:

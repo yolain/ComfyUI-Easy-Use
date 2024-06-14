@@ -30,6 +30,7 @@
 - Background removal nodes for the RMBG-1.4 model supporting BriaAI, [BriaAI Guide](https://huggingface.co/briaai/RMBG-1.4)
 - Forcibly cleared the memory usage of the comfy UI model are supported
 - Stable Diffusion 3 multi-account API nodes are supported
+- Support Stable Diffusion 3 model
 
 ## Installation
 Clone the repo into the **custom_nodes** directory and install the requirements:
@@ -44,6 +45,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.1.9**
 
+- Support for Stable Diffusion 3 model
 - Added `easy applyInpaint` - All inpainting mode in this node
 
 **v1.1.8**

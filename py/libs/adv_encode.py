@@ -6,9 +6,9 @@ import itertools
 from comfy import model_management
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
 try:
-    from comfy.sd3_clip import SD3ClipModel, SDT5XXLModel
+    from comfy.sd3_clip import SD3ClipModel, T5XXLModel
 except:
-    SD3ClipModel, SDT5XXLModel = None, None
+    SD3ClipModel, T5XXLModel = None, None
     pass
 from nodes import NODE_CLASS_MAPPINGS, ConditioningConcat, ConditioningZeroOut, ConditioningSetTimestepRange, ConditioningCombine
 
@@ -353,7 +353,7 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
                     out = lg_out
                 pooled = torch.cat((l_pooled, g_pooled), dim=-1)
 
-            # t5xxl not working, need to fix
+            # t5xxl
             if 't5xxl' in tokenized and clip.cond_stage_model.t5xxl is not None:
                 t5_out, t5_pooled = advanced_encode_from_tokens(tokenized['t5xxl'],
                                token_normalization,
@@ -414,7 +414,7 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
         else:
             conditioning = cond
 
-    # setTimeRange
+    # setTimeStepRange
     if time_start > 0 or time_end < 1:
         conditioning_2, = ConditioningSetTimestepRange().set_range(conditioning, 0, time_start)
         conditioning_1, = ConditioningZeroOut().zero_out(conditioning)

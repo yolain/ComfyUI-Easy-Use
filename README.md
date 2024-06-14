@@ -37,6 +37,7 @@
 - 支持Stable Diffusion 3 多账号API节点
 - 支持IC-Light的应用 [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows?tab=readme-ov-file#2-5-ic-light) | [代码整合来源](https://github.com/huchenlei/ComfyUI-IC-Light) | [技术参考](https://github.com/lllyasviel/IC-Light)
 - 中文提示词自动识别，使用[opus-mt-zh-en模型](https://huggingface.co/Helsinki-NLP/opus-mt-zh-en)
+- 支持 sd3 模型 
 
 ## 安装
 将存储库克隆到 **custom_nodes** 目录并安装依赖
@@ -51,7 +52,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.1.9**
 
-- 支持 sd3_medium_incl_clips 模型 
+- 支持 sd3 模型 
 - 增加 `easy applyInpaint` - 局部重绘全模式节点 (相比与之前的kSamplerInpating节点逻辑会更合理些)
 
 **v1.1.8**
