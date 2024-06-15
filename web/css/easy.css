@@ -113,3 +113,10 @@ hr{
 ::-webkit-scrollbar-thumb:hover {
     background-color: transparent;
 }
+
+[data-theme="dark"] .workspace_manager .chakra-card{
+    background-color:var(--comfy-menu-bg)!important;
+}
+.workspace_manager .chakra-card{
+    width: 400px;
+}

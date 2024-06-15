@@ -45,6 +45,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.1.9**
 
+- Added `easy imageBatchToImageList` and `easy imageListToImageBatch` 
 - Recursive subcategories nested for models
 - Support for Stable Diffusion 3 model
 - Added `easy applyInpaint` - All inpainting mode in this node

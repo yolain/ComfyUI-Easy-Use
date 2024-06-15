@@ -507,6 +507,48 @@ class JoinImageBatch:
       image = torch.transpose(torch.transpose(images, 1, 2).reshape(1, n * w, h, c), 1, 2)
     return (image,)
 
+class imageListToImageBatch:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required": {
+      "images": ("IMAGE",),
+    }}
+
+  INPUT_IS_LIST = True
+
+  RETURN_TYPES = ("IMAGE",)
+  FUNCTION = "doit"
+
+  CATEGORY = "EasyUse/Image"
+
+  def doit(self, images):
+    if len(images) <= 1:
+      return (images[0],)
+    else:
+      image1 = images[0]
+      for image2 in images[1:]:
+        if image1.shape[1:] != image2.shape[1:]:
+          image2 = comfy.utils.common_upscale(image2.movedim(-1, 1), image1.shape[2], image1.shape[1], "lanczos",
+                                              "center").movedim(1, -1)
+        image1 = torch.cat((image1, image2), dim=0)
+      return (image1,)
+
+
+class imageBatchToImageList:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required": {"image": ("IMAGE",), }}
+
+  RETURN_TYPES = ("IMAGE",)
+  OUTPUT_IS_LIST = (True,)
+  FUNCTION = "doit"
+
+  CATEGORY = "EasyUse/Image"
+
+  def doit(self, image):
+    images = [image[i:i + 1, ...] for i in range(image.shape[0])]
+    return (images,)
+
 # 图像拆分
 class imageSplitList:
   @classmethod
@@ -1512,6 +1554,8 @@ NODE_CLASS_MAPPINGS = {
   "easy imageRatio": imageRatio,
   "easy imageToMask": imageToMask,
   "easy imageConcat": imageConcat,
+  "easy imageListToImageBatch": imageListToImageBatch,
+  "easy imageBatchToImageList": imageBatchToImageList,
   "easy imageSplitList": imageSplitList,
   "easy imageSplitGrid": imageSplitGrid,
   "easy imagesSplitImage": imagesSplitImage,
@@ -1545,6 +1589,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageToMask": "ImageToMask",
   "easy imageHSVMask": "ImageHSVMask",
   "easy imageConcat": "imageConcat",
+  "easy imageListToImageBatch": "Image List To Image Batch",
+  "easy imageBatchToImageList": "Image Batch To Image List",
   "easy imageSplitList": "imageSplitList",
   "easy imageSplitGrid": "imageSplitGrid",
   "easy imagesSplitImage": "imagesSplitImage",

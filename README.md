@@ -50,8 +50,9 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 更新日志
 
-**v1.1.9**
+**v1.1.9**x
 
+- 增加 `easy imageBatchToImageList` 和 `easy imageListToImageBatch` (修复Impact版的一点小问题)
 - 递归模型子目录嵌套
 - 支持 sd3 模型 
 - 增加 `easy applyInpaint` - 局部重绘全模式节点 (相比与之前的kSamplerInpating节点逻辑会更合理些)
