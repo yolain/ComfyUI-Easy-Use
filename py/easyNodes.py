@@ -2889,10 +2889,11 @@ class ipadapterApplyEncoder(ipadapter):
     def INPUT_TYPES(cls):
         ipa_cls = cls()
         normal_presets = ipa_cls.normal_presets
-        max_embeds_num = 3
+        max_embeds_num = 4
         inputs = {
             "required": {
                 "model": ("MODEL",),
+                "clip_vision": ("CLIP_VISION",),
                 "image1": ("IMAGE",),
                 "preset": (normal_presets,),
                 "num_embeds":  ("INT", {"default": 2, "min": 1, "max": max_embeds_num}),
@@ -2912,8 +2913,8 @@ class ipadapterApplyEncoder(ipadapter):
         inputs["optional"]["neg_embeds"] = ("EMBEDS",)
         return inputs
 
-    RETURN_TYPES = ("MODEL", "IPADAPTER", "EMBEDS", "EMBEDS", )
-    RETURN_NAMES = ("model", "ipadapter", "pos_embed", "neg_embed", )
+    RETURN_TYPES = ("MODEL", "CLIP_VISION","IPADAPTER", "EMBEDS", "EMBEDS", )
+    RETURN_NAMES = ("model", "clip_vision","ipadapter", "pos_embed", "neg_embed",)
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
@@ -2943,16 +2944,16 @@ class ipadapterApplyEncoder(ipadapter):
 
     def apply(self, **kwargs):
         model = kwargs['model']
+        clip_vision = kwargs['clip_vision']
         preset = kwargs['preset']
         if 'optional_ipadapter' in kwargs:
             ipadapter = kwargs['optional_ipadapter']
         else:
-            model, ipadapter = self.load_model(model, preset, 0, 'CPU', clip_vision=None, optional_ipadapter=None, cache_mode='none')
+            model, ipadapter = self.load_model(model, preset, 0, 'CPU', clip_vision=clip_vision, optional_ipadapter=None, cache_mode='none')
 
         if "IPAdapterEncoder" not in ALL_NODE_CLASS_MAPPINGS:
             self.error()
         encoder_cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterEncoder"]
-
         pos_embeds = kwargs["pos_embeds"] if "pos_embeds" in kwargs else []
         neg_embeds = kwargs["neg_embeds"] if "neg_embeds" in kwargs else []
         for i in range(1, kwargs['num_embeds'] + 1):
@@ -2961,14 +2962,14 @@ class ipadapterApplyEncoder(ipadapter):
             kwargs[f"mask{i}"] = kwargs[f"mask{i}"] if f"mask{i}" in kwargs else None
             kwargs[f"weight{i}"] = kwargs[f"weight{i}"] if f"weight{i}" in kwargs else 1.0
 
-            pos, neg = encoder_cls().encode(ipadapter, kwargs[f"image{i}"], kwargs[f"weight{i}"], kwargs[f"mask{i}"], clip_vision=None)
+            pos, neg = encoder_cls().encode(ipadapter, kwargs[f"image{i}"], kwargs[f"weight{i}"], kwargs[f"mask{i}"], clip_vision=clip_vision)
             pos_embeds.append(pos)
             neg_embeds.append(neg)
 
         pos_embeds = self.batch(pos_embeds, kwargs['combine_method'])
         neg_embeds = self.batch(neg_embeds, kwargs['combine_method'])
 
-        return (model, ipadapter, pos_embeds, neg_embeds)
+        return (model,clip_vision, ipadapter, pos_embeds, neg_embeds)
 
 class ipadapterApplyEmbeds(ipadapter):
     def __init__(self):
@@ -2982,6 +2983,7 @@ class ipadapterApplyEmbeds(ipadapter):
         return {
             "required": {
                 "model": ("MODEL",),
+                "clip_vision": ("CLIP_VISION",),
                 "ipadapter": ("IPADAPTER",),
                 "pos_embed": ("EMBEDS",),
                 "weight": ("FLOAT", {"default": 1.0, "min": -1, "max": 3, "step": 0.05}),
@@ -3002,12 +3004,12 @@ class ipadapterApplyEmbeds(ipadapter):
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
-    def apply(self, model, ipadapter, pos_embed, weight, weight_type, start_at, end_at, embeds_scaling, attn_mask=None, neg_embed=None,):
+    def apply(self, model, ipadapter, clip_vision, pos_embed, weight, weight_type, start_at, end_at, embeds_scaling, attn_mask=None, neg_embed=None,):
         if "IPAdapterEmbeds" not in ALL_NODE_CLASS_MAPPINGS:
             self.error()
 
         cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterEmbeds"]
-        model, image = cls().apply_ipadapter(model, ipadapter, pos_embed, weight, weight_type, start_at, end_at, neg_embed=neg_embed, attn_mask=attn_mask, clip_vision=None, embeds_scaling=embeds_scaling)
+        model, image = cls().apply_ipadapter(model, ipadapter, pos_embed, weight, weight_type, start_at, end_at, neg_embed=neg_embed, attn_mask=attn_mask, clip_vision=clip_vision, embeds_scaling=embeds_scaling)
 
         return (model, ipadapter)
 
