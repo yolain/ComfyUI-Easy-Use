@@ -52,6 +52,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.1.9**
 
+- 递归模型子目录嵌套
 - 支持 sd3 模型 
 - 增加 `easy applyInpaint` - 局部重绘全模式节点 (相比与之前的kSamplerInpating节点逻辑会更合理些)
 

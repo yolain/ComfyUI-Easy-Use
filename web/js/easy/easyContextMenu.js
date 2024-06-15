@@ -109,19 +109,60 @@ app.registerExtension({
                     }
                 }
                 const newValues = [];
+                const add_sub_folder = (folder, folderName) => {
+                    let subs = []
+                    let less = []
+                    const b = folder.map(name=> {
+                        const _folders = {};
+                        const splitBy = name.indexOf('/') > -1 ? '/' : '\\';
+                        const valueSplit = name.split(splitBy);
+                        if(valueSplit.length > 1){
+                            const key = valueSplit.shift();
+                            _folders[key] = _folders[key] || [];
+                            _folders[key].push(valueSplit.join(splitBy));
+                        }
+                        const foldersCount = Object.values(folders).length;
+                        if(foldersCount > 0){
+                            let key = Object.keys(_folders)[0]
+                            if(key && _folders[key]) subs.push({key, value:_folders[key][0]})
+                            else{
+                                less.push(addContent(name,key))
+                            }
+                        }
+                        return addContent(name,folderName)
+                    })
+                    if(subs.length>0){
+                      let subs_obj = {}
+                      subs.forEach(item => {
+                        subs_obj[item.key] = subs_obj[item.key] || []
+                        subs_obj[item.key].push(item.value)
+                      })
+                      return [...Object.entries(subs_obj).map(f => {
+                          return {
+                              content: f[0],
+                              has_submenu: true,
+                              callback: () => {},
+                              submenu: {
+                                  options: add_sub_folder(f[1], f[0]),
+                              }
+                          }
+                      }),...less]
+                    }
+                    else return b
+                }
+
                 for(const [folderName,folder] of Object.entries(folders)){
                     newValues.push({
                         content:folderName,
                         has_submenu:true,
                         callback:() => {},
                         submenu:{
-                            options:folder.map(f => addContent(f,folderName)),
+                            options:add_sub_folder(folder,folderName),
                         }
                     });
                 }
                 newValues.push(...folderless.map(f => addContent(f, '')));
-                if(specialOps.length > 0)
-                    newValues.push(...specialOps.map(f => addContent(f, '')));
+                if(specialOps.length > 0) newValues.push(...specialOps.map(f => addContent(f, '')));
                 return existingContextMenu.call(this,newValues,options);
             }
             return existingContextMenu.apply(this,[...arguments]);
