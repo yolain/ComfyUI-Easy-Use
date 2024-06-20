@@ -795,7 +795,11 @@ class imageChooser(PreviewImage):
     mode = kwargs.pop('mode', 'Always Pause')
     last_choosen = None
     if mode == 'Keep Last Selection':
-      if id and extra_pnginfo[0] and "workflow" in extra_pnginfo[0]:
+      if not extra_pnginfo:
+        print("Error: extra_pnginfo is empty")
+      elif (not isinstance(extra_pnginfo[0], dict) or "workflow" not in extra_pnginfo[0]):
+        print("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
+      else:
         workflow = extra_pnginfo[0]["workflow"]
         node = next((x for x in workflow["nodes"] if str(x["id"]) == id), None)
         if node:

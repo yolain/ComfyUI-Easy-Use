@@ -75,7 +75,7 @@ class Int:
     @classmethod
     def INPUT_TYPES(s):
         return {
-            "required": {"value": ("INT", {"default": 0})},
+            "required": {"value": ("INT", {"default": 0, "min": -999999, "max": 999999,})},
         }
 
     RETURN_TYPES = ("INT",)
@@ -144,7 +144,7 @@ class Float:
     @classmethod
     def INPUT_TYPES(s):
         return {
-            "required": {"value": ("FLOAT", {"default": 0, "step": 0.01})},
+            "required": {"value": ("FLOAT", {"default": 0, "step": 0.01, "min": -999999, "max": 999999,})},
         }
 
     RETURN_TYPES = ("FLOAT",)
@@ -478,7 +478,11 @@ class showAnything:
                     values.append(str(val))
                     pass
 
-        if unique_id and extra_pnginfo and "workflow" in extra_pnginfo[0]:
+        if not extra_pnginfo:
+            print("Error: extra_pnginfo is empty")
+        elif (not isinstance(extra_pnginfo[0], dict) or "workflow" not in extra_pnginfo[0]):
+            print("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
+        else:
             workflow = extra_pnginfo[0]["workflow"]
             node = next((x for x in workflow["nodes"] if str(x["id"]) == unique_id[0]), None)
             if node:
