@@ -333,6 +333,7 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'beta_d'))
 			toggleWidget(node, findWidgetByName(node, 'beta_min'))
 			toggleWidget(node, findWidgetByName(node, 'eps_s'))
+			toggleWidget(node, findWidgetByName(node, 'coeff'))
 			if(widget.value != 'exponentialADV'){
 				toggleWidget(node, findWidgetByName(node, 'rho'), true)
 			}else{
@@ -346,7 +347,9 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'beta_d'),true)
 			toggleWidget(node, findWidgetByName(node, 'beta_min'),true)
 			toggleWidget(node, findWidgetByName(node, 'eps_s'),true)
-		}else{
+			toggleWidget(node, findWidgetByName(node, 'coeff'))
+		}
+		else{
 			toggleWidget(node, findWidgetByName(node, 'denoise'),true)
 			toggleWidget(node, findWidgetByName(node, 'sigma_max'))
 			toggleWidget(node, findWidgetByName(node, 'sigma_min'))
@@ -354,6 +357,8 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'beta_min'))
 			toggleWidget(node, findWidgetByName(node, 'eps_s'))
 			toggleWidget(node, findWidgetByName(node, 'rho'))
+			if(widget.value == 'gits') 	toggleWidget(node, findWidgetByName(node, 'coeff'), true)
+			else toggleWidget(node, findWidgetByName(node, 'coeff'))
 		}
 		updateNodeHeight(node)
 	}

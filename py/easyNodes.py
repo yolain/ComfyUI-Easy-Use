@@ -27,7 +27,7 @@ from .libs.adv_encode import advanced_encode
 from .libs.wildcards import process_with_loras, get_wildcard_list, process
 from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave, get_local_filepath, AlwaysEqualProxy, get_sd_version
 from .libs.loader import easyLoader
-from .libs.sampler import easySampler, alignYourStepsScheduler
+from .libs.sampler import easySampler, alignYourStepsScheduler, gitsScheduler
 from .libs.xyplot import easyXYPlot
 from .libs.controlnet import easyControlnet
 from .libs.conditioning import prompt_to_cond, set_cond
@@ -37,6 +37,8 @@ from .libs import cache as backend_cache
 
 sampler = easySampler()
 easyCache = easyLoader()
+
+new_schedulers = ['align_your_steps', 'gits']
 # ---------------------------------------------------------------提示词 开始----------------------------------------------------------------------#
 
 # 正面提示词
@@ -3311,7 +3313,7 @@ class samplerSettings:
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['align_your_steps'],),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + new_schedulers,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
@@ -3389,7 +3391,7 @@ class samplerSettingsAdvanced:
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['align_your_steps'],),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + new_schedulers,),
                      "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
                      "end_at_step": ("INT", {"default": 10000, "min": 0, "max": 10000}),
                      "add_noise": (["enable", "disable"],),
@@ -3478,7 +3480,7 @@ class samplerSettingsNoiseIn:
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS+['align_your_steps'],),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS+new_schedulers,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
@@ -3624,13 +3626,14 @@ class samplerCustomSettings:
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required":
-                    {"pipe": ("PIPE_LINE",),
+        return {"required": {
+                     "pipe": ("PIPE_LINE",),
                      "guider": (['CFG','DualCFG','IP2P+DualCFG','Basic'],{"default":"Basic"}),
                      "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "cfg_negative": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS + ['inversed_euler'],),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['karrasADV','exponentialADV','polyExponential', 'sdturbo', 'vp', 'alignYourSteps'],),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['karrasADV','exponentialADV','polyExponential', 'sdturbo', 'vp', 'alignYourSteps', 'gits'],),
+                     "coeff": ("FLOAT", {"default": 1.20, "min": 0.80, "max": 1.50, "step": 0.05}),
                      "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                      "sigma_max": ("FLOAT", {"default": 14.614642, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
                      "sigma_min": ("FLOAT", {"default": 0.0291675, "min": 0.0, "max": 1000.0, "step": 0.01, "round": False}),
@@ -3642,7 +3645,7 @@ class samplerCustomSettings:
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                      "add_noise": (["enable", "disable"], {"default": "enable"}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
-                     },
+                 },
                 "optional": {
                     "image_to_latent": ("IMAGE",),
                     "latent": ("LATENT",),
@@ -3735,7 +3738,7 @@ class samplerCustomSettings:
             to["model_patch"] = {}
         return to
 
-    def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, flip_sigmas, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, coeff, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, flip_sigmas, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
         # 图生图转换
         vae = pipe["vae"]
@@ -3762,13 +3765,12 @@ class samplerCustomSettings:
                 case 'sdturbo':
                     sigmas, = self.get_custom_cls('SDTurboScheduler').get_sigmas(model, steps, denoise)
                 case 'alignYourSteps':
-                    try:
-                        model_type = get_sd_version(model)
-                        if model_type == 'unknown':
-                            raise Exception("This Model not supported")
-                        sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
-                    except:
-                        raise Exception("Please update your ComfyUI")
+                    model_type = get_sd_version(model)
+                    if model_type == 'unknown':
+                        raise Exception("This Model not supported")
+                    sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
+                case 'gits':
+                    sigmas, = gitsScheduler().get_sigmas(coeff, steps, denoise)
                 case _:
                     sigmas, = self.get_custom_cls('BasicScheduler').get_sigmas(model, scheduler, steps, denoise)
 
@@ -4095,7 +4097,7 @@ class layerDiffusionSettings:
              "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
              "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
              "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler"}),
-             "scheduler": (comfy.samplers.KSampler.SCHEDULERS+ ['align_your_steps'], {"default": "normal"}),
+             "scheduler": (comfy.samplers.KSampler.SCHEDULERS+ new_schedulers, {"default": "normal"}),
              "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
              "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
              },
@@ -4260,7 +4262,7 @@ class dynamicCFGSettings:
                      "cfg_mode": (DynThresh.Modes,),
                      "cfg_scale_min": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0, "step": 0.5}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS+['align_your_steps'],),
+                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS+new_schedulers,),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      },
@@ -4399,7 +4401,7 @@ class samplerFull:
                  "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                  "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                  "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS+['align_your_steps'],),
+                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS+new_schedulers,),
                  "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                  "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save"],),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
@@ -4534,13 +4536,14 @@ class samplerFull:
                 noise = samp_custom['noise'] if 'noise' in samp_custom else None
                 samp_samples, _ = sampler.custom_advanced_ksampler(noise, guider, _sampler, sigmas, samp_samples)
             elif scheduler == 'align_your_steps':
-                try:
-                    model_type = get_sd_version(samp_model)
-                    if model_type == 'unknown':
-                        raise Exception("This Model not supported")
-                    sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
-                except:
-                    raise Exception("Please update your ComfyUI")
+                model_type = get_sd_version(samp_model)
+                if model_type == 'unknown':
+                    raise Exception("This Model not supported")
+                sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
+                _sampler = comfy.samplers.sampler_object(sampler_name)
+                samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent)
+            elif scheduler == 'gits':
+                sigmas, = gitsScheduler().get_sigmas(coeff=1.2, steps=steps, denoise=denoise)
                 _sampler = comfy.samplers.sampler_object(sampler_name)
                 samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent)
             else:

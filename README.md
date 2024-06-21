@@ -50,8 +50,9 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 更新日志
 
-**v1.1.9**x
+**v1.1.9**
 
+- 增加 新的调度器 **gitsScheduler**
 - 增加 `easy imageBatchToImageList` 和 `easy imageListToImageBatch` (修复Impact版的一点小问题)
 - 递归模型子目录嵌套
 - 支持 sd3 模型 

@@ -9,7 +9,7 @@
 
 **ComfyUI-Easy-Use** is a simplified node integration package, which is extended on the basis of [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes), and has been integrated and optimized for many mainstream node packages to achieve the purpose of faster and more convenient use of ComfyUI. While ensuring the degree of freedom, it restores the ultimate smooth image production experience that belongs to Stable Diffusion.
 
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Docs/workflow_node_compare.png">
+[![ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Easy-Use/assets/73304135/9a3f54bc-a677-4bf1-a196-8845dd57c942)](https://github.com/yolain/ComfyUI-Yolain-Workflows)
 
 ## Introduce
 
@@ -45,6 +45,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.1.9**
 
+- Added **gitsScheduler**
 - Added `easy imageBatchToImageList` and `easy imageListToImageBatch` 
 - Recursive subcategories nested for models
 - Support for Stable Diffusion 3 model
@@ -357,33 +358,6 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 | easy imageChooser              | [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) | Preview Chooser         | 
 | easy styleAlignedBatchAlign              | [style_aligned_comfy](https://github.com/chrisgoringe/cg-image-picker) | styleAlignedBatchAlign       | 
 
-## Workflow Examples
-
-### Text to image
-
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/text_to_image.png">
-
-### Image to image + controlnet
-
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/image_to_image_controlnet.png">
-
-### SDTurbo + HiresFix + SVD
-
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/sdturbo_hiresfix_svd.png">
-
-### LayerDiffusion
-#### SD15
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/layer_diffusion_sd15.png">
-
-#### SDXL
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/Simple/layer_diffusion_example.png">
-
-### StableCascade
-#### Text to image
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/StableCascade/text_to_image.png">
-
-#### Image to image
-<img src="https://raw.githubusercontent.com/yolain/yolain-comfyui-workflow/main/Workflows/StableCascade/image_to_image.png">
 
 ## Credits
 
