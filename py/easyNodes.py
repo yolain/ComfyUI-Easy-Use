@@ -2495,7 +2495,7 @@ class ipadapter:
             'FACEID PLUS V2',
             'FACEID PORTRAIT (style transfer)'
         ]
-        self.weight_types = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output', 'weak middle', 'strong middle', 'style transfer', 'composition']
+        self.weight_types = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output', 'weak middle', 'strong middle', 'style transfer', 'composition', 'strong style transfer']
         self.presets = self.normal_presets + self.faceid_presets
 
 
