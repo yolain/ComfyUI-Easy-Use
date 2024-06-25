@@ -50,6 +50,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 更新日志
 
+**v1.2.0**
+
+- 增加 **layer_weights** 属性在 `easy ipadapterApplyADV` 节点
+
 **v1.1.9**
 
 - 增加 新的调度器 **gitsScheduler**

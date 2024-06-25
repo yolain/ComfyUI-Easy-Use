@@ -2495,7 +2495,7 @@ class ipadapter:
             'FACEID PLUS V2',
             'FACEID PORTRAIT (style transfer)'
         ]
-        self.weight_types = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output', 'weak middle', 'strong middle', 'style transfer', 'composition', 'strong style transfer']
+        self.weight_types = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output', 'weak middle', 'strong middle', 'style transfer', 'composition', 'strong style transfer', 'style and composition', 'style transfer precise']
         self.presets = self.normal_presets + self.faceid_presets
 
 
@@ -2603,6 +2603,21 @@ class ipadapter:
 
         return ipadapter_file, ipadapter_name, is_insightface, lora_pattern
 
+    def get_lora_pattern(self, file):
+        basename = os.path.basename(file)
+        lora_pattern = None
+        if re.search(r'faceid.sdxl\.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.sdxl.lora\.safetensors$'
+        elif re.search(r'faceid.sd15\.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.sd15.lora\.safetensors$'
+        elif re.search(r'faceid.plus.sd15\.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.plus.sd15.lora\.safetensors$'
+        elif re.search(r'faceid.plusv2.sdxl\.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.plusv2.sdxl.lora\.safetensors$'
+        elif re.search(r'faceid.plusv2.sd15\.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.plusv2.sd15.lora\.safetensors$'
+        return lora_pattern
+
     def get_lora_file(self, preset, pattern, model_type, model, model_strength, clip_strength, clip=None):
         lora_list = folder_paths.get_filename_list("loras")
         lora_files = [e for e in lora_list if re.search(pattern, e, re.IGNORECASE)]
@@ -2639,8 +2654,15 @@ class ipadapter:
     def load_model(self, model, preset, lora_model_strength, provider="CPU", clip_vision=None, optional_ipadapter=None, cache_mode='none', node_name='easy ipadapterApply'):
         pipeline = {"clipvision": {'file': None, 'model': None}, "ipadapter": {'file': None, 'model': None},
                     "insightface": {'provider': None, 'model': None}}
+        ipadapter, insightface, is_insightface, lora_pattern = None, None, None, None
         if optional_ipadapter is not None:
             pipeline = optional_ipadapter
+            if not clip_vision:
+                clip_vision = pipeline['clipvision']['model']
+            ipadapter = pipeline['ipadapter']['model']
+            if 'insightface' in pipeline:
+                insightface = pipeline['insightface']['model']
+                lora_pattern = self.get_lora_pattern(pipeline['ipadapter']['file'])
 
         # 1. Load the clipvision model
         if not clip_vision:
@@ -2658,29 +2680,30 @@ class ipadapter:
                 if cache_mode in ["all", "clip_vision only"]:
                     backend_cache.update_cache(clipvision_name, 'clip_vision', (False, clip_vision))
             pipeline['clipvision']['file'] = clipvision_file
-        pipeline['clipvision']['model'] = clip_vision
+            pipeline['clipvision']['model'] = clip_vision
 
         # 2. Load the ipadapter model
         is_sdxl = isinstance(model.model, comfy.model_base.SDXL)
-        ipadapter_file, ipadapter_name, is_insightface, lora_pattern = self.get_ipadapter_file(preset, is_sdxl, node_name)
-        model_type = 'sdxl' if is_sdxl else 'sd15'
-        if ipadapter_file is None:
-            model_url = IPADAPTER_MODELS[preset][model_type]["model_url"]
-            ipadapter_file = get_local_filepath(model_url, IPADAPTER_DIR)
-            ipadapter_name = os.path.basename(model_url)
-        if ipadapter_file == pipeline['ipadapter']['file']:
-            ipadapter = pipeline['ipadapter']['model']
-        elif cache_mode in ["all", "ipadapter only"] and ipadapter_name in backend_cache.cache:
-            log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name} Cached")
-            _, ipadapter = backend_cache.cache[ipadapter_name][1]
-        else:
-            ipadapter = self.ipadapter_model_loader(ipadapter_file)
-            pipeline['ipadapter']['file'] = ipadapter_file
-            log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name}")
-            if cache_mode in ["all", "ipadapter only"]:
-                backend_cache.update_cache(ipadapter_name, 'ipadapter', (False, ipadapter))
+        if not ipadapter:
+            ipadapter_file, ipadapter_name, is_insightface, lora_pattern = self.get_ipadapter_file(preset, is_sdxl, node_name)
+            model_type = 'sdxl' if is_sdxl else 'sd15'
+            if ipadapter_file is None:
+                model_url = IPADAPTER_MODELS[preset][model_type]["model_url"]
+                ipadapter_file = get_local_filepath(model_url, IPADAPTER_DIR)
+                ipadapter_name = os.path.basename(model_url)
+            if ipadapter_file == pipeline['ipadapter']['file']:
+                ipadapter = pipeline['ipadapter']['model']
+            elif cache_mode in ["all", "ipadapter only"] and ipadapter_name in backend_cache.cache:
+                log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name} Cached")
+                _, ipadapter = backend_cache.cache[ipadapter_name][1]
+            else:
+                ipadapter = self.ipadapter_model_loader(ipadapter_file)
+                pipeline['ipadapter']['file'] = ipadapter_file
+                log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name}")
+                if cache_mode in ["all", "ipadapter only"]:
+                    backend_cache.update_cache(ipadapter_name, 'ipadapter', (False, ipadapter))
 
-        pipeline['ipadapter']['model'] = ipadapter
+            pipeline['ipadapter']['model'] = ipadapter
 
         # 3. Load the lora model if needed
         if lora_pattern is not None:
@@ -2689,18 +2712,19 @@ class ipadapter:
 
         # 4. Load the insightface model if needed
         if is_insightface:
-            icache_key = 'insightface-' + provider
-            if provider == pipeline['insightface']['provider']:
-                insightface = pipeline['insightface']['model']
-            elif cache_mode in ["all", "insightface only"] and icache_key in backend_cache.cache:
-                log_node_info("easy ipadapterApply", f"Using InsightFaceModel {icache_key} Cached")
-                _, insightface = backend_cache.cache[icache_key][1]
-            else:
-                insightface = insightface_loader(provider)
-                if cache_mode in ["all", "insightface only"]:
-                    backend_cache.update_cache(icache_key, 'insightface',(False, insightface))
-            pipeline['insightface']['provider'] = provider
-            pipeline['insightface']['model'] = insightface
+            if not insightface:
+                icache_key = 'insightface-' + provider
+                if provider == pipeline['insightface']['provider']:
+                    insightface = pipeline['insightface']['model']
+                elif cache_mode in ["all", "insightface only"] and icache_key in backend_cache.cache:
+                    log_node_info("easy ipadapterApply", f"Using InsightFaceModel {icache_key} Cached")
+                    _, insightface = backend_cache.cache[icache_key][1]
+                else:
+                    insightface = insightface_loader(provider)
+                    if cache_mode in ["all", "insightface only"]:
+                        backend_cache.update_cache(icache_key, 'insightface',(False, insightface))
+                pipeline['insightface']['provider'] = provider
+                pipeline['insightface']['model'] = insightface
 
         return (model, pipeline,)
 
@@ -2796,6 +2820,7 @@ class ipadapterApplyAdvanced(ipadapter):
                 "attn_mask": ("MASK",),
                 "clip_vision": ("CLIP_VISION",),
                 "optional_ipadapter": ("IPADAPTER",),
+                "layer_weights": ("STRING", {"default": "", "multiline": True, "placeholder": "Mad Scientist Layer Weights"}),
             }
         }
 
@@ -2804,10 +2829,15 @@ class ipadapterApplyAdvanced(ipadapter):
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
-    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, weight_type, combine_embeds, start_at, end_at, embeds_scaling, cache_mode, use_tiled, use_batch, sharpening, weight_style=1.0, weight_composition=1.0, image_style=None, image_composition=None, expand_style=False, image_negative=None, clip_vision=None, attn_mask=None, optional_ipadapter=None):
+    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, weight_type, combine_embeds, start_at, end_at, embeds_scaling, cache_mode, use_tiled, use_batch, sharpening, weight_style=1.0, weight_composition=1.0, image_style=None, image_composition=None, expand_style=False, image_negative=None, clip_vision=None, attn_mask=None, optional_ipadapter=None, layer_weights=None):
         images, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=clip_vision, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
-        if use_tiled:
+        if layer_weights:
+            if "IPAdapterMS" not in ALL_NODE_CLASS_MAPPINGS:
+                self.error()
+            cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
+            model, images = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=weight_style, weight_composition=weight_composition, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling, layer_weights=layer_weights)
+        elif use_tiled:
             if use_batch:
                 if "IPAdapterTiledBatch" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()

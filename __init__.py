@@ -1,4 +1,4 @@
-__version__ = "1.1.9"
+__version__ = "1.2.0"
 
 import os
 import folder_paths
@@ -42,7 +42,7 @@ else:
     os.mkdir(styles_path)
     os.mkdir(samples_path)
 
-# 需要把模型预览图暴露给PS读取，此处借鉴了 AIGODLIKE-ComfyUI-Studio 的部分代码
+# Model thumbnails
 from .py.libs.add_resources import add_static_resource
 from .py.libs.model import easyModelManager
 model_config = easyModelManager().models_config

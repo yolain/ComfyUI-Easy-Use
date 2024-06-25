@@ -43,6 +43,10 @@ Double-click install.bat to install the required dependencies
 
 ## Changelog
 
+**v1.2.0**
+
+- Added **layer_weights** in `easy ipadapterApplyADV`
+
 **v1.1.9**
 
 - Added **gitsScheduler**
