@@ -35,6 +35,10 @@
     color:white;
     transition: all 0.3s ease-in-out;
 }
+.easyuse-toolbar-icon svg{
+    width: 14px;
+    height: 14px;
+}
 .easyuse-toolbar-tips{
     visibility: hidden;
     opacity: 0;
