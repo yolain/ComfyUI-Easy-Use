@@ -438,12 +438,14 @@ const reloadNode = function (node) {
 
     function handleLinks() {
         // re-convert inputs
-        for (let w of oldNode.widgets) {
-            if (w.type === 'converted-widget') {
-                const WidgetToConvert = newNode.widgets.find((nw) => nw.name === w.name);
-                for (let i of oldNode.inputs) {
-                    if (i.name === w.name) {
-                        convertToInput(newNode, WidgetToConvert, i.widget);
+        if(oldNode.widgets) {
+            for (let w of oldNode.widgets) {
+                if (w.type === 'converted-widget') {
+                    const WidgetToConvert = newNode.widgets.find((nw) => nw.name === w.name);
+                    for (let i of oldNode.inputs) {
+                        if (i.name === w.name) {
+                            convertToInput(newNode, WidgetToConvert, i.widget);
+                        }
                     }
                 }
             }
@@ -461,7 +463,7 @@ const reloadNode = function (node) {
 
     // fix widget values
     let values = oldNode.widgets_values;
-    if (!values) {
+    if (!values && newNode.widgets?.length>0) {
         newNode.widgets.forEach((newWidget, index) => {
             const oldWidget = oldNode.widgets[index];
             if (newWidget.name === oldWidget.name && newWidget.type === oldWidget.type) {
@@ -472,7 +474,7 @@ const reloadNode = function (node) {
         return;
     }
     let pass = false
-    const isIterateForwards = values.length <= newNode.widgets.length;
+    const isIterateForwards = values?.length <= newNode.widgets?.length;
     let vi = isIterateForwards ? 0 : values.length - 1;
     function evalWidgetValues(testValue, newWidg) {
         if (testValue === true || testValue === false) {
@@ -504,15 +506,15 @@ const reloadNode = function (node) {
             }
             vi++
             if (!isIterateForwards) {
-                vi = values.length - (newNode.widgets.length - 1 - wi);
+                vi = values.length - (newNode.widgets?.length - 1 - wi);
             }
         }
     };
-    if (isIterateForwards) {
+    if (isIterateForwards && newNode.widgets?.length>0) {
         for (let wi = 0; wi < newNode.widgets.length; wi++) {
             updateValue(wi);
         }
-    } else {
+    } else if(newNode.widgets?.length>0){
         for (let wi = newNode.widgets.length - 1; wi >= 0; wi--) {
             updateValue(wi);
         }
