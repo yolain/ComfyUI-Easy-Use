@@ -183,7 +183,8 @@ const suggestions = {
     },
     "easy ipadapterApplyADV":{
         "to":{
-            "COMBO": [...["Reroute", "easy promptLine"]]
+          "STRING": [...["Reroute", "easy sliderControl"], ...propmts],
+          "COMBO": [...["Reroute", "easy promptLine"]]
         }
     },
     "easy ipadapterStyleComposition":{
