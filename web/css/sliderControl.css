@@ -55,7 +55,7 @@
     border-radius:20px;
     position: absolute;
     bottom: 0;
-    background: var(--bg-color);
+    background: var(--input-text);
     z-index:0;
 }
 .easyuse-slider-item.positive .easyuse-slider-item-area{
@@ -63,8 +63,4 @@
 }
 .easyuse-slider-item.negative .easyuse-slider-item-area{
     background: var(--error-color);
-}
-
-[data-theme="dark"] .easyuse-slider-item-scroll{
-    background: var(--comfy-menu-bg);
 }
