@@ -71,7 +71,7 @@ const setSliderValue = (_this, layer_total, refresh=false) => {
         else if(i == 6) layer_total == 12 ?  item_div.classList.add('positive') : item_div.classList.remove('positive')
         sliders.push(item_div)
     }
-    if(values_div) values_div.replaceChildren(...sliders)
+    if(refresh) values_div.replaceChildren(...sliders)
     else{
         values_div = $el('div.easyuse-slider', sliders)
         sliders_value = _this.addDOMWidget('values',"btn",values_div)
