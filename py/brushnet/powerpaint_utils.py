@@ -346,7 +346,7 @@ class EmbeddingLayerWithFixes(nn.Module):
         start = external_embedding["start"]
         end = external_embedding["end"]
         target_ids_to_replace = [i for i in range(start, end)]
-        ext_emb = external_embedding["embedding"]
+        ext_emb = external_embedding["embedding"].to(embedding.device)
 
         # do not need to replace
         if not (input_ids == start).any():
