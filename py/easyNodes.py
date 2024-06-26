@@ -6855,7 +6855,7 @@ class sliderControl:
         return {
             "required": {
                 "mode": (['ipadapter layer weights'],),
-                "model_type": (['sdxl', 'sd1x'],),
+                "model_type": (['sdxl', 'sd1'],),
             },
             "hidden": {
                 "prompt": "PROMPT",
