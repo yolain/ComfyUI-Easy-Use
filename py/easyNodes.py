@@ -6849,6 +6849,38 @@ class showLoaderSettingsNames:
         return {"ui": {"text": names}, "result": (ckpt_name, vae_name, lora_name)}
 
 
+class sliderControl:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "mode": (['ipadapter layer weights'],),
+                "model_type": (['sdxl', 'sd1x'],),
+            },
+            "hidden": {
+                "prompt": "PROMPT",
+                "my_unique_id": "UNIQUE_ID",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("layer_weights",)
+
+    FUNCTION = "control"
+    OUTPUT_NODE = True
+
+    CATEGORY = "EasyUse/Util"
+
+    def control(self, mode, model_type, prompt=None, my_unique_id=None, extra_pnginfo=None):
+        values = ''
+        if my_unique_id in prompt:
+            print(prompt[my_unique_id])
+            if 'values' in prompt[my_unique_id]["inputs"]:
+                values = prompt[my_unique_id]["inputs"]['values']
+
+        return (values,)
+
 #---------------------------------------------------------------API 开始----------------------------------------------------------------------#
 from .libs.stability import stableAPI
 class stableDiffusion3API:
@@ -6995,6 +7027,7 @@ NODE_CLASS_MAPPINGS = {
     # others 其他
     "easy showSpentTime": showSpentTime,
     "easy showLoaderSettingsNames": showLoaderSettingsNames,
+    "easy sliderControl": sliderControl,
     "dynamicThresholdingFull": dynamicThresholdingFull,
     # api 相关
     "easy stableDiffusion3API": stableDiffusion3API,
@@ -7107,6 +7140,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # others 其他
     "easy showSpentTime": "Show Spent Time",
     "easy showLoaderSettingsNames": "Show Loader Settings Names",
+    "easy sliderControl": "Easy Slider Control",
     "dynamicThresholdingFull": "DynamicThresholdingFull",
     # api 相关
     "easy stableDiffusion3API": "Stable Diffusion 3 (API)",

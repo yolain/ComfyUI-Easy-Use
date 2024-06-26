@@ -52,6 +52,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.0**
 
+- 增加 **easy sliderControl** - 滑块控制节点，当前可用于控制ipadapterMS的参数 (双击滑块可重置为默认值)
 - 增加 **layer_weights** 属性在 `easy ipadapterApplyADV` 节点
 
 **v1.1.9**

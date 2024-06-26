@@ -45,6 +45,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.0**
 
+- Added **easy sliderControl** - Slider control node, which can currently be used to control the parameters of ipadapterMS (double-click the slider to reset to default)
 - Added **layer_weights** in `easy ipadapterApplyADV`
 
 **v1.1.9**
