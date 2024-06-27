@@ -2058,7 +2058,6 @@ class LLLiteLoader:
 
 # FooocusInpaint
 from .libs.fooocus import InpaintHead, InpaintWorker
-inpaint_head_model = None
 
 class applyFooocusInpaint:
     @classmethod
@@ -2079,13 +2078,10 @@ class applyFooocusInpaint:
 
     def apply(self, model, latent, head, patch):
 
-        global inpaint_head_model
-
         head_file = get_local_filepath(FOOOCUS_INPAINT_HEAD[head]["model_url"], INPAINT_DIR)
-        if inpaint_head_model is None:
-            inpaint_head_model = InpaintHead()
-            sd = torch.load(head_file, map_location='cpu')
-            inpaint_head_model.load_state_dict(sd)
+        inpaint_head_model = InpaintHead()
+        sd = torch.load(head_file, map_location='cpu')
+        inpaint_head_model.load_state_dict(sd)
 
         patch_file = get_local_filepath(FOOOCUS_INPAINT_PATCH[patch]["model_url"], INPAINT_DIR)
         inpaint_lora = comfy.utils.load_torch_file(patch_file, safe_load=True)
