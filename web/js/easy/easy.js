@@ -1,6 +1,6 @@
 import { api } from "../../../../scripts/api.js";
 import { app } from "../../../../scripts/app.js";
-import {deepEqual, addCss, isLocalNetwork} from "../common/utils.js";
+import {deepEqual, addCss, addMeta, isLocalNetwork} from "../common/utils.js";
 import {quesitonIcon, rocketIcon, groupIcon, rebootIcon, closeIcon} from "../common/icon.js";
 import {$t} from '../common/i18n.js';
 import {toast} from "../common/toast.js";

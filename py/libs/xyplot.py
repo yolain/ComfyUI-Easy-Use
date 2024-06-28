@@ -288,21 +288,6 @@ class easyXYPlot():
                 if plot_image_vars['clip_skip'] != 0:
                     clip.clip_layer(plot_image_vars['clip_skip'])
 
-            # Lora
-            if self.x_type == "Lora" or self.y_type == "Lora":
-                model = model if model is not None else plot_image_vars["model"]
-                clip = clip if clip is not None else plot_image_vars["clip"]
-
-                xy_values = x_value if self.x_type == "Lora" else y_value
-                lora_name, lora_model_strength, lora_clip_strength = xy_values.split(",")
-                lora_stack = [{"lora_name": lora_name, "model": model, "clip" :clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)}]
-                if 'lora_stack' in plot_image_vars:
-                    lora_stack = lora_stack + plot_image_vars['lora_stack']
-
-                if lora_stack is not None and lora_stack != []:
-                    for lora in lora_stack:
-                        model, clip = self.easyCache.load_lora(lora)
-
             # CheckPoint
             if self.x_type == "Checkpoint" or self.y_type == "Checkpoint":
                 xy_values = x_value if self.x_type == "Checkpoint" else y_value
@@ -348,6 +333,21 @@ class easyXYPlot():
                         positive = positive + plot_image_vars["positive_cond"]
                     if "negative_cond" in plot_image_vars:
                         negative = negative + plot_image_vars["negative_cond"]
+
+            # Lora
+            if self.x_type == "Lora" or self.y_type == "Lora":
+                model = model if model is not None else plot_image_vars["model"]
+                clip = clip if clip is not None else plot_image_vars["clip"]
+
+                xy_values = x_value if self.x_type == "Lora" else y_value
+                lora_name, lora_model_strength, lora_clip_strength = xy_values.split(",")
+                lora_stack = [{"lora_name": lora_name, "model": model, "clip" :clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)}]
+                if 'lora_stack' in plot_image_vars:
+                    lora_stack = lora_stack + plot_image_vars['lora_stack']
+
+                if lora_stack is not None and lora_stack != []:
+                    for lora in lora_stack:
+                        model, clip = self.easyCache.load_lora(lora)
 
             # 提示词
             if "Positive" in self.x_type or "Positive" in self.y_type:

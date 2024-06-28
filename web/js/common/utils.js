@@ -20,6 +20,13 @@ export function addCss(href, base=true) {
     document.head.appendChild(link);
 }
 
+export function addMeta(name, content) {
+    const meta = document.createElement("meta");
+    meta.setAttribute("name", name);
+    meta.setAttribute('content', content);
+    document.head.appendChild(meta);
+}
+
 export function deepEqual(obj1, obj2) {
   if (typeof obj1 !== typeof obj2) {
     return false
