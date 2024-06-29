@@ -9,7 +9,9 @@
   color: var(--descrip-text);
   background-color: var(--comfy-menu-bg);
   padding: 10px 4px;
-  border: 1px solid var(--border-color);z-index: 999999999;padding-top: 0;
+  border: 1px solid var(--border-color);
+  z-index: 399;
+  padding-top: 0;
 }
 #easyuse_groups_map .icon{
   width: 12px;

@@ -26,15 +26,14 @@ textarea{
     backdrop-filter: blur(8px) brightness(120%);
 }
 .comfy-menu{
-    top:38%;
     border-radius:16px;
     box-shadow:0 0 1px var(--descrip-text);
     backdrop-filter: blur(8px) brightness(120%);
 }
 .comfy-menu button,.comfy-modal button {
-    font-size: 16px;
-    padding:6px 0;
-    margin-bottom:8px;
+    font-size: 14px;
+    padding:4px 0;
+    margin-bottom:4px;
 }
 .comfy-menu button.comfy-settings-btn{
     font-size: 12px;
@@ -43,7 +42,7 @@ textarea{
     margin-bottom: 4px;
 }
 .comfy-menu-btns button,.comfy-list-actions button{
-    font-size: 12px;
+    font-size: 10px;
 }
 .comfy-menu > button,
 .comfy-menu-btns button,
@@ -51,6 +50,7 @@ textarea{
 .comfy-modal button {
     border-width:1px;
 }
+
 
 dialog{
     border:1px solid var(--border-color);
@@ -71,6 +71,9 @@ dialog{
 hr{
    border:1px solid var(--border-color);
 }
+#comfy-dev-save-api-button{
+    justify-content: center;
+}
 #shareButton{
     background:linear-gradient(to left,var(--theme-color),var(--theme-color-light))!important;
     color:white!important;
@@ -78,10 +81,12 @@ hr{
 #queue-button{
     position:relative;
     overflow:hidden;
+    min-height:30px;
     z-index:1;
 }
 
 #queue-button:after{
+    clear: both;
     content:attr(data-attr);
     background:green;
     color:#FFF;

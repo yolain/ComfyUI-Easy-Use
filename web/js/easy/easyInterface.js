@@ -5,8 +5,8 @@ import {addPreconnect, addCss} from "../common/utils.js";
 
 const locale = localStorage['AGL.Locale'] || localStorage['Comfy.Settings.AGL.Locale'] || 'en-US'
 
-const customThemeColor = "#3f3eed"
-const customThemeColorLight = "#008ecb"
+const customThemeColor = "#236692"
+const customThemeColorLight = "#3485bb"
 // 增加Slot颜色
 const customPipeLineLink = "#7737AA"
 const customPipeLineSDXLLink = "#7737AA"
@@ -28,9 +28,9 @@ localStorage.setItem('Comfy.Settings.easyUse.customLinkColors', JSON.stringify(c
 
 // 增加自定义主题
 const ui = {
-  "version": 101,
+  "version": 102,
   "id": "obsidian",
-  "name": "黑曜石",
+  "name": "Obsidian",
   "colors": {
       "node_slot": {
           "CLIP": "#FFD500",
@@ -105,7 +105,7 @@ try{
         custom_theme.obsidian = ui
         let ui2 = JSON.parse(JSON.stringify(ui))
         ui2.id = 'obsidian_dark'
-        ui2.name = '黑曜石-深'
+        ui2.name = 'Obsidian Dark'
         ui2.colors.litegraph_base.BACKGROUND_IMAGE = dark_bg
         ui2.colors.litegraph_base.CLEAR_BACKGROUND_COLOR = '#000'
         custom_theme[ui2.id] = ui2
@@ -559,7 +559,7 @@ try{
                         ctx.fill();
                         if(show_text && !w.disabled)
                             ctx.stroke();
-                        ctx.fillStyle = w.value ? customThemeColorLight : "#333";
+                        ctx.fillStyle = w.value ? customThemeColor : "#333";
                         ctx.beginPath();
                         ctx.arc( widget_width - margin * 2, y + H * 0.5, H * 0.25, 0, Math.PI * 2 );
                         ctx.fill();
@@ -593,7 +593,7 @@ try{
                         var nvalue = (w.value - w.options.min) / range;
                         if(nvalue < 0.0) nvalue = 0.0;
                         if(nvalue > 1.0) nvalue = 1.0;
-                        ctx.fillStyle = w.options.hasOwnProperty("slider_color") ? w.options.slider_color : (active_widget == w ? "#333" : customThemeColorLight);
+                        ctx.fillStyle = w.options.hasOwnProperty("slider_color") ? w.options.slider_color : (active_widget == w ? "#333" : customThemeColor);
                         ctx.beginPath();
                         ctx.roundRect(margin, y, nvalue * (widget_width - margin * 2), H, [H*0.25]);
                         ctx.fill();

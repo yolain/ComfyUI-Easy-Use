@@ -1,7 +1,7 @@
 import { api } from "../../../../scripts/api.js";
 import { app } from "../../../../scripts/app.js";
 import {deepEqual, addCss, addMeta, isLocalNetwork} from "../common/utils.js";
-import {quesitonIcon, rocketIcon, groupIcon, rebootIcon, closeIcon} from "../common/icon.js";
+import {logoIcon, quesitonIcon, rocketIcon, groupIcon, rebootIcon, closeIcon} from "../common/icon.js";
 import {$t} from '../common/i18n.js';
 import {toast} from "../common/toast.js";
 import {$el, ComfyDialog} from "../../../../scripts/ui.js";
@@ -172,7 +172,7 @@ function createGroupMap(){
             buttons.append(go_btn)
             let see_btn = document.createElement('button')
             let defaultStyle = `cursor:pointer;font-size:10px;;padding:2px;border: 1px solid var(--border-color);border-radius:4px;width:36px;`
-            see_btn.style = isGroupMute ? `background-color:var(--error-text);color:var(--input-text);` + defaultStyle : (isGroupShow ? `background-color:#006691;color:var(--input-text);` + defaultStyle : `background-color: var(--comfy-input-bg);color:var(--descrip-text);` + defaultStyle)
+            see_btn.style = isGroupMute ? `background-color:var(--error-text);color:var(--input-text);` + defaultStyle : (isGroupShow ? `background-color:var(--theme-color);color:var(--input-text);` + defaultStyle : `background-color: var(--comfy-input-bg);color:var(--descrip-text);` + defaultStyle)
             see_btn.innerText = isGroupMute ? mute_text : (isGroupShow ? show_text : hide_text)
             let pressTimer
             let firstTime =0, lastTime =0
@@ -384,11 +384,12 @@ class GuideDialog {
     }
 }
 
-const getEnableToolBar = _ => app.ui.settings.getSettingValue(toolBarId, true)
-
+// toolbar
 const toolBarId = "Comfy.EasyUse.toolBar"
+const getEnableToolBar = _ => app.ui.settings.getSettingValue(toolBarId, true)
+const getNewMenuPosition = _ => app.ui.settings.getSettingValue('Comfy.UseNewMenu', 'Disabled')
 
-let enableToolBar = getEnableToolBar()
+let enableToolBar = getEnableToolBar() && getNewMenuPosition() == 'Disabled'
 let disableRenderInfo = localStorage['Comfy.Settings.Comfy.EasyUse.disableRenderInfo'] ? true : false
 export function addToolBar(app) {
 	app.ui.settings.addSetting({
@@ -404,15 +405,17 @@ export function addToolBar(app) {
 		},
 	});
 }
-
 let note = null
 let toolbar = null
 function showToolBar(){
-    toolbar.style.display = 'flex'
+    if(toolbar) toolbar.style.display = 'flex'
 }
 function hideToolBar(){
-    toolbar.style.display = 'none'
+    if(toolbar) toolbar.style.display = 'none'
 }
+const changeNewMenuPosition = app.ui.settings.settingsLookup?.['Comfy.UseNewMenu']
+if(changeNewMenuPosition) changeNewMenuPosition.onChange = v => v == 'Disabled' ? showToolBar() : hideToolBar()
+
 
 app.registerExtension({
     name: "comfy.easyUse",
@@ -520,6 +523,35 @@ app.registerExtension({
         }
 
         addToolBar(app)
+    },
+    async setup() {
+        // New style menu button
+        if(app.menu?.actionsGroup){
+            const groupMap = new (await import('../../../../scripts/ui/components/button.js')).ComfyButton({
+                icon:'list-box',
+                action:()=> createGroupMap(),
+                tooltip: "EasyUse Group Map",
+                // content: "EasyUse Group Map",
+                classList: "comfyui-button comfyui-menu-mobile-collapse"
+            });
+            app.menu?.actionsGroup.element.after(groupMap.element);
+            // const easyNewMenu = $el('div.easyuse-new-menu',[
+            //    $el('div.easyuse-new-menu-intro',[
+            //      $el('div.easyuse-new-menu-logo',{innerHTML:logoIcon}),
+            //      $el('div.easyuse-new-menu-title',[
+            //          $el('div.title',{textContent:'ComfyUI-Easy-Use'}),
+            //          $el('div.desc',{textContent:'Version:'})
+            //      ])
+            //    ])
+            // ])
+            // app.menu?.actionsGroup.element.after(new (await import('../../../../scripts/ui/components/splitButton.js')).ComfySplitButton({
+            //     primary: groupMap,
+            //     mode:'click',
+            //     position:'absolute',
+            //     horizontal: 'right'
+            // },easyNewMenu).element);
+        }
+
     },
     beforeRegisterNodeDef(nodeType, nodeData, app) {
         if (nodeData.name.startsWith("easy")) {

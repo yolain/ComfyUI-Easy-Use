@@ -387,3 +387,9 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) - pyssss🐍
 
 [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) - Image Preview Chooser
+
+##  🌟Stargazers
+
+My gratitude extends to the generous souls who bestow a star. Your support is much appreciated!
+
+[![Stargazers repo roster for @yolain/ComfyUI-Easy-Use](https://reporoster.com/stars/yolain/ComfyUI-Easy-Use)](https://github.com/yolain/ComfyUI-Easy-Use/stargazers)
