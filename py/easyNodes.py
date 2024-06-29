@@ -331,7 +331,7 @@ class promptLine:
 
     def generate_strings(self, prompt, start_index, max_rows, workflow_prompt=None, my_unique_id=None):
         lines = prompt.split('\n')
-        lines = [zh_to_en([v])[0] if has_chinese(v) else v for v in lines]
+        lines = [zh_to_en([v])[0] if has_chinese(v) else v for v in lines if v]
 
         start_index = max(0, min(start_index, len(lines) - 1))
 
