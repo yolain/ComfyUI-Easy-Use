@@ -177,7 +177,10 @@ function widgetLogic(node, widget) {
 	}
 
 	if (widget.name === 'resolution') {
-		if (widget.value === "自定义 x 自定义") {
+		if(widget.value === "自定义 x 自定义"){
+			widget.value = 'width x height (custom)'
+		}
+		if (widget.value === "自定义 x 自定义" || widget.value === 'width x height (custom)') {
 			toggleWidget(node, findWidgetByName(node, 'empty_latent_width'), true)
 			toggleWidget(node, findWidgetByName(node, 'empty_latent_height'), true)
 		} else {

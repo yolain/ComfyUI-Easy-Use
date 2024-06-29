@@ -891,7 +891,7 @@ class fullLoader:
 
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
+        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         a1111_prompt_style_default = False
 
         return {"required": {
@@ -997,7 +997,7 @@ class fullLoader:
 class a1111Loader(fullLoader):
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
+        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         a1111_prompt_style_default = False
         checkpoints = folder_paths.get_filename_list("checkpoints")
         loras = ["None"] + folder_paths.get_filename_list("loras")
@@ -1052,7 +1052,7 @@ class a1111Loader(fullLoader):
 class comfyLoader(fullLoader):
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
+        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         return {
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
@@ -1103,7 +1103,7 @@ class cascadeLoader:
 
     @classmethod
     def INPUT_TYPES(s):
-        resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
+        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
 
         return {"required": {
             "stage_c": (folder_paths.get_filename_list("unet") + folder_paths.get_filename_list("checkpoints"),),
@@ -1512,7 +1512,7 @@ class svdLoader:
 
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
+        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         def get_file_list(filenames):
             return [file for file in filenames if file != "put_models_here.txt" and "svd" in file.lower()]
 
@@ -1632,7 +1632,7 @@ class dynamiCrafterLoader(DynamiCrafter):
 
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
+        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
 
         return {"required": {
                 "model_name": (list(DYNAMICRAFTER_MODELS.keys()),),

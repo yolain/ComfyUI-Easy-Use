@@ -52,7 +52,8 @@ class easySampler:
         return parts
 
     def emptyLatent(self, resolution, empty_latent_width, empty_latent_height, batch_size=1, compression=0, sd3=False):
-        if resolution != "自定义 x 自定义":
+        print(resolution)
+        if resolution not in ["自定义 x 自定义", 'width x height (custom)']:
             try:
                 width, height = map(int, resolution.split(' x '))
                 empty_latent_width = width
