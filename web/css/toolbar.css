@@ -215,3 +215,16 @@
 .markdown-body .link{
     color:var(--theme-color-light)
 }
+
+#comfyui-menu-monitor{
+    width:120px;
+}
+#comfyui-menu-monitor #crystools-monitor-container{
+    margin:0 auto!important;
+}
+#comfyui-menu-monitor #crystools-monitor-container > div{
+    margin:2px 0!important;
+}
+#comfyui-menu-monitor #crystools-monitor-container > div > div > div{
+    padding:0 4px!important;
+}

@@ -387,8 +387,16 @@ class GuideDialog {
 // toolbar
 const toolBarId = "Comfy.EasyUse.toolBar"
 const getEnableToolBar = _ => app.ui.settings.getSettingValue(toolBarId, true)
-const getNewMenuPosition = _ => app.ui.settings.getSettingValue('Comfy.UseNewMenu', 'Disabled')
+const getNewMenuPosition = _ => {
+    try{
+        return app.ui.settings.getSettingValue('Comfy.UseNewMenu', 'Disabled')
+    }catch (e){
+        return 'Disabled'
+    }
+}
 
+let note = null
+let toolbar = null
 let enableToolBar = getEnableToolBar() && getNewMenuPosition() == 'Disabled'
 let disableRenderInfo = localStorage['Comfy.Settings.Comfy.EasyUse.disableRenderInfo'] ? true : false
 export function addToolBar(app) {
@@ -405,16 +413,49 @@ export function addToolBar(app) {
 		},
 	});
 }
-let note = null
-let toolbar = null
 function showToolBar(){
     if(toolbar) toolbar.style.display = 'flex'
 }
 function hideToolBar(){
     if(toolbar) toolbar.style.display = 'none'
 }
+let monitor = null
+function setCrystoolsUI(position){
+    const crystools = document.getElementById('crystools-root')?.children || null
+    if(crystools?.length>0){
+        if(!monitor){
+           for (let i = 0; i < crystools.length; i++) {
+                if (crystools[i].id === 'crystools-monitor-container') {
+                    monitor = crystools[i];
+                    break;
+                }
+           }
+        }
+        if(monitor){
+            if(position == 'Disabled'){
+                let replace = true
+                for (let i = 0; i < crystools.length; i++) {
+                    if (crystools[i].id === 'crystools-monitor-container') {
+                        replace = false
+                        break;
+                    }
+                }
+                document.getElementById('crystools-root').appendChild(monitor)
+            }
+            else {
+                let monitor_div = document.getElementById('comfyui-menu-monitor')
+                if(!monitor_div) app.menu.settingsGroup.element.before($el('div',{id:'comfyui-menu-monitor'},monitor))
+                else monitor_div.appendChild(monitor)
+            }
+        }
+    }
+}
 const changeNewMenuPosition = app.ui.settings.settingsLookup?.['Comfy.UseNewMenu']
-if(changeNewMenuPosition) changeNewMenuPosition.onChange = v => v == 'Disabled' ? showToolBar() : hideToolBar()
+if(changeNewMenuPosition) changeNewMenuPosition.onChange = v => {
+    v == 'Disabled' ? showToolBar() : hideToolBar()
+    setCrystoolsUI(v)
+}
+
 
 
 app.registerExtension({
@@ -534,7 +575,9 @@ app.registerExtension({
                 // content: "EasyUse Group Map",
                 classList: "comfyui-button comfyui-menu-mobile-collapse"
             });
-            app.menu?.actionsGroup.element.after(groupMap.element);
+            app.menu.actionsGroup.element.after(groupMap.element);
+            setCrystoolsUI(getNewMenuPosition())
+
             // const easyNewMenu = $el('div.easyuse-new-menu',[
             //    $el('div.easyuse-new-menu-intro',[
             //      $el('div.easyuse-new-menu-logo',{innerHTML:logoIcon}),

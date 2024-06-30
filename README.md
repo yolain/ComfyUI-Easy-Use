@@ -52,6 +52,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.0**
 
+- 当新菜单的位置在上或者下时增加上 crystools 的显示，推荐开两个就好（如果后续crystools有更新UI适配我可能会删除掉）
 - 增加 **easy sliderControl** - 滑块控制节点，当前可用于控制ipadapterMS的参数 (双击滑块可重置为默认值)
 - 增加 **layer_weights** 属性在 `easy ipadapterApplyADV` 节点
 
