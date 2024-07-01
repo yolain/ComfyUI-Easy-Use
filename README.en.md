@@ -388,6 +388,9 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 
 [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) - Image Preview Chooser
 
+[ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels) - DiT custom nodes
+
+
 ##  🌟Stargazers
 
 My gratitude extends to the generous souls who bestow a star. Your support is much appreciated!

@@ -8,9 +8,11 @@ from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
+from ..dit.hunyuanDiT.loader import EXM_HyDiT_Tenc_Temp, load_hydit
 
 stable_diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy zero123Loader", "easy svdLoader"]
 stable_cascade_loaders = ["easy cascadeLoader"]
+dit_loaders = ['easy hunyuanDiTLoader']
 controlnet_loaders = ["easy controlnetLoader", "easy controlnetLoaderADV"]
 instant_loaders = ["easy instantIDApply", "easy instantIDApplyADV"]
 cascade_vae_node = ["easy preSamplingCascade", "easy fullCascadeKSampler"]
@@ -28,6 +30,7 @@ class easyLoader:
             "vae": defaultdict(object),
             "lora": defaultdict(dict),  # {lora_name: {UID: (model_lora, clip_lora)}}
             "controlnet": defaultdict(dict),
+            "t5": defaultdict(tuple),
         }
         self.memory_threshold = self.determine_memory_threshold(0.7)
         self.lora_name_cache = []
@@ -86,6 +89,7 @@ class easyLoader:
         desired_lora_names = set()
         desired_lora_settings = set()
         desired_controlnet_names = set()
+        desired_t5_names = set()
 
         for entry in prompt.values():
             class_type = entry["class_type"]
@@ -98,6 +102,13 @@ class easyLoader:
             if class_type in stable_diffusion_loaders:
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name", prompt))
                 desired_vae_names.add(self.get_input_value(entry, "vae_name"))
+
+            elif class_type in dit_loaders:
+                t5_name = self.get_input_value(entry, "mt5_name")
+                model_name = self.get_input_value(entry, "model")
+                ckpt_name = self.get_input_value(entry, "ckpt_name", prompt)
+                desired_t5_names.add(t5_name)
+                desired_ckpt_names.add(ckpt_name+'_'+model_name)
 
             elif class_type in stable_cascade_loaders:
                 desired_unet_names.add(self.get_input_value(entry, "stage_c"))
@@ -130,7 +141,7 @@ class easyLoader:
                 if vae_use != 'Use Model 1' and vae_use != 'Use Model 2':
                     desired_vae_names.add(vae_use)
 
-        object_types = ["ckpt", "unet", "clip", "bvae", "vae", "lora", "controlnet"]
+        object_types = ["ckpt", "unet", "clip", "bvae", "vae", "lora", "controlnet", "t5"]
         for object_type in object_types:
             if object_type == 'unet':
                 desired_names = desired_unet_names
@@ -143,6 +154,8 @@ class easyLoader:
                 desired_names = desired_vae_names
             elif object_type == "controlnet":
                 desired_names = desired_controlnet_names
+            elif object_type == "t5":
+                desired_names = desired_t5_names
             else:
                 desired_names = desired_lora_names
             self.clear_unused_objects(desired_names, object_type)
@@ -272,6 +285,9 @@ class easyLoader:
             self.eviction_based_on_memory()
         return control_net
     def load_clip(self, clip_name, type='stable_diffusion', load_clip=None):
+        if clip_name in self.loaded_objects["clip"]:
+            return self.loaded_objects["clip"][clip_name][0]
+
         if type == 'stable_diffusion':
             clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION
         else:
@@ -435,3 +451,67 @@ class easyLoader:
             raise Exception("No CLIP found")
 
         return model, clip, vae, clip_vision, lora_stack
+
+    # DiT
+    def load_dit_ckpt(self, ckpt_name, model_name, **kwargs):
+        if (ckpt_name+'_'+model_name) in self.loaded_objects["ckpt"]:
+            return self.loaded_objects["ckpt"][ckpt_name+'_'+model_name][0]
+
+        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+        model_type = kwargs['model_type'] if "model_type" in kwargs else 'HyDiT'
+        if model_type == 'HyDiT':
+            hydit_conf = kwargs['hydit_conf']
+            model_conf = hydit_conf[model_name]
+            model = load_hydit(ckpt_path, model_conf)
+            self.add_to_cache("ckpt", ckpt_name+'_'+model_name, model)
+        self.eviction_based_on_memory()
+        return model
+
+
+    def load_dit_clip(self, clip_name, **kwargs):
+        if clip_name in self.loaded_objects["clip"]:
+            return self.loaded_objects["clip"][clip_name][0]
+
+        model_type = kwargs['model_type'] if "model_type" in kwargs else 'HyDiT'
+        if model_type == 'HyDiT':
+            del kwargs['model_type']
+            model = EXM_HyDiT_Tenc_Temp(model_class="clip", **kwargs)
+        clip_path = folder_paths.get_full_path("clip", clip_name)
+        sd = comfy.utils.load_torch_file(clip_path)
+
+        prefix = "bert."
+        state_dict = {}
+        for key in sd:
+            nkey = key
+            if key.startswith(prefix):
+                nkey = key[len(prefix):]
+            state_dict[nkey] = sd[key]
+
+        m, e = model.load_sd(state_dict)
+        if len(m) > 0 or len(e) > 0:
+            print(f"{clip_name}: clip missing {len(m)} keys ({len(e)} extra)")
+
+        self.add_to_cache("clip", clip_name, model)
+        self.eviction_based_on_memory()
+
+        return model
+
+    def load_dit_t5(self, t5_name, **kwargs):
+        if t5_name in self.loaded_objects["t5"]:
+            return self.loaded_objects["t5"][t5_name][0]
+
+        model_type = kwargs['model_type'] if "model_type" in kwargs else 'HyDiT'
+        if model_type == 'HyDiT':
+            del kwargs['model_type']
+            model = EXM_HyDiT_Tenc_Temp(model_class="mT5", **kwargs)
+        t5_path = folder_paths.get_full_path("t5", t5_name)
+        sd = comfy.utils.load_torch_file(t5_path)
+        m, e = model.load_sd(sd)
+        if len(m) > 0 or len(e) > 0:
+            print(f"{t5_name}: mT5 missing {len(m)} keys ({len(e)} extra)")
+
+        self.add_to_cache("t5", t5_name, model)
+        self.eviction_based_on_memory()
+
+        return model
+

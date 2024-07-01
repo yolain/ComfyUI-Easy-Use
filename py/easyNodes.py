@@ -887,11 +887,11 @@ class setControlName:
         return (controlnet_name,)
 
 # 简易加载器完整
+resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
 class fullLoader:
 
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         a1111_prompt_style_default = False
 
         return {"required": {
@@ -997,7 +997,6 @@ class fullLoader:
 class a1111Loader(fullLoader):
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         a1111_prompt_style_default = False
         checkpoints = folder_paths.get_filename_list("checkpoints")
         loras = ["None"] + folder_paths.get_filename_list("loras")
@@ -1052,7 +1051,6 @@ class a1111Loader(fullLoader):
 class comfyLoader(fullLoader):
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         return {
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
@@ -1103,7 +1101,6 @@ class cascadeLoader:
 
     @classmethod
     def INPUT_TYPES(s):
-        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
 
         return {"required": {
             "stage_c": (folder_paths.get_filename_list("unet") + folder_paths.get_filename_list("checkpoints"),),
@@ -1512,7 +1509,6 @@ class svdLoader:
 
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
         def get_file_list(filenames):
             return [file for file in filenames if file != "put_models_here.txt" and "svd" in file.lower()]
 
@@ -1632,7 +1628,6 @@ class dynamiCrafterLoader(DynamiCrafter):
 
     @classmethod
     def INPUT_TYPES(cls):
-        resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
 
         return {"required": {
                 "model_name": (list(DYNAMICRAFTER_MODELS.keys()),),
@@ -1789,6 +1784,145 @@ class dynamiCrafterLoader(DynamiCrafter):
                 }
 
         return (pipe, model, vae)
+
+# Dit Loader
+from .dit.utils import string_to_dtype
+from .dit.hunyuanDiT.config import hydit_conf, dtypes, devices
+class hunyuanDiTLoader:
+    @classmethod
+    def INPUT_TYPES(cls):
+        for k in range(1, torch.cuda.device_count()):
+            devices.append(f"cuda:{k}")
+        return {
+            "required": {
+                "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
+                "model":(list(hydit_conf.keys()),{"default":"G/2"}),
+                "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
+                "clip_name": (folder_paths.get_filename_list("clip"),),
+                "mt5_name": (folder_paths.get_filename_list("t5"),),
+                "device": (devices, {"default": "cpu"}),
+                "dtype": (dtypes,),
+                "resolution": (resolution_strings,{'default':'1024 x 1024'}),
+                "empty_latent_width": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "empty_latent_height": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+
+                "positive": ("STRING", {"default": "", "placeholder": "Positive", "multiline": True}),
+                "negative": ("STRING", {"default": "", "placeholder": "Negative", "multiline": True}),
+
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+            }
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
+    RETURN_NAMES = ("pipe", "model", "vae")
+    FUNCTION = "hydit_pipeloader"
+    CATEGORY = "EasyUse/Loaders"
+
+    def text_encoder(self, text, text_t5, clip, t5):
+        # T5
+        t5.load_model()
+        t5_pre = t5.tokenizer(
+            text_t5,
+            max_length=t5.cond_stage_model.max_length,
+            padding='max_length',
+            truncation=True,
+            return_attention_mask=True,
+            add_special_tokens=True,
+            return_tensors='pt'
+        )
+        t5_mask = t5_pre["attention_mask"]
+        with torch.no_grad():
+            t5_outs = t5.cond_stage_model.transformer(
+                input_ids=t5_pre["input_ids"].to(t5.load_device),
+                attention_mask=t5_mask.to(t5.load_device),
+                output_hidden_states=True,
+            )
+            # to-do: replace -1 for clip skip
+            t5_embs = t5_outs["hidden_states"][-1].float().cpu()
+
+        # clip
+        clip.load_model()
+        clip_pre = clip.tokenizer(
+            text,
+            max_length=clip.cond_stage_model.max_length,
+            padding='max_length',
+            truncation=True,
+            return_attention_mask=True,
+            add_special_tokens=True,
+            return_tensors='pt'
+        )
+        clip_mask = clip_pre["attention_mask"]
+        with torch.no_grad():
+            clip_outs = clip.cond_stage_model.transformer(
+                input_ids=clip_pre["input_ids"].to(clip.load_device),
+                attention_mask=clip_mask.to(clip.load_device),
+            )
+            # to-do: add hidden states
+            clip_embs = clip_outs[0].float().cpu()
+
+        # combined cond
+        return ([[
+            clip_embs, {
+                "context_t5": t5_embs,
+                "context_mask": clip_mask.float(),
+                "context_t5_mask": t5_mask.float()
+            }
+        ]],)
+
+    def hydit_pipeloader(self, ckpt_name, model, vae_name, clip_name, mt5_name, device, dtype, resolution, empty_latent_width, empty_latent_height, positive, negative, batch_size, prompt=None, my_unique_id=None):
+        dtype = string_to_dtype(dtype, "text_encoder")
+        if device == "cpu":
+            assert dtype in [None, torch.float32,
+                             torch.bfloat16], f"Can't use dtype '{dtype}' with CPU! Set dtype to 'default' or 'bf16'."
+
+        # Load models
+        log_node_warn("正在加载模型...")
+        # load checkpoint
+
+        model = easyCache.load_dit_ckpt(ckpt_name=ckpt_name, model_name=model, hydit_conf=hydit_conf, model_type='HyDiT')
+        # load vae
+        vae = easyCache.load_vae(vae_name)
+        # load clip
+        clip = easyCache.load_dit_clip(clip_name=clip_name, device=device, dtype=dtype, model_type='HyDiT')
+        # load t5
+        t5 = easyCache.load_dit_t5(t5_name=mt5_name, device=device, dtype=dtype, model_type='HyDiT')
+
+        # Create Empty Latent
+        samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size, sd3=False)
+
+        # t5 text encoder
+        positive_embeddings_final, = self.text_encoder(positive, positive, clip, t5)
+        negative_embeddings_final, = self.text_encoder(negative, negative, clip, t5)
+
+        log_node_warn("加载完毕...")
+        pipe = {
+            "model": model,
+            "positive": positive_embeddings_final,
+            "negative": negative_embeddings_final,
+            "vae": vae,
+            "clip": clip,
+
+            "samples": samples,
+            "images": None,
+
+            "loader_settings": {
+                "ckpt_name": ckpt_name,
+                "clip_name": clip_name,
+                "vae_name": vae_name,
+                "mt5_name": mt5_name,
+
+                "positive": positive,
+                "negative": negative,
+                "resolution": resolution,
+                "empty_latent_width": empty_latent_width,
+                "empty_latent_height": empty_latent_height,
+                "batch_size": batch_size,
+            }
+        }
+
+        return {"ui": {},
+                "result": (pipe, model, vae, clip, positive_embeddings_final, negative_embeddings_final, samples)}
+
 
 # lora
 class loraStack:
@@ -6943,6 +7077,7 @@ NODE_CLASS_MAPPINGS = {
     "easy zero123Loader": zero123Loader,
     "easy dynamiCrafterLoader": dynamiCrafterLoader,
     "easy cascadeLoader": cascadeLoader,
+    "easy hunyuanDiTLoader": hunyuanDiTLoader,
     "easy loraStack": loraStack,
     "easy controlnetStack": controlnetStack,
     "easy controlnetLoader": controlnetSimple,
@@ -7056,6 +7191,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy zero123Loader": "EasyLoader (Zero123)",
     "easy dynamiCrafterLoader": "EasyLoader (DynamiCrafter)",
     "easy cascadeLoader": "EasyCascadeLoader",
+    "easy hunyuanDiTLoader": "EasyLoader (HunYuanDiT)",
     "easy loraStack": "EasyLoraStack",
     "easy controlnetStack": "EasyControlnetStack",
     "easy controlnetLoader": "EasyControlnet",

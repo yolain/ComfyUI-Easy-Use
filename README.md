@@ -404,6 +404,8 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 [ComfyUI-BrushNet](https://github.com/nullquant/ComfyUI-BrushNet) - BrushNet 内补节点
 
+[ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels) - DiT架构相关节点（Pixart、混元DiT等）
+
 ##  🌟Stargazers
 
 My gratitude extends to the generous souls who bestow a star. Your support is much appreciated!

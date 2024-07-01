@@ -7,7 +7,7 @@ import { $t } from '../common/i18n.js';
 import { findWidgetByName, toggleWidget, updateNodeHeight} from "../common/utils.js";
 
 const seedNodes = ["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy preSamplingLayerDiffusion", "easy fullkSampler", "easy fullCascadeKSampler"]
-const loaderNodes = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader"]
+const loaderNodes = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy hunyuanDiTLoader"]
 
 
 function widgetLogic(node, widget) {
@@ -647,6 +647,7 @@ app.registerExtension({
 			case "easy cascadeLoader":
 			case "easy svdLoader":
 			case "easy dynamiCrafterLoader":
+			case "easy hunyuanDiTLoader":
 			case "easy loraStack":
 			case "easy controlnetStack":
 			case "easy latentNoisy":

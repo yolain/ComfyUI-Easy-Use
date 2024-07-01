@@ -2,7 +2,7 @@ import {app} from "../../../../scripts/app.js";
 import {$t} from '../common/i18n.js'
 import {CheckpointInfoDialog, LoraInfoDialog} from "../common/model.js";
 
-const loaders = ['easy fullLoader', 'easy a1111Loader', 'easy comfyLoader']
+const loaders = ['easy fullLoader', 'easy a1111Loader', 'easy comfyLoader', 'easy hunyuanDiTLoader']
 const preSampling = ['easy preSampling', 'easy preSamplingAdvanced', 'easy preSamplingDynamicCFG', 'easy preSamplingNoiseIn', 'easy preSamplingCustom', 'easy preSamplingLayerDiffusion', 'easy fullkSampler']
 const kSampler = ['easy kSampler', 'easy kSamplerTiled', 'easy kSamplerInpainting', 'easy kSamplerDownscaleUnet', 'easy kSamplerLayerDiffusion']
 const controlnet = ['easy controlnetLoader', 'easy controlnetLoaderADV', 'easy instantIDApply', 'easy instantIDApplyADV']
