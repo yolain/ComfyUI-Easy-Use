@@ -1797,7 +1797,7 @@ class hunyuanDiTLoader:
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
                 "model":(list(hydit_conf.keys()),{"default":"G/2"}),
-                "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
+                "vae_name": (folder_paths.get_filename_list("vae"),),
                 "clip_name": (folder_paths.get_filename_list("clip"),),
                 "mt5_name": (folder_paths.get_filename_list("t5"),),
                 "device": (devices, {"default": "cpu"}),
