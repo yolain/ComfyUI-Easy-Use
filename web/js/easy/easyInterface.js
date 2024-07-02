@@ -128,11 +128,6 @@ try{
         if(!control_mode && _settings['Comfy.WidgetControlMode']) {
             control_mode = _settings['Comfy.WidgetControlMode']
         }else if(!control_mode) control_mode = 'after'
-        if(control_mode == 'before'){
-            if(!settings) settings = {}
-            settings["AE.mouseover"] = false
-            settings["AE.highlight"] = false
-        }
         // 主题设置
         if(!theme_name && _settings['Comfy.ColorPalette']) {
             theme_name = `"${_settings['Comfy.ColorPalette']}"`
