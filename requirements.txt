@@ -1,7 +1,7 @@
 diffusers>=0.25.0
 accelerate>=0.25.0
 clip_interrogator>=0.6.0
-sentencepiece==0.2.0
+sentencepiece
 lark-parser
 onnxruntime
 spandrel
