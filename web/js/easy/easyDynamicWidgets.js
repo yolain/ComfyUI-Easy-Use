@@ -77,14 +77,30 @@ function widgetLogic(node, widget) {
 		}
 	}
 	if (widget.name === 'add_noise') {
+		let control_before_widget = findWidgetByName(node, 'control_before_generate')
+		let control_after_widget = findWidgetByName(node, 'control_after_generate')
 		if (widget.value === "disable") {
 			toggleWidget(node, findWidgetByName(node, 'seed'))
-			toggleWidget(node, findWidgetByName(node, 'control_before_generate'))
-			toggleWidget(node, findWidgetByName(node, 'control_after_generate'))
+			if(control_before_widget){
+				control_before_widget.last_value = control_before_widget.value
+				control_before_widget.value = 'fixed'
+				toggleWidget(node, control_before_widget)
+			}
+			if(control_after_widget){
+				control_after_widget.last_value = control_after_widget.value
+				control_after_widget.value = 'fixed'
+				toggleWidget(node, control_after_widget)
+			}
 		} else {
 			toggleWidget(node, findWidgetByName(node, 'seed'), true)
-			toggleWidget(node, findWidgetByName(node, 'control_before_generate'), true)
-			toggleWidget(node, findWidgetByName(node, 'control_after_generate'), true)
+			if(control_before_widget){
+				if(control_before_widget?.last_value) control_before_widget.value = control_before_widget.last_value
+				toggleWidget(node, control_before_widget, true)
+			}
+			if(control_after_widget) {
+				if(control_after_widget?.last_value) control_after_widget.value = control_after_widget.last_value
+				toggleWidget(node, findWidgetByName(node, control_after_widget, true))
+			}
 		}
 		updateNodeHeight(node)
 	}
