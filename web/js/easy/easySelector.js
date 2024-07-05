@@ -180,16 +180,16 @@ app.registerExtension({
                                 selector.element.children[1].innerHTML=''
                                 if(styles_list_cache[styles_values]){
                                     let tags = styles_list_cache[styles_values]
-                                    this.properties["values"] = []
                                     // 重新排序
                                     if(selector.value) tags = tags.sort((a,b)=> selector.value.includes(b.name) - selector.value.includes(a.name))
+                                    this.properties["values"] = []
                                     let list = getTagList(tags, value, language);
                                     selector.element.children[1].append(...list)
                                     selector.element.children[1].querySelectorAll(".easyuse-prompt-styles-tag").forEach(el => {
                                         if (this.properties["values"].includes(el.dataset.tag)) {
                                             el.classList.add("easyuse-prompt-styles-tag-selected");
                                         }
-                                        this.setSize([425, 500]);
+                                        if(this.size?.[0]<150 || this.size?.[1]<150) this.setSize([425, 500]);
                                     })
                                 }
                             })
@@ -285,7 +285,8 @@ app.registerExtension({
                             }
                         })
                     }
-                    this.setSize([425, 500]);
+                    if(this.size?.[0]<150 || this.size?.[1]<150) this.setSize([425, 500]);
+                    //
                 },100)
 
                 return onNodeCreated;
