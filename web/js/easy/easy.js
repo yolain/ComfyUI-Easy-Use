@@ -576,8 +576,10 @@ app.registerExtension({
                 classList: "comfyui-button comfyui-menu-mobile-collapse"
             });
             app.menu.actionsGroup.element.after(groupMap.element);
-            setCrystoolsUI(getNewMenuPosition())
-
+            const position = getNewMenuPosition()
+            setCrystoolsUI(position)
+            if(position == 'Disabled') showToolBar()
+            else hideToolBar()
             // const easyNewMenu = $el('div.easyuse-new-menu',[
             //    $el('div.easyuse-new-menu-intro',[
             //      $el('div.easyuse-new-menu-logo',{innerHTML:logoIcon}),
