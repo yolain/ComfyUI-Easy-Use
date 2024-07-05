@@ -2748,7 +2748,8 @@ class ipadapter:
             'FACEID',
             'FACEID PLUS - SD1.5 only',
             'FACEID PLUS V2',
-            'FACEID PORTRAIT (style transfer)'
+            'FACEID PORTRAIT (style transfer)',
+            'FACEID PORTRAIT UNNORM - SDXL only (strong)'
         ]
         self.weight_types = ["linear", "ease in", "ease out", 'ease in-out', 'reverse in-out', 'weak input', 'weak output', 'weak middle', 'strong middle', 'style transfer', 'composition', 'strong style transfer', 'style and composition', 'style transfer precise']
         self.presets = self.normal_presets + self.faceid_presets
@@ -2825,6 +2826,12 @@ class ipadapter:
                 if not [e for e in ipadapter_list if re.search(pattern, e, re.IGNORECASE)]:
                     pattern = 'portrait.sd15\.(safetensors|bin)$'
             is_insightface = True
+        elif preset.startswith("faceid portrait unnorm"):
+            if is_sdxl:
+                pattern = r'portrait.sdxl.unnorm\.(safetensors|bin)$'
+            else:
+                raise Exception("portrait unnorm model is not supported for SD1.5")
+            is_insightface = True
         elif preset == "faceid":
             if is_sdxl:
                 pattern = 'faceid.sdxl\.(safetensors|bin)$'
@@ -2871,6 +2878,12 @@ class ipadapter:
             lora_pattern = 'faceid.plusv2.sdxl.lora\.safetensors$'
         elif re.search(r'faceid.plusv2.sd15\.(safetensors|bin)$', basename, re.IGNORECASE):
             lora_pattern = 'faceid.plusv2.sd15.lora\.safetensors$'
+        elif re.search(r'faceid.portrait.(sd15|v11.sd15)\.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'portrait.v11.sd15\.(safetensors|bin)$'
+        elif re.search(r'faceid.portrait.sdxl\.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'portrait.sdxl\.(safetensors|bin)$'
+        elif re.search(r'faceid.portrait.sdxl.unnorm\.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'portrait.sdxl.unnorm\.(safetensors|bin)$'
         return lora_pattern
 
     def get_lora_file(self, preset, pattern, model_type, model, model_strength, clip_strength, clip=None):

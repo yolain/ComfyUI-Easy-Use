@@ -280,7 +280,8 @@ function widgetLogic(node, widget) {
             'FACEID',
             'FACEID PLUS - SD1.5 only',
             'FACEID PLUS V2',
-			'FACEID PORTRAIT (style transfer)'
+			'FACEID PORTRAIT (style transfer)',
+			'FACEID PORTRAIT UNNORM - SDXL only (strong)'
         ]
 		if(normol_presets.includes(widget.value)){
 			toggleWidget(node, findWidgetByName(node, 'lora_strength'))
@@ -301,7 +302,7 @@ function widgetLogic(node, widget) {
 			}else{
 				toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'))
 			}
-			if(widget.value == 'FACEID PORTRAIT (style transfer)'){
+			if(['FACEID PORTRAIT (style transfer)','FACEID PORTRAIT UNNORM - SDXL only (strong)'].includes(widget.value)){
 				toggleWidget(node, findWidgetByName(node, 'lora_strength'), false)
 			}
 			else{
