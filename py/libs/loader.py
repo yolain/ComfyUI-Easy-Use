@@ -9,10 +9,11 @@ from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
 from ..dit.hunyuanDiT.loader import EXM_HyDiT_Tenc_Temp, load_hydit
+from ..dit.pixArt.loader import load_pixart
 
 stable_diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy zero123Loader", "easy svdLoader"]
 stable_cascade_loaders = ["easy cascadeLoader"]
-dit_loaders = ['easy hunyuanDiTLoader']
+dit_loaders = ['easy hunyuanDiTLoader', 'easy pixArtLoader']
 controlnet_loaders = ["easy controlnetLoader", "easy controlnetLoaderADV"]
 instant_loaders = ["easy instantIDApply", "easy instantIDApplyADV"]
 cascade_vae_node = ["easy preSamplingCascade", "easy fullCascadeKSampler"]
@@ -104,10 +105,14 @@ class easyLoader:
                 desired_vae_names.add(self.get_input_value(entry, "vae_name"))
 
             elif class_type in dit_loaders:
-                t5_name = self.get_input_value(entry, "mt5_name")
-                model_name = self.get_input_value(entry, "model")
+                t5_name = self.get_input_value(entry, "mt5_name") if "mt5_name" in entry["inputs"] else  None
+                clip_name = self.get_input_value(entry, "clip_name") if "clip_name" in entry["inputs"] else None
+                model_name = self.get_input_value(entry, "model_name")
                 ckpt_name = self.get_input_value(entry, "ckpt_name", prompt)
-                desired_t5_names.add(t5_name)
+                if t5_name:
+                    desired_t5_names.add(t5_name)
+                if clip_name:
+                    desired_clip_names.add(clip_name)
                 desired_ckpt_names.add(ckpt_name+'_'+model_name)
 
             elif class_type in stable_cascade_loaders:
@@ -290,8 +295,12 @@ class easyLoader:
 
         if type == 'stable_diffusion':
             clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION
-        else:
+        elif type == 'stable_cascade':
             clip_type = comfy.sd.CLIPType.STABLE_CASCADE
+        elif type == 'sd3':
+            clip_type = comfy.sd.CLIPType.SD3
+        elif type == 'stable_audio':
+            clip_type = comfy.sd.CLIPType.STABLE_AUDIO
         clip_path = folder_paths.get_full_path("clip", clip_name)
         load_clip = comfy.sd.load_clip(ckpt_paths=[clip_path], embedding_directory=folder_paths.get_folder_paths("embeddings"), clip_type=clip_type)
         self.add_to_cache("clip", clip_name, load_clip)
@@ -299,7 +308,7 @@ class easyLoader:
 
         return load_clip
 
-    def load_lora(self, lora, model=None, clip=None):
+    def load_lora(self, lora, model=None, clip=None, type=None):
         lora_name = lora["lora_name"]
         model = model if model is not None else lora["model"]
         clip = clip if clip is not None else lora["clip"]
@@ -364,7 +373,12 @@ class easyLoader:
                     model.model.load_state_dict(mapping_norm, strict=False)
                     return (model, clip)
 
-                model, clip = comfy.sd.load_lora_for_models(model, clip, _lora, model_strength, clip_strength)
+                # PixArt
+                if type is not None and type == 'PixArt':
+                    from ..dit.pixArt.loader import load_pixart_lora
+                    model = load_pixart_lora(model, _lora, lora_path, model_strength)
+                else:
+                    model, clip = comfy.sd.load_lora_for_models(model, clip, _lora, model_strength, clip_strength)
 
             self.add_to_cache("lora", unique_id, (model, clip))
             self.eviction_based_on_memory()
@@ -456,15 +470,20 @@ class easyLoader:
     def load_dit_ckpt(self, ckpt_name, model_name, **kwargs):
         if (ckpt_name+'_'+model_name) in self.loaded_objects["ckpt"]:
             return self.loaded_objects["ckpt"][ckpt_name+'_'+model_name][0]
-
+        model = None
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
         model_type = kwargs['model_type'] if "model_type" in kwargs else 'HyDiT'
         if model_type == 'HyDiT':
             hydit_conf = kwargs['hydit_conf']
             model_conf = hydit_conf[model_name]
             model = load_hydit(ckpt_path, model_conf)
-            self.add_to_cache("ckpt", ckpt_name+'_'+model_name, model)
-        self.eviction_based_on_memory()
+        elif model_type == 'PixArt':
+            pixart_conf = kwargs['pixart_conf']
+            model_conf = pixart_conf[model_name]
+            model = load_pixart(ckpt_path, model_conf)
+        if model:
+            self.add_to_cache("ckpt", ckpt_name + '_' + model_name, model)
+            self.eviction_based_on_memory()
         return model
 
 
@@ -515,3 +534,33 @@ class easyLoader:
 
         return model
 
+    def load_t5_from_sd3_clip(self, sd3_clip, padding):
+        from comfy.sd3_clip import SD3Tokenizer, SD3ClipModel
+        import copy
+
+        clip = sd3_clip.clone()
+        assert clip.cond_stage_model.t5xxl is not None, "CLIP must have T5 loaded!"
+
+        # remove transformer
+        transformer = clip.cond_stage_model.t5xxl.transformer
+        clip.cond_stage_model.t5xxl.transformer = None
+
+        # clone object
+        tmp = SD3ClipModel(clip_l=False, clip_g=False, t5=False)
+        tmp.t5xxl = copy.deepcopy(clip.cond_stage_model.t5xxl)
+        # put transformer back
+        clip.cond_stage_model.t5xxl.transformer = transformer
+        tmp.t5xxl.transformer = transformer
+
+        # override special tokens
+        tmp.t5xxl.special_tokens = copy.deepcopy(clip.cond_stage_model.t5xxl.special_tokens)
+        tmp.t5xxl.special_tokens.pop("end")  # make sure empty tokens match
+
+        # tokenizer
+        tok = SD3Tokenizer()
+        tok.t5xxl.min_length = padding
+
+        clip.cond_stage_model = tmp
+        clip.tokenizer = tok
+
+        return clip

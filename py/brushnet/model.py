@@ -1684,5 +1684,5 @@ try:
 except ImportError:
     BrushNetModel = None
     PowerPaintModel = None
-    print("\33[33mModule 'diffusers' load failed. If you don't have it installed, do it:\033[0m")
-    print("\33[33mpip install diffusers\033[0m")
+    # print("\33[33mModule 'diffusers' load failed. If you don't have it installed, do it:\033[0m")
+    # print("\33[33mpip install diffusers\033[0m")

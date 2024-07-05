@@ -1788,6 +1788,7 @@ class dynamiCrafterLoader(DynamiCrafter):
 # Dit Loader
 from .dit.utils import string_to_dtype
 from .dit.hunyuanDiT.config import hydit_conf, dtypes, devices
+from .dit.pixArt.config import pixart_conf, pixart_res
 class hunyuanDiTLoader:
     @classmethod
     def INPUT_TYPES(cls):
@@ -1796,7 +1797,7 @@ class hunyuanDiTLoader:
         return {
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
-                "model":(list(hydit_conf.keys()),{"default":"G/2"}),
+                "model_name":(list(hydit_conf.keys()),{"default":"G/2"}),
                 "vae_name": (folder_paths.get_filename_list("vae"),),
                 "clip_name": (folder_paths.get_filename_list("clip"),),
                 "mt5_name": (folder_paths.get_filename_list("t5"),),
@@ -1810,7 +1811,8 @@ class hunyuanDiTLoader:
                 "negative": ("STRING", {"default": "", "placeholder": "Negative", "multiline": True}),
 
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
-            }
+            },
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
@@ -1869,17 +1871,19 @@ class hunyuanDiTLoader:
             }
         ]],)
 
-    def hydit_pipeloader(self, ckpt_name, model, vae_name, clip_name, mt5_name, device, dtype, resolution, empty_latent_width, empty_latent_height, positive, negative, batch_size, prompt=None, my_unique_id=None):
+    def hydit_pipeloader(self, ckpt_name, model_name, vae_name, clip_name, mt5_name, device, dtype, resolution, empty_latent_width, empty_latent_height, positive, negative, batch_size, prompt=None, my_unique_id=None):
         dtype = string_to_dtype(dtype, "text_encoder")
         if device == "cpu":
             assert dtype in [None, torch.float32,
                              torch.bfloat16], f"Can't use dtype '{dtype}' with CPU! Set dtype to 'default' or 'bf16'."
 
+        # Clean models from loaded_objects
+        easyCache.update_loaded_objects(prompt)
+
         # Load models
         log_node_warn("正在加载模型...")
         # load checkpoint
-
-        model = easyCache.load_dit_ckpt(ckpt_name=ckpt_name, model_name=model, hydit_conf=hydit_conf, model_type='HyDiT')
+        model = easyCache.load_dit_ckpt(ckpt_name=ckpt_name, model_name=model_name, hydit_conf=hydit_conf, model_type='HyDiT')
         # load vae
         vae = easyCache.load_vae(vae_name)
         # load clip
@@ -1923,6 +1927,127 @@ class hunyuanDiTLoader:
         return {"ui": {},
                 "result": (pipe, model, vae, clip, positive_embeddings_final, negative_embeddings_final, samples)}
 
+class pixArtLoader:
+    @classmethod
+    def INPUT_TYPES(cls):
+        for k in range(1, torch.cuda.device_count()):
+            devices.append(f"cuda:{k}")
+        return {
+            "required": {
+                "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
+                "model_name":(list(pixart_conf.keys()),),
+                "vae_name": (folder_paths.get_filename_list("vae"),),
+                "t5_type": (['sd3'],),
+                "clip_name": (folder_paths.get_filename_list("clip"),),
+                "padding": ("INT", {"default": 1, "min": 1, "max": 300}),
+                "t5_name": (folder_paths.get_filename_list("t5"),),
+                "device": (devices, {"default": "cpu"}),
+                "dtype": (dtypes,),
+
+                "lora_name": (["None"] + folder_paths.get_filename_list("loras"),),
+                "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+
+                "ratio": (["custom"] + list(pixart_res["PixArtMS_XL_2"].keys()), {"default":"1.00"}),
+                "empty_latent_width": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "empty_latent_height": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+
+                "positive": ("STRING", {"default": "", "placeholder": "Positive", "multiline": True}),
+                "negative": ("STRING", {"default": "", "placeholder": "Negative", "multiline": True}),
+
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+            },
+            "optional":{
+              "optional_lora_stack": ("LORA_STACK",),
+            },
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
+    RETURN_NAMES = ("pipe", "model", "vae")
+    FUNCTION = "pixart_pipeloader"
+    CATEGORY = "EasyUse/Loaders"
+
+    def pixart_pipeloader(self, ckpt_name, model_name, vae_name, t5_type, clip_name, padding, t5_name, device, dtype, lora_name, lora_model_strength, ratio, empty_latent_width, empty_latent_height, positive, negative, batch_size, optional_lora_stack=None, prompt=None, my_unique_id=None):
+        # Clean models from loaded_objects
+        easyCache.update_loaded_objects(prompt)
+
+        # load checkpoint
+        model = easyCache.load_dit_ckpt(ckpt_name=ckpt_name, model_name=model_name, pixart_conf=pixart_conf,
+                                        model_type='PixArt')
+        # load vae
+        vae = easyCache.load_vae(vae_name)
+
+        # load t5
+        if t5_type == 'sd3':
+            clip = easyCache.load_clip(clip_name=clip_name,type='sd3')
+            clip = easyCache.load_t5_from_sd3_clip(sd3_clip=clip, padding=padding)
+            lora_stack = None
+            if optional_lora_stack is not None:
+                for lora in optional_lora_stack:
+                    lora = {"lora_name": lora[0], "model": model, "clip": clip, "model_strength": lora[1],
+                            "clip_strength": lora[2]}
+                    model, _ = easyCache.load_lora(lora, type='PixArt')
+                    lora['model'] = model
+                    lora['clip'] = clip
+                    lora_stack.append(lora)
+
+            if lora_name != "None":
+                lora = {"lora_name": lora_name, "model": model, "clip": clip, "model_strength": lora_model_strength,
+                        "clip_strength": 1}
+                model, _ = easyCache.load_lora(lora, type='PixArt')
+                lora_stack.append(lora)
+
+            positive_embeddings_final, = CLIPTextEncode().encode(clip, positive)
+            negative_embeddings_final, = CLIPTextEncode().encode(clip, negative)
+        else:
+            # todo t5v11
+            positive_embeddings_final, negative_embeddings_final = None, None
+            clip = None
+            pass
+
+        # Create Empty Latent
+        if ratio != 'custom':
+            if model_name in ['ControlPixArtMSHalf','PixArtMS_Sigma_XL_2_900M']:
+                res_name = 'PixArtMS_XL_2'
+            elif model_name in ['ControlPixArtHalf']:
+                res_name = 'PixArt_XL_2'
+            else:
+                res_name = model_name
+            width, height = pixart_res[res_name][ratio]
+            empty_latent_width = width
+            empty_latent_height = height
+
+        latent = torch.zeros([batch_size, 4, empty_latent_height // 8, empty_latent_width // 8], device=sampler.device)
+        samples = {"samples": latent}
+
+        log_node_warn("加载完毕...")
+        pipe = {
+            "model": model,
+            "positive": positive_embeddings_final,
+            "negative": negative_embeddings_final,
+            "vae": vae,
+            "clip": clip,
+
+            "samples": samples,
+            "images": None,
+
+            "loader_settings": {
+                "ckpt_name": ckpt_name,
+                "clip_name": clip_name,
+                "vae_name": vae_name,
+                "t5_name": t5_name,
+
+                "positive": positive,
+                "negative": negative,
+                "ratio": ratio,
+                "empty_latent_width": empty_latent_width,
+                "empty_latent_height": empty_latent_height,
+                "batch_size": batch_size,
+            }
+        }
+
+        return {"ui": {},
+                "result": (pipe, model, vae, clip, positive_embeddings_final, negative_embeddings_final, samples)}
 
 # lora
 class loraStack:
@@ -3927,7 +4052,8 @@ class samplerCustomSettings:
                 case 'alignYourSteps':
                     model_type = get_sd_version(model)
                     if model_type == 'unknown':
-                        raise Exception("This Model not supported")
+                        model_type = 'sdxl'
+                        # raise Exception("This Model not supported")
                     sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
                 case 'gits':
                     sigmas, = gitsScheduler().get_sigmas(coeff, steps, denoise)
@@ -4698,7 +4824,8 @@ class samplerFull:
             elif scheduler == 'align_your_steps':
                 model_type = get_sd_version(samp_model)
                 if model_type == 'unknown':
-                    raise Exception("This Model not supported")
+                    model_type = 'sdxl'
+                    # raise Exception("This Model not supported")
                 sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
                 _sampler = comfy.samplers.sampler_object(sampler_name)
                 samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent)
@@ -5803,7 +5930,7 @@ class preDetailerFix:
              "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
              "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
              "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-             "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+             "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['align_your_steps'],),
              "denoise": ("FLOAT", {"default": 0.5, "min": 0.0001, "max": 1.0, "step": 0.01}),
              "feather": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
              "noise_mask": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
@@ -5857,6 +5984,15 @@ class preDetailerFix:
             raise Exception(f"[ERROR] sam_pipe or pipe['sam_pipe'] is missing")
 
         loader_settings = pipe["loader_settings"] if "loader_settings" in pipe else {}
+
+        if(scheduler == 'align_your_steps'):
+            model_version = get_sd_version(model)
+            if model_version == 'sdxl':
+                scheduler = 'AYS SDXL'
+            elif model_version == 'svd':
+                scheduler = 'AYS SVD'
+            else:
+                scheduler = 'AYS SD1'
 
         new_pipe = {
             "images": images,
@@ -7078,6 +7214,7 @@ NODE_CLASS_MAPPINGS = {
     "easy dynamiCrafterLoader": dynamiCrafterLoader,
     "easy cascadeLoader": cascadeLoader,
     "easy hunyuanDiTLoader": hunyuanDiTLoader,
+    "easy pixArtLoader": pixArtLoader,
     "easy loraStack": loraStack,
     "easy controlnetStack": controlnetStack,
     "easy controlnetLoader": controlnetSimple,
@@ -7192,6 +7329,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy dynamiCrafterLoader": "EasyLoader (DynamiCrafter)",
     "easy cascadeLoader": "EasyCascadeLoader",
     "easy hunyuanDiTLoader": "EasyLoader (HunYuanDiT)",
+    "easy pixArtLoader": "EasyLoader (PixArt)",
     "easy loraStack": "EasyLoraStack",
     "easy controlnetStack": "EasyControlnetStack",
     "easy controlnetLoader": "EasyControlnet",

@@ -7,7 +7,7 @@ import { $t } from '../common/i18n.js';
 import { findWidgetByName, toggleWidget, updateNodeHeight} from "../common/utils.js";
 
 const seedNodes = ["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy preSamplingLayerDiffusion", "easy fullkSampler", "easy fullCascadeKSampler"]
-const loaderNodes = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy hunyuanDiTLoader"]
+const loaderNodes = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy hunyuanDiTLoader", "easy pixArtLoader"]
 
 
 function widgetLogic(node, widget) {
@@ -197,6 +197,15 @@ function widgetLogic(node, widget) {
 			widget.value = 'width x height (custom)'
 		}
 		if (widget.value === "自定义 x 自定义" || widget.value === 'width x height (custom)') {
+			toggleWidget(node, findWidgetByName(node, 'empty_latent_width'), true)
+			toggleWidget(node, findWidgetByName(node, 'empty_latent_height'), true)
+		} else {
+			toggleWidget(node, findWidgetByName(node, 'empty_latent_width'), false)
+			toggleWidget(node, findWidgetByName(node, 'empty_latent_height'), false)
+		}
+	}
+	if (widget.name === 'ratio') {
+		if (widget.value === "custom") {
 			toggleWidget(node, findWidgetByName(node, 'empty_latent_width'), true)
 			toggleWidget(node, findWidgetByName(node, 'empty_latent_height'), true)
 		} else {
@@ -410,6 +419,25 @@ function widgetLogic(node, widget) {
 				toggleWidget(node, findWidgetByName(node, 'start_at'), true)
 				toggleWidget(node, findWidgetByName(node, 'end_at'), true)
 				break
+		}
+		updateNodeHeight(node)
+	}
+
+	if(widget.name == 't5_type'){
+		switch (widget.value){
+			case 'sd3':
+				toggleWidget(node, findWidgetByName(node, 'clip_name'), true)
+				toggleWidget(node, findWidgetByName(node, 'padding'), true)
+				toggleWidget(node, findWidgetByName(node, 't5_name'))
+				toggleWidget(node, findWidgetByName(node, 'device'))
+				toggleWidget(node, findWidgetByName(node, 'dtype'))
+				break
+			case 't5v11':
+				toggleWidget(node, findWidgetByName(node, 'clip_name'))
+				toggleWidget(node, findWidgetByName(node, 'padding'))
+				toggleWidget(node, findWidgetByName(node, 't5_name'),true)
+				toggleWidget(node, findWidgetByName(node, 'device'),true)
+				toggleWidget(node, findWidgetByName(node, 'dtype'),true)
 		}
 		updateNodeHeight(node)
 	}
@@ -664,6 +692,7 @@ app.registerExtension({
 			case "easy svdLoader":
 			case "easy dynamiCrafterLoader":
 			case "easy hunyuanDiTLoader":
+			case "easy pixArtLoader":
 			case "easy loraStack":
 			case "easy controlnetStack":
 			case "easy latentNoisy":
@@ -1205,10 +1234,10 @@ const getSetWidgets = ['rescale_after_model', 'rescale',
 						'refiner_lora1_name', 'refiner_lora2_name', 'upscale_method', 
 						'image_output', 'add_noise', 'info', 'sampler_name',
 						'ckpt_B_name', 'ckpt_C_name', 'save_model', 'refiner_ckpt_name',
-						'num_loras', 'num_controlnet', 'mode', 'toggle', 'resolution', 'target_parameter',
+						'num_loras', 'num_controlnet', 'mode', 'toggle', 'resolution', 'ratio', 'target_parameter',
 	'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode',
 	'lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch', 'num_embeds',
-	"easing_mode", "guider", "scheduler", "inpaint_mode",
+	"easing_mode", "guider", "scheduler", "inpaint_mode", 't5_type'
 ]
 
 function getSetters(node) {

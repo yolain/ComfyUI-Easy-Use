@@ -52,7 +52,6 @@ class easySampler:
         return parts
 
     def emptyLatent(self, resolution, empty_latent_width, empty_latent_height, batch_size=1, compression=0, sd3=False):
-        print(resolution)
         if resolution not in ["自定义 x 自定义", 'width x height (custom)']:
             try:
                 width, height = map(int, resolution.split(' x '))
@@ -73,7 +72,6 @@ class easySampler:
 
             samples = ({"samples": latent_c}, {"samples": latent_b})
         return samples
-
 
     def common_ksampler(self, model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=1.0,
                         disable_noise=False, start_step=None, last_step=None, force_full_denoise=False,
