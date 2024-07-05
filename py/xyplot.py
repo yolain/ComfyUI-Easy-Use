@@ -163,7 +163,7 @@ class XYplot_Sampler_Scheduler:
             for sampler, scheduler in zip(samplers, schedulers):
                 sampler = sampler if sampler else 'None'
                 scheduler = scheduler if scheduler else 'None'
-                values.append(sampler +', '+ scheduler)
+                values.append(sampler +','+ scheduler)
         values = "; ".join(values)
         return ({"axis": axis, "values": values},) if values else (None,)
 
@@ -555,7 +555,6 @@ class XYplot_Lora:
 
         optional_lora_stack = kwargs.get("optional_lora_stack") if "optional_lora_stack" in kwargs else []
 
-        print(values)
         xy_values = {"axis": axis, "values": values, "lora_stack": optional_lora_stack}
         return (xy_values,)
 

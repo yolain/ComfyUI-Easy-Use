@@ -186,7 +186,6 @@ class easyXYPlot():
 
         # 高级用法
         if plot_image_vars["x_node_type"] == "advanced" or plot_image_vars["y_node_type"] == "advanced":
-
             if self.x_type == "Seeds++ Batch" or self.y_type == "Seeds++ Batch":
                 seed = int(x_value) if self.x_type == "Seeds++ Batch" else int(y_value)
             if self.x_type == "Steps" or self.y_type == "Steps":
@@ -294,7 +293,6 @@ class easyXYPlot():
                 ckpt_name, clip_skip, vae_name = xy_values.split(",")
                 ckpt_name = ckpt_name.replace('*', ',')
                 vae_name = vae_name.replace('*', ',')
-                print(ckpt_name)
                 model, clip, vae, clip_vision = self.easyCache.load_checkpoint(ckpt_name)
                 if vae_name != 'None':
                     vae = self.easyCache.load_vae(vae_name)
@@ -447,7 +445,6 @@ class easyXYPlot():
 
         samples = empty_samples if layer_diffusion_method is not None and empty_samples is not None else samples
         # Sample
-
         samples = self.sampler.common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, samples,
                                           denoise=denoise, disable_noise=disable_noise, preview_latent=preview_latent,
                                           start_step=start_step, last_step=last_step,
