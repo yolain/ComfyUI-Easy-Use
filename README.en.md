@@ -45,6 +45,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.0**
 
+- Added `easy pulIDApply` and `easy pulIDApplyADV`
 - Added `easy huanyuanDiTLoader` and `easy pixArtLoader`
 - Added **easy sliderControl** - Slider control node, which can currently be used to control the parameters of ipadapterMS (double-click the slider to reset to default)
 - Added **layer_weights** in `easy ipadapterApplyADV`
@@ -384,6 +385,8 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus) - Style migration
 
 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID) - Face migration
+
+[ComfyUI_PuLID](https://github.com/cubiq/PuLID_ComfyUI) - Face migration
 
 [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) - pyssss🐍
 

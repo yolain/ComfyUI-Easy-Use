@@ -52,6 +52,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.0**
 
+- 增加 `easy pulIDApply` 和 `easy pulIDApplyADV`
 - 增加 `easy huanyuanDiTLoader` 和 `easy pixArtLoader`
 - 当新菜单的位置在上或者下时增加上 crystools 的显示，推荐开两个就好（如果后续crystools有更新UI适配我可能会删除掉）
 - 增加 **easy sliderControl** - 滑块控制节点，当前可用于控制ipadapterMS的参数 (双击滑块可重置为默认值)
@@ -398,6 +399,8 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 [ComfyUI_IPAdapter_plus](https://github.com/cubiq/ComfyUI_IPAdapter_plus) - 风格迁移
 
 [ComfyUI_InstantID](https://github.com/cubiq/ComfyUI_InstantID) - 人脸迁移
+
+[ComfyUI_PuLID](https://github.com/cubiq/PuLID_ComfyUI) - 人脸迁移
 
 [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) - pyssss 小蛇🐍脚本
 

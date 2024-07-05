@@ -6,7 +6,7 @@ const loaders = ['easy fullLoader', 'easy a1111Loader', 'easy comfyLoader', 'eas
 const preSampling = ['easy preSampling', 'easy preSamplingAdvanced', 'easy preSamplingDynamicCFG', 'easy preSamplingNoiseIn', 'easy preSamplingCustom', 'easy preSamplingLayerDiffusion', 'easy fullkSampler']
 const kSampler = ['easy kSampler', 'easy kSamplerTiled', 'easy kSamplerInpainting', 'easy kSamplerDownscaleUnet', 'easy kSamplerLayerDiffusion']
 const controlnet = ['easy controlnetLoader', 'easy controlnetLoaderADV', 'easy instantIDApply', 'easy instantIDApplyADV']
-const ipadapter = ['easy ipadapterApply', 'easy ipadapterApplyADV', 'easy ipadapterStyleComposition', 'easy ipadapterApplyFromParams']
+const ipadapter = ['easy ipadapterApply', 'easy ipadapterApplyADV', 'easy ipadapterStyleComposition', 'easy ipadapterApplyFromParams', 'easy pulIDApply', 'easy pulIDApplyADV']
 const positive_prompt = ['easy positive', 'easy wildcards']
 const imageNode = ['easy loadImageBase64', 'LoadImage', 'LoadImageMask']
 const inpaint = ['easy applyBrushNet', 'easy applyPowerPaint', 'easy applyInpaint']
@@ -60,6 +60,8 @@ const widgetMapping = {
         "end_at": "end_at",
         "cache_mode": "cache_mode",
         "use_tiled": "use_tiled",
+        "insightface": "insightface",
+        "pulid_file": "pulid_file"
     },
     "load_image":{
         "image":"image",
@@ -576,7 +578,7 @@ app.registerExtension({
         }
         // Swap IPAdapater
         if (ipadapter.includes(nodeData.name)) {
-            addMenu("↪️ Swap EasyIPAdapater", 'ipadapter', ipadapter, nodeType)
+            addMenu("↪️ Swap EasyAdapater", 'ipadapter', ipadapter, nodeType)
         }
         // Swap Image
         if (imageNode.includes(nodeData.name)) {

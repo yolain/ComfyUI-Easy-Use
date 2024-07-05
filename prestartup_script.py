@@ -22,6 +22,7 @@ add_folder_path_and_extensions("mmdets", [os.path.join(model_path, "mmdets")], f
 add_folder_path_and_extensions("sams", [os.path.join(model_path, "sams")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("onnx", [os.path.join(model_path, "onnx")], {'.onnx'})
 add_folder_path_and_extensions("instantid", [os.path.join(model_path, "instantid")], folder_paths.supported_pt_extensions)
+add_folder_path_and_extensions("pulid", [os.path.join(model_path, "pulid")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("layer_model", [os.path.join(model_path, "layer_model")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("rembg", [os.path.join(model_path, "rembg")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("ipadapter", [os.path.join(model_path, "ipadapter")], folder_paths.supported_pt_extensions)
