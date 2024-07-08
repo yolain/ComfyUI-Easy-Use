@@ -24,7 +24,7 @@ def correct_prompt_syntax(prompt=""):
     # print("input prompt",prompt)
     corrected_elements = []
     # 处理成统一的英文标点
-    prompt = prompt.replace('（', '(').replace('）', ')').replace('，', ',').replace(';', ',').replace('。', '.').replace('：',':')
+    prompt = prompt.replace('（', '(').replace('）', ')').replace('，', ',').replace(';', ',').replace('。', '.').replace('：',':').replace('\\',',')
     # 删除多余的空格
     prompt = re.sub(r'\s+', ' ', prompt).strip()
     prompt = prompt.replace("< ","<").replace(" >",">").replace("( ","(").replace(" )",")").replace("[ ","[").replace(' ]',']')
