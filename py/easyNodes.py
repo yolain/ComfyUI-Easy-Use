@@ -2817,7 +2817,7 @@ class ipadapter:
                 pattern = 'plus.composition.sdxl\.(safetensors|bin)$'
             else:
                 pattern = 'plus.composition.sd15\.(safetensors|bin)$'
-        elif preset.startswith("faceid portrait"):
+        elif preset.startswith("faceid portrait ("):
             if is_sdxl:
                 pattern = 'portrait.sdxl\.(safetensors|bin)$'
             else:
@@ -2878,12 +2878,7 @@ class ipadapter:
             lora_pattern = 'faceid.plusv2.sdxl.lora\.safetensors$'
         elif re.search(r'faceid.plusv2.sd15\.(safetensors|bin)$', basename, re.IGNORECASE):
             lora_pattern = 'faceid.plusv2.sd15.lora\.safetensors$'
-        elif re.search(r'faceid.portrait.(sd15|v11.sd15)\.(safetensors|bin)$', basename, re.IGNORECASE):
-            lora_pattern = 'portrait.v11.sd15\.(safetensors|bin)$'
-        elif re.search(r'faceid.portrait.sdxl\.(safetensors|bin)$', basename, re.IGNORECASE):
-            lora_pattern = 'portrait.sdxl\.(safetensors|bin)$'
-        elif re.search(r'faceid.portrait.sdxl.unnorm\.(safetensors|bin)$', basename, re.IGNORECASE):
-            lora_pattern = 'portrait.sdxl.unnorm\.(safetensors|bin)$'
+
         return lora_pattern
 
     def get_lora_file(self, preset, pattern, model_type, model, model_strength, clip_strength, clip=None):
@@ -2916,6 +2911,9 @@ class ipadapter:
 
         if 'plusv2' in file.lower():
             model["faceidplusv2"] = True
+
+        if 'unnorm' in file.lower():
+            model["portraitunnorm"] = True
 
         return model
 

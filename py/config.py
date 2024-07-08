@@ -282,11 +282,11 @@ IPADAPTER_MODELS = {
             "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-portrait_sdxl.bin",
         }
     },
-    "FACEID PORTRAIT UNNORM - SDXL only (strong)":{
-        "SD15":{
+    "FACEID PORTRAIT UNNORM - SDXL only (strong)": {
+        "sd15": {
             "model_url":""
         },
-        "SDXL":{
+        "sdxl": {
             "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-portrait_sdxl_unnorm.bin",
         }
     },
