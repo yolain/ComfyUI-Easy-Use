@@ -1739,8 +1739,6 @@ class dynamiCrafterLoader(DynamiCrafter):
         model_path = get_local_filepath(DYNAMICRAFTER_MODELS[model_name]['model_url'], DYNAMICRAFTER_DIR)
         model_patcher, image_proj_model = self.load_dynamicrafter(model_path)
 
-        # rescale cfg
-
         # apply
         model, empty_latent, image_latent = self.process_image_conditioning(model_patcher, clip_vision, vae, image_proj_model, init_image, use_interpolate, fps, frames, scale_latents)
 
@@ -1784,6 +1782,117 @@ class dynamiCrafterLoader(DynamiCrafter):
                 }
 
         return (pipe, model, vae)
+
+# kolors Loader
+from .kolors.text_encode import chatglm3_adv_text_encode
+hid_proj = None
+class kolorsLoader:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required":{
+                "unet_name": (folder_paths.get_filename_list("unet"),),
+                "vae_name": (folder_paths.get_filename_list("vae"),),
+                "chatglm3_name": (folder_paths.get_filename_list("llm"),),
+                "lora_name": (["None"] + folder_paths.get_filename_list("loras"),),
+                "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+                "lora_clip_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+                "resolution": (resolution_strings, {"default": "1024 x 576"}),
+                "empty_latent_width": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "empty_latent_height": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+
+                "positive": ("STRING", {"default": "", "placeholder": "Positive", "multiline": True}),
+                "negative": ("STRING", {"default": "", "placeholder": "Negative", "multiline": True}),
+
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+            },
+            "optional": {
+                "model_override": ("MODEL",),
+                "optional_lora_stack": ("LORA_STACK",),
+            },
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
+    RETURN_NAMES = ("pipe", "model", "vae")
+
+    FUNCTION = "adv_pipeloader"
+    CATEGORY = "EasyUse/Loaders"
+
+    def adv_pipeloader(self, unet_name, vae_name, chatglm3_name, lora_name, lora_model_strength, lora_clip_strength, resolution, empty_latent_width, empty_latent_height, positive, negative, batch_size, model_override=None, optional_lora_stack=None, prompt=None, my_unique_id=None):
+        # load unet
+        global hid_proj
+        if model_override:
+           model = model_override
+        else:
+           model, _hid_proj = easyCache.load_kolors_unet(unet_name)
+           if hid_proj is None:
+             hid_proj = _hid_proj
+        # load vae
+        vae = easyCache.load_vae(vae_name)
+        # load chatglm3
+        chatglm3_model = easyCache.load_chatglm3(chatglm3_name)
+        # load lora
+        lora_stack = []
+        if optional_lora_stack is not None:
+            for lora in optional_lora_stack:
+                lora = {"lora_name": lora[0], "model": model, "clip": None, "model_strength": lora[1],
+                        "clip_strength": lora[2]}
+                model, _ = easyCache.load_lora(lora)
+                lora['model'] = model
+                lora['clip'] = None
+                lora_stack.append(lora)
+
+        if lora_name != "None":
+            lora = {"lora_name": lora_name, "model": model, "clip": None, "model_strength": lora_model_strength,
+                    "clip_strength": lora_clip_strength}
+            model, _ = easyCache.load_lora(lora)
+            lora_stack.append(lora)
+
+
+        # text encode
+        positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive, hid_proj)
+        negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative, hid_proj)
+
+        # empty latent
+        samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size)
+
+        log_node_warn("加载完毕...")
+        pipe = {
+            "model": model,
+            "positive": positive_embeddings_final,
+            "negative": negative_embeddings_final,
+            "vae": vae,
+            "clip": None,
+
+            "samples": samples,
+            "images": None,
+
+            "loader_settings": {
+                "unet_name": unet_name,
+                "vae_name": vae_name,
+                "chatglm3_name": chatglm3_name,
+
+                "lora_name": lora_name,
+                "lora_model_strength": lora_model_strength,
+                "lora_clip_strength": lora_clip_strength,
+
+                "positive": positive,
+                "negative": negative,
+                "resolution": resolution,
+                "empty_latent_width": empty_latent_width,
+                "empty_latent_height": empty_latent_height,
+                "batch_size": batch_size,
+            }
+        }
+
+        return {"ui": {},
+                "result": (pipe, model, vae, chatglm3_model, positive_embeddings_final, negative_embeddings_final, samples)}
+
+
+        return (chatglm3_model, None, None)
+
 
 # Dit Loader
 from .dit.utils import string_to_dtype
@@ -7326,6 +7435,7 @@ NODE_CLASS_MAPPINGS = {
     "easy zero123Loader": zero123Loader,
     "easy dynamiCrafterLoader": dynamiCrafterLoader,
     "easy cascadeLoader": cascadeLoader,
+    "easy kolorsLoader": kolorsLoader,
     "easy hunyuanDiTLoader": hunyuanDiTLoader,
     "easy pixArtLoader": pixArtLoader,
     "easy loraStack": loraStack,
@@ -7443,6 +7553,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy zero123Loader": "EasyLoader (Zero123)",
     "easy dynamiCrafterLoader": "EasyLoader (DynamiCrafter)",
     "easy cascadeLoader": "EasyCascadeLoader",
+    "easy kolorsLoader": "EasyLoader (Kolors)",
     "easy hunyuanDiTLoader": "EasyLoader (HunYuanDiT)",
     "easy pixArtLoader": "EasyLoader (PixArt)",
     "easy loraStack": "EasyLoraStack",

@@ -113,13 +113,13 @@ try{
     }
     let theme_name = localStorage.getItem('Comfy.Settings.Comfy.ColorPalette')
     control_mode = localStorage.getItem('Comfy.Settings.Comfy.WidgetControlMode')
-    if(control_mode) {
-        control_mode = JSON.parse(control_mode)
-        if(control_mode == 'before'){
-            localStorage['Comfy.Settings.AE.mouseover'] = false
-            localStorage['Comfy.Settings.AE.highlight'] = false
-        }
-    }
+    // if(control_mode) {
+    //     control_mode = JSON.parse(control_mode)
+    //     if(control_mode == 'before'){
+    //         localStorage['Comfy.Settings.AE.mouseover'] = false
+    //         localStorage['Comfy.Settings.AE.highlight'] = false
+    //     }
+    // }
     // 兼容 ComfyUI Revision: 1887 [235727fe] 以上版本
     if(api.storeSettings){
         const _settings = await api.getSettings()

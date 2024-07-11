@@ -43,6 +43,10 @@ Double-click install.bat to install the required dependencies
 
 ## Changelog
 
+**v1.2.1**
+
+- Added `easy kolorsLoader` - Code based on [MinusZoneAI](https://github.com/MinusZoneAI/ComfyUI-Kolors-MZ)'s and [kijai](https://github.com/kijai/ComfyUI-KwaiKolorsWrapper)'s repo, thanks for their contribution.
+
 **v1.2.0**
 
 - Added `easy pulIDApply` and `easy pulIDApplyADV`

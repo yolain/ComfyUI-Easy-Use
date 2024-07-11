@@ -50,6 +50,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 更新日志
 
+**v1.2.1**
+
+- 增加 `easy kolorsLoader` - 可灵加载器，参考了 [MinusZoneAI](https://github.com/MinusZoneAI/ComfyUI-Kolors-MZ) 和 [kijai](https://github.com/kijai/ComfyUI-KwaiKolorsWrapper) 的代码。
+
 **v1.2.0**
 
 - 增加 `easy pulIDApply` 和 `easy pulIDApplyADV`
@@ -377,6 +381,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 | easy imageChooser              | [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) | Preview Chooser         | 
 | easy styleAlignedBatchAlign    | [style_aligned_comfy](https://github.com/chrisgoringe/cg-image-picker) | styleAlignedBatchAlign  | 
 | easy icLightApply              | [ComfyUI-IC-Light](https://github.com/huchenlei/ComfyUI-IC-Light) | ICLightApply等           |
+| easy kolorsLoader              | [ComfyUI-Kolors-MZ](https://github.com/MinusZoneAI/ComfyUI-Kolors-MZ) | kolorsLoader            |
 
 ## Credits
 

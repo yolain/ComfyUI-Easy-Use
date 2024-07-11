@@ -694,6 +694,7 @@ app.registerExtension({
 			case "easy dynamiCrafterLoader":
 			case "easy hunyuanDiTLoader":
 			case "easy pixArtLoader":
+			case "easy kolorsLoader":
 			case "easy loraStack":
 			case "easy controlnetStack":
 			case "easy latentNoisy":

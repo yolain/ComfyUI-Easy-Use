@@ -8,6 +8,7 @@ from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
+from ..kolors.loader import load_chatglm3, applyKolorsUnet, load_kolors_unet_state_dict
 from ..dit.hunyuanDiT.loader import EXM_HyDiT_Tenc_Temp, load_hydit
 from ..dit.pixArt.loader import load_pixart
 
@@ -32,6 +33,7 @@ class easyLoader:
             "lora": defaultdict(dict),  # {lora_name: {UID: (model_lora, clip_lora)}}
             "controlnet": defaultdict(dict),
             "t5": defaultdict(tuple),
+            "chatglm3": defaultdict(tuple),
         }
         self.memory_threshold = self.determine_memory_threshold(0.7)
         self.lora_name_cache = []
@@ -91,6 +93,7 @@ class easyLoader:
         desired_lora_settings = set()
         desired_controlnet_names = set()
         desired_t5_names = set()
+        desired_glm3_names = set()
 
         for entry in prompt.values():
             class_type = entry["class_type"]
@@ -103,6 +106,11 @@ class easyLoader:
             if class_type in stable_diffusion_loaders:
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name", prompt))
                 desired_vae_names.add(self.get_input_value(entry, "vae_name"))
+
+            elif class_type in ['easy kolorsLoader']:
+                desired_unet_names.add(self.get_input_value(entry, "unet_name"))
+                desired_vae_names.add(self.get_input_value(entry, "vae_name"))
+                desired_glm3_names.add(self.get_input_value(entry, "chatglm3_name"))
 
             elif class_type in dit_loaders:
                 t5_name = self.get_input_value(entry, "mt5_name") if "mt5_name" in entry["inputs"] else  None
@@ -161,6 +169,8 @@ class easyLoader:
                 desired_names = desired_controlnet_names
             elif object_type == "t5":
                 desired_names = desired_t5_names
+            elif object_type == "chatglm3":
+                desired_names = desired_glm3_names
             else:
                 desired_names = desired_lora_names
             self.clear_unused_objects(desired_names, object_type)
@@ -199,7 +209,7 @@ class easyLoader:
         current_memory = self.get_memory_usage()
         if current_memory < self.memory_threshold:
             return
-        eviction_order = ["vae", "lora", "bvae", "clip", "ckpt", "controlnet"]
+        eviction_order = ["vae", "lora", "bvae", "clip", "ckpt", "controlnet", "unet", "t5", "chatglm3"]
         for obj_type in eviction_order:
             if current_memory < self.memory_threshold:
                 break
@@ -319,11 +329,14 @@ class easyLoader:
         lbw_b = lora["lbw_b"] if "lbw_b" in lora else None
 
         model_hash = str(model)[44:-1]
-        clip_hash = str(clip)[25:-1]
+        clip_hash = str(clip)[25:-1] if clip else ''
 
         unique_id = f'{model_hash};{clip_hash};{lora_name};{model_strength};{clip_strength}'
 
-        if unique_id in self.loaded_objects["lora"] and unique_id in self.loaded_objects["lora"][lora_name]:
+        print(unique_id)
+        print(self.loaded_objects["lora"])
+        if unique_id in self.loaded_objects["lora"]:
+            log_node_info("Load LORA",f"{lora_name} cached")
             return self.loaded_objects["lora"][unique_id][0]
 
         orig_lora_name = lora_name
@@ -465,6 +478,32 @@ class easyLoader:
             raise Exception("No CLIP found")
 
         return model, clip, vae, clip_vision, lora_stack
+
+    # Kolors
+    def load_kolors_unet(self, unet_name):
+        if unet_name in self.loaded_objects["unet"]:
+            return (self.loaded_objects["unet"][unet_name][0], None)
+        else:
+            with applyKolorsUnet():
+
+                unet_path = folder_paths.get_full_path("unet", unet_name)
+                sd = comfy.utils.load_torch_file(unet_path)
+                model, hid_proj = load_kolors_unet_state_dict(sd)
+                self.add_to_cache("unet", unet_name, model)
+                self.eviction_based_on_memory()
+
+                return model, hid_proj
+
+    def load_chatglm3(self, chatglm3_name):
+        if chatglm3_name in self.loaded_objects["chatglm3"]:
+            return self.loaded_objects["chatglm3"][chatglm3_name][0]
+
+        chatglm_model = load_chatglm3(model_path=folder_paths.get_full_path("llm", chatglm3_name))
+        self.add_to_cache("chatglm3", chatglm3_name, chatglm_model)
+        self.eviction_based_on_memory()
+
+        return chatglm_model
+
 
     # DiT
     def load_dit_ckpt(self, ckpt_name, model_name, **kwargs):
