@@ -12,7 +12,7 @@ if exist "%python_exec%" (
 )^
 else if exist "%aki_python_exec%" (
     echo Installing with ComfyUI Aki
-    "%python_exec%" -s -m pip install -r "%requirements_txt%" 
+    "%aki_python_exec%" -s -m pip install -r "%requirements_txt%" 
 )^
 else (
     echo Installing with system Python
