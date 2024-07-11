@@ -61,8 +61,6 @@ class positivePrompt:
 
     @staticmethod
     def main(positive):
-        if has_chinese(positive):
-            return zh_to_en([positive])
         return positive,
 
 # 通配符提示词
@@ -93,10 +91,7 @@ class wildcardsPrompt:
     CATEGORY = "EasyUse/Prompt"
 
     def translate(self, text):
-        if has_chinese(text):
-            return zh_to_en([text])[0]
-        else:
-            return text
+        return text
 
     def main(self, *args, **kwargs):
         prompt = kwargs["prompt"] if "prompt" in kwargs else None
@@ -142,10 +137,7 @@ class negativePrompt:
 
     @staticmethod
     def main(negative):
-        if has_chinese(negative):
-            return zh_to_en([negative])
-        else:
-            return negative,
+        return negative,
 
 # 风格提示词选择器
 class stylesPromptSelector:
@@ -257,8 +249,6 @@ class prompt:
     CATEGORY = "EasyUse/Prompt"
 
     def doit(self, prompt, main, lighting):
-        if has_chinese(prompt):
-            prompt = zh_to_en([prompt])[0]
         if lighting != 'none' and main != 'none':
             prompt = main + ',' + lighting + ',' + prompt
         elif lighting != 'none' and main == 'none':
@@ -302,8 +292,6 @@ class promptList:
 
             # Only process string input ports.
             if isinstance(v, str) and v != '':
-                if has_chinese(v):
-                    v = zh_to_en([v])[0]
                 prompts.append(v)
 
         return (prompts, prompts)
@@ -331,7 +319,7 @@ class promptLine:
 
     def generate_strings(self, prompt, start_index, max_rows, workflow_prompt=None, my_unique_id=None):
         lines = prompt.split('\n')
-        lines = [zh_to_en([v])[0] if has_chinese(v) else v for v in lines if v]
+        # lines = [zh_to_en([v])[0] if has_chinese(v) else v for v in lines if v]
 
         start_index = max(0, min(start_index, len(lines) - 1))
 

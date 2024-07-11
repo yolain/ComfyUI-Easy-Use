@@ -52,6 +52,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.1**
 
+- 去除 `easy positive` `easy negative` 等prompt节点的自动将中文翻译功能，自动翻译仅在 `easy a1111Loader` 等不支持中文TE的加载器中生效
 - 增加 `easy kolorsLoader` - 可灵加载器，参考了 [MinusZoneAI](https://github.com/MinusZoneAI/ComfyUI-Kolors-MZ) 和 [kijai](https://github.com/kijai/ComfyUI-KwaiKolorsWrapper) 的代码。
 
 **v1.2.0**
