@@ -4,7 +4,7 @@ import folder_paths
 import comfy.model_management as mm
 from nodes import ConditioningConcat, ConditioningZeroOut, ConditioningSetTimestepRange, ConditioningCombine
 
-def chatglm3_text_encode(chatglm3_model, prompt, hid_proj):
+def chatglm3_text_encode(chatglm3_model, prompt):
     device = mm.get_torch_device()
     offload_device = mm.unet_offload_device()
     mm.unload_all_models()
@@ -56,11 +56,9 @@ def chatglm3_text_encode(chatglm3_model, prompt, hid_proj):
     mm.soft_empty_cache()
     gc.collect()
 
-    if hid_proj:
-        prompt_embeds = hid_proj(prompt_embeds)
     return [[prompt_embeds, {"pooled_output": text_proj},]]
 
-def chatglm3_adv_text_encode(chatglm3_model, text, hid_proj):
+def chatglm3_adv_text_encode(chatglm3_model, text):
     time_start = 0
     time_end = 1
     match = re.search(r'TIMESTEP.*$', text)
@@ -80,7 +78,21 @@ def chatglm3_adv_text_encode(chatglm3_model, text, hid_proj):
             time_start = 0.1
             time_end = 1
 
-    conditioning = chatglm3_text_encode(chatglm3_model, text, hid_proj)
+
+    pass3 = [x.strip() for x in text.split("BREAK")]
+    pass3 = [x for x in pass3 if x != '']
+
+    if len(pass3) == 0:
+        pass3 = ['']
+
+    conditioning = None
+
+    for text in pass3:
+        cond = chatglm3_text_encode(chatglm3_model, text)
+        if conditioning is not None:
+            conditioning = ConditioningConcat().concat(conditioning, cond)[0]
+        else:
+            conditioning = cond
 
     # setTimeStepRange
     if time_start > 0 or time_end < 1:

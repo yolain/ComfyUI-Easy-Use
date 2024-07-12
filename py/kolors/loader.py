@@ -18,18 +18,6 @@ class Kolors(comfy.supported_models.SDXL):
         "use_temporal_attention": False,
     }
 
-    def process_clip_state_dict(self, state_dict):
-        raise NotImplementedError("Kolors does not support clip state dict processing")
-        return state_dict
-
-    def process_clip_state_dict_for_saving(self, state_dict):
-        raise NotImplementedError("Kolors does not support clip state dict processing")
-        return state_dict
-
-    def clip_target(self):
-        raise NotImplementedError("Kolors does not support clip target")
-
-
 if Kolors not in comfy.supported_models.models:
     comfy.supported_models.models += [Kolors]
 
@@ -88,64 +76,12 @@ def kolors_unet_config_from_diffusers_unet(state_dict, dtype=None):
         matches = True
         for k in match:
             if match[k] != unet_config[k]:
-                print("key {} does not match".format(
-                    k), match[k], "||", unet_config[k])
+                # print("key {} does not match".format(k), match[k], "||", unet_config[k])
                 matches = False
                 break
         if matches:
             return model_detection.convert_config(unet_config)
     return None
-
-def load_kolors_unet_state_dict(sd):
-    checkpoint = False
-    diffusion_model_prefix = model_detection.unet_prefix_from_state_dict(sd)
-    temp_sd = comfy.utils.state_dict_prefix_replace(
-        sd, {diffusion_model_prefix: ""}, filter_keys=True)
-    if len(temp_sd) > 0:
-        sd = temp_sd
-        checkpoint = True
-
-    parameters = comfy.utils.calculate_parameters(sd)
-    unet_dtype = comfy.model_management.unet_dtype(model_params=parameters)
-    load_device = comfy.model_management.get_torch_device()
-
-    from torch import nn
-    hid_proj: nn.Linear = None
-    if True:
-        model_config = model_detection.model_config_from_diffusers_unet(sd)
-        if model_config is None:
-            return None
-
-        diffusers_keys = comfy.utils.unet_to_diffusers(model_config.unet_config)
-
-        new_sd = {}
-        for k in diffusers_keys:
-            if k in sd:
-                new_sd[diffusers_keys[k]] = sd.pop(k)
-            else:
-                # print("{} {}".format(diffusers_keys[k], k))
-                pass
-        encoder_hid_proj_weight = sd.pop("encoder_hid_proj.weight")
-        encoder_hid_proj_bias = sd.pop("encoder_hid_proj.bias")
-        hid_proj = nn.Linear(encoder_hid_proj_weight.shape[1], encoder_hid_proj_weight.shape[0])
-        hid_proj.weight.data = encoder_hid_proj_weight
-        hid_proj.bias.data = encoder_hid_proj_bias
-        hid_proj = hid_proj.to(load_device)
-
-    offload_device = comfy.model_management.unet_offload_device()
-    unet_dtype = comfy.model_management.unet_dtype(
-        model_params=parameters, supported_dtypes=model_config.supported_inference_dtypes)
-    manual_cast_dtype = comfy.model_management.unet_manual_cast(
-        unet_dtype, load_device, model_config.supported_inference_dtypes)
-    model_config.set_inference_dtype(unet_dtype, manual_cast_dtype)
-    model = model_config.get_model(new_sd, "")
-    model = model.to(offload_device)
-    model.load_model_weights(new_sd, "")
-    left_over = sd.keys()
-    if len(left_over) > 0:
-        print("left over keys in unet: {}".format(left_over))
-    return comfy.model_patcher.ModelPatcher(model, load_device=load_device, offload_device=offload_device), hid_proj
-
 
 class chatGLM3Model(torch.nn.Module):
     def __init__(self, textmodel_json_config=None, device='cpu', offload_device='cpu', model_path=None):

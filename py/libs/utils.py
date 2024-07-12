@@ -102,6 +102,8 @@ def get_sd_version(model):
         return 'svd'
     elif isinstance(model_config, comfy.supported_models.SD3):
         return 'sd3'
+    elif isinstance(model_config, comfy.supported_models.Kolors):
+        return 'kolors'
     else:
         return 'unknown'
 

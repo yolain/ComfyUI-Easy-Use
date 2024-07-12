@@ -8,7 +8,8 @@ from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
-from ..kolors.loader import load_chatglm3, applyKolorsUnet, load_kolors_unet_state_dict
+from ..kolors.loader import load_chatglm3, applyKolorsUnet
+from ..kolors.model_patch import add_model_patch
 from ..dit.hunyuanDiT.loader import EXM_HyDiT_Tenc_Temp, load_hydit
 from ..dit.pixArt.loader import load_pixart
 
@@ -333,8 +334,6 @@ class easyLoader:
 
         unique_id = f'{model_hash};{clip_hash};{lora_name};{model_strength};{clip_strength}'
 
-        print(unique_id)
-        print(self.loaded_objects["lora"])
         if unique_id in self.loaded_objects["lora"]:
             log_node_info("Load LORA",f"{lora_name} cached")
             return self.loaded_objects["lora"][unique_id][0]
@@ -482,17 +481,22 @@ class easyLoader:
     # Kolors
     def load_kolors_unet(self, unet_name):
         if unet_name in self.loaded_objects["unet"]:
-            return (self.loaded_objects["unet"][unet_name][0], None)
+            return self.loaded_objects["unet"][unet_name][0]
         else:
             with applyKolorsUnet():
 
                 unet_path = folder_paths.get_full_path("unet", unet_name)
                 sd = comfy.utils.load_torch_file(unet_path)
-                model, hid_proj = load_kolors_unet_state_dict(sd)
+                model = comfy.sd.load_unet_state_dict(sd)
+                if model is None:
+                    raise RuntimeError("ERROR: Could not detect model type of: {}".format(unet_path))
+
+                add_model_patch(model, sd)
+
                 self.add_to_cache("unet", unet_name, model)
                 self.eviction_based_on_memory()
 
-                return model, hid_proj
+                return model
 
     def load_chatglm3(self, chatglm3_name):
         if chatglm3_name in self.loaded_objects["chatglm3"]:

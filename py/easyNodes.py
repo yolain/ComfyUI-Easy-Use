@@ -1773,7 +1773,6 @@ class dynamiCrafterLoader(DynamiCrafter):
 
 # kolors Loader
 from .kolors.text_encode import chatglm3_adv_text_encode
-hid_proj = None
 class kolorsLoader:
 
     @classmethod
@@ -1810,13 +1809,10 @@ class kolorsLoader:
 
     def adv_pipeloader(self, unet_name, vae_name, chatglm3_name, lora_name, lora_model_strength, lora_clip_strength, resolution, empty_latent_width, empty_latent_height, positive, negative, batch_size, model_override=None, optional_lora_stack=None, prompt=None, my_unique_id=None):
         # load unet
-        global hid_proj
         if model_override:
            model = model_override
         else:
-           model, _hid_proj = easyCache.load_kolors_unet(unet_name)
-           if hid_proj is None:
-             hid_proj = _hid_proj
+           model = easyCache.load_kolors_unet(unet_name)
         # load vae
         vae = easyCache.load_vae(vae_name)
         # load chatglm3
@@ -1840,8 +1836,8 @@ class kolorsLoader:
 
 
         # text encode
-        positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive, hid_proj)
-        negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative, hid_proj)
+        positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive)
+        negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative)
 
         # empty latent
         samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size)
@@ -4956,6 +4952,8 @@ class samplerFull:
         if add_noise == "disable":
             disable_noise = True
 
+
+        # When model is colors
         def downscale_model_unet(samp_model):
             # 获取Unet参数
             if "PatchModelAddDownscale" in ALL_NODE_CLASS_MAPPINGS:
