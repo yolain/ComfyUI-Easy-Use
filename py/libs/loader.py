@@ -8,7 +8,6 @@ from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
-from ..kolors.loader import load_chatglm3, applyKolorsUnet
 from ..kolors.model_patch import add_model_patch
 from ..dit.hunyuanDiT.loader import EXM_HyDiT_Tenc_Temp, load_hydit
 from ..dit.pixArt.loader import load_pixart
@@ -485,6 +484,7 @@ class easyLoader:
             log_node_info("Load Kolors UNet", f"{unet_name} cached")
             return self.loaded_objects["unet"][unet_name][0]
         else:
+            from ..kolors.loader import applyKolorsUnet
             with applyKolorsUnet():
 
                 unet_path = folder_paths.get_full_path("unet", unet_name)
@@ -501,6 +501,7 @@ class easyLoader:
                 return model
 
     def load_chatglm3(self, chatglm3_name):
+        from ..kolors.loader import load_chatglm3
         if chatglm3_name in self.loaded_objects["chatglm3"]:
             log_node_info("Load ChatGLM3", f"{chatglm3_name} cached")
             return self.loaded_objects["chatglm3"][chatglm3_name][0]

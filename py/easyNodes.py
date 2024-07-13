@@ -4111,6 +4111,7 @@ class samplerSettingsNoiseIn:
 
 # 预采样设置（自定义）
 import comfy_extras.nodes_custom_sampler as custom_samplers
+from .kolors.model_patch import patched_set_conds
 from tqdm import trange
 class samplerCustomSettings:
 
@@ -4320,10 +4321,22 @@ class samplerCustomSettings:
 
         # guider
         if guider == 'CFG':
+            # --------------------------------
+            # kolors  patch set conditioning
+            model, positive, negative, _ = patched_set_conds(model, positive, negative, None)
+            # --------------------------------
             _guider, = self.get_custom_cls('CFGGuider').get_guider(model, positive, negative, cfg)
         elif guider in ['DualCFG', 'IP2P+DualCFG']:
-            _guider, =  self.get_custom_cls('DualCFGGuider').get_guider(model, positive, negative, pipe['negative'], cfg, cfg_negative)
+            # --------------------------------
+            # kolors patch set conditioning
+            model, positive, negative, middle = patched_set_conds(model, positive, pipe['negative'], negative)
+            # --------------------------------
+            _guider, =  self.get_custom_cls('DualCFGGuider').get_guider(model, positive, middle, negative, cfg, cfg_negative)
         else:
+            # --------------------------------
+            # kolors patch set conditioning
+            model, positive, negative, _ = patched_set_conds(model, positive, negative, None)
+            # --------------------------------
             _guider, = self.get_custom_cls('BasicGuider').get_guider(model, positive)
 
         # sampler

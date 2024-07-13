@@ -8,6 +8,7 @@ from nodes import MAX_RESOLUTION
 from PIL import Image
 from typing import Dict, List, Optional, Tuple, Union, Any
 from ..brushnet.model_patch import add_model_patch
+from ..kolors.model_patch import patched_set_conds
 
 class easySampler:
     def __init__(self):
@@ -108,9 +109,11 @@ class easySampler:
             noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
 
         #######################################################################################
+        # add model patch
         # brushnet
         add_model_patch(model)
-        # model, positive, negative = patched_kolors_conds(model, positive, negative)
+        # kolors
+        model, positive, negative, _ = patched_set_conds(model, positive, negative, None)
         #######################################################################################
         samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
                                       latent_image,
@@ -156,11 +159,6 @@ class easySampler:
                 preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
             pbar.update_absolute(step + 1, total_steps, preview_bytes)
 
-        # samples = comfy.sample.sample_custom(model, noise, cfg, _sampler, sigmas, positive, negative, latent_image,
-        #                                      noise_mask=noise_mask, callback=callback, disable_pbar=disable_pbar,
-        #                                      seed=seed)
-
-        # model, positive, negative = patched_kolors_conds(model, positive, negative)
         samples = comfy.samplers.sample(model, noise, positive, negative, cfg, device, _sampler, sigmas, latent_image=latent_image, model_options=model.model_options,
                denoise_mask=noise_mask, callback=callback, disable_pbar=disable_pbar, seed=seed)
 

@@ -1,6 +1,6 @@
+diffusers>=0.25.0
 accelerate>=0.25.0
 clip_interrogator>=0.6.0
-diffusers>=0.25.0
 lark-parser
 onnxruntime
 opencv-python
