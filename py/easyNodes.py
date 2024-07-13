@@ -1836,13 +1836,15 @@ class kolorsLoader:
 
 
         # text encode
+        log_node_warn("正在进行正向提示词编码...")
         positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive)
+        log_node_warn("正在进行负面提示词编码...")
         negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative)
 
         # empty latent
         samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size)
 
-        log_node_warn("加载完毕...")
+        log_node_warn("处理完毕...")
         pipe = {
             "model": model,
             "positive": positive_embeddings_final,

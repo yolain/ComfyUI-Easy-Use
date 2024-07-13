@@ -271,6 +271,7 @@ class easyLoader:
 
     def load_unet(self, unet_name):
         if unet_name in self.loaded_objects["unet"]:
+            log_node_info("Load UNet", f"{unet_name} cached")
             return self.loaded_objects["unet"][unet_name][0]
 
         unet_path = folder_paths.get_full_path("unet", unet_name)
@@ -481,6 +482,7 @@ class easyLoader:
     # Kolors
     def load_kolors_unet(self, unet_name):
         if unet_name in self.loaded_objects["unet"]:
+            log_node_info("Load Kolors UNet", f"{unet_name} cached")
             return self.loaded_objects["unet"][unet_name][0]
         else:
             with applyKolorsUnet():
@@ -500,6 +502,7 @@ class easyLoader:
 
     def load_chatglm3(self, chatglm3_name):
         if chatglm3_name in self.loaded_objects["chatglm3"]:
+            log_node_info("Load ChatGLM3", f"{chatglm3_name} cached")
             return self.loaded_objects["chatglm3"][chatglm3_name][0]
 
         chatglm_model = load_chatglm3(model_path=folder_paths.get_full_path("llm", chatglm3_name))

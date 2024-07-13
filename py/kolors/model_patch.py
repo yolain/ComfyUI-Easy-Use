@@ -23,9 +23,9 @@ def add_model_patch(model, sd):
         "hid_proj": hid_proj
     }
 
-def patched_set_conds(self, positive, negative=None, middle=None):
-    if "model_patch" in self.model_options:
-        mp = self.model_options["model_patch"]
+def patched_set_conds(model, positive, negative=None, middle=None):
+    if "model_patch" in model.model_options:
+        mp = model.model_options["model_patch"]
         if "hid_proj" in mp:
             import copy
             hid_proj = mp["hid_proj"]
@@ -37,22 +37,22 @@ def patched_set_conds(self, positive, negative=None, middle=None):
                     positive[i][0] = hid_proj(positive[i][0])
                     if "control" in positive[i][1]:
                         if hasattr(positive[i][1]["control"], "control_model"):
-                            positive[i][1]["control"].control_model.label_emb = self.model_patcher.model.diffusion_model.label_emb
+                            positive[i][1]["control"].control_model.label_emb = model.model_patcher.model.diffusion_model.label_emb
 
                 if negative is not None:
                     for i in range(len(negative)):
                         negative[i][0] = hid_proj(negative[i][0])
                         if "control" in negative[i][1]:
                             if hasattr(negative[i][1]["control"], "control_model"):
-                                negative[i][1]["control"].control_model.label_emb = self.model_patcher.model.diffusion_model.label_emb
+                                negative[i][1]["control"].control_model.label_emb = model.model_patcher.model.diffusion_model.label_emb
                 if middle is not None:
                     for i in range(len(middle)):
                         middle[i][0] = hid_proj(middle[i][0])
                         if "control" in middle[i][1]:
                             if hasattr(middle[i][1]["control"], "control_model"):
-                                middle[i][1]["control"].control_model.label_emb = self.model_patcher.model.diffusion_model.label_emb
+                                middle[i][1]["control"].control_model.label_emb = model.model_patcher.model.diffusion_model.label_emb
 
-    return self, positive, negative, middle
+    return model, positive, negative, middle
 
 def patched_cfgguider_set_conds(self, positive, negative):
     self, positive, negative, _ = patched_set_conds(self, positive, negative)
