@@ -3732,7 +3732,7 @@ class applyPulID:
             log_node_info("easy pulIDApply", f"Using InsightFaceModel {insightface} Cached")
             _, insightface_model = backend_cache.cache[icache_key][1]
         elif "PulidInsightFaceLoader" in ALL_NODE_CLASS_MAPPINGS:
-            load_insightface_cls = ALL_NODE_CLASS_MAPPINGS["InstantIDFaceAnalysis"]
+            load_insightface_cls = ALL_NODE_CLASS_MAPPINGS["PulidInsightFaceLoader"]
             insightface_model, = load_insightface_cls().load_insight_face(insightface)
             backend_cache.update_cache(icache_key, 'insightface', (False, insightface_model))
         else:
