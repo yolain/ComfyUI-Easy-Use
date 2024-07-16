@@ -1,7 +1,7 @@
 from typing import Iterator, List, Tuple, Dict, Any, Union, Optional
 from _decimal import Context, getcontext
 from decimal import Decimal
-from .libs.utils import AlwaysEqualProxy, cleanGPUUsedForce
+from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce
 from .libs.cache import remove_cache
 import numpy as np
 import json
@@ -424,19 +424,18 @@ class ConvertAnything:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-            "anything": (AlwaysEqualProxy("*"),),
+            "*": (AlwaysEqualProxy("*"),),
             "output_type": (["string", "int", "float", "boolean"], {"default": "string"}),
         }}
 
-    RETURN_TYPES = (AlwaysEqualProxy("*"),),
-    RETURN_NAMES = ('*',)
+    RETURN_TYPES = ByPassTypeTuple((AlwaysEqualProxy("*"),))
     OUTPUT_NODE = True
     FUNCTION = "convert"
     CATEGORY = "EasyUse/Logic"
 
     def convert(self, *args, **kwargs):
         print(kwargs)
-        anything = kwargs['anything']
+        anything = kwargs['*']
         output_type = kwargs['output_type']
         params = None
         if output_type == 'string':

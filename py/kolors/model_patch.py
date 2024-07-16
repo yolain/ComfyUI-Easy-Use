@@ -1,8 +1,8 @@
 import comfy.model_management
 import comfy.samplers
+from torch.nn import Linear
 
 def add_model_patch(model, sd):
-    from torch.nn import Linear
     load_device = comfy.model_management.get_torch_device()
     encoder_hid_proj_weight = sd.pop("encoder_hid_proj.weight")
     encoder_hid_proj_bias = sd.pop("encoder_hid_proj.bias")

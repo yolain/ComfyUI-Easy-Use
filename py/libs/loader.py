@@ -486,7 +486,6 @@ class easyLoader:
         else:
             from ..kolors.loader import applyKolorsUnet
             with applyKolorsUnet():
-
                 unet_path = folder_paths.get_full_path("unet", unet_name)
                 sd = comfy.utils.load_torch_file(unet_path)
                 model = comfy.sd.load_unet_state_dict(sd)

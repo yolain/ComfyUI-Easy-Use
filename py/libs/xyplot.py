@@ -394,7 +394,7 @@ class easyXYPlot():
             model, clip, vae, clip_vision = self.easyCache.load_checkpoint(plot_image_vars['ckpt_name'])
 
             if plot_image_vars['lora_name'] != "None":
-                lora = {"lora_name": plot_image_vars['lora_name'], "model": model, "clip": clip, "model_strength": plot_image_vars['model_strength'], "clip_strength": plot_image_vars['lora_clip_strength']}
+                lora = {"lora_name": plot_image_vars['lora_name'], "model": model, "clip": clip, "model_strength": plot_image_vars['lora_model_strength'], "clip_strength": plot_image_vars['lora_clip_strength']}
                 model, clip = self.easyCache.load_lora(lora)
 
             # Check for custom VAE

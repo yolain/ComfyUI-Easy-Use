@@ -1176,22 +1176,15 @@ app.registerExtension({
 
 		if(nodeData.name == 'easy convertAnything'){
 			const onNodeCreated = nodeType.prototype.onNodeCreated;
-			const changeType = async function (type) {
-				const body = new FormData();
-				body.append("type", type);
-				const response = await api.fetchApi("/easyuse/convert", { method:'POST',body});
-			}
 			nodeType.prototype.onNodeCreated = async function () {
 				onNodeCreated ? onNodeCreated.apply(this, []) : undefined;
 				setTimeout(_=>{
 					const type_control = this.widgets[this.widgets.findIndex((w) => w.name === "output_type")]
 					let _this = this
-					changeType(type_control.value)
 					type_control.callback = async() => {
 						_this.outputs[0].type = (type_control.value).toUpperCase()
 						_this.outputs[0].name = type_control.value
 						_this.outputs[0].label = type_control.value
-						changeType(type_control.value)
 					}
 				},300)
 
