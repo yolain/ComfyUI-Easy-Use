@@ -45,6 +45,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.1**
 
+- Added **PLUS (kolors genernal)** preset to `easy ipadapterApply` and `easy ipadapterApplyADV` (Supported kolors ipadapter）
 - Added `easy kolorsLoader` - Code based on [MinusZoneAI](https://github.com/MinusZoneAI/ComfyUI-Kolors-MZ)'s and [kijai](https://github.com/kijai/ComfyUI-KwaiKolorsWrapper)'s repo, thanks for their contribution.
 
 **v1.2.0**

@@ -1,9 +1,11 @@
 import json
 import os
 import torch
+import comfy.model_patcher
 import comfy.model_management
 import comfy.model_detection as model_detection
 import comfy.supported_models
+from comfy.clip_vision import ClipVisionModel, Output
 from comfy.utils import load_torch_file
 from .chatglm.modeling_chatglm import ChatGLMModel, ChatGLMConfig
 from .chatglm.tokenization_chatglm import ChatGLMTokenizer
@@ -83,6 +85,7 @@ def kolors_unet_config_from_diffusers_unet(state_dict, dtype=None):
             return model_detection.convert_config(unet_config)
     return None
 
+# chatglm3 model
 class chatGLM3Model(torch.nn.Module):
     def __init__(self, textmodel_json_config=None, device='cpu', offload_device='cpu', model_path=None):
         super().__init__()
@@ -137,3 +140,51 @@ def load_chatglm3(model_path=None):
     tokenizer = ChatGLMTokenizer.from_pretrained(tokenizer_path)
     text_encoder = glm3model.text_encoder
     return {"text_encoder":text_encoder, "tokenizer":tokenizer}
+
+
+# clipvision model
+def clip_preprocess(image, size=336):
+    mean = torch.tensor([ 0.48145466,0.4578275,0.40821073], device=image.device, dtype=image.dtype)
+    std = torch.tensor([0.26862954,0.26130258,0.27577711], device=image.device, dtype=image.dtype)
+    image = image.movedim(-1, 1)
+    if not (image.shape[2] == size and image.shape[3] == size):
+        scale = (size / min(image.shape[2], image.shape[3]))
+        image = torch.nn.functional.interpolate(image, size=(round(scale * image.shape[2]), round(scale * image.shape[3])), mode="bicubic", antialias=True)
+        h = (image.shape[2] - size)//2
+        w = (image.shape[3] - size)//2
+        image = image[:,:,h:h+size,w:w+size]
+    image = torch.clip((255. * image), 0, 255).round() / 255.0
+    return (image - mean.view([3,1,1])) / std.view([3,1,1])
+
+class kolorsClipVisionModel(ClipVisionModel):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+
+    def encode_image(self, image):
+        comfy.model_management.load_model_gpu(self.patcher)
+        pixel_values = clip_preprocess(image.to(self.load_device), 336).float()
+        out = self.model(pixel_values=pixel_values, intermediate_output=-2)
+
+        outputs = Output()
+        outputs["last_hidden_state"] = out[0].to(comfy.model_management.intermediate_device())
+        outputs["image_embeds"] = out[2].to(comfy.model_management.intermediate_device())
+        outputs["penultimate_hidden_states"] = out[1].to(comfy.model_management.intermediate_device())
+        return outputs
+
+def load_kolors_clip_vision(path):
+    sd = load_torch_file(path)
+    if "vision_model.encoder.layers.22.layer_norm1.weight" in sd:
+        json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "clip_vision_config_vitl_336.json")
+    else:
+        raise Exception("Unsupported clip vision model")
+    clip = kolorsClipVisionModel(json_config)
+    m, u = clip.load_sd(sd)
+    if len(m) > 0:
+        print("missing clip vision: {}".format(m))
+    u = set(u)
+    keys = list(sd.keys())
+    for k in keys:
+        if k not in u:
+            t = sd.pop(k)
+            del t
+    return clip
