@@ -29,7 +29,7 @@ from .libs.utils import find_wildcards_seed, is_linked_styles_selector, easySave
 from .libs.loader import easyLoader
 from .libs.sampler import easySampler, alignYourStepsScheduler, gitsScheduler
 from .libs.xyplot import easyXYPlot
-from .libs.controlnet import easyControlnet
+from .libs.controlnet import easyControlnet, union_controlnet_types
 from .libs.conditioning import prompt_to_cond, set_cond
 from .libs.easing import EasingBase
 from .libs.translate import has_chinese, zh_to_en
@@ -2209,8 +2209,6 @@ class loraStack:
 
 class controlnetStack:
 
-    def get_file_list(filenames):
-        return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
 
     @classmethod
     def INPUT_TYPES(s):
@@ -2227,7 +2225,7 @@ class controlnetStack:
         }
 
         for i in range(1, max_cn_num+1):
-            inputs["optional"][f"controlnet_{i}"] = (["None"] + s.get_file_list(folder_paths.get_filename_list("controlnet")), {"default": "None"})
+            inputs["optional"][f"controlnet_{i}"] = (["None"] + folder_paths.get_filename_list("controlnet"), {"default": "None"})
             inputs["optional"][f"controlnet_{i}_strength"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01},)
             inputs["optional"][f"start_percent_{i}"] = ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001},)
             inputs["optional"][f"end_percent_{i}"] = ("FLOAT",{"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},)
@@ -2270,14 +2268,12 @@ class controlnetStack:
 class controlnetSimple:
     @classmethod
     def INPUT_TYPES(s):
-        def get_file_list(filenames):
-            return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
 
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
                 "image": ("IMAGE",),
-                "control_net_name": (get_file_list(folder_paths.get_filename_list("controlnet")),),
+                "control_net_name": (folder_paths.get_filename_list("controlnet"),),
             },
             "optional": {
                 "control_net": ("CONTROL_NET",),
@@ -2293,9 +2289,9 @@ class controlnetSimple:
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loaders"
 
-    def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, scale_soft_weights=1):
+    def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, scale_soft_weights=1, union_type=None):
 
-        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"], strength, 0, 1, control_net, scale_soft_weights, None, easyCache)
+        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"], strength, 0, 1, control_net, scale_soft_weights, mask=None, easyCache=easyCache)
 
         new_pipe = {
             "model": pipe['model'],
@@ -2319,14 +2315,12 @@ class controlnetAdvanced:
 
     @classmethod
     def INPUT_TYPES(s):
-        def get_file_list(filenames):
-            return [file for file in filenames if file != "put_models_here.txt" and "lllite" not in file]
 
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
                 "image": ("IMAGE",),
-                "control_net_name": (get_file_list(folder_paths.get_filename_list("controlnet")),),
+                "control_net_name": (folder_paths.get_filename_list("controlnet"),),
             },
             "optional": {
                 "control_net": ("CONTROL_NET",),
@@ -2347,7 +2341,71 @@ class controlnetAdvanced:
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=1):
         positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"],
-                                                    strength, start_percent, end_percent, control_net, scale_soft_weights, None, easyCache)
+                                                    strength, start_percent, end_percent, control_net, scale_soft_weights, union_type=None, mask=None, easyCache=easyCache)
+
+        new_pipe = {
+            "model": pipe['model'],
+            "positive": positive,
+            "negative": negative,
+            "vae": pipe['vae'],
+            "clip": pipe['clip'],
+
+            "samples": pipe["samples"],
+            "images": pipe["images"],
+            "seed": 0,
+
+            "loader_settings": pipe["loader_settings"]
+        }
+
+        del pipe
+
+        return (new_pipe, positive, negative)
+
+# controlnetPlusPlus
+class controlnetPlusPlus:
+
+    @classmethod
+    def INPUT_TYPES(s):
+
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "image": ("IMAGE",),
+                "control_net_name": (folder_paths.get_filename_list("controlnet"),),
+            },
+            "optional": {
+                "control_net": ("CONTROL_NET",),
+                "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                "start_percent": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_percent": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "scale_soft_weights": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001},),
+                "union_type": (list(union_controlnet_types.keys()),)
+            }
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "CONDITIONING", "CONDITIONING")
+    RETURN_NAMES = ("pipe", "positive", "negative")
+    OUTPUT_NODE = True
+
+    FUNCTION = "controlnetApply"
+    CATEGORY = "EasyUse/Loaders"
+
+
+    def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=1, union_type=None):
+        if scale_soft_weights < 1:
+            if "ScaledSoftControlNetWeights" in NODE_CLASS_MAPPINGS:
+                soft_weight_cls = NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
+                (weights, timestep_keyframe) = soft_weight_cls().load_weights(scale_soft_weights, False)
+                cn_adv_cls = NODE_CLASS_MAPPINGS['ACN_ControlNet++LoaderSingle']
+                control_net, = cn_adv_cls().load_controlnet_plusplus(control_net_name, union_type)
+                apply_adv_cls = NODE_CLASS_MAPPINGS['ACN_AdvancedControlNetApply']
+                positive, negative, _ = apply_adv_cls().controlnetApply(pipe["positive"], pipe["negative"], control_net, image, strength, start_percent, end_percent, timestep_kf=timestep_keyframe,)
+            else:
+                raise Exception(
+                    f"[Advanced-ControlNet Not Found] you need to install 'COMFYUI-Advanced-ControlNet'")
+        else:
+            positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"],
+                                                        strength, start_percent, end_percent, control_net, scale_soft_weights, union_type=union_type, mask=None, easyCache=easyCache)
 
         new_pipe = {
             "model": pipe['model'],
@@ -3037,9 +3095,8 @@ class ipadapter:
         # 1. Load the clipvision model
         if not clip_vision:
             clipvision_file, clipvision_name = self.get_clipvision_file(preset, node_name)
-            preset = preset.lower()
             if clipvision_file is None:
-                if preset.startswith("plus (kolors"):
+                if preset.lower().startswith("plus (kolors"):
                     model_url = IPADAPTER_CLIPVISION_MODELS["clip-vit-large-patch14-336"]["model_url"]
                     clipvision_file = get_local_filepath(model_url, IPADAPTER_DIR, "clip-vit-large-patch14-336.bin")
                 else:
@@ -3052,7 +3109,7 @@ class ipadapter:
                 log_node_info("easy ipadapterApply", f"Using ClipVisonModel {clipvision_name} Cached")
                 _, clip_vision = backend_cache.cache[clipvision_name][1]
             else:
-                if preset.startswith("plus (kolors"):
+                if preset.lower().startswith("plus (kolors"):
                     from .kolors.loader import load_kolors_clip_vision
                     clip_vision = load_kolors_clip_vision(clipvision_file)
                 else:
@@ -7492,6 +7549,7 @@ NODE_CLASS_MAPPINGS = {
     "easy controlnetStack": controlnetStack,
     "easy controlnetLoader": controlnetSimple,
     "easy controlnetLoaderADV": controlnetAdvanced,
+    "easy controlnetLoader++": controlnetPlusPlus,
     "easy LLLiteLoader": LLLiteLoader,
     # Adapter 适配器
     "easy ipadapterApply": ipadapterApply,
@@ -7610,6 +7668,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy controlnetStack": "EasyControlnetStack",
     "easy controlnetLoader": "EasyControlnet",
     "easy controlnetLoaderADV": "EasyControlnet (Advanced)",
+    "easy controlnetLoader++": "EasyControlnet++",
     "easy LLLiteLoader": "EasyLLLite",
     # Adapter 适配器
     "easy ipadapterApply": "Easy Apply IPAdapter",

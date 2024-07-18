@@ -3,16 +3,27 @@ import comfy.controlnet
 import comfy.model_management
 from nodes import NODE_CLASS_MAPPINGS
 
+union_controlnet_types = {"auto": -1, "openpose": 0, "depth": 1, "hed/pidi/scribble/ted": 2, "canny/lineart/anime_lineart/mlsd": 3, "normal": 4, "segment": 5, "tile": 6, "repaint": 7}
+
 class easyControlnet:
     def __init__(self):
         pass
 
-    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None, easyCache=None, use_cache=True):
+    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None, union_type=None, easyCache=None, use_cache=True):
         if strength == 0:
             return (positive, negative)
 
         if control_net is None:
             control_net = easyCache.load_controlnet(control_net_name, scale_soft_weights, use_cache)
+
+        # union controlnet
+        if union_type is not None:
+            control_net = control_net.copy()
+            type_number = union_controlnet_types[union_type]
+            if type_number >= 0:
+                control_net.set_extra_arg("control_type", [type_number])
+            else:
+                control_net.set_extra_arg("control_type", [])
 
         if mask is not None:
             mask = mask.to(self.device)

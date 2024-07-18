@@ -37,10 +37,12 @@
 - 支持Stable Diffusion 3 多账号API节点
 - 支持IC-Light的应用 [示例参考](https://github.com/yolain/ComfyUI-Yolain-Workflows?tab=readme-ov-file#2-5-ic-light) | [代码整合来源](https://github.com/huchenlei/ComfyUI-IC-Light) | [技术参考](https://github.com/lllyasviel/IC-Light)
 - 中文提示词自动识别，使用[opus-mt-zh-en模型](https://huggingface.co/Helsinki-NLP/opus-mt-zh-en)
-- 支持 sd3 模型 
+- 支持 sd3 模型
+- 支持 kolors 模型
 
 ## 安装
-将存储库克隆到 **custom_nodes** 目录并安装依赖
+
+1. 将存储库克隆到 **custom_nodes** 目录并安装依赖
 ```shell
 #1. git下载
 git clone https://github.com/yolain/ComfyUI-Easy-Use
@@ -48,10 +50,12 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 双击install.bat安装依赖
 ```
 
+
 ## 更新日志
 
 **v1.2.1**
 
+- 增加 `easy controlnetLoader++`
 - `easy ipadapterApply` 和 `easy ipadapterApplyADV` 增加 **PLUS (kolors genernal)** 预置项 (支持kolors IPA，可能会改名）
 - 去除 `easy positive` `easy negative` 等prompt节点的自动将中文翻译功能，自动翻译仅在 `easy a1111Loader` 等不支持中文TE的加载器中生效
 - 增加 `easy kolorsLoader` - 可灵加载器，参考了 [MinusZoneAI](https://github.com/MinusZoneAI/ComfyUI-Kolors-MZ) 和 [kijai](https://github.com/kijai/ComfyUI-KwaiKolorsWrapper) 的代码。
