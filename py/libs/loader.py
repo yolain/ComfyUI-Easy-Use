@@ -581,7 +581,10 @@ class easyLoader:
         return model
 
     def load_t5_from_sd3_clip(self, sd3_clip, padding):
-        from comfy.sd3_clip import SD3Tokenizer, SD3ClipModel
+        try:
+            from comfy.text_encoders.sd3_clip import SD3Tokenizer, SD3ClipModel
+        except:
+            from comfy.sd3_clip import SD3Tokenizer, SD3ClipModel
         import copy
 
         clip = sd3_clip.clone()

@@ -6,10 +6,13 @@ import itertools
 from comfy import model_management
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
 try:
-    from comfy.sd3_clip import SD3ClipModel, T5XXLModel
+    from comfy.text_encoders.sd3_clip import SD3ClipModel, T5XXLModel
 except:
-    SD3ClipModel, T5XXLModel = None, None
-    pass
+    try:
+        from comfy.sd3_clip import SD3ClipModel, T5XXLModel
+    except:
+        SD3ClipModel, T5XXLModel = None, None
+        pass
 from nodes import NODE_CLASS_MAPPINGS, ConditioningConcat, ConditioningZeroOut, ConditioningSetTimestepRange, ConditioningCombine
 
 def _grouper(n, iterable):
