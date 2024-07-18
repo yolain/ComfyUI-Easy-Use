@@ -14,7 +14,7 @@
 
 [![ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Easy-Use/assets/73304135/9a3f54bc-a677-4bf1-a196-8845dd57c942)](https://github.com/yolain/ComfyUI-Yolain-Workflows)
 
-## 特色介绍
+## 👨🏻‍🎨 特色介绍
 
 - 沿用了 [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes) 的思路，大大减少了折腾工作流的时间成本。
 - UI界面美化，首次安装的用户，如需使用UI主题，请在 Settings -> Color Palette 中自行切换主题并**刷新页面**即可
@@ -40,7 +40,7 @@
 - 支持 sd3 模型
 - 支持 kolors 模型
 
-## 安装
+## 👨🏻‍🔧 安装
 
 1. 将存储库克隆到 **custom_nodes** 目录并安装依赖
 ```shell
@@ -50,8 +50,17 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 双击install.bat安装依赖
 ```
 
+## ☕️ 计划
 
-## 更新日志
+- [ ] 更新便于维护的新前端代码
+  - [x] 使用sass维护css样式
+  - [ ] 对原有扩展进行优化
+  - [ ] 增加新的组件（如节点时间统计等） 
+  - [ ] 增加浅色主题
+- [ ] 在[ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Yolain-Workflows)中上传更多的工作流（如kolors,sd3等），并更新english版本的readme  
+- [ ] 更详细功能介绍的 gitbook   
+
+## 📜 更新日志
 
 **v1.2.1**
 
@@ -162,7 +171,9 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 去除强制**control_before_generate**设定
 - 增加 `easy imageRemBg` - 默认为BriaAI的RMBG-1.4模型, 移除背景效果更加，速度更快
 
-**v1.1.0**
+
+<details>
+<summary><b>v1.1.0</b></summary>
 
 - 增加 `easy imageSplitList` - 拆分每 N 张图像
 - 增加 `easy preSamplingDiffusionADDTL` - 可配置前景、背景、blended的additional_prompt等   
@@ -175,6 +186,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 修复 `easy wildcards` 读取lora未填写完整路径时未自动检索导致加载lora失败的问题
 - 修复 `easy instantIDApply` mask 未传入正确值
 - 修复 在 非a1111提示词风格下 BREAK 不生效的问题
+</details>
 
 <details>
 <summary><b>v1.0.9</b></summary>

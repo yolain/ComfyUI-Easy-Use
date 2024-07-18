@@ -11,7 +11,7 @@
 
 [![ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Easy-Use/assets/73304135/9a3f54bc-a677-4bf1-a196-8845dd57c942)](https://github.com/yolain/ComfyUI-Yolain-Workflows)
 
-## Introduce
+## 👨🏻‍🎨 Introduce
 
 - Inspire by [tinyterraNodes](https://github.com/TinyTerra/ComfyUI_tinyterraNodes), which greatly reduces the time cost of tossing workflows。
 - UI interface beautification, the first time you install the user, if you need to use the UI theme, please switch the theme in Settings -> Color Palette and refresh page.
@@ -31,8 +31,9 @@
 - Forcibly cleared the memory usage of the comfy UI model are supported
 - Stable Diffusion 3 multi-account API nodes are supported
 - Support Stable Diffusion 3 model
+- Support Kolors model
 
-## Installation
+## 👨🏻‍🔧 Installation
 Clone the repo into the **custom_nodes** directory and install the requirements:
 ```shell
 #1. Clone the repo
@@ -41,7 +42,17 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 Double-click install.bat to install the required dependencies
 ```
 
-## Changelog
+## ☕️ Plan
+
+- [ ] Updated new front-end code for easier maintenance
+  - [x] Maintain css styles using sass
+  - [ ] Optimize existing extensions
+  - [ ] Add new components
+  - [ ] Add light theme
+- [ ] Upload new workflows to [ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Yolain-Workflows) and translate readme to english version.
+- [ ] Write gitbook with more detailed function introdution
+
+## 📜 Changelog
 
 **v1.2.1**
 
@@ -144,7 +155,8 @@ Double-click install.bat to install the required dependencies
 - Remove forced **control_before_generate** settings。 If you want to use control_before_generate, change widget_value_control_mode to before in system settings
 - Added `easy imageRemBg` - The default is BriaAI's RMBG-1.4 model, which removes the background effect more and faster
 
-**v1.1.0**
+<details>
+<summary><b>v1.1.0</b></summary>
 
 - Added `easy imageSplitList` - to split every N images
 - Added `easy preSamplingDiffusionADDTL` - It can modify foreground、background or blended additional prompt
@@ -158,7 +170,7 @@ Double-click install.bat to install the required dependencies
 - Fixed `easy wildcards` When LoRa is not filled in completely, LoRa is not automatically retrieved, resulting in failure to load LoRa
 - Fixed the issue that 'BREAK' non-initiation when didn't use a1111 prompt style
 - Fixed `easy instantIDApply` mask not input right
-
+</details>
 
 <details>
 <summary><b>v1.0.9</b></summary>
@@ -370,6 +382,7 @@ Disclaimer: Opened source was not easy. I have a lot of respect for the contribu
 | easy dynamiCrafterLoader       | [ComfyUI-layerdiffusion](https://github.com/ExponentialML/ComfyUI_Native_DynamiCrafter) | Apply Dynamicrafter    | 
 | easy imageChooser              | [cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) | Preview Chooser         | 
 | easy styleAlignedBatchAlign              | [style_aligned_comfy](https://github.com/chrisgoringe/cg-image-picker) | styleAlignedBatchAlign       | 
+| easy kolorsLoader              | [ComfyUI-Kolors-MZ](https://github.com/MinusZoneAI/ComfyUI-Kolors-MZ) | kolorsLoader            |
 
 
 ## Credits
