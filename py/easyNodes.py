@@ -3618,7 +3618,7 @@ class ipadapterApplyFromParams(ipadapter):
                 "combine_embeds": (["concat", "add", "subtract", "average", "norm average", "max", "min"],),
                 "embeds_scaling": (['V only', 'K+V', 'K+V w/ C penalty', 'K+mean(V) w/ C penalty'],),
                 "cache_mode": (["insightface only", "clip_vision only", "ipadapter only", "all", "none"],
-                               {"default": "insightface only"},{"default":"none"}),
+                               {"default": "insightface only"}),
             },
 
             "optional": {
