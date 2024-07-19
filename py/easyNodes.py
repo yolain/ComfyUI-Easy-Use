@@ -2393,13 +2393,13 @@ class controlnetPlusPlus:
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=1, union_type=None):
         if scale_soft_weights < 1:
-            if "ScaledSoftControlNetWeights" in NODE_CLASS_MAPPINGS:
-                soft_weight_cls = NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
+            if "ScaledSoftControlNetWeights" in ALL_NODE_CLASS_MAPPINGS:
+                soft_weight_cls = ALL_NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
                 (weights, timestep_keyframe) = soft_weight_cls().load_weights(scale_soft_weights, False)
-                cn_adv_cls = NODE_CLASS_MAPPINGS['ACN_ControlNet++LoaderSingle']
+                cn_adv_cls = ALL_NODE_CLASS_MAPPINGS['ACN_ControlNet++LoaderSingle']
                 control_net, = cn_adv_cls().load_controlnet_plusplus(control_net_name, union_type)
-                apply_adv_cls = NODE_CLASS_MAPPINGS['ACN_AdvancedControlNetApply']
-                positive, negative, _ = apply_adv_cls().controlnetApply(pipe["positive"], pipe["negative"], control_net, image, strength, start_percent, end_percent, timestep_kf=timestep_keyframe,)
+                apply_adv_cls = ALL_NODE_CLASS_MAPPINGS['ACN_AdvancedControlNetApply']
+                positive, negative, _ = apply_adv_cls().apply_controlnet(pipe["positive"], pipe["negative"], control_net, image, strength, start_percent, end_percent, timestep_kf=timestep_keyframe,)
             else:
                 raise Exception(
                     f"[Advanced-ControlNet Not Found] you need to install 'COMFYUI-Advanced-ControlNet'")
