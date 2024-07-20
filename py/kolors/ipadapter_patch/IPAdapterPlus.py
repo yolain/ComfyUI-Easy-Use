@@ -3,7 +3,6 @@ import math
 import os
 import folder_paths
 
-from node_helpers import conditioning_set_values
 import comfy.model_base
 import comfy.model_management as model_management
 
