@@ -674,9 +674,13 @@ class imageRemBg:
     return {
       "required": {
         "images": ("IMAGE",),
-        "rem_mode": (("RMBG-1.4",),),
+        "rem_mode": (("RMBG-1.4","Inspyrenet"),),
         "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
         "save_prefix": ("STRING", {"default": "ComfyUI"}),
+
+      },
+      "optional":{
+        "torchscript_jit": ("BOOLEAN", {"default": False}),
       },
       "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
     }
@@ -688,7 +692,9 @@ class imageRemBg:
 
   CATEGORY = "EasyUse/Image"
 
-  def remove(self, rem_mode, images, image_output, save_prefix, prompt=None, extra_pnginfo=None):
+  def remove(self, rem_mode, images, image_output, save_prefix, torchscript_jit=False, prompt=None, extra_pnginfo=None):
+    new_images = list()
+    masks = list()
     if rem_mode == "RMBG-1.4":
       # load model
       model_url = REMBG_MODELS[rem_mode]['model_url']
@@ -702,8 +708,6 @@ class imageRemBg:
       net.eval()
       # prepare input
       model_input_size = [1024, 1024]
-      new_images = list()
-      masks = list()
       for image in images:
         orig_im = tensor2pil(image)
         w, h = orig_im.size
@@ -721,18 +725,33 @@ class imageRemBg:
       new_images = torch.cat(new_images, dim=0)
       masks = torch.cat(masks, dim=0)
 
+    elif rem_mode == "Inspyrenet":
+      from tqdm import tqdm
+      try:
+        from transparent_background import Remover
+      except:
+          install_package("transparent_background")
+          from transparent_background import Remover
 
-      results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
+      remover = Remover(jit=torchscript_jit)
 
-      if image_output in ("Hide", "Hide/Save"):
-        return {"ui": {},
-                "result": (new_images, masks)}
+      for img in tqdm(images, "Inspyrenet Rembg"):
+        mid = remover.process(tensor2pil(img), type='rgba')
+        out = pil2tensor(mid)
+        new_images.append(out)
+        mask = out[:, :, :, 3]
+        masks.append(mask)
+      new_images = torch.cat(new_images, dim=0)
+      masks = torch.cat(masks, dim=0)
 
-      return {"ui": {"images": results},
+    results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
+
+    if image_output in ("Hide", "Hide/Save"):
+      return {"ui": {},
               "result": (new_images, masks)}
 
-    else:
-      return (None, None)
+    return {"ui": {"images": results},
+            "result": (new_images, masks)}
 
 # 图像选择器
 class imageChooser(PreviewImage):

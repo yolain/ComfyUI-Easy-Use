@@ -64,6 +64,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.1**
 
+- `easy imageRemBg` 增加 **inspyrenet** 选项
 - 增加 `easy controlnetLoader++`
 - `easy ipadapterApply` 和 `easy ipadapterApplyADV` 增加 **PLUS (kolors genernal)** 预置项 (支持kolors IPA，可能会改名）
 - 去除 `easy positive` `easy negative` 等prompt节点的自动将中文翻译功能，自动翻译仅在 `easy a1111Loader` 等不支持中文TE的加载器中生效

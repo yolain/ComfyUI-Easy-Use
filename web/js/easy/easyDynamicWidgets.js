@@ -442,6 +442,17 @@ function widgetLogic(node, widget) {
 		}
 		updateNodeHeight(node)
 	}
+
+	if(widget.name == 'rem_mode'){
+		switch (widget.value){
+			case 'Inspyrenet':
+				toggleWidget(node, findWidgetByName(node, 'torchscript_jit'), true)
+				break
+			default:
+				toggleWidget(node, findWidgetByName(node, 'torchscript_jit'), false)
+				break
+		}
+	}
 }
 
 function widgetLogic2(node, widget) {
