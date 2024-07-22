@@ -3100,8 +3100,8 @@ class ipadapter:
                     model_url = IPADAPTER_CLIPVISION_MODELS["clip-vit-large-patch14-336"]["model_url"]
                     clipvision_file = get_local_filepath(model_url, IPADAPTER_DIR, "clip-vit-large-patch14-336.bin")
                 else:
-                    model_url = IPADAPTER_CLIPVISION_MODELS["clip-vit-h-14-32b-b79k"]["model_url"]
-                    clipvision_file = get_local_filepath(model_url, IPADAPTER_DIR, "clip-vit-h-14-32b-b79k.safetensors")
+                    model_url = IPADAPTER_CLIPVISION_MODELS["clip-vit-h-14-laion2B-s32B-b79K"]["model_url"]
+                    clipvision_file = get_local_filepath(model_url, IPADAPTER_DIR, "clip-vit-h-14-laion2B-s32B-b79K.safetensors")
                 clipvision_name = os.path.basename(model_url)
             if clipvision_file == pipeline['clipvision']['file']:
                 clip_vision = pipeline['clipvision']['model']

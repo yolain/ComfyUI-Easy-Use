@@ -1243,7 +1243,7 @@ const getSetWidgets = ['rescale_after_model', 'rescale',
 						'num_loras', 'num_controlnet', 'mode', 'toggle', 'resolution', 'ratio', 'target_parameter',
 	'input_count', 'replace_count', 'downscale_mode', 'range_mode','text_combine_mode', 'input_mode',
 	'lora_count','ckpt_count', 'conditioning_mode', 'preset', 'use_tiled', 'use_batch', 'num_embeds',
-	"easing_mode", "guider", "scheduler", "inpaint_mode", 't5_type'
+	"easing_mode", "guider", "scheduler", "inpaint_mode", 't5_type', 'rem_mode'
 ]
 
 function getSetters(node) {

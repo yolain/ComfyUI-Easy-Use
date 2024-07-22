@@ -99,6 +99,10 @@ async def getStylesList(request):
                         nd['name_cn'] = cn_data[key] if key in cn_data else key
                     nd["name"] = d['name']
                     nd['imgName'] = img_name
+                    if "prompt" in d:
+                        nd['prompt'] = d['prompt']
+                    if "negative_prompt" in d:
+                        nd['negative_prompt'] = d['negative_prompt']
                     ndata.append(nd)
                 return web.json_response(ndata)
     return web.Response(status=400)
