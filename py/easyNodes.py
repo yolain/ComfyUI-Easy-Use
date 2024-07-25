@@ -2,11 +2,7 @@ import sys, os, re, json, time
 import torch
 import folder_paths
 import numpy as np
-import comfy.utils, comfy.sample, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management
-try:
-    import comfy.sampler_helpers, comfy.supported_models
-except:
-    pass
+import comfy.utils, comfy.sample, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management, comfy.sampler_helpers, comfy.supported_models
 from comfy.sd import CLIP, VAE
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.chainner_models import model_loading
@@ -2291,7 +2287,7 @@ class controlnetSimple:
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, scale_soft_weights=1, union_type=None):
 
-        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"], strength, 0, 1, control_net, scale_soft_weights, mask=None, easyCache=easyCache)
+        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"], strength, 0, 1, control_net, scale_soft_weights, mask=None, easyCache=easyCache, model=pipe['model'])
 
         new_pipe = {
             "model": pipe['model'],
@@ -2341,7 +2337,7 @@ class controlnetAdvanced:
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=1):
         positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"],
-                                                    strength, start_percent, end_percent, control_net, scale_soft_weights, union_type=None, mask=None, easyCache=easyCache)
+                                                    strength, start_percent, end_percent, control_net, scale_soft_weights, union_type=None, mask=None, easyCache=easyCache, model=pipe['model'])
 
         new_pipe = {
             "model": pipe['model'],
@@ -2405,7 +2401,7 @@ class controlnetPlusPlus:
                     f"[Advanced-ControlNet Not Found] you need to install 'COMFYUI-Advanced-ControlNet'")
         else:
             positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"],
-                                                        strength, start_percent, end_percent, control_net, scale_soft_weights, union_type=union_type, mask=None, easyCache=easyCache)
+                                                        strength, start_percent, end_percent, control_net, scale_soft_weights, union_type=union_type, mask=None, easyCache=easyCache, model=pipe['model'])
 
         new_pipe = {
             "model": pipe['model'],
@@ -3212,7 +3208,7 @@ class ipadapterApply(ipadapter):
                 if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
-            model, images, masks = cls().apply_tiled(model, ipadapter, image, weight, "linear", start_at, end_at, sharpening=0.0, combine_embeds="concat", image_negative=None, attn_mask=attn_mask, clip_vision=None, embeds_scaling='V only')
+                model, images, masks = cls().apply_tiled(model, ipadapter, image, weight, "linear", start_at, end_at, sharpening=0.0, combine_embeds="concat", image_negative=None, attn_mask=attn_mask, clip_vision=None, embeds_scaling='V only')
         else:
             if preset in ['FACEID PLUS V2', 'FACEID PORTRAIT (style transfer)']:
                 if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
@@ -4217,7 +4213,6 @@ class samplerSettingsNoiseIn:
 
 # 预采样设置（自定义）
 import comfy_extras.nodes_custom_sampler as custom_samplers
-from .kolors.model_patch import patched_set_conds
 from tqdm import trange
 class samplerCustomSettings:
 
@@ -4427,22 +4422,10 @@ class samplerCustomSettings:
 
         # guider
         if guider == 'CFG':
-            # --------------------------------
-            # kolors  patch set conditioning
-            model, positive, negative, _ = patched_set_conds(model, positive, negative, None)
-            # --------------------------------
             _guider, = self.get_custom_cls('CFGGuider').get_guider(model, positive, negative, cfg)
         elif guider in ['DualCFG', 'IP2P+DualCFG']:
-            # --------------------------------
-            # kolors patch set conditioning
-            model, positive, negative, middle = patched_set_conds(model, positive, pipe['negative'], negative)
-            # --------------------------------
             _guider, =  self.get_custom_cls('DualCFGGuider').get_guider(model, positive, middle, negative, cfg, cfg_negative)
         else:
-            # --------------------------------
-            # kolors patch set conditioning
-            model, positive, negative, _ = patched_set_conds(model, positive, negative, None)
-            # --------------------------------
             _guider, = self.get_custom_cls('BasicGuider').get_guider(model, positive)
 
         # sampler

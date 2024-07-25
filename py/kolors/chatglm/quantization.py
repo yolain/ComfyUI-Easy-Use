@@ -137,8 +137,10 @@ class QuantizedLinear(torch.nn.Module):
             self.weight = torch.round(weight / self.weight_scale[:, None]).to(torch.int8)
             if weight_bit_width == 4:
                 self.weight = compress_int4_weight(self.weight)
-
-        self.weight = Parameter(self.weight.to(device), requires_grad=False)
+        try:
+            self.weight = Parameter(self.weight.to(device), requires_grad=False)
+        except:
+            self.weight.to(device, dtype=self.weight.dtype)
         self.weight_scale = Parameter(self.weight_scale.to(device), requires_grad=False)
         self.bias = Parameter(bias.to(device), requires_grad=False) if bias is not None else None
 

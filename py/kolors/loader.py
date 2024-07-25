@@ -1,14 +1,58 @@
 import json
 import os
 import torch
+import comfy.supported_models
 import comfy.model_patcher
 import comfy.model_management
 import comfy.model_detection as model_detection
-import comfy.supported_models
+import comfy.model_base as model_base
+from comfy.model_base import sdxl_pooled, CLIPEmbeddingNoiseAugmentation, Timestep, ModelType
+from comfy.ldm.modules.diffusionmodules.openaimodel import UNetModel
 from comfy.clip_vision import ClipVisionModel, Output
 from comfy.utils import load_torch_file
 from .chatglm.modeling_chatglm import ChatGLMModel, ChatGLMConfig
 from .chatglm.tokenization_chatglm import ChatGLMTokenizer
+
+
+class KolorsUNetModel(UNetModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.encoder_hid_proj = torch.nn.Linear(4096, 2048, bias=True)
+
+    def forward(self, *args, **kwargs):
+        with torch.cuda.amp.autocast(enabled=True):
+            if "context" in kwargs:
+                kwargs["context"] = self.encoder_hid_proj(kwargs["context"])
+            result = super().forward(*args, **kwargs)
+            return result
+
+
+class KolorsSDXL(model_base.SDXL):
+    def __init__(self, model_config, model_type=ModelType.EPS, device=None):
+        model_base.BaseModel.__init__(self, model_config, model_type, device=device, unet_model=KolorsUNetModel)
+        self.embedder = Timestep(256)
+        self.noise_augmentor = CLIPEmbeddingNoiseAugmentation(**{"noise_schedule_config": {"timesteps": 1000, "beta_schedule": "squaredcos_cap_v2"}, "timestep_dim": 1280})
+
+    def encode_adm(self, **kwargs):
+        clip_pooled = sdxl_pooled(kwargs, self.noise_augmentor)
+        width = kwargs.get("width", 768)
+        height = kwargs.get("height", 768)
+        crop_w = kwargs.get("crop_w", 0)
+        crop_h = kwargs.get("crop_h", 0)
+        target_width = kwargs.get("target_width", width)
+        target_height = kwargs.get("target_height", height)
+
+        out = []
+        out.append(self.embedder(torch.Tensor([height])))
+        out.append(self.embedder(torch.Tensor([width])))
+        out.append(self.embedder(torch.Tensor([crop_h])))
+        out.append(self.embedder(torch.Tensor([crop_w])))
+        out.append(self.embedder(torch.Tensor([target_height])))
+        out.append(self.embedder(torch.Tensor([target_width])))
+        flat = torch.flatten(torch.cat(out)).unsqueeze(
+            dim=0).repeat(clip_pooled.shape[0], 1)
+        return torch.cat((clip_pooled.to(flat.device), flat), dim=1)
+
 
 class Kolors(comfy.supported_models.SDXL):
     unet_config = {
@@ -20,16 +64,38 @@ class Kolors(comfy.supported_models.SDXL):
         "use_temporal_attention": False,
     }
 
-if Kolors not in comfy.supported_models.models:
-    comfy.supported_models.models += [Kolors]
+    def get_model(self, state_dict, prefix="", device=None):
+        out = KolorsSDXL(self, model_type=self.model_type(state_dict, prefix), device=device, )
+        out.__class__ = model_base.SDXL
+        if self.inpaint_model():
+            out.set_inpaint()
+        return out
 
 class applyKolorsUnet:
     def __enter__(self):
+        import comfy.ldm.modules.diffusionmodules.openaimodel
+        import comfy.utils
+        import comfy.clip_vision
+
+        self.original_UNET_MAP_BASIC = comfy.utils.UNET_MAP_BASIC.copy()
+        comfy.utils.UNET_MAP_BASIC.add(("encoder_hid_proj.weight", "encoder_hid_proj.weight"),)
+        comfy.utils.UNET_MAP_BASIC.add(("encoder_hid_proj.bias", "encoder_hid_proj.bias"),)
+
         self.original_unet_config_from_diffusers_unet = model_detection.unet_config_from_diffusers_unet
         model_detection.unet_config_from_diffusers_unet = kolors_unet_config_from_diffusers_unet
 
+        import comfy.supported_models
+        self.original_supported_models = comfy.supported_models.models
+        comfy.supported_models.models = [Kolors]
+
     def __exit__(self, type, value, traceback):
+        import comfy.ldm.modules.diffusionmodules.openaimodel
+        import comfy.utils
+        import comfy.supported_models
+        comfy.utils.UNET_MAP_BASIC = self.original_UNET_MAP_BASIC
+
         model_detection.unet_config_from_diffusers_unet = self.original_unet_config_from_diffusers_unet
+        comfy.supported_models.models = self.original_supported_models
 
 def kolors_unet_config_from_diffusers_unet(state_dict, dtype=None):
     match = {}
@@ -111,17 +177,26 @@ class chatGLM3Model(torch.nn.Module):
 
         from contextlib import nullcontext
         with (init_empty_weights() if is_accelerate_available else nullcontext()):
-            self.text_encoder = ChatGLMModel(textmodel_json_config)
-            if '4bit' in model_path:
-                self.text_encoder.quantize(4)
-            elif '8bit' in model_path:
-                self.text_encoder.quantize(8)
+            with torch.no_grad():
+                print('torch version:', torch.__version__)
+                self.text_encoder = ChatGLMModel(textmodel_json_config).eval()
+                if '4bit' in model_path:
+                    try:
+                        import cpm_kernels
+                    except ImportError:
+                        print("Installing cpm_kernels...")
+                        subprocess.run([sys.executable, "-m", "pip", "install", "cpm_kernels"], check=True)
+                        pass
+                    self.text_encoder.quantize(4)
+                elif '8bit' in model_path:
+                    self.text_encoder.quantize(8)
 
         sd = load_torch_file(model_path)
         if is_accelerate_available:
             for key in sd:
                 set_module_tensor_to_device(self.text_encoder, key, device=offload_device, value=sd[key])
         else:
+            print("WARNING: Accelerate not available, use load_state_dict load model")
             self.text_encoder.load_state_dict()
 
 def load_chatglm3(model_path=None):
@@ -188,3 +263,10 @@ def load_kolors_clip_vision(path):
             t = sd.pop(k)
             del t
     return clip
+def is_kolors_model(model):
+    base: BaseModel = model.model
+    model_config: comfy.supported_models.supported_models_base.BASE = base.model_config
+    if isinstance(model_config, Kolors):
+        return True
+    else:
+        return False

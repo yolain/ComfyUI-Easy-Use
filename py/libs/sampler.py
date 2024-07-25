@@ -8,7 +8,6 @@ from nodes import MAX_RESOLUTION
 from PIL import Image
 from typing import Dict, List, Optional, Tuple, Union, Any
 from ..brushnet.model_patch import add_model_patch
-from ..kolors.model_patch import patched_set_conds
 
 class easySampler:
     def __init__(self):
@@ -113,7 +112,6 @@ class easySampler:
         # brushnet
         add_model_patch(model)
         # kolors
-        model, positive, negative, _ = patched_set_conds(model, positive, negative, None)
         #######################################################################################
         samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
                                       latent_image,

@@ -9,12 +9,18 @@ class easyControlnet:
     def __init__(self):
         pass
 
-    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None, union_type=None, easyCache=None, use_cache=True):
+    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None, union_type=None, easyCache=None, use_cache=True, model=None):
         if strength == 0:
             return (positive, negative)
 
         if control_net is None:
             control_net = easyCache.load_controlnet(control_net_name, scale_soft_weights, use_cache)
+
+        # kolors controlnet patch
+        from ..kolors.loader import is_kolors_model
+        if is_kolors_model(model):
+            from ..kolors.model_patch import patch_controlnet
+            control_net = patch_controlnet(model, control_net)
 
         # union controlnet
         if union_type is not None:

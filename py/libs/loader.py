@@ -8,7 +8,6 @@ from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
-from ..kolors.model_patch import add_model_patch
 from ..dit.hunyuanDiT.loader import EXM_HyDiT_Tenc_Temp, load_hydit
 from ..dit.pixArt.loader import load_pixart
 
@@ -291,14 +290,14 @@ class easyLoader:
                 cn_adv_cls = NODE_CLASS_MAPPINGS['ControlNetLoaderAdvanced']
                 control_net, = cn_adv_cls().load_controlnet(control_net_name, timestep_keyframe)
             else:
-                raise Exception(
-                    f"[Advanced-ControlNet Not Found] you need to install 'COMFYUI-Advanced-ControlNet'")
+                raise Exception(f"[Advanced-ControlNet Not Found] you need to install 'COMFYUI-Advanced-ControlNet'")
         else:
             controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
             control_net = comfy.controlnet.load_controlnet(controlnet_path)
         if use_cache:
             self.add_to_cache("controlnet", unique_id, control_net)
             self.eviction_based_on_memory()
+
         return control_net
     def load_clip(self, clip_name, type='stable_diffusion', load_clip=None):
         if clip_name in self.loaded_objects["clip"]:
@@ -491,8 +490,6 @@ class easyLoader:
                 model = comfy.sd.load_unet_state_dict(sd)
                 if model is None:
                     raise RuntimeError("ERROR: Could not detect model type of: {}".format(unet_path))
-
-                add_model_patch(model, sd)
 
                 self.add_to_cache("unet", unet_name, model)
                 self.eviction_based_on_memory()
