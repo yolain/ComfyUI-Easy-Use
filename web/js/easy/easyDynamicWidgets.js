@@ -9,7 +9,6 @@ import { findWidgetByName, toggleWidget, updateNodeHeight} from "../common/utils
 const seedNodes = ["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy preSamplingLayerDiffusion", "easy fullkSampler", "easy fullCascadeKSampler"]
 const loaderNodes = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy hunyuanDiTLoader", "easy pixArtLoader"]
 
-
 function widgetLogic(node, widget) {
 	if (widget.name === 'lora_name') {
 		if (widget.value === "None") {
