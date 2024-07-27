@@ -279,10 +279,10 @@ class XYplot_Negative_Cond:
     def INPUT_TYPES(cls):
         inputs = {
             "optional": {
-                "negative_1": ("CONDITIONING"),
-                "negative_2": ("CONDITIONING"),
-                "negative_3": ("CONDITIONING"),
-                "negative_4": ("CONDITIONING"),
+                "negative_1": ("CONDITIONING",),
+                "negative_2": ("CONDITIONING",),
+                "negative_3": ("CONDITIONING",),
+                "negative_4": ("CONDITIONING",),
             }
         }
 
