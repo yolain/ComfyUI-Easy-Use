@@ -4,9 +4,12 @@ import gc
 import comfy.model_management as mm
 from nodes import ConditioningConcat, ConditioningZeroOut, ConditioningSetTimestepRange, ConditioningCombine
 
-def chatglm3_text_encode(chatglm3_model, prompt):
+def chatglm3_text_encode(chatglm3_model, prompt, clean_gpu=False):
     device = mm.get_torch_device()
     offload_device = mm.unet_offload_device()
+    if clean_gpu:
+        mm.unload_all_models()
+        mm.soft_empty_cache()
     # Function to randomly select an option from the brackets
 
     def choose_random_option(match):
@@ -51,10 +54,12 @@ def chatglm3_text_encode(chatglm3_model, prompt):
     bs_embed = text_proj.shape[0]
     text_proj = text_proj.repeat(1, 1).view(bs_embed, -1)
     text_encoder.to(offload_device)
-
+    if clean_gpu:
+        mm.soft_empty_cache()
+        gc.collect()
     return [[prompt_embeds, {"pooled_output": text_proj},]]
 
-def chatglm3_adv_text_encode(chatglm3_model, text):
+def chatglm3_adv_text_encode(chatglm3_model, text, clean_gpu=False):
     time_start = 0
     time_end = 1
     match = re.search(r'TIMESTEP.*$', text)
@@ -84,7 +89,7 @@ def chatglm3_adv_text_encode(chatglm3_model, text):
     conditioning = None
 
     for text in pass3:
-        cond = chatglm3_text_encode(chatglm3_model, text)
+        cond = chatglm3_text_encode(chatglm3_model, text, clean_gpu)
         if conditioning is not None:
             conditioning = ConditioningConcat().concat(conditioning, cond)[0]
         else:

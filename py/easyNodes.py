@@ -1848,6 +1848,7 @@ class kolorsLoader:
                 "model_override": ("MODEL",),
                 "vae_override": ("VAE",),
                 "optional_lora_stack": ("LORA_STACK",),
+                "auto_clean_gpu": ("BOOLEAN", {"default": False}),
             },
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
@@ -1858,7 +1859,7 @@ class kolorsLoader:
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
 
-    def adv_pipeloader(self, unet_name, vae_name, chatglm3_name, lora_name, lora_model_strength, lora_clip_strength, resolution, empty_latent_width, empty_latent_height, positive, negative, batch_size, model_override=None, optional_lora_stack=None, vae_override=None, prompt=None, my_unique_id=None):
+    def adv_pipeloader(self, unet_name, vae_name, chatglm3_name, lora_name, lora_model_strength, lora_clip_strength, resolution, empty_latent_width, empty_latent_height, positive, negative, batch_size, model_override=None, optional_lora_stack=None, vae_override=None, auto_clean_gpu=False, prompt=None, my_unique_id=None):
         # load unet
         if model_override:
            model = model_override
@@ -1891,9 +1892,9 @@ class kolorsLoader:
 
         # text encode
         log_node_warn("正在进行正向提示词编码...")
-        positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive)
+        positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive, auto_clean_gpu)
         log_node_warn("正在进行负面提示词编码...")
-        negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative)
+        negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative, auto_clean_gpu)
 
         # empty latent
         samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size)
