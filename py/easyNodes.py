@@ -1846,6 +1846,7 @@ class kolorsLoader:
             },
             "optional": {
                 "model_override": ("MODEL",),
+                "vae_override": ("VAE",),
                 "optional_lora_stack": ("LORA_STACK",),
             },
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
@@ -1857,14 +1858,17 @@ class kolorsLoader:
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
 
-    def adv_pipeloader(self, unet_name, vae_name, chatglm3_name, lora_name, lora_model_strength, lora_clip_strength, resolution, empty_latent_width, empty_latent_height, positive, negative, batch_size, model_override=None, optional_lora_stack=None, prompt=None, my_unique_id=None):
+    def adv_pipeloader(self, unet_name, vae_name, chatglm3_name, lora_name, lora_model_strength, lora_clip_strength, resolution, empty_latent_width, empty_latent_height, positive, negative, batch_size, model_override=None, optional_lora_stack=None, vae_override=None, prompt=None, my_unique_id=None):
         # load unet
         if model_override:
            model = model_override
         else:
            model = easyCache.load_kolors_unet(unet_name)
         # load vae
-        vae = easyCache.load_vae(vae_name)
+        if vae_override:
+           vae = vae_override
+        else:
+           vae = easyCache.load_vae(vae_name)
         # load chatglm3
         chatglm3_model = easyCache.load_chatglm3(chatglm3_name)
         # load lora
@@ -2797,7 +2801,6 @@ def insightface_loader(provider):
     return model
 
 # Apply Ipadapter
-from .kolors.ipadapter_patch import IPAdapterPlus as ipadapter_patch
 class ipadapter:
 
     def __init__(self):
@@ -3021,11 +3024,7 @@ class ipadapter:
                 log_node_info("easy ipadapterApply", f"Using ClipVisonModel {clipvision_name} Cached")
                 _, clip_vision = backend_cache.cache[clipvision_name][1]
             else:
-                if preset.lower().startswith("plus (kolors"):
-                    from .kolors.loader import load_kolors_clip_vision
-                    clip_vision = load_kolors_clip_vision(clipvision_file)
-                else:
-                    clip_vision = load_clip_vision(clipvision_file)
+                clip_vision = load_clip_vision(clipvision_file)
                 log_node_info("easy ipadapterApply", f"Using ClipVisonModel {clipvision_name}")
                 if cache_mode in ["all", "clip_vision only"]:
                     backend_cache.update_cache(clipvision_name, 'clip_vision', (False, clip_vision))
@@ -3116,15 +3115,10 @@ class ipadapterApply(ipadapter):
         images, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
         if use_tiled and preset not in self.faceid_presets:
-            # kolors
-            if preset.lower().startswith("plus (kolors"):
-                model, images, masks = ipadapter_patch.apply_tiled(model, ipadapter, image, weight, "linear", start_at, end_at, sharpening=0.0, combine_embeds="concat", image_negative=None, attn_mask=attn_mask, clip_vision=None, embeds_scaling='V only')
-            # normal
-            else:
-                if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
-                    self.error()
-                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
-                model, images, masks = cls().apply_tiled(model, ipadapter, image, weight, "linear", start_at, end_at, sharpening=0.0, combine_embeds="concat", image_negative=None, attn_mask=attn_mask, clip_vision=None, embeds_scaling='V only')
+            if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
+                self.error()
+            cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
+            model, images, masks = cls().apply_tiled(model, ipadapter, image, weight, "linear", start_at, end_at, sharpening=0.0, combine_embeds="concat", image_negative=None, attn_mask=attn_mask, clip_vision=None, embeds_scaling='V only')
         else:
             if preset in ['FACEID PLUS V2', 'FACEID PORTRAIT (style transfer)']:
                 if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
@@ -3132,15 +3126,10 @@ class ipadapterApply(ipadapter):
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
                 model, images = cls().apply_ipadapter(model, ipadapter, start_at=start_at, end_at=end_at, weight=weight, weight_type="linear", combine_embeds="concat", weight_faceidv2=weight_faceidv2, image=image, image_negative=None, clip_vision=None, attn_mask=attn_mask, insightface=None, embeds_scaling='V only')
             else:
-                # kolors
-                if preset.lower().startswith("plus (kolors"):
-                    model, images = ipadapter_patch.apply_simple(model, ipadapter, image, weight, start_at, end_at,weight_type='standard', attn_mask=attn_mask)
-                # normal
-                else:
-                    if "IPAdapter" not in ALL_NODE_CLASS_MAPPINGS:
-                        self.error()
-                    cls = ALL_NODE_CLASS_MAPPINGS["IPAdapter"]
-                    model, images = cls().apply_ipadapter(model, ipadapter, image, weight, start_at, end_at, weight_type='standard', attn_mask=attn_mask)
+                if "IPAdapter" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapter"]
+                model, images = cls().apply_ipadapter(model, ipadapter, image, weight, start_at, end_at, weight_type='standard', attn_mask=attn_mask)
         if images is None:
             images = image
         return (model, images, masks, ipadapter,)
@@ -3193,49 +3182,30 @@ class ipadapterApplyAdvanced(ipadapter):
         images, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=clip_vision, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
         if layer_weights:
-            # kolors
-            if preset.lower().startswith("plus (kolors"):
-                model, images = ipadapter_patch.apply_advanced(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=weight_style, weight_composition=weight_composition, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling, layer_weights=layer_weights, unfold_batch=use_batch)
-            # normal
+            if "IPAdapterMS" not in ALL_NODE_CLASS_MAPPINGS:
+                self.error()
+            cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
+            model, images = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=weight_style, weight_composition=weight_composition, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling, layer_weights=layer_weights)
+        elif use_tiled:
+            if use_batch:
+                if "IPAdapterTiledBatch" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiledBatch"]
             else:
-                if "IPAdapterMS" not in ALL_NODE_CLASS_MAPPINGS:
+                if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
+            model, images, masks = cls().apply_tiled(model, ipadapter, image=image, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, sharpening=sharpening, combine_embeds=combine_embeds, image_negative=image_negative, attn_mask=attn_mask, clip_vision=clip_vision, embeds_scaling=embeds_scaling)
+        else:
+            if use_batch:
+                if "IPAdapterBatch" not in ALL_NODE_CLASS_MAPPINGS:
+                    self.error()
+                cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterBatch"]
+            else:
+                if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
-                model, images = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=weight_style, weight_composition=weight_composition, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling, layer_weights=layer_weights)
-        elif use_tiled:
-            # kolors
-            if preset.lower().startswith("plus (kolors"):
-                model, images, masks = ipadapter_patch.apply_tiled(model, ipadapter, image=image, weight=weight,
-                                                         weight_type=weight_type, start_at=start_at, end_at=end_at,
-                                                         sharpening=sharpening, combine_embeds=combine_embeds,
-                                                         image_negative=image_negative, attn_mask=attn_mask,
-                                                         clip_vision=clip_vision, embeds_scaling=embeds_scaling, unfold_batch=use_batch)
-            # normal
-            else:
-                if use_batch:
-                    if "IPAdapterTiledBatch" not in ALL_NODE_CLASS_MAPPINGS:
-                        self.error()
-                    cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiledBatch"]
-                else:
-                    if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
-                        self.error()
-                    cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
-                model, images, masks = cls().apply_tiled(model, ipadapter, image=image, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, sharpening=sharpening, combine_embeds=combine_embeds, image_negative=image_negative, attn_mask=attn_mask, clip_vision=clip_vision, embeds_scaling=embeds_scaling)
-        else:
-            # kolors
-            if preset.lower().startswith("plus (kolors"):
-                model, images = ipadapter_patch.apply_advanced(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=1.0, weight_composition=1.0, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling, unfold_batch=use_batch)
-            # normal
-            else:
-                if use_batch:
-                    if "IPAdapterBatch" not in ALL_NODE_CLASS_MAPPINGS:
-                        self.error()
-                    cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterBatch"]
-                else:
-                    if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
-                        self.error()
-                    cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
-                model, images = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=1.0, weight_composition=1.0, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
+            model, images = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=1.0, weight_composition=1.0, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
         if images is None:
             images = image
         return (model, images, masks, ipadapter)
