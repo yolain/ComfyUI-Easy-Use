@@ -2873,7 +2873,7 @@ class ipadapter:
                 pattern = 'ip.adapter.plus.sd15\.(safetensors|bin)$'
         elif preset.startswith("plus (kolors"):
             if is_sdxl:
-                pattern = 'plus.genernal\.(safetensors|bin)$'
+                pattern = 'plus.gener(nal|al)\.(safetensors|bin)$'
             else:
                 raise Exception("kolors model is not supported for SD15")
         elif preset.startswith("plus face"):

@@ -233,7 +233,7 @@ IPADAPTER_MODELS = {
             "model_url":""
         },
         "sdxl":{
-            "model_url":"https://huggingface.co/Kwai-Kolors/Kolors-IP-Adapter-Plus/resolve/main/ip_adapter_plus_genernal.bin"
+            "model_url":"https://huggingface.co/Kwai-Kolors/Kolors-IP-Adapter-Plus/resolve/main/ip_adapter_plus_general.bin"
         }
     },
     "PLUS FACE (portraits)": {
