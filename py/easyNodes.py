@@ -934,14 +934,8 @@ class fullLoader:
         samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size, sd3=sd3)
 
         # Prompt to Conditioning
-        if model_type == 'hydit':
-            positive_embeddings_final, = CLIPTextEncode().encode(clip, positive)
-            negative_embeddings_final, = CLIPTextEncode().encode(clip, negative)
-            positive_wildcard_prompt = ''
-            negative_wildcard_prompt = ''
-        else:
-            positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
-            negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
+        positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache, model_type=model_type)
+        negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache, model_type=model_type)
 
         # Conditioning add controlnet
         if optional_controlnet_stack is not None and len(optional_controlnet_stack) > 0:
@@ -1925,6 +1919,7 @@ class kolorsLoader:
                 "empty_latent_width": empty_latent_width,
                 "empty_latent_height": empty_latent_height,
                 "batch_size": batch_size,
+                "auto_clean_gpu": auto_clean_gpu,
             }
         }
 
@@ -6713,9 +6708,6 @@ class pipeOut:
 
 # 编辑节点束
 class pipeEdit:
-    def __init__(self):
-        pass
-
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -6753,11 +6745,11 @@ class pipeEdit:
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING", "LATENT", "VAE", "CLIP", "IMAGE")
     RETURN_NAMES = ("pipe", "model", "pos", "neg", "latent", "vae", "clip", "image")
-    FUNCTION = "flush"
+    FUNCTION = "edit"
 
     CATEGORY = "EasyUse/Pipe"
 
-    def flush(self, clip_skip, optional_positive, positive_token_normalization, positive_weight_interpretation, optional_negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, conditioning_mode, average_strength, old_cond_start, old_cond_end, new_cond_start, new_cond_end, pipe=None, model=None, pos=None, neg=None, latent=None, vae=None, clip=None, image=None, my_unique_id=None, prompt=None):
+    def edit(self, clip_skip, optional_positive, positive_token_normalization, positive_weight_interpretation, optional_negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, conditioning_mode, average_strength, old_cond_start, old_cond_end, new_cond_start, new_cond_end, pipe=None, model=None, pos=None, neg=None, latent=None, vae=None, clip=None, image=None, my_unique_id=None, prompt=None):
 
         model = model if model is not None else pipe.get("model")
         if model is None:
@@ -6831,6 +6823,76 @@ class pipeEdit:
         del pipe
 
         return (new_pipe, model,pos, neg, latent, vae, clip, image)
+
+# 编辑节点束提示词
+class pipeEditPrompt:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipe": ("PIPE_LINE",),
+                "positive": ("STRING", {"default": "", "multiline": True}),
+                "negative": ("STRING", {"default": "", "multiline": True}),
+            },
+            "hidden": {"my_unique_id": "UNIQUE_ID", "prompt": "PROMPT"},
+        }
+
+    RETURN_TYPES = ("PIPE_LINE",)
+    RETURN_NAMES = ("pipe",)
+    FUNCTION = "edit"
+
+    CATEGORY = "EasyUse/Pipe"
+
+    def edit(self, pipe, positive, negative, my_unique_id=None, prompt=None):
+        model = pipe.get("model")
+        if model is None:
+            log_node_warn(f'pipeEdit[{my_unique_id}]', "Model missing from pipeLine")
+
+        from .kolors.loader import is_kolors_model
+        if is_kolors_model(model):
+            auto_clean_gpu = pipe["loader_settings"]["auto_clean_gpu"] if "auto_clean_gpu" in pipe["loader_settings"] else False
+            # text encode
+            log_node_warn("正在进行正向提示词编码...")
+            positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive, auto_clean_gpu)
+            log_node_warn("正在进行负面提示词编码...")
+            negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative, auto_clean_gpu)
+        else:
+            model_type = get_sd_version(model)
+            clip_skip = pipe["loader_settings"]["clip_skip"] if "clip_skip" in pipe["loader_settings"] else -1
+            lora_stack = pipe.get("lora_stack") if pipe is not None and "lora_stack" in pipe else []
+            positive_token_normalization = pipe["loader_settings"]["positive_token_normalization"] if "positive_token_normalization" in pipe["loader_settings"] else "none"
+            positive_weight_interpretation = pipe["loader_settings"]["positive_weight_interpretation"] if "positive_weight_interpretation" in pipe["loader_settings"] else "comfy"
+            negative_token_normalization = pipe["loader_settings"]["negative_token_normalization"] if "negative_token_normalization" in pipe["loader_settings"] else "none"
+            negative_weight_interpretation = pipe["loader_settings"]["negative_weight_interpretation"] if "negative_weight_interpretation" in pipe["loader_settings"] else "comfy"
+            a1111_prompt_style = pipe["loader_settings"]["a1111_prompt_style"] if "a1111_prompt_style" in pipe["loader_settings"] else False
+            # Prompt to Conditioning
+            positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip,
+                                                                                              clip_skip, lora_stack,
+                                                                                              positive,
+                                                                                              positive_token_normalization,
+                                                                                              positive_weight_interpretation,
+                                                                                              a1111_prompt_style,
+                                                                                              my_unique_id, prompt,
+                                                                                              easyCache,
+                                                                                              model_type=model_type)
+            negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip,
+                                                                                              clip_skip, lora_stack,
+                                                                                              negative,
+                                                                                              negative_token_normalization,
+                                                                                              negative_weight_interpretation,
+                                                                                              a1111_prompt_style,
+                                                                                              my_unique_id, prompt,
+                                                                                              easyCache,
+                                                                                              model_type=model_type)
+        new_pipe = {
+            **pipe,
+            "model": model,
+            "positive": positive_embeddings_final,
+            "negative": negative_embeddings_final,
+        }
+        del pipe
+
+        return (new_pipe,)
 
 
 # 节点束到基础节点束（pipe to ComfyUI-Impack-pack's basic_pipe）
@@ -7476,6 +7538,7 @@ NODE_CLASS_MAPPINGS = {
     "easy pipeIn": pipeIn,
     "easy pipeOut": pipeOut,
     "easy pipeEdit": pipeEdit,
+    "easy pipeEditPrompt": pipeEditPrompt,
     "easy pipeToBasicPipe": pipeToBasicPipe,
     "easy pipeBatchIndex": pipeBatchIndex,
     "easy XYPlot": pipeXYPlot,
@@ -7595,6 +7658,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy pipeIn": "Pipe In",
     "easy pipeOut": "Pipe Out",
     "easy pipeEdit": "Pipe Edit",
+    "easy pipeEditPrompt": "Pipe Edit Prompt",
     "easy pipeBatchIndex": "Pipe Batch Index",
     "easy pipeToBasicPipe": "Pipe -> BasicPipe",
     "easy XYPlot": "XY Plot",

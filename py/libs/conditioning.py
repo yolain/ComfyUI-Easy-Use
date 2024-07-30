@@ -4,12 +4,16 @@ from .translate import zh_to_en, has_chinese
 from .wildcards import process_with_loras
 from .adv_encode import advanced_encode
 
-from nodes import ConditioningConcat, ConditioningCombine, ConditioningAverage, ConditioningSetTimestepRange
+from nodes import ConditioningConcat, ConditioningCombine, ConditioningAverage, ConditioningSetTimestepRange, CLIPTextEncode
 
-def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_normalization, prompt_weight_interpretation, a1111_prompt_style ,my_unique_id, prompt, easyCache, can_load_lora=True, steps=None):
+def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_normalization, prompt_weight_interpretation, a1111_prompt_style ,my_unique_id, prompt, easyCache, can_load_lora=True, steps=None, model_type=None):
     styles_selector = is_linked_styles_selector(prompt, my_unique_id, type)
     title = "正面提示词" if type == 'positive' else "负面提示词"
     log_node_warn("正在进行" + title + "...")
+
+    if model_type == 'hydit':
+        embeddings_final, = CLIPTextEncode().encode(clip, text)
+        return (embeddings_final, "", model, clip)
 
     # Translate cn to en
     if has_chinese(text):
