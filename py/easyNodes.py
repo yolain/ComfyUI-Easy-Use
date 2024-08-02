@@ -1937,8 +1937,6 @@ from .dit.pixArt.config import pixart_conf, pixart_res
 class pixArtLoader:
     @classmethod
     def INPUT_TYPES(cls):
-        for k in range(1, torch.cuda.device_count()):
-            devices.append(f"cuda:{k}")
         return {
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
