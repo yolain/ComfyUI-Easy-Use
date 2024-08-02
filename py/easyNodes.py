@@ -2785,14 +2785,13 @@ class icLightApply:
         return (m, lighting_image)
 
 
-def insightface_loader(provider):
+def insightface_loader(provider, name='buffalo_l'):
     try:
         from insightface.app import FaceAnalysis
     except ImportError as e:
         raise Exception(e)
-
     path = os.path.join(folder_paths.models_dir, "insightface")
-    model = FaceAnalysis(name="buffalo_l", root=path, providers=[provider + 'ExecutionProvider', ])
+    model = FaceAnalysis(name=name, root=path, providers=[provider + 'ExecutionProvider', ])
     model.prepare(ctx_id=0, det_size=(640, 640))
     return model
 
@@ -2813,6 +2812,7 @@ class ipadapter:
         self.faceid_presets = [
             'FACEID',
             'FACEID PLUS - SD1.5 only',
+            "FACEID PLUS KOLORS",
             'FACEID PLUS V2',
             'FACEID PORTRAIT (style transfer)',
             'FACEID PORTRAIT UNNORM - SDXL only (strong)'
@@ -2828,7 +2828,7 @@ class ipadapter:
         preset = preset.lower()
         clipvision_list = folder_paths.get_filename_list("clip_vision")
 
-        if preset.startswith("plus (kolors"):
+        if preset.startswith("plus (kolors") or preset.startswith("faceid plus kolors"):
             pattern = 'Vit.Large.patch14.336\.(bin|safetensors)$'
         elif preset.startswith("vit-g"):
             pattern = '(ViT.bigG.14.*39B.b160k|ipadapter.*sdxl|sdxl.*model\.(bin|safetensors))'
@@ -2913,6 +2913,12 @@ class ipadapter:
                 pattern = 'faceid.sd15\.(safetensors|bin)$'
                 lora_pattern = 'faceid.sd15.lora\.safetensors$'
             is_insightface = True
+        elif preset.startswith("faceid plus kolors"):
+            if is_sdxl:
+                pattern = '(kolors|ipa).faceid.plus\.(safetensors|bin)$'
+            else:
+                raise Exception("faceid plus kolors model is not supported for SD1.5")
+            is_insightface = True
         elif preset.startswith("faceid plus -"):
             if is_sdxl:
                 raise Exception("faceid plus model is not supported for SDXL")
@@ -2979,7 +2985,12 @@ class ipadapter:
             model = st_model
             del st_model
 
-        if not "ip_adapter" in model.keys() or not model["ip_adapter"]:
+        model_keys = model.keys()
+        if "adapter_modules" in model_keys:
+            model["ip_adapter"] = model["adapter_modules"]
+            del model['adapter_modules']
+
+        if not "ip_adapter" in model_keys or not model["ip_adapter"]:
             raise Exception("invalid IPAdapter model {}".format(file))
 
         if 'plusv2' in file.lower():
@@ -3065,7 +3076,7 @@ class ipadapter:
                     log_node_info("easy ipadapterApply", f"Using InsightFaceModel {icache_key} Cached")
                     _, insightface = backend_cache.cache[icache_key][1]
                 else:
-                    insightface = insightface_loader(provider)
+                    insightface = insightface_loader(provider, 'antelopev2' if preset == 'FACEID PLUS KOLORS' else 'buffalo_l')
                     if cache_mode in ["all", "insightface only"]:
                         backend_cache.update_cache(icache_key, 'insightface',(False, insightface))
                 pipeline['insightface']['provider'] = provider
@@ -3116,7 +3127,7 @@ class ipadapterApply(ipadapter):
             cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
             model, images, masks = cls().apply_tiled(model, ipadapter, image, weight, "linear", start_at, end_at, sharpening=0.0, combine_embeds="concat", image_negative=None, attn_mask=attn_mask, clip_vision=None, embeds_scaling='V only')
         else:
-            if preset in ['FACEID PLUS V2', 'FACEID PORTRAIT (style transfer)']:
+            if preset in ['FACEID PLUS KOLORS', 'FACEID PLUS V2', 'FACEID PORTRAIT (style transfer)']:
                 if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
@@ -7402,7 +7413,6 @@ class sliderControl:
     def control(self, mode, model_type, prompt=None, my_unique_id=None, extra_pnginfo=None):
         values = ''
         if my_unique_id in prompt:
-            print(prompt[my_unique_id])
             if 'values' in prompt[my_unique_id]["inputs"]:
                 values = prompt[my_unique_id]["inputs"]['values']
 

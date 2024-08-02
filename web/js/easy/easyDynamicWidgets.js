@@ -278,6 +278,7 @@ function widgetLogic(node, widget) {
 		const faceid_presets = [
             'FACEID',
             'FACEID PLUS - SD1.5 only',
+			'FACEID PLUS KOLORS',
             'FACEID PLUS V2',
 			'FACEID PORTRAIT (style transfer)',
 			'FACEID PORTRAIT UNNORM - SDXL only (strong)'
@@ -296,12 +297,12 @@ function widgetLogic(node, widget) {
 
 		}
 		else if(faceid_presets.includes(widget.value)){
-			if(widget.value == 'FACEID PLUS V2'){
+			if(['FACEID PLUS V2','FACEID PLUS KOLORS'].includes(widget.value)){
 				toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'), true)
 			}else{
 				toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'))
 			}
-			if(['FACEID PORTRAIT (style transfer)','FACEID PORTRAIT UNNORM - SDXL only (strong)'].includes(widget.value)){
+			if(['FACEID PLUS KOLORS','FACEID PORTRAIT (style transfer)','FACEID PORTRAIT UNNORM - SDXL only (strong)'].includes(widget.value)){
 				toggleWidget(node, findWidgetByName(node, 'lora_strength'), false)
 			}
 			else{

@@ -282,6 +282,14 @@ IPADAPTER_MODELS = {
             "lora_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plusv2_sdxl_lora.safetensors"
         }
     },
+    "FACEID PLUS KOLORS":{
+        "sd15":{
+
+        },
+        "sdxl":{
+            "model_url":"https://huggingface.co/Kwai-Kolors/Kolors-IP-Adapter-FaceID-Plus/resolve/main/ipa-faceid-plus.bin"
+        }
+    },
     "FACEID PORTRAIT (style transfer)": {
         "sd15": {
             "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-portrait-v11_sd15.bin",
