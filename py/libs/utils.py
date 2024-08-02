@@ -119,6 +119,8 @@ def get_sd_version(model):
         return 'sd3'
     elif isinstance(model_config, comfy.supported_models.HunyuanDiT):
         return 'hydit'
+    elif isinstance(model_config, comfy.supported_models.Flux):
+        return 'flux'
     else:
         return 'unknown'
 

@@ -167,6 +167,9 @@ class easySampler:
     def custom_advanced_ksampler(self, noise, guider, sampler, sigmas, latent_image):
         latent = latent_image
         latent_image = latent["samples"]
+        latent = latent.copy()
+        latent_image = comfy.sample.fix_empty_latent_channels(guider.model_patcher, latent_image)
+        latent["samples"] = latent_image
 
         noise_mask = None
         if "noise_mask" in latent:

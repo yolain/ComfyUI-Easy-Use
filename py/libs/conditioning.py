@@ -11,7 +11,7 @@ def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_
     title = "正面提示词" if type == 'positive' else "负面提示词"
     log_node_warn("正在进行" + title + "...")
 
-    if model_type == 'hydit':
+    if model_type in ['hydit', 'flux']:
         embeddings_final, = CLIPTextEncode().encode(clip, text)
         return (embeddings_final, "", model, clip)
 
