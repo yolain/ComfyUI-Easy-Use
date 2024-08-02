@@ -2309,6 +2309,12 @@ class controlnetPlusPlus:
                 soft_weight_cls = ALL_NODE_CLASS_MAPPINGS['ScaledSoftControlNetWeights']
                 (weights, timestep_keyframe) = soft_weight_cls().load_weights(scale_soft_weights, False)
                 cn_adv_cls = ALL_NODE_CLASS_MAPPINGS['ACN_ControlNet++LoaderSingle']
+                if union_type == 'auto':
+                    union_type = 'none'
+                elif union_type == 'canny/lineart/anime_lineart/mlsd':
+                    union_type = 'canny/lineart/mlsd'
+                elif union_type == 'repaint':
+                    union_type = 'inpaint/outpaint'
                 control_net, = cn_adv_cls().load_controlnet_plusplus(control_net_name, union_type)
                 apply_adv_cls = ALL_NODE_CLASS_MAPPINGS['ACN_AdvancedControlNetApply']
                 positive, negative, _ = apply_adv_cls().apply_controlnet(pipe["positive"], pipe["negative"], control_net, image, strength, start_percent, end_percent, timestep_kf=timestep_keyframe,)
