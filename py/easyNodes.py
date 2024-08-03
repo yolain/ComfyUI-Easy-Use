@@ -2919,7 +2919,7 @@ class ipadapter:
             is_insightface = True
         elif preset.startswith("faceid plus kolors"):
             if is_sdxl:
-                pattern = '(kolors|ipa).faceid.plus\.(safetensors|bin)$'
+                pattern = '(kolors.ip.adapter.faceid.plus|ipa.faceid.plus)\.(safetensors|bin)$'
             else:
                 raise Exception("faceid plus kolors model is not supported for SD1.5")
             is_insightface = True
@@ -2992,6 +2992,7 @@ class ipadapter:
         model_keys = model.keys()
         if "adapter_modules" in model_keys:
             model["ip_adapter"] = model["adapter_modules"]
+            model["faceidplusv2"] = True
             del model['adapter_modules']
 
         if not "ip_adapter" in model_keys or not model["ip_adapter"]:
@@ -3122,7 +3123,7 @@ class ipadapterApply(ipadapter):
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
-    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, start_at, end_at, cache_mode, use_tiled, attn_mask=None, optional_ipadapter=None):
+    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, start_at, end_at, cache_mode, use_tiled, attn_mask=None, optional_ipadapter=None, weight_kolors=None):
         images, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
         if use_tiled and preset not in self.faceid_presets:
@@ -3135,7 +3136,9 @@ class ipadapterApply(ipadapter):
                 if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
-                model, images = cls().apply_ipadapter(model, ipadapter, start_at=start_at, end_at=end_at, weight=weight, weight_type="linear", combine_embeds="concat", weight_faceidv2=weight_faceidv2, image=image, image_negative=None, clip_vision=None, attn_mask=attn_mask, insightface=None, embeds_scaling='V only')
+                if weight_kolors is None:
+                    weight_kolors = weight
+                model, images = cls().apply_ipadapter(model, ipadapter, start_at=start_at, end_at=end_at, weight=weight, weight_type="linear", combine_embeds="concat", weight_faceidv2=weight_faceidv2, image=image, image_negative=None, clip_vision=None, attn_mask=attn_mask, insightface=None, embeds_scaling='V only', weight_kolors=weight_kolors)
             else:
                 if "IPAdapter" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
@@ -3189,14 +3192,18 @@ class ipadapterApplyAdvanced(ipadapter):
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
-    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, weight_type, combine_embeds, start_at, end_at, embeds_scaling, cache_mode, use_tiled, use_batch, sharpening, weight_style=1.0, weight_composition=1.0, image_style=None, image_composition=None, expand_style=False, image_negative=None, clip_vision=None, attn_mask=None, optional_ipadapter=None, layer_weights=None):
+    def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, weight_type, combine_embeds, start_at, end_at, embeds_scaling, cache_mode, use_tiled, use_batch, sharpening, weight_style=1.0, weight_composition=1.0, image_style=None, image_composition=None, expand_style=False, image_negative=None, clip_vision=None, attn_mask=None, optional_ipadapter=None, layer_weights=None, weight_kolors=None):
         images, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=clip_vision, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
+
+        if weight_kolors is None:
+            weight_kolors = weight
+
         if layer_weights:
             if "IPAdapterMS" not in ALL_NODE_CLASS_MAPPINGS:
                 self.error()
             cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
-            model, images = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=weight_style, weight_composition=weight_composition, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling, layer_weights=layer_weights)
+            model, images = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=weight_style, weight_composition=weight_composition, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling, layer_weights=layer_weights, weight_kolors=weight_kolors)
         elif use_tiled:
             if use_batch:
                 if "IPAdapterTiledBatch" not in ALL_NODE_CLASS_MAPPINGS:
@@ -3216,10 +3223,47 @@ class ipadapterApplyAdvanced(ipadapter):
                 if "IPAdapterAdvanced" not in ALL_NODE_CLASS_MAPPINGS:
                     self.error()
                 cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterAdvanced"]
-            model, images = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=1.0, weight_composition=1.0, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling)
+            model, images = cls().apply_ipadapter(model, ipadapter, weight=weight, weight_type=weight_type, start_at=start_at, end_at=end_at, combine_embeds=combine_embeds, weight_faceidv2=weight_faceidv2, image=image, image_negative=image_negative, weight_style=1.0, weight_composition=1.0, image_style=image_style, image_composition=image_composition, expand_style=expand_style, clip_vision=clip_vision, attn_mask=attn_mask, insightface=None, embeds_scaling=embeds_scaling, weight_kolors=weight_kolors)
         if images is None:
             images = image
         return (model, images, masks, ipadapter)
+
+class ipadapterApplyFaceIDKolors(ipadapterApplyAdvanced):
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        ipa_cls = cls()
+        presets = ipa_cls.presets
+        weight_types = ipa_cls.weight_types
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "image": ("IMAGE",),
+                "preset": (['FACEID PLUS KOLORS'], {"default":"FACEID PLUS KOLORS"}),
+                "lora_strength": ("FLOAT", {"default": 0.6, "min": 0, "max": 1, "step": 0.01}),
+                "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"],),
+                "weight": ("FLOAT", {"default": 0.8, "min": -1, "max": 3, "step": 0.05}),
+                "weight_faceidv2": ("FLOAT", {"default": 1.0, "min": -1, "max": 5.0, "step": 0.05}),
+                "weight_kolors": ("FLOAT", {"default": 0.8, "min": -1, "max": 5.0, "step": 0.05}),
+                "weight_type": (weight_types,),
+                "combine_embeds": (["concat", "add", "subtract", "average", "norm average"],),
+                "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "end_at": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.001}),
+                "embeds_scaling": (['V only', 'K+V', 'K+V w/ C penalty', 'K+mean(V) w/ C penalty'],),
+                "cache_mode": (["insightface only", "clip_vision only", "ipadapter only", "all", "none"], {"default": "all"},),
+                "use_tiled": ("BOOLEAN", {"default": False},),
+                "use_batch": ("BOOLEAN", {"default": False},),
+                "sharpening": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.05}),
+            },
+
+            "optional": {
+                "image_negative": ("IMAGE",),
+                "attn_mask": ("MASK",),
+                "clip_vision": ("CLIP_VISION",),
+                "optional_ipadapter": ("IPADAPTER",),
+            }
+        }
+
 
 class ipadapterStyleComposition(ipadapter):
     def __init__(self):
@@ -7500,6 +7544,7 @@ NODE_CLASS_MAPPINGS = {
     # Adapter 适配器
     "easy ipadapterApply": ipadapterApply,
     "easy ipadapterApplyADV": ipadapterApplyAdvanced,
+    "easy ipadapterApplyFaceIDKolors": ipadapterApplyFaceIDKolors,
     "easy ipadapterApplyEncoder": ipadapterApplyEncoder,
     "easy ipadapterApplyEmbeds": ipadapterApplyEmbeds,
     "easy ipadapterApplyRegional": ipadapterApplyRegional,
@@ -7620,6 +7665,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # Adapter 适配器
     "easy ipadapterApply": "Easy Apply IPAdapter",
     "easy ipadapterApplyADV": "Easy Apply IPAdapter (Advanced)",
+    "easy ipadapterApplyFaceIDKolors": "Easy Apply IPAdapter (FaceID Kolors)",
     "easy ipadapterStyleComposition": "Easy Apply IPAdapter (StyleComposition)",
     "easy ipadapterApplyEncoder": "Easy Apply IPAdapter (Encoder)",
     "easy ipadapterApplyRegional": "Easy Apply IPAdapter (Regional)",

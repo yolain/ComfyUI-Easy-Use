@@ -287,6 +287,7 @@ function widgetLogic(node, widget) {
 			toggleWidget(node, findWidgetByName(node, 'lora_strength'))
 			toggleWidget(node, findWidgetByName(node, 'provider'))
 			toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'))
+			toggleWidget(node, findWidgetByName(node, 'weight_kolors'))
 			toggleWidget(node, findWidgetByName(node, 'use_tiled'), true)
 			let use_tiled = findWidgetByName(node, 'use_tiled')
 			if(use_tiled && use_tiled.value){
@@ -297,11 +298,8 @@ function widgetLogic(node, widget) {
 
 		}
 		else if(faceid_presets.includes(widget.value)){
-			if(['FACEID PLUS V2','FACEID PLUS KOLORS'].includes(widget.value)){
-				toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'), true)
-			}else{
-				toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'))
-			}
+			toggleWidget(node, findWidgetByName(node, 'weight_faceidv2'), ['FACEID PLUS V2','FACEID PLUS KOLORS'].includes(widget.value) ? true : false);
+			toggleWidget(node, findWidgetByName(node, 'weight_kolors'), ['FACEID PLUS KOLORS'].includes(widget.value) ? true : false);
 			if(['FACEID PLUS KOLORS','FACEID PORTRAIT (style transfer)','FACEID PORTRAIT UNNORM - SDXL only (strong)'].includes(widget.value)){
 				toggleWidget(node, findWidgetByName(node, 'lora_strength'), false)
 			}
@@ -744,6 +742,7 @@ app.registerExtension({
 			case 'easy icLightApply':
 			case 'easy ipadapterApply':
 			case 'easy ipadapterApplyADV':
+			case 'easy ipadapterApplyFaceIDKolors':
 			case 'easy ipadapterApplyEncoder':
 			case 'easy applyInpaint':
 				getSetters(node)
