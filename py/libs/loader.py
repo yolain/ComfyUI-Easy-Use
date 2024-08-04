@@ -308,6 +308,8 @@ class easyLoader:
             clip_type = comfy.sd.CLIPType.STABLE_CASCADE
         elif type == 'sd3':
             clip_type = comfy.sd.CLIPType.SD3
+        elif type == 'flux':
+            clip_type = comfy.sd.CLIPType.FLUX
         elif type == 'stable_audio':
             clip_type = comfy.sd.CLIPType.STABLE_AUDIO
         clip_path = folder_paths.get_full_path("clip", clip_name)
