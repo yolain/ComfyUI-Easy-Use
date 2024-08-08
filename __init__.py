@@ -1,5 +1,6 @@
 __version__ = "1.2.2"
 
+import yaml
 import os
 import folder_paths
 import importlib
@@ -24,7 +25,7 @@ for module_name in node_list:
 cwd_path = os.path.dirname(os.path.realpath(__file__))
 comfy_path = folder_paths.base_path
 
-#Wildcards读取
+#Wildcards
 from .py.libs.wildcards import read_wildcard_dict
 wildcards_path = os.path.join(os.path.dirname(__file__), "wildcards")
 if os.path.exists(wildcards_path):
@@ -53,8 +54,29 @@ for model in model_config:
             continue
         add_static_resource(path, path, limit=True)
 
-WEB_DIRECTORY = "./web"
-__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]
+# web directory
+config_path = os.path.join(cwd_path, "config.yaml")
+if os.path.isfile(config_path):
+    with open(config_path, 'r') as f:
+        data = yaml.load(f, Loader=yaml.FullLoader)
+        if not data:
+            data = {'WEB_VERSION': 'v1'}
+            with open(config_path, 'w') as f:
+                yaml.dump(data, f)
+        if 'WEB_VERSION' not in data:
+            data['WEB_VERSION'] = 'v1'
+            with open(config_path, 'w') as f:
+                yaml.dump(data, f)
+        directory = f"./web_version/{data['WEB_VERSION']}"
+    if not os.path.exists(os.path.join(cwd_path, directory)):
+        print(f"Web version {data['WEB_VERSION']} not found, using default")
+        directory = f"./web_version/v1"
+    WEB_DIRECTORY = directory
+else:
+    with open(config_path, 'w') as f:
+        data = {'WEB_VERSION': 'v1'}
+        yaml.dump(data, f)
 
+__all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]
 
 print(f'\033[34mComfy-Easy-Use v{__version__}: \033[92mLoaded\033[0m')
