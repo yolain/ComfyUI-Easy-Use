@@ -79,9 +79,10 @@ if os.path.isfile(config_path):
         directory = f"./web_version/v1"
     WEB_DIRECTORY = directory
 else:
-    with open(config_path, 'w') as f:
-        data = {'WEB_VERSION': 'v1'}
-        yaml.dump(data, f)
+    # with open(config_path, 'w') as f:
+    #     data = {'WEB_VERSION': 'v1'}
+    #     yaml.dump(data, f)
+    WEB_DIRECTORY = "./web_version/v1"
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]
 
