@@ -294,9 +294,8 @@ class applyKolorsUnet:
 
 
 def is_kolors_model(model):
-    base: BaseModel = model.model
-    model_config: comfy.supported_models.supported_models_base.BASE = base.model_config
-    if isinstance(model_config, Kolors):
+    unet_config = model.model.model_config.unet_config
+    if unet_config and "adm_in_channels" in unet_config and unet_config["adm_in_channels"] == 5632:
         return True
     else:
         return False

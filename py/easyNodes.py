@@ -1896,6 +1896,7 @@ class kolorsLoader:
         log_node_warn("处理完毕...")
         pipe = {
             "model": model,
+            "chatglm3_model": chatglm3_model,
             "positive": positive_embeddings_final,
             "negative": negative_embeddings_final,
             "vae": vae,
@@ -6908,17 +6909,19 @@ class pipeEditPrompt:
             log_node_warn(f'pipeEdit[{my_unique_id}]', "Model missing from pipeLine")
 
         from .kolors.loader import is_kolors_model
-        if is_kolors_model(model):
+        model_type = get_sd_version(model)
+        if model_type == 'sdxl' and is_kolors_model(model):
             auto_clean_gpu = pipe["loader_settings"]["auto_clean_gpu"] if "auto_clean_gpu" in pipe["loader_settings"] else False
+            chatglm3_model = pipe["chatglm3_model"] if "chatglm3_model" in pipe else None
             # text encode
             log_node_warn("正在进行正向提示词编码...")
             positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive, auto_clean_gpu)
             log_node_warn("正在进行负面提示词编码...")
             negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative, auto_clean_gpu)
         else:
-            model_type = get_sd_version(model)
             clip_skip = pipe["loader_settings"]["clip_skip"] if "clip_skip" in pipe["loader_settings"] else -1
             lora_stack = pipe.get("lora_stack") if pipe is not None and "lora_stack" in pipe else []
+            clip = pipe.get("clip") if pipe is not None and "clip" in pipe else None
             positive_token_normalization = pipe["loader_settings"]["positive_token_normalization"] if "positive_token_normalization" in pipe["loader_settings"] else "none"
             positive_weight_interpretation = pipe["loader_settings"]["positive_weight_interpretation"] if "positive_weight_interpretation" in pipe["loader_settings"] else "comfy"
             negative_token_normalization = pipe["loader_settings"]["negative_token_normalization"] if "negative_token_normalization" in pipe["loader_settings"] else "none"
