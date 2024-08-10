@@ -59,15 +59,21 @@ config_path = os.path.join(cwd_path, "config.yaml")
 if os.path.isfile(config_path):
     with open(config_path, 'r') as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
-        if not data:
-            data = {'WEB_VERSION': 'v1'}
+        # if not data:
+        #     data = {'WEB_VERSION': 'v1'}
+        #     with open(config_path, 'w') as f:
+        #         yaml.dump(data, f)
+        # if 'WEB_VERSION' not in data:
+        #     data['WEB_VERSION'] = 'v1'
+        #     with open(config_path, 'w') as f:
+        #         yaml.dump(data, f)
+        if "WEB_VERSION" in data and data['WEB_VERSION'] == "v1":
+            del data['WEB_VERSION']
             with open(config_path, 'w') as f:
                 yaml.dump(data, f)
-        if 'WEB_VERSION' not in data:
-            data['WEB_VERSION'] = 'v1'
-            with open(config_path, 'w') as f:
-                yaml.dump(data, f)
-        directory = f"./web_version/{data['WEB_VERSION']}"
+            directory = f"./web_version/v1"
+        else:
+            directory = f"./web_version/{data['WEB_VERSION']}"
     if not os.path.exists(os.path.join(cwd_path, directory)):
         print(f"Web version {data['WEB_VERSION']} not found, using default")
         directory = f"./web_version/v1"

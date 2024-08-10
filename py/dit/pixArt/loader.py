@@ -118,7 +118,6 @@ def load_pixart(model_path, model_conf=None):
         model,
         load_device=load_device,
         offload_device=offload_device,
-        current_device="cpu",
     )
     return model_patcher
 

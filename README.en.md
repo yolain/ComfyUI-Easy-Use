@@ -46,13 +46,16 @@ Double-click install.bat to install the required dependencies
 
 - [ ] Updated new front-end code for easier maintenance
   - [x] Maintain css styles using sass
-  - [ ] Optimize existing extensions
-  - [ ] Add new components
-  - [ ] Add light theme
+  - [x] Optimize existing extensions
+  - [x] Add new components
 - [ ] Upload new workflows to [ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Yolain-Workflows) and translate readme to english version.
 - [ ] Write gitbook with more detailed function introdution
 
 ## 📜 Changelog
+
+**v1.2.2**
+
+- Added support for `controlnetApply` Related nodes with SD3 and hunyuanDiT
 
 **v1.2.1**
 
