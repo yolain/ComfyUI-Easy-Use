@@ -940,7 +940,7 @@ class fullLoader:
         # Conditioning add controlnet
         if optional_controlnet_stack is not None and len(optional_controlnet_stack) > 0:
             for controlnet in optional_controlnet_stack:
-                positive_embeddings_final, negative_embeddings_final = easyControlnet().apply(controlnet[0], controlnet[5], positive_embeddings_final, negative_embeddings_final, controlnet[1], start_percent=controlnet[2], end_percent=controlnet[3], control_net=None, scale_soft_weights=controlnet[4], mask=None, easyCache=easyCache, use_cache=True, model=model)
+                positive_embeddings_final, negative_embeddings_final = easyControlnet().apply(controlnet[0], controlnet[5], positive_embeddings_final, negative_embeddings_final, controlnet[1], start_percent=controlnet[2], end_percent=controlnet[3], control_net=None, scale_soft_weights=controlnet[4], mask=None, easyCache=easyCache, use_cache=True, model=model, vae=vae)
 
         log_node_warn("加载完毕...")
         pipe = {
@@ -2202,7 +2202,7 @@ class controlnetSimple:
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, scale_soft_weights=1, union_type=None):
 
-        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"], strength, 0, 1, control_net, scale_soft_weights, mask=None, easyCache=easyCache, model=pipe['model'])
+        positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"], strength, 0, 1, control_net, scale_soft_weights, mask=None, easyCache=easyCache, model=pipe['model'], vae=pipe['vae'])
 
         new_pipe = {
             "model": pipe['model'],
@@ -2252,7 +2252,7 @@ class controlnetAdvanced:
 
     def controlnetApply(self, pipe, image, control_net_name, control_net=None, strength=1, start_percent=0, end_percent=1, scale_soft_weights=1):
         positive, negative = easyControlnet().apply(control_net_name, image, pipe["positive"], pipe["negative"],
-                                                    strength, start_percent, end_percent, control_net, scale_soft_weights, union_type=None, mask=None, easyCache=easyCache, model=pipe['model'])
+                                                    strength, start_percent, end_percent, control_net, scale_soft_weights, union_type=None, mask=None, easyCache=easyCache, model=pipe['model'], vae=pipe['vae'])
 
         new_pipe = {
             "model": pipe['model'],
@@ -2262,7 +2262,7 @@ class controlnetAdvanced:
             "clip": pipe['clip'],
 
             "samples": pipe["samples"],
-            "images": pipe["images"],
+            "images": image,
             "seed": 0,
 
             "loader_settings": pipe["loader_settings"]

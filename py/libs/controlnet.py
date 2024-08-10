@@ -9,7 +9,7 @@ class easyControlnet:
     def __init__(self):
         pass
 
-    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None, union_type=None, easyCache=None, use_cache=True, model=None):
+    def apply(self, control_net_name, image, positive, negative, strength, start_percent=0, end_percent=1, control_net=None, scale_soft_weights=1, mask=None, union_type=None, easyCache=None, use_cache=True, model=None, vae=None):
         if strength == 0:
             return (positive, negative)
 
@@ -69,7 +69,7 @@ class easyControlnet:
                     if prev_cnet in cnets:
                         c_net = cnets[prev_cnet]
                     else:
-                        c_net = control_net.copy().set_cond_hint(control_hint, strength, (start_percent, end_percent))
+                        c_net = control_net.copy().set_cond_hint(control_hint, strength, (start_percent, end_percent), vae)
                         c_net.set_previous_controlnet(prev_cnet)
                         cnets[prev_cnet] = c_net
 
