@@ -67,13 +67,10 @@ if os.path.isfile(config_path):
         #     data['WEB_VERSION'] = 'v1'
         #     with open(config_path, 'w') as f:
         #         yaml.dump(data, f)
-        if "WEB_VERSION" in data and data['WEB_VERSION'] == "v1":
-            del data['WEB_VERSION']
-            with open(config_path, 'w') as f:
-                yaml.dump(data, f)
-            directory = f"./web_version/v1"
-        else:
+        if "WEB_VERSION" in data:
             directory = f"./web_version/{data['WEB_VERSION']}"
+        else:
+            directory = f"./web_version/v1"
     if not os.path.exists(os.path.join(cwd_path, directory)):
         print(f"Web version {data['WEB_VERSION']} not found, using default")
         directory = f"./web_version/v1"
