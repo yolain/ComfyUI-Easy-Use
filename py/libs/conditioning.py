@@ -12,6 +12,8 @@ def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_
     log_node_warn("正在进行" + title + "...")
 
     if model_type in ['hydit', 'flux']:
+        if model_type == 'flux':
+            text = zh_to_en([text])[0] if has_chinese(text) else text
         embeddings_final, = CLIPTextEncode().encode(clip, text)
         return (embeddings_final, "", model, clip)
 
