@@ -95,7 +95,6 @@ def translate(text):
     if not os.path.exists(zh_en_model_path):
         zh_en_model_path = 'Helsinki-NLP/opus-mt-zh-en'
 
-    print(zh_en_model_path)
     if zh_en_model is None:
 
         zh_en_model = AutoModelForSeq2SeqLM.from_pretrained(zh_en_model_path).eval()
