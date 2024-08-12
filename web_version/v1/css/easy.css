@@ -50,6 +50,9 @@ textarea{
 .comfy-modal button {
     border-width:1px;
 }
+.comfy-modal-content{
+    width: 100%;
+}
 
 
 dialog{
