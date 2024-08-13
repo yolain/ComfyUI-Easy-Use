@@ -1956,7 +1956,7 @@ class fluxLoader(fullLoader):
                 "clip_override": ("CLIP",),
                 "vae_override": ("VAE",),
                 "optional_lora_stack": ("LORA_STACK",),
-                "optional_controlnet_stack": ("LORA_STACK",),
+                "optional_controlnet_stack": ("CONTROL_NET_STACK",),
             },
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
