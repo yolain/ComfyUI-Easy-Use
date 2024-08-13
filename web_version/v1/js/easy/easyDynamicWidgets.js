@@ -7,7 +7,7 @@ import { $t } from '../common/i18n.js';
 import { findWidgetByName, toggleWidget, updateNodeHeight} from "../common/utils.js";
 
 const seedNodes = ["easy seed", "easy latentNoisy", "easy wildcards", "easy preSampling", "easy preSamplingAdvanced", "easy preSamplingNoiseIn", "easy preSamplingSdTurbo", "easy preSamplingCascade", "easy preSamplingDynamicCFG", "easy preSamplingLayerDiffusion", "easy fullkSampler", "easy fullCascadeKSampler"]
-const loaderNodes = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy hunyuanDiTLoader", "easy pixArtLoader"]
+const loaderNodes = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy fluxLoader", "easy hunyuanDiTLoader", "easy pixArtLoader"]
 
 function widgetLogic(node, widget) {
 	if (widget.name === 'lora_name') {
@@ -697,6 +697,7 @@ app.registerExtension({
 		switch (node.comfyClass){
 			case "easy fullLoader":
 			case "easy a1111Loader":
+			case "easy fluxLoader":
 			case "easy comfyLoader":
 			case "easy cascadeLoader":
 			case "easy svdLoader":

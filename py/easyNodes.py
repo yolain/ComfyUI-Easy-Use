@@ -918,7 +918,7 @@ class fullLoader:
                        positive, positive_token_normalization, positive_weight_interpretation,
                        negative, negative_token_normalization, negative_weight_interpretation,
                        batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, prompt=None,
-                       my_unique_id=None
+                       my_unique_id=None, nf4=False
                        ):
 
         # Clean models from loaded_objects
@@ -926,7 +926,7 @@ class fullLoader:
 
         # Load models
         log_node_warn("正在加载模型...")
-        model, clip, vae, clip_vision, lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt)
+        model, clip, vae, clip_vision, lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt, nf4=nf4)
 
         # Create Empty Latent
         model_type = get_sd_version(model)
@@ -1929,6 +1929,60 @@ class kolorsLoader:
 
 
         return (chatglm3_model, None, None)
+
+# Flux Loader
+class fluxLoader(fullLoader):
+    @classmethod
+    def INPUT_TYPES(cls):
+        checkpoints = folder_paths.get_filename_list("checkpoints")
+        loras = ["None"] + folder_paths.get_filename_list("loras")
+        return {
+            "required": {
+                "ckpt_name": (checkpoints,),
+                "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
+                "lora_name": (loras,),
+                "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+                "lora_clip_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+                "resolution": (resolution_strings, {"default": "1024 x 1024"}),
+                "empty_latent_width": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "empty_latent_height": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+
+                "positive": ("STRING", {"default": "", "placeholder": "Positive", "multiline": True}),
+
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+            },
+            "optional": {
+                "model_override": ("MODEL",),
+                "clip_override": ("CLIP",),
+                "vae_override": ("VAE",),
+                "optional_lora_stack": ("LORA_STACK",),
+                "optional_controlnet_stack": ("CONTROL_NET_STACK",),
+            },
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
+    RETURN_NAMES = ("pipe", "model", "vae")
+
+    FUNCTION = "fluxloader"
+    CATEGORY = "EasyUse/Loaders"
+
+    def fluxloader(self, ckpt_name, vae_name,
+                    lora_name, lora_model_strength, lora_clip_strength,
+                    resolution, empty_latent_width, empty_latent_height,
+                    positive, batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None,
+                    a1111_prompt_style=False, prompt=None,
+                    my_unique_id=None):
+
+        return super().adv_pipeloader(ckpt_name, 'Default', vae_name, 0,
+                                      lora_name, lora_model_strength, lora_clip_strength,
+                                      resolution, empty_latent_width, empty_latent_height,
+                                      positive, 'none', 'comfy',
+                                      '', 'none', 'comfy',
+                                      batch_size, model_override, clip_override, vae_override, optional_lora_stack=optional_lora_stack,
+                                      optional_controlnet_stack=optional_controlnet_stack,
+                                      a1111_prompt_style=a1111_prompt_style, prompt=prompt,
+                                      my_unique_id=my_unique_id, nf4=True)
 
 
 # Dit Loader
@@ -7510,6 +7564,21 @@ class stableDiffusion3API:
 
 #---------------------------------------------------------------API 结束----------------------------------------------------------------------
 
+class CheckpointLoaderNF4:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": { "ckpt_name": (folder_paths.get_filename_list("checkpoints"), ),
+                             }}
+    RETURN_TYPES = ("MODEL", "CLIP", "VAE")
+    FUNCTION = "load_checkpoint"
+
+    CATEGORY = "loaders"
+
+    def load_checkpoint(self, ckpt_name):
+        from .bitsandbytes_NF4 import OPS
+        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+        out = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options={"custom_operations": OPS})
+        return out[:3]
 
 NODE_CLASS_MAPPINGS = {
     # seed 随机种
@@ -7537,6 +7606,7 @@ NODE_CLASS_MAPPINGS = {
     "easy dynamiCrafterLoader": dynamiCrafterLoader,
     "easy cascadeLoader": cascadeLoader,
     "easy kolorsLoader": kolorsLoader,
+    "easy fluxLoader": fluxLoader,
     "easy pixArtLoader": pixArtLoader,
     "easy loraStack": loraStack,
     "easy controlnetStack": controlnetStack,
@@ -7657,6 +7727,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy dynamiCrafterLoader": "EasyLoader (DynamiCrafter)",
     "easy cascadeLoader": "EasyCascadeLoader",
     "easy kolorsLoader": "EasyLoader (Kolors)",
+    "easy fluxLoader": "EasyLoader (Flux)",
     "easy hunyuanDiTLoader": "EasyLoader (HunyuanDiT)",
     "easy pixArtLoader": "EasyLoader (PixArt)",
     "easy loraStack": "EasyLoraStack",

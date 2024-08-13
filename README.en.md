@@ -32,6 +32,7 @@
 - Stable Diffusion 3 multi-account API nodes are supported
 - Support Stable Diffusion 3 model
 - Support Kolors model
+- Support Flux model
 
 ## 👨🏻‍🔧 Installation
 Clone the repo into the **custom_nodes** directory and install the requirements:
@@ -55,6 +56,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.2**
 
+- Added `easy fluxLoader`
 - Added support for `controlnetApply` Related nodes with SD3 and hunyuanDiT
 
 **v1.2.1**

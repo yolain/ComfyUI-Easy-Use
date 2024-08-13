@@ -39,6 +39,7 @@
 - 中文提示词自动识别，使用[opus-mt-zh-en模型](https://huggingface.co/Helsinki-NLP/opus-mt-zh-en)
 - 支持 sd3 模型
 - 支持 kolors 模型
+- 支持 flux 模型
 
 ## 👨🏻‍🔧 安装
 
@@ -63,6 +64,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.2**
 
+- 增加 `easy fluxLoader`
 - 增加 `controlnetApply` 相关节点对sd3和hunyuanDiT的支持
 
 **v1.2.1**
