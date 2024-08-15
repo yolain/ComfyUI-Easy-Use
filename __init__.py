@@ -54,38 +54,40 @@ for model in model_config:
             continue
         add_static_resource(path, path, limit=True)
 
+# get comfyui revision
+from .py.libs.utils import get_comfyui_revision
+
+comfyui_revision = get_comfyui_revision()
+new_frontend_revision = 2546
+web_default_version = 'v2' if comfyui_revision >= new_frontend_revision else 'v1'
 # web directory
 config_path = os.path.join(cwd_path, "config.yaml")
 if os.path.isfile(config_path):
     with open(config_path, 'r') as f:
         data = yaml.load(f, Loader=yaml.FullLoader)
-        # if not data:
-        #     data = {'WEB_VERSION': 'v1'}
-        #     with open(config_path, 'w') as f:
-        #         yaml.dump(data, f)
-        # if 'WEB_VERSION' not in data:
-        #     data['WEB_VERSION'] = 'v1'
-        #     with open(config_path, 'w') as f:
-        #         yaml.dump(data, f)
-        if "WEB_VERSION" in data and data['WEB_VERSION'] == "v1":
-            del data['WEB_VERSION']
+        if data and "WEB_VERSION" in data:
+            directory = f"web_version/{data['WEB_VERSION']}"
             with open(config_path, 'w') as f:
                 yaml.dump(data, f)
-            directory = f"./web_version/v1"
-        elif "WEB_VERSION" in data:
-            directory = f"./web_version/{data['WEB_VERSION']}"
+        elif web_default_version != 'v1':
+            if not data:
+                data = {'WEB_VERSION': web_default_version}
+            elif 'WEB_VERSION' not in data:
+                data = {**data, 'WEB_VERSION': web_default_version}
+            with open(config_path, 'w') as f:
+                yaml.dump(data, f)
+            directory = f"web_version/{web_default_version}"
         else:
-            directory = f"./web_version/v1"
+            directory = f"web_version/v1"
     if not os.path.exists(os.path.join(cwd_path, directory)):
-        print(f"Web version {data['WEB_VERSION']} not found, using default")
-        directory = f"./web_version/v1"
+        print(f"web root {data['WEB_VERSION']} not found, using default")
+        directory = f"web_version/{web_default_version}"
     WEB_DIRECTORY = directory
 else:
-    # with open(config_path, 'w') as f:
-    #     data = {'WEB_VERSION': 'v1'}
-    #     yaml.dump(data, f)
-    WEB_DIRECTORY = "./web_version/v1"
+    directory = f"web_version/{web_default_version}"
+    WEB_DIRECTORY =  directory
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', "WEB_DIRECTORY"]
 
-print(f'\033[34mComfy-Easy-Use v{__version__}: \033[92mLoaded\033[0m')
+print(f'\033[34m[ComfyUI-Easy-Use] server: \033[0mv{__version__} \033[92mLoaded\033[0m')
+print(f'\033[34m[ComfyUI-Easy-Use] web root: \033[0m{os.path.join(cwd_path, directory)} \033[92mLoaded\033[0m')
