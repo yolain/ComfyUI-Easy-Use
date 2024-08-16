@@ -59,7 +59,7 @@ from .py.libs.utils import get_comfyui_revision
 
 comfyui_revision = get_comfyui_revision()
 new_frontend_revision = 2546
-web_default_version = 'v2' if comfyui_revision >= new_frontend_revision else 'v1'
+web_default_version = 'v2' if int(comfyui_revision) >= new_frontend_revision else 'v1'
 # web directory
 config_path = os.path.join(cwd_path, "config.yaml")
 if os.path.isfile(config_path):
