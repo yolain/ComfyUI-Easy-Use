@@ -51,7 +51,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 👨🏻‍🚀 计划
 
-- [ ] 更新便于维护的新前端代码
+- [x] 更新便于维护的新前端代码
   - [x] 使用sass维护css样式
   - [x] 对原有扩展进行优化
   - [x] 增加新的组件（如节点时间统计等） 
@@ -62,6 +62,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.2**
 
+- 增加 v2 版本新前端代码
 - 增加 `easy fluxLoader`
 - 增加 `controlnetApply` 相关节点对sd3和hunyuanDiT的支持
 
@@ -149,7 +150,8 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - `easy wildcards` 增加 **multiline_mode**属性 
 - 增加 当节点需要下载模型时，若huggingface连接超时，会切换至镜像地址下载模型
 
-**v1.1.2**
+<details>
+<summary><b>v1.1.2</b></summary>
 
 - 改写 EasyUse 相关节点的部分插槽推荐节点
 - 增加 **启用上下文菜单自动嵌套子目录** 设置项，默认为启用状态，可分类子目录及checkpoints、loras预览图
@@ -164,8 +166,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 修复 `easy stylesSelector` 当未选择样式时，原有提示词发生了变化
 - 修复 `easy pipeEdit` 提示词输入lora时报错
 - 修复 layerDiffuse xyplot相关bug
+</details>
 
-**v1.1.1**
+<details>
+<summary><b>v1.1.1/b></summary>
 
 - 修复首次添加含seed的节点且当前模式为control_before_generate时，seed为0的问题
 - `easy preSamplingAdvanced` 增加 **return_with_leftover_noise**
@@ -175,7 +179,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 修补官方BUG: 当control_mode为before 在首次加载页面时未修改节点中widget名称为 control_before_generate
 - 去除强制**control_before_generate**设定
 - 增加 `easy imageRemBg` - 默认为BriaAI的RMBG-1.4模型, 移除背景效果更加，速度更快
-
+</details>
 
 <details>
 <summary><b>v1.1.0</b></summary>

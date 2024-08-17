@@ -46,7 +46,7 @@ Double-click install.bat to install the required dependencies
 
 ## 👨🏻‍🚀 Plan
 
-- [ ] Updated new front-end code for easier maintenance
+- [x] Updated new front-end code for easier maintenance
   - [x] Maintain css styles using sass
   - [x] Optimize existing extensions
   - [x] Add new components
@@ -57,6 +57,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.2**
 
+- Added v2 web frond-end code
 - Added `easy fluxLoader`
 - Added support for `controlnetApply` Related nodes with SD3 and hunyuanDiT
 
@@ -137,7 +138,8 @@ Double-click install.bat to install the required dependencies
 - Added `easy promptConcat`
 - `easy wildcards` Added **multiline_mode**  
 
-**v1.1.2**
+<details>
+<summary><b>v1.1.2</b></summary>
 
 - Optimized some of the recommended nodes for slots related to EasyUse
 - Added **Enable ContextMenu Auto Nest Subdirectories** The setting item is enabled by default, and it can be classified into subdirectories, checkpoints and loras previews
@@ -152,8 +154,10 @@ Double-click install.bat to install the required dependencies
 - Fixed `easy pipeEdit` error when add lora to prompt
 - Fixed layerDiffuse xyplot bug
 - `easy kSamplerInpainting` add *additional* widget，you can choose 'Differential Diffusion' or 'Only InpaintModelConditioning'
+</details>
 
-**v1.1.1**
+<details>
+<summary><b>v1.1.1</b></summary>
 
 - The issue that the seed is 0 when a node with a seed control is added and **control before generate** is fixed for the first time run queue prompt.
 - `easy preSamplingAdvanced` Added **return_with_leftover_noise**
@@ -162,6 +166,7 @@ Double-click install.bat to install the required dependencies
 - Renamed all nodes widget name named seed_num to seed
 - Remove forced **control_before_generate** settings。 If you want to use control_before_generate, change widget_value_control_mode to before in system settings
 - Added `easy imageRemBg` - The default is BriaAI's RMBG-1.4 model, which removes the background effect more and faster
+</details>
 
 <details>
 <summary><b>v1.1.0</b></summary>
