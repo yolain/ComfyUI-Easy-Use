@@ -150,11 +150,15 @@ async def getModelsList(request):
 # get models thumbnails
 @PromptServer.instance.routes.get("/easyuse/models/thumbnail")
 async def getModelsThumbnail(request):
+    limit = 500
+    if "limit" in request.rel_url.query:
+        limit = request.rel_url.query.get("limit")
+        limit = int(limit)
     checkpoints = folder_paths.get_filename_list("checkpoints_thumb")
     loras = folder_paths.get_filename_list("loras_thumb")
     checkpoints_full = []
     loras_full = []
-    if len(checkpoints) + len(loras) >= 500:
+    if len(checkpoints) + len(loras) >= limit:
         return web.Response(status=400)
     for index, i in enumerate(checkpoints):
         full_path = folder_paths.get_full_path('checkpoints_thumb', str(i))
