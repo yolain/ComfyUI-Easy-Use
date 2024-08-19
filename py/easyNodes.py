@@ -918,7 +918,7 @@ class fullLoader:
                        positive, positive_token_normalization, positive_weight_interpretation,
                        negative, negative_token_normalization, negative_weight_interpretation,
                        batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, prompt=None,
-                       my_unique_id=None, nf4=False
+                       my_unique_id=None
                        ):
 
         # Clean models from loaded_objects
@@ -926,7 +926,7 @@ class fullLoader:
 
         # Load models
         log_node_warn("正在加载模型...")
-        model, clip, vae, clip_vision, lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt, nf4=nf4)
+        model, clip, vae, clip_vision, lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt)
 
         # Create Empty Latent
         model_type = get_sd_version(model)
@@ -1982,11 +1982,10 @@ class fluxLoader(fullLoader):
                                       batch_size, model_override, clip_override, vae_override, optional_lora_stack=optional_lora_stack,
                                       optional_controlnet_stack=optional_controlnet_stack,
                                       a1111_prompt_style=a1111_prompt_style, prompt=prompt,
-                                      my_unique_id=my_unique_id, nf4=True)
+                                      my_unique_id=my_unique_id)
 
 
 # Dit Loader
-from .dit.utils import string_to_dtype
 from .dit.pixArt.config import pixart_conf, pixart_res
 
 class pixArtLoader:
@@ -4254,81 +4253,6 @@ class samplerCustomSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def ip2p(self, positive, negative, vae=None, pixels=None, latent=None):
-        if latent is not None:
-            concat_latent = latent
-        else:
-            x = (pixels.shape[1] // 8) * 8
-            y = (pixels.shape[2] // 8) * 8
-
-            if pixels.shape[1] != x or pixels.shape[2] != y:
-                x_offset = (pixels.shape[1] % 8) // 2
-                y_offset = (pixels.shape[2] % 8) // 2
-                pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
-
-            concat_latent = vae.encode(pixels)
-
-        out_latent = {}
-        out_latent["samples"] = torch.zeros_like(concat_latent)
-
-        out = []
-        for conditioning in [positive, negative]:
-            c = []
-            for t in conditioning:
-                d = t[1].copy()
-                d["concat_latent_image"] = concat_latent
-                n = [t[0], d]
-                c.append(n)
-            out.append(c)
-        return (out[0], out[1], out_latent)
-
-    def get_inversed_euler_sampler(self):
-        @torch.no_grad()
-        def sample_inversed_euler(model, x, sigmas, extra_args=None, callback=None, disable=None, s_churn=0., s_tmin=0.,
-                                  s_tmax=float('inf'), s_noise=1.):
-            """Implements Algorithm 2 (Euler steps) from Karras et al. (2022)."""
-            extra_args = {} if extra_args is None else extra_args
-            s_in = x.new_ones([x.shape[0]])
-            for i in trange(1, len(sigmas), disable=disable):
-                sigma_in = sigmas[i - 1]
-
-                if i == 1:
-                    sigma_t = sigmas[i]
-                else:
-                    sigma_t = sigma_in
-
-                denoised = model(x, sigma_t * s_in, **extra_args)
-
-                if i == 1:
-                    d = (x - denoised) / (2 * sigmas[i])
-                else:
-                    d = (x - denoised) / sigmas[i - 1]
-
-                dt = sigmas[i] - sigmas[i - 1]
-                x = x + d * dt
-                if callback is not None:
-                    callback(
-                        {'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
-            return x / sigmas[-1]
-
-        ksampler = comfy.samplers.KSAMPLER(sample_inversed_euler)
-        return (ksampler,)
-
-    def get_custom_cls(self, sampler_name):
-        try:
-            cls = custom_samplers.__dict__[sampler_name]
-            return cls()
-        except:
-            raise Exception(f"Custom sampler {sampler_name} not found, Please updated your ComfyUI")
-
-    def add_model_patch_option(self, model):
-        if 'transformer_options' not in model.model_options:
-            model.model_options['transformer_options'] = {}
-        to = model.model_options['transformer_options']
-        if "model_patch" not in to:
-            to["model_patch"] = {}
-        return to
-
     def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, coeff, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, flip_sigmas, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
         # 图生图转换
@@ -4337,60 +4261,6 @@ class samplerCustomSettings:
         positive = pipe['positive']
         negative = pipe['negative']
         batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
-        _guider, sigmas = None, None
-
-        # sigmas
-        if optional_sigmas is not None:
-            sigmas = optional_sigmas
-        else:
-            match scheduler:
-                case 'vp':
-                    sigmas, = self.get_custom_cls('VPScheduler').get_sigmas(steps, beta_d, beta_min, eps_s)
-                case 'karrasADV':
-                    sigmas, = self.get_custom_cls('KarrasScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
-                case 'exponentialADV':
-                    sigmas, = self.get_custom_cls('ExponentialScheduler').get_sigmas(steps, sigma_max, sigma_min)
-                case 'polyExponential':
-                    sigmas, = self.get_custom_cls('PolyexponentialScheduler').get_sigmas(steps, sigma_max, sigma_min,
-                                                                                         rho)
-                case 'sdturbo':
-                    sigmas, = self.get_custom_cls('SDTurboScheduler').get_sigmas(model, steps, denoise)
-                case 'alignYourSteps':
-                    model_type = get_sd_version(model)
-                    if model_type == 'unknown':
-                        model_type = 'sdxl'
-                        # raise Exception("This Model not supported")
-                    sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
-                case 'gits':
-                    sigmas, = gitsScheduler().get_sigmas(coeff, steps, denoise)
-                case _:
-                    sigmas, = self.get_custom_cls('BasicScheduler').get_sigmas(model, scheduler, steps, denoise)
-
-            # filp_sigmas
-            if flip_sigmas:
-                sigmas, = self.get_custom_cls('FlipSigmas').get_sigmas(sigmas)
-
-        #######################################################################################
-        # brushnet
-        to = None
-        transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
-        if 'model_patch' in transformer_options and 'brushnet' in transformer_options['model_patch']:
-            to = self.add_model_patch_option(model)
-            mp = to['model_patch']
-            if isinstance(model.model.model_config, comfy.supported_models.SD15):
-                mp['SDXL'] = False
-            elif isinstance(model.model.model_config, comfy.supported_models.SDXL):
-                mp['SDXL'] = True
-            else:
-                print('Base model type: ', type(model.model.model_config))
-                raise Exception("Unsupported model type: ", type(model.model.model_config))
-
-            mp['all_sigmas'] = sigmas
-            mp['unet'] = model.model.diffusion_model
-            mp['step'] = 0
-            mp['total_steps'] = 1
-        #
-        #######################################################################################
 
         if image_to_latent is not None:
             _, height, width, _ = image_to_latent.shape
@@ -4416,33 +4286,11 @@ class samplerCustomSettings:
             samples = pipe["samples"]
             images = pipe["images"]
 
-        # guider
-        if guider == 'CFG':
-            _guider, = self.get_custom_cls('CFGGuider').get_guider(model, positive, negative, cfg)
-        elif guider in ['DualCFG', 'IP2P+DualCFG']:
-            _guider, =  self.get_custom_cls('DualCFGGuider').get_guider(model, positive, middle, negative, cfg, cfg_negative)
-        else:
-            _guider, = self.get_custom_cls('BasicGuider').get_guider(model, positive)
-
-        # sampler
-        if optional_sampler:
-            sampler = optional_sampler
-        else:
-            if sampler_name == 'inversed_euler':
-                sampler, = self.get_inversed_euler_sampler()
-            else:
-                sampler, = self.get_custom_cls('KSamplerSelect').get_sampler(sampler_name)
-
-        # noise
-        if add_noise == 'disable':
-            noise, = self.get_custom_cls('DisableNoise').get_noise()
-        else:
-            noise, = self.get_custom_cls('RandomNoise').get_noise(seed)
 
         new_pipe = {
-            "model": pipe['model'],
-            "positive": pipe['positive'],
-            "negative": pipe['negative'],
+            "model": model,
+            "positive": positive,
+            "negative": negative,
             "vae": pipe['vae'],
             "clip": pipe['clip'],
 
@@ -4452,17 +4300,27 @@ class samplerCustomSettings:
 
             "loader_settings": {
                 **pipe["loader_settings"],
+                "middle": pipe['negative'],
                 "steps": steps,
                 "cfg": cfg,
+                "cfg_negative": cfg_negative,
                 "sampler_name": sampler_name,
                 "scheduler": scheduler,
                 "denoise": denoise,
+                "add_noise": add_noise,
                 "custom": {
-                    "noise": noise,
-                    "guider": _guider,
-                    "sampler": sampler,
-                    "sigmas": sigmas,
-                }
+                    "guider": guider,
+                    "coeff": coeff,
+                    "sigma_max": sigma_max,
+                    "sigma_min": sigma_min,
+                    "rho": rho,
+                    "beta_d": beta_d,
+                    "beta_min": beta_min,
+                    "eps_s": beta_min,
+                    "flip_sigmas": flip_sigmas
+                },
+                "optional_sampler": optional_sampler,
+                "optional_sigmas": optional_sigmas
             }
         }
 
@@ -5022,6 +4880,177 @@ class samplerFull:
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
 
+    def ip2p(self, positive, negative, vae=None, pixels=None, latent=None):
+        if latent is not None:
+            concat_latent = latent
+        else:
+            x = (pixels.shape[1] // 8) * 8
+            y = (pixels.shape[2] // 8) * 8
+
+            if pixels.shape[1] != x or pixels.shape[2] != y:
+                x_offset = (pixels.shape[1] % 8) // 2
+                y_offset = (pixels.shape[2] % 8) // 2
+                pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
+
+            concat_latent = vae.encode(pixels)
+
+        out_latent = {}
+        out_latent["samples"] = torch.zeros_like(concat_latent)
+
+        out = []
+        for conditioning in [positive, negative]:
+            c = []
+            for t in conditioning:
+                d = t[1].copy()
+                d["concat_latent_image"] = concat_latent
+                n = [t[0], d]
+                c.append(n)
+            out.append(c)
+        return (out[0], out[1], out_latent)
+
+    def get_inversed_euler_sampler(self):
+        @torch.no_grad()
+        def sample_inversed_euler(model, x, sigmas, extra_args=None, callback=None, disable=None, s_churn=0., s_tmin=0.,s_tmax=float('inf'), s_noise=1.):
+            """Implements Algorithm 2 (Euler steps) from Karras et al. (2022)."""
+            extra_args = {} if extra_args is None else extra_args
+            s_in = x.new_ones([x.shape[0]])
+            for i in trange(1, len(sigmas), disable=disable):
+                sigma_in = sigmas[i - 1]
+
+                if i == 1:
+                    sigma_t = sigmas[i]
+                else:
+                    sigma_t = sigma_in
+
+                denoised = model(x, sigma_t * s_in, **extra_args)
+
+                if i == 1:
+                    d = (x - denoised) / (2 * sigmas[i])
+                else:
+                    d = (x - denoised) / sigmas[i - 1]
+
+                dt = sigmas[i] - sigmas[i - 1]
+                x = x + d * dt
+                if callback is not None:
+                    callback(
+                        {'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
+            return x / sigmas[-1]
+
+        ksampler = comfy.samplers.KSAMPLER(sample_inversed_euler)
+        return (ksampler,)
+
+    def get_custom_cls(self, sampler_name):
+        try:
+            cls = custom_samplers.__dict__[sampler_name]
+            return cls()
+        except:
+            raise Exception(f"Custom sampler {sampler_name} not found, Please updated your ComfyUI")
+
+    def add_model_patch_option(self, model):
+        if 'transformer_options' not in model.model_options:
+            model.model_options['transformer_options'] = {}
+        to = model.model_options['transformer_options']
+        if "model_patch" not in to:
+            to["model_patch"] = {}
+        return to
+
+    def get_sampler_custom(self, model, positive, negative, loader_settings):
+        _guider = None
+        middle = loader_settings['middle'] if "middle" in loader_settings else negative
+        steps = loader_settings['steps'] if "steps" in loader_settings else 20
+        cfg = loader_settings['cfg'] if "cfg" in loader_settings else 8.0
+        cfg_negative = loader_settings['cfg_negative'] if "cfg_negative" in loader_settings else 8.0
+        sampler_name = loader_settings['sampler_name'] if "sampler_name" in loader_settings else "euler"
+        scheduler = loader_settings['scheduler'] if "scheduler" in loader_settings else "normal"
+        guider = loader_settings['custom']['guider'] if "guider" in loader_settings['custom'] else "CFG"
+        beta_d = loader_settings['custom']['beta_d'] if "beta_d" in loader_settings['custom'] else 0.1
+        beta_min = loader_settings['custom']['beta_min'] if "beta_min" in loader_settings['custom'] else 0.1
+        eps_s = loader_settings['custom']['eps_s'] if "eps_s" in loader_settings['custom'] else 0.1
+        sigma_max = loader_settings['custom']['sigma_max'] if "sigma_max" in loader_settings['custom'] else 14.61
+        sigma_min = loader_settings['custom']['sigma_min'] if "sigma_min" in loader_settings['custom'] else 0.03
+        rho = loader_settings['custom']['rho'] if "rho" in loader_settings['custom'] else 7.0
+        coeff = loader_settings['custom']['coeff'] if "coeff" in loader_settings['custom'] else 1.2
+        flip_sigmas = loader_settings['custom']['flip_sigmas'] if "flip_sigmas" in loader_settings['custom'] else False
+        denoise = loader_settings['denoise'] if "denoise" in loader_settings else 1.0
+        add_noise = loader_settings['add_noise'] if "add_noise" in loader_settings else "enable"
+        seed = loader_settings['seed'] if "seed" in loader_settings else 0
+        optional_sigmas = loader_settings['optional_sigmas'] if "optional_sigmas" in loader_settings else None
+        optional_sampler = loader_settings['optional_sampler'] if "optional_sampler" in loader_settings else None
+
+        # sigmas
+        if optional_sigmas is not None:
+            sigmas = optional_sigmas
+        else:
+            if scheduler == 'vp':
+                sigmas, = self.get_custom_cls('VPScheduler').get_sigmas(steps, beta_d, beta_min, eps_s)
+            elif scheduler == 'karrasADV':
+                sigmas, = self.get_custom_cls('KarrasScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
+            elif scheduler == 'exponentialADV':
+                sigmas, = self.get_custom_cls('ExponentialScheduler').get_sigmas(steps, sigma_max, sigma_min)
+            elif scheduler == 'polyExponential':
+                sigmas, = self.get_custom_cls('PolyexponentialScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
+            elif scheduler == 'sdturbo':
+                sigmas, = self.get_custom_cls('SDTurboScheduler').get_sigmas(model, steps, denoise)
+            elif scheduler == 'alignYourSteps':
+                model_type = get_sd_version(model)
+                if model_type == 'unknown':
+                    model_type = 'sdxl'
+                sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
+            elif scheduler == 'gits':
+                sigmas, = gitsScheduler().get_sigmas(coeff, steps, denoise)
+            else:
+                sigmas, = self.get_custom_cls('BasicScheduler').get_sigmas(model, scheduler, steps, denoise)
+
+        # filp_sigmas
+        if flip_sigmas:
+            sigmas, = self.get_custom_cls('FlipSigmas').get_sigmas(sigmas)
+
+        #######################################################################################
+        # brushnet
+        to = None
+        transformer_options = model.model_options['transformer_options'] if "transformer_options" in model.model_options else {}
+        if 'model_patch' in transformer_options and 'brushnet' in transformer_options['model_patch']:
+            to = self.add_model_patch_option(model)
+            mp = to['model_patch']
+            if isinstance(model.model.model_config, comfy.supported_models.SD15):
+                mp['SDXL'] = False
+            elif isinstance(model.model.model_config, comfy.supported_models.SDXL):
+                mp['SDXL'] = True
+            else:
+                print('Base model type: ', type(model.model.model_config))
+                raise Exception("Unsupported model type: ", type(model.model.model_config))
+
+            mp['all_sigmas'] = sigmas
+            mp['unet'] = model.model.diffusion_model
+            mp['step'] = 0
+            mp['total_steps'] = 1
+        #######################################################################################
+        # guider
+        if guider == 'CFG':
+            _guider, = self.get_custom_cls('CFGGuider').get_guider(model, positive, negative, cfg)
+        elif guider in ['DualCFG', 'IP2P+DualCFG']:
+            _guider, = self.get_custom_cls('DualCFGGuider').get_guider(model, positive, middle,
+                                                                       negative, cfg, cfg_negative)
+        else:
+            _guider, = self.get_custom_cls('BasicGuider').get_guider(model, positive)
+
+        # sampler
+        if optional_sampler:
+            _sampler = optional_sampler
+        else:
+            if sampler_name == 'inversed_euler':
+                _sampler, = self.get_inversed_euler_sampler()
+            else:
+                _sampler, = self.get_custom_cls('KSamplerSelect').get_sampler(sampler_name)
+
+        # noise
+        if add_noise == 'disable':
+            noise, = self.get_custom_cls('DisableNoise').get_noise()
+        else:
+            noise, = self.get_custom_cls('RandomNoise').get_noise(seed)
+
+        return (noise, _guider, _sampler, sigmas)
+
     def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None, image=None):
 
         samp_model = model if model is not None else pipe["model"]
@@ -5033,7 +5062,7 @@ class samplerFull:
 
         samp_seed = seed if seed is not None else pipe['seed']
 
-        samp_custom = pipe["loader_settings"]["custom"] if "custom" in pipe["loader_settings"] else None
+        samp_custom = pipe["loader_settings"] if "custom" in pipe["loader_settings"] else None
 
         steps = steps if steps is not None else pipe['loader_settings']['steps']
         start_step = pipe['loader_settings']['start_step'] if 'start_step' in pipe['loader_settings'] else 0
@@ -5052,8 +5081,6 @@ class samplerFull:
         if add_noise == "disable":
             disable_noise = True
 
-
-        # When model is colors
         def downscale_model_unet(samp_model):
             # 获取Unet参数
             if "PatchModelAddDownscale" in ALL_NODE_CLASS_MAPPINGS:
@@ -5124,16 +5151,12 @@ class samplerFull:
             start_time = int(time.time() * 1000)
             # 开始推理
             if samp_custom is not None:
-                guider = samp_custom['guider'] if 'guider' in samp_custom else None
-                _sampler = samp_custom['sampler'] if 'sampler' in samp_custom else None
-                sigmas = samp_custom['sigmas'] if 'sigmas' in samp_custom else None
-                noise = samp_custom['noise'] if 'noise' in samp_custom else None
-                samp_samples, _ = sampler.custom_advanced_ksampler(noise, guider, _sampler, sigmas, samp_samples)
+                noise, _guider, _sampler, sigmas = self.get_sampler_custom(samp_model, samp_positive, samp_negative, samp_custom)
+                samp_samples, _ = sampler.custom_advanced_ksampler(noise, _guider, _sampler, sigmas, samp_samples)
             elif scheduler == 'align_your_steps':
                 model_type = get_sd_version(samp_model)
                 if model_type == 'unknown':
                     model_type = 'sdxl'
-                    # raise Exception("This Model not supported")
                 sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
                 _sampler = comfy.samplers.sampler_object(sampler_name)
                 samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent)
@@ -7563,22 +7586,6 @@ class stableDiffusion3API:
         return (output_image,)
 
 #---------------------------------------------------------------API 结束----------------------------------------------------------------------
-
-class CheckpointLoaderNF4:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required": { "ckpt_name": (folder_paths.get_filename_list("checkpoints"), ),
-                             }}
-    RETURN_TYPES = ("MODEL", "CLIP", "VAE")
-    FUNCTION = "load_checkpoint"
-
-    CATEGORY = "loaders"
-
-    def load_checkpoint(self, ckpt_name):
-        from .bitsandbytes_NF4 import OPS
-        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
-        out = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options={"custom_operations": OPS})
-        return out[:3]
 
 NODE_CLASS_MAPPINGS = {
     # seed 随机种
