@@ -1,4 +1,4 @@
-import time, os, psutil
+import re, time, os, psutil
 import folder_paths
 import comfy.utils
 import comfy.sd
@@ -221,7 +221,7 @@ class easyLoader:
                 del self.loaded_objects[obj_type][item[0]]
                 current_memory = self.get_memory_usage()
 
-    def load_checkpoint(self, ckpt_name, config_name=None, load_vision=False, nf4=False):
+    def load_checkpoint(self, ckpt_name, config_name=None, load_vision=False):
         cache_name = ckpt_name
         if config_name not in [None, "Default"]:
             cache_name = ckpt_name + "_" + config_name
@@ -239,7 +239,7 @@ class easyLoader:
             loaded_ckpt = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=output_clip, embedding_directory=folder_paths.get_folder_paths("embeddings"))
         else:
             model_options = {}
-            if nf4:
+            if re.search("nf4", ckpt_name):
                 from ..bitsandbytes_NF4 import OPS
                 model_options = {"custom_operations": OPS}
             loaded_ckpt = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options=model_options)
@@ -442,7 +442,7 @@ class easyLoader:
             node = prompt[xy_model_id]
             if "ckpt_name_1" in node["inputs"]:
                 ckpt_name_1 = node["inputs"]["ckpt_name_1"]
-                model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name_1, nf4=nf4)
+                model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name_1)
                 can_load_lora = False
         # Load models
         elif model_override is not None and clip_override is not None and vae_override is not None:
@@ -456,7 +456,7 @@ class easyLoader:
         elif clip_override is not None:
             raise Exception(f"[ERROR] model or vae is missing")
         else:
-            model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name, config_name, nf4=nf4)
+            model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name, config_name)
 
         if optional_lora_stack is not None and can_load_lora:
             for lora in optional_lora_stack:

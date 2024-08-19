@@ -918,7 +918,7 @@ class fullLoader:
                        positive, positive_token_normalization, positive_weight_interpretation,
                        negative, negative_token_normalization, negative_weight_interpretation,
                        batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, prompt=None,
-                       my_unique_id=None, nf4=False
+                       my_unique_id=None
                        ):
 
         # Clean models from loaded_objects
@@ -926,7 +926,7 @@ class fullLoader:
 
         # Load models
         log_node_warn("正在加载模型...")
-        model, clip, vae, clip_vision, lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt, nf4=nf4)
+        model, clip, vae, clip_vision, lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt)
 
         # Create Empty Latent
         model_type = get_sd_version(model)
@@ -1982,11 +1982,10 @@ class fluxLoader(fullLoader):
                                       batch_size, model_override, clip_override, vae_override, optional_lora_stack=optional_lora_stack,
                                       optional_controlnet_stack=optional_controlnet_stack,
                                       a1111_prompt_style=a1111_prompt_style, prompt=prompt,
-                                      my_unique_id=my_unique_id, nf4=True)
+                                      my_unique_id=my_unique_id)
 
 
 # Dit Loader
-from .dit.utils import string_to_dtype
 from .dit.pixArt.config import pixart_conf, pixart_res
 
 class pixArtLoader:
@@ -4420,7 +4419,7 @@ class samplerCustomSettings:
         if guider == 'CFG':
             _guider, = self.get_custom_cls('CFGGuider').get_guider(model, positive, negative, cfg)
         elif guider in ['DualCFG', 'IP2P+DualCFG']:
-            _guider, =  self.get_custom_cls('DualCFGGuider').get_guider(model, positive, middle, negative, cfg, cfg_negative)
+            _guider, =  self.get_custom_cls('DualCFGGuider').get_guider(model, positive, pipe['negative'], negative, cfg, cfg_negative)
         else:
             _guider, = self.get_custom_cls('BasicGuider').get_guider(model, positive)
 
@@ -7563,22 +7562,6 @@ class stableDiffusion3API:
         return (output_image,)
 
 #---------------------------------------------------------------API 结束----------------------------------------------------------------------
-
-class CheckpointLoaderNF4:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required": { "ckpt_name": (folder_paths.get_filename_list("checkpoints"), ),
-                             }}
-    RETURN_TYPES = ("MODEL", "CLIP", "VAE")
-    FUNCTION = "load_checkpoint"
-
-    CATEGORY = "loaders"
-
-    def load_checkpoint(self, ckpt_name):
-        from .bitsandbytes_NF4 import OPS
-        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
-        out = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=True, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options={"custom_operations": OPS})
-        return out[:3]
 
 NODE_CLASS_MAPPINGS = {
     # seed 随机种
