@@ -111,7 +111,6 @@ class easySampler:
         # add model patch
         # brushnet
         add_model_patch(model)
-        # kolors
         #######################################################################################
         samples = comfy.sample.sample(model, noise, steps, cfg, sampler_name, scheduler, positive, negative,
                                       latent_image,
