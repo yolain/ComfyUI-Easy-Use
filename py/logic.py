@@ -304,7 +304,254 @@ class textSwitch:
         else:
             return (text2,)
 
-# ---------------------------------------------------------------运算 开始----------------------------------------------------------------------#
+# ---------------------------------------------------------------Math----------------------------------------------------------------------#
+class mathIntOperation:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "a": ("INT", {"default": 0, "min": -0xffffffffffffffff, "max": 0xffffffffffffffff, "step": 1}),
+                "b": ("INT", {"default": 0, "min": -0xffffffffffffffff, "max": 0xffffffffffffffff, "step": 1}),
+                "operation": (["add", "subtract", "multiply", "divide", "modulo", "power"],),
+            },
+        }
+
+    RETURN_TYPES = ("INT",)
+    FUNCTION = "int_math_operation"
+
+    CATEGORY = "EasyUse/Logic/Math"
+
+    def int_math_operation(self, a, b, operation):
+        if operation == "add":
+            return (a + b,)
+        elif operation == "subtract":
+            return (a - b,)
+        elif operation == "multiply":
+            return (a * b,)
+        elif operation == "divide":
+            return (a // b,)
+        elif operation == "modulo":
+            return (a % b,)
+        elif operation == "power":
+            return (a ** b,)
+
+# ---------------------------------------------------------------Flow----------------------------------------------------------------------#
+NUM_FLOW_SOCKETS = 3
+try:
+    from comfy_execution.graph_utils import GraphBuilder, is_link
+except:
+    GraphBuilder = None
+
+class whileLoopStart:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs = {
+            "required": {
+                "condition": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+            },
+        }
+        for i in range(NUM_FLOW_SOCKETS):
+            inputs["optional"]["initial_value%d" % i] = ("*",)
+        return inputs
+
+    RETURN_TYPES = tuple(["FLOW_CONTROL"] + ["*"] * NUM_FLOW_SOCKETS)
+    RETURN_NAMES = tuple(["FLOW_CONTROL"] + ["value%d" % i for i in range(NUM_FLOW_SOCKETS)])
+    FUNCTION = "while_loop_open"
+
+    CATEGORY = "EasyUse/Logic/While Loop"
+
+    def while_loop_open(self, condition, **kwargs):
+        values = []
+        for i in range(NUM_FLOW_SOCKETS):
+            values.append(kwargs.get("initial_value%d" % i, None))
+        return tuple(["stub"] + values)
+
+class whileLoopEnd:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs = {
+            "required": {
+                "flow": ("FLOW_CONTROL", {"rawLink": True}),
+                "condition": ("BOOLEAN", {"forceInput": True}),
+            },
+            "optional": {
+            },
+            "hidden": {
+                "dynprompt": "DYNPROMPT",
+                "unique_id": "UNIQUE_ID",
+            }
+        }
+        for i in range(NUM_FLOW_SOCKETS):
+            inputs["optional"]["initial_value%d" % i] = (AlwaysEqualProxy('*'),)
+        return inputs
+
+    RETURN_TYPES = tuple([AlwaysEqualProxy('*')] * NUM_FLOW_SOCKETS)
+    RETURN_NAMES = tuple(["value%d" % i for i in range(NUM_FLOW_SOCKETS)])
+    FUNCTION = "while_loop_close"
+
+    CATEGORY = "EasyUse/Logic/While Loop"
+
+    def explore_dependencies(self, node_id, dynprompt, upstream):
+        node_info = dynprompt.get_node(node_id)
+        if "inputs" not in node_info:
+            return
+        for k, v in node_info["inputs"].items():
+            if is_link(v):
+                parent_id = v[0]
+                if parent_id not in upstream:
+                    upstream[parent_id] = []
+                    self.explore_dependencies(parent_id, dynprompt, upstream)
+                upstream[parent_id].append(node_id)
+
+    def collect_contained(self, node_id, upstream, contained):
+        if node_id not in upstream:
+            return
+        for child_id in upstream[node_id]:
+            if child_id not in contained:
+                contained[child_id] = True
+                self.collect_contained(child_id, upstream, contained)
+
+
+    def while_loop_close(self, flow, condition, dynprompt=None, unique_id=None, **kwargs):
+        if not condition:
+            # We're done with the loop
+            values = []
+            for i in range(NUM_FLOW_SOCKETS):
+                values.append(kwargs.get("initial_value%d" % i, None))
+            return tuple(values)
+
+        # We want to loop
+        this_node = dynprompt.get_node(unique_id)
+        upstream = {}
+        # Get the list of all nodes between the open and close nodes
+        self.explore_dependencies(unique_id, dynprompt, upstream)
+
+        contained = {}
+        open_node = flow[0]
+        self.collect_contained(open_node, upstream, contained)
+        contained[unique_id] = True
+        contained[open_node] = True
+
+        graph = GraphBuilder()
+        for node_id in contained:
+            original_node = dynprompt.get_node(node_id)
+            node = graph.node(original_node["class_type"], "Recurse" if node_id == unique_id else node_id)
+            node.set_override_display_id(node_id)
+        for node_id in contained:
+            original_node = dynprompt.get_node(node_id)
+            node = graph.lookup_node("Recurse" if node_id == unique_id else node_id)
+            for k, v in original_node["inputs"].items():
+                if is_link(v) and v[0] in contained:
+                    parent = graph.lookup_node(v[0])
+                    node.set_input(k, parent.out(v[1]))
+                else:
+                    node.set_input(k, v)
+        new_open = graph.lookup_node(open_node)
+        for i in range(NUM_FLOW_SOCKETS):
+            key = "initial_value%d" % i
+            new_open.set_input(key, kwargs.get(key, None))
+        my_clone = graph.lookup_node("Recurse" )
+        result = map(lambda x: my_clone.out(x), range(NUM_FLOW_SOCKETS))
+        return {
+            "result": tuple(result),
+            "expand": graph.finalize(),
+        }
+
+class forLoopStart:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "total": ("INT", {"default": 1, "min": 0, "max": 100000, "step": 1}),
+            },
+            "optional": {
+                "initial_value%d" % i: (AlwaysEqualProxy("*"),) for i in range(1, NUM_FLOW_SOCKETS)
+            },
+            "hidden": {
+                "initial_value0": (AlwaysEqualProxy("*"),),
+                "prompt": "PROMPT",
+                "unique_id": "UNIQUE_ID"
+            }
+        }
+
+    RETURN_TYPES = tuple(["FLOW_CONTROL", "INT"] + [AlwaysEqualProxy("*")] * (NUM_FLOW_SOCKETS - 1))
+    RETURN_NAMES = tuple(["flow", "index"] + ["value%d" % i for i in range(1, NUM_FLOW_SOCKETS)])
+    FUNCTION = "for_loop_start"
+
+    CATEGORY = "EasyUse/Logic/For Loop"
+
+    def for_loop_start(self, total, prompt=None, unique_id=None, **kwargs):
+        graph = GraphBuilder()
+        i = 0
+        if "initial_value0" in kwargs:
+            i = kwargs["initial_value0"]
+        initial_values = {("initial_value%d" % num): kwargs.get("initial_value%d" % num, None) for num in range(1, NUM_FLOW_SOCKETS)}
+
+        while_open = graph.node("easy whileLoopStart", condition=total, initial_value0=i, **initial_values)
+        outputs = [kwargs.get("initial_value%d" % num, None) for num in range(1, NUM_FLOW_SOCKETS)]
+        return {
+            "result": tuple(["stub", i] + outputs),
+            "expand": graph.finalize(),
+        }
+
+class forLoopEnd:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "flow": ("FLOW_CONTROL", {"rawLink": True}),
+            },
+            "optional": {
+                "initial_value%d" % i: (AlwaysEqualProxy("*"), {"rawLink": True}) for i in range(1, NUM_FLOW_SOCKETS)
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = tuple([AlwaysEqualProxy("*")] * (NUM_FLOW_SOCKETS - 1))
+    RETURN_NAMES = tuple(["value%d" % i for i in range(1, NUM_FLOW_SOCKETS)])
+    FUNCTION = "for_loop_end"
+
+    CATEGORY = "EasyUse/Logic/For Loop"
+
+    def for_loop_end(self, flow, prompt=None, extra_pnginfo=None, my_unique_id=None, **kwargs):
+        graph = GraphBuilder()
+        while_open = flow[0]
+        total = None
+        if extra_pnginfo:
+            node = next((x for x in extra_pnginfo['workflow']['nodes'] if x['id'] == int(while_open)), None)
+            total = node['widgets_values'][0] if "widgets_values" in node else None
+        if total is None:
+            raise Exception("Unable to get parameters for the start of the loop")
+        sub = graph.node("easy mathInt", operation="add", a=[while_open, 1], b=1)
+        cond = graph.node("easy compare", a=sub.out(0), b=total, comparison='a < b')
+        input_values = {("initial_value%d" % i): kwargs.get("initial_value%d" % i, None) for i in
+                        range(1, NUM_FLOW_SOCKETS)}
+        while_close = graph.node("easy whileLoopEnd",
+                                 flow=flow,
+                                 condition=cond.out(0),
+                                 initial_value0=sub.out(0),
+                                 **input_values)
+        return {
+            "result": tuple([while_close.out(i) for i in range(1, NUM_FLOW_SOCKETS)]),
+            "expand": graph.finalize(),
+        }
 
 COMPARE_FUNCTIONS = {
     "a == b": lambda a, b: a == b,
@@ -319,12 +566,12 @@ COMPARE_FUNCTIONS = {
 class Compare:
     @classmethod
     def INPUT_TYPES(s):
-        s.compare_functions = list(COMPARE_FUNCTIONS.keys())
+        compare_functions = list(COMPARE_FUNCTIONS.keys())
         return {
             "required": {
                 "a": (AlwaysEqualProxy("*"), {"default": 0}),
                 "b": (AlwaysEqualProxy("*"), {"default": 0}),
-                "comparison": (s.compare_functions, {"default": "a == b"}),
+                "comparison": (compare_functions, {"default": "a == b"}),
             },
         }
 
@@ -342,7 +589,7 @@ class IfElse:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "switch": ("BOOLEAN", {"forceInput": True}),
+                "boolean": ("BOOLEAN",),
                 "on_true": (AlwaysEqualProxy("*"), lazy_options),
                 "on_false": (AlwaysEqualProxy("*"), lazy_options),
             },
@@ -353,17 +600,36 @@ class IfElse:
     FUNCTION = "execute"
     CATEGORY = "EasyUse/Logic"
 
-    def check_lazy_status(self, switch, on_true=None, on_false=None):
-        if switch and on_true is None:
+    def check_lazy_status(self, boolean, on_true=None, on_false=None):
+        if boolean and on_true is None:
             return ["on_true"]
-        if not switch and on_false is None:
+        if not boolean and on_false is None:
             return ["on_false"]
 
     def execute(self, *args, **kwargs):
-        return (kwargs['on_true'] if kwargs['switch'] else kwargs['on_false'],)
+        return (kwargs['on_true'] if kwargs['boolean'] else kwargs['on_false'],)
 
 #是否为SDXL
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
+class isNone:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "any": (AlwaysEqualProxy("*"),)
+            },
+            "optional": {
+            }
+        }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    RETURN_NAMES = ("boolean",)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic"
+
+    def execute(self, any):
+        return (True if any is None else False,)
+
 class isSDXL:
     @classmethod
     def INPUT_TYPES(s):
@@ -604,7 +870,19 @@ class If:
     def execute(self, *args, **kwargs):
         return (kwargs['if'] if kwargs['any'] else kwargs['else'],)
 
+class poseEditor:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required": {
+        "image": ("STRING", {"default":""})
+    }}
 
+  FUNCTION = "output_pose"
+  CATEGORY = "EasyUse/🚫 Deprecated"
+  RETURN_TYPES = ()
+  RETURN_NAMES = ()
+  def output_pose(self, image):
+      return ()
 
 NODE_CLASS_MAPPINGS = {
   "easy string": String,
@@ -613,10 +891,16 @@ NODE_CLASS_MAPPINGS = {
   "easy float": Float,
   "easy rangeFloat": RangeFloat,
   "easy boolean": Boolean,
+  "easy mathInt": mathIntOperation,
   "easy compare": Compare,
   "easy imageSwitch": imageSwitch,
   "easy textSwitch": textSwitch,
+  "easy whileLoopStart": whileLoopStart,
+  "easy whileLoopEnd": whileLoopEnd,
+  "easy forLoopStart": forLoopStart,
+  "easy forLoopEnd": forLoopEnd,
   "easy ifElse": IfElse,
+  "easy isNone": isNone,
   "easy isSDXL": isSDXL,
   "easy xyAny": xyAny,
   "easy convertAnything": ConvertAnything,
@@ -626,6 +910,7 @@ NODE_CLASS_MAPPINGS = {
   "easy clearCacheAll": clearCacheAll,
   "easy cleanGpuUsed": cleanGPUUsed,
   "easy if": If,
+  "easy poseEditor": poseEditor
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy string": "String",
@@ -635,9 +920,15 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy rangeFloat": "Range(Float)",
   "easy boolean": "Boolean",
   "easy compare": "Compare",
+  "easy mathInt": "Math Int",
   "easy imageSwitch": "Image Switch",
   "easy textSwitch": "Text Switch",
+  "easy whileLoopStart": "While Loop Start",
+  "easy whileLoopEnd": "While Loop End",
+  "easy forLoopStart": "For Loop Start",
+  "easy forLoopEnd": "For Loop End",
   "easy ifElse": "If else",
+  "easy isNone": "Is None",
   "easy isSDXL": "Is SDXL",
   "easy xyAny": "XYAny",
   "easy convertAnything": "Convert Any",
@@ -647,4 +938,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy clearCacheAll": "Clear Cache All",
   "easy cleanGpuUsed": "Clean GPU Used",
   "easy if": "If (🚫Deprecated)",
+  "easy poseEditor": "PoseEditor (🚫Deprecated)"
 }
