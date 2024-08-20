@@ -4954,7 +4954,7 @@ class samplerFull:
             to["model_patch"] = {}
         return to
 
-    def get_sampler_custom(self, model, positive, negative, loader_settings):
+    def get_sampler_custom(self, model, positive, negative, seed, loader_settings):
         _guider = None
         middle = loader_settings['middle'] if "middle" in loader_settings else negative
         steps = loader_settings['steps'] if "steps" in loader_settings else 20
@@ -4973,7 +4973,6 @@ class samplerFull:
         flip_sigmas = loader_settings['custom']['flip_sigmas'] if "flip_sigmas" in loader_settings['custom'] else False
         denoise = loader_settings['denoise'] if "denoise" in loader_settings else 1.0
         add_noise = loader_settings['add_noise'] if "add_noise" in loader_settings else "enable"
-        seed = loader_settings['seed'] if "seed" in loader_settings else 0
         optional_sigmas = loader_settings['optional_sigmas'] if "optional_sigmas" in loader_settings else None
         optional_sampler = loader_settings['optional_sampler'] if "optional_sampler" in loader_settings else None
 
@@ -5151,7 +5150,7 @@ class samplerFull:
             start_time = int(time.time() * 1000)
             # 开始推理
             if samp_custom is not None:
-                noise, _guider, _sampler, sigmas = self.get_sampler_custom(samp_model, samp_positive, samp_negative, samp_custom)
+                noise, _guider, _sampler, sigmas = self.get_sampler_custom(samp_model, samp_positive, samp_negative, samp_seed, samp_custom)
                 samp_samples, _ = sampler.custom_advanced_ksampler(noise, _guider, _sampler, sigmas, samp_samples)
             elif scheduler == 'align_your_steps':
                 model_type = get_sd_version(samp_model)
