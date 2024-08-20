@@ -1,10 +1,12 @@
 from typing import Iterator, List, Tuple, Dict, Any, Union, Optional
 from _decimal import Context, getcontext
 from decimal import Decimal
-from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce
+from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, compare_revision
 from .libs.cache import remove_cache
 import numpy as np
 import json
+
+lazy_options = {"lazy": True} if compare_revision(2543) else {}
 
 def validate_list_args(args: Dict[str, List[Any]]) -> Tuple[bool, Optional[str], Optional[str]]:
     """
@@ -329,31 +331,36 @@ class Compare:
     RETURN_TYPES = ("BOOLEAN",)
     RETURN_NAMES = ("boolean",)
     FUNCTION = "compare"
-    CATEGORY = "EasyUse/Logic/Math"
+    CATEGORY = "EasyUse/Logic"
 
     def compare(self, a, b, comparison):
         return (COMPARE_FUNCTIONS[comparison](a, b),)
 
 # 判断
-class If:
+class IfElse:
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
-                "any": (AlwaysEqualProxy("*"),),
-                "if": (AlwaysEqualProxy("*"),),
-                "else": (AlwaysEqualProxy("*"),),
+                "switch": ("BOOLEAN", {"forceInput": True}),
+                "on_true": (AlwaysEqualProxy("*"), lazy_options),
+                "on_false": (AlwaysEqualProxy("*"), lazy_options),
             },
         }
 
     RETURN_TYPES = (AlwaysEqualProxy("*"),)
-    RETURN_NAMES = ("?",)
+    RETURN_NAMES = ("*",)
     FUNCTION = "execute"
-    CATEGORY = "EasyUse/Logic/Math"
+    CATEGORY = "EasyUse/Logic"
+
+    def check_lazy_status(self, switch, on_true=None, on_false=None):
+        if switch and on_true is None:
+            return ["on_true"]
+        if not switch and on_false is None:
+            return ["on_false"]
 
     def execute(self, *args, **kwargs):
-        return (kwargs['if'] if kwargs['any'] else kwargs['else'],)
-
+        return (kwargs['on_true'] if kwargs['switch'] else kwargs['on_false'],)
 
 #是否为SDXL
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
@@ -577,6 +584,25 @@ class clearCacheAll:
         remove_cache('*')
         return ()
 
+# Deprecated
+class If:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "any": (AlwaysEqualProxy("*"),),
+                "if": (AlwaysEqualProxy("*"),),
+                "else": (AlwaysEqualProxy("*"),),
+            },
+        }
+
+    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_NAMES = ("?",)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/🚫 Deprecated"
+
+    def execute(self, *args, **kwargs):
+        return (kwargs['if'] if kwargs['any'] else kwargs['else'],)
 
 
 
@@ -590,7 +616,7 @@ NODE_CLASS_MAPPINGS = {
   "easy compare": Compare,
   "easy imageSwitch": imageSwitch,
   "easy textSwitch": textSwitch,
-  "easy if": If,
+  "easy ifElse": IfElse,
   "easy isSDXL": isSDXL,
   "easy xyAny": xyAny,
   "easy convertAnything": ConvertAnything,
@@ -599,6 +625,7 @@ NODE_CLASS_MAPPINGS = {
   "easy clearCacheKey": clearCacheKey,
   "easy clearCacheAll": clearCacheAll,
   "easy cleanGpuUsed": cleanGPUUsed,
+  "easy if": If,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy string": "String",
@@ -610,7 +637,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy compare": "Compare",
   "easy imageSwitch": "Image Switch",
   "easy textSwitch": "Text Switch",
-  "easy if": "If",
+  "easy ifElse": "If else",
   "easy isSDXL": "Is SDXL",
   "easy xyAny": "XYAny",
   "easy convertAnything": "Convert Any",
@@ -618,5 +645,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy showTensorShape": "Show Tensor Shape",
   "easy clearCacheKey": "Clear Cache Key",
   "easy clearCacheAll": "Clear Cache All",
-  "easy cleanGpuUsed": "Clean GPU Used"
+  "easy cleanGpuUsed": "Clean GPU Used",
+  "easy if": "If (🚫Deprecated)",
 }

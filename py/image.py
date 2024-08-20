@@ -1540,7 +1540,7 @@ class poseEditor:
   RETURN_TYPES = ("IMAGE",)
   FUNCTION = "output_pose"
 
-  CATEGORY = "EasyUse/Image"
+  CATEGORY = "EasyUse/🚫 Deprecated"
 
   def output_pose(self, image):
     image_path = os.path.join(folder_paths.get_temp_directory(), image)
@@ -1630,5 +1630,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageToBase64": "Image To Base64",
   "easy humanSegmentation": "Human Segmentation",
   "easy removeLocalImage": "Remove Local Image",
-  "easy poseEditor": "PoseEditor",
+  "easy poseEditor": "PoseEditor (🚫Deprecated)",
 }
