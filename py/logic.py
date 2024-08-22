@@ -5,7 +5,11 @@ from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, co
 from .libs.cache import remove_cache
 import numpy as np
 import json
+import torch
+import comfy.utils
 
+DEFAULT_FLOW_NUM = 2
+MAX_FLOW_NUM = 10
 lazy_options = {"lazy": True} if compare_revision(2543) else {}
 
 def validate_list_args(args: Dict[str, List[Any]]) -> Tuple[bool, Optional[str], Optional[str]]:
@@ -304,6 +308,136 @@ class textSwitch:
         else:
             return (text2,)
 
+# ---------------------------------------------------------------Index Switch----------------------------------------------------------------------#
+
+class anythingIndexSwitch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs =  {
+            "required": {
+                "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            },
+            "optional": {
+            }
+        }
+        for i in range(DEFAULT_FLOW_NUM):
+            inputs["optional"]["value%d" % i] = (AlwaysEqualProxy("*"),lazy_options)
+        return inputs
+
+    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_NAMES = ("value",)
+    FUNCTION = "index_switch"
+
+    CATEGORY = "EasyUse/Logic/Index Switch"
+
+    def check_lazy_status(self, index, **kwargs):
+        key = "value%d" % index
+        if kwargs.get(key, None) is None:
+            return [key]
+
+    def index_switch(self, index, **kwargs):
+        key = "value%d" % index
+        return (kwargs[key],)
+
+class imageIndexSwitch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs =  {
+            "required": {
+                "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            },
+            "optional": {
+            }
+        }
+        for i in range(DEFAULT_FLOW_NUM):
+            inputs["optional"]["image%d" % i] = ("IMAGE",lazy_options)
+        return inputs
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "index_switch"
+
+    CATEGORY = "EasyUse/Logic/Index Switch"
+
+    def check_lazy_status(self, index, **kwargs):
+        key = "image%d" % index
+        if kwargs.get(key, None) is None:
+            return [key]
+
+    def index_switch(self, index, **kwargs):
+        key = "image%d" % index
+        return (kwargs[key],)
+
+class textIndexSwitch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs =  {
+            "required": {
+                "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            },
+            "optional": {
+            }
+        }
+        for i in range(DEFAULT_FLOW_NUM):
+            inputs["optional"]["text%d" % i] = ("STRING",{**lazy_options,"forceInput":True})
+        return inputs
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("text",)
+    FUNCTION = "index_switch"
+
+    CATEGORY = "EasyUse/Logic/Index Switch"
+
+    def check_lazy_status(self, index, **kwargs):
+        key = "text%d" % index
+        if kwargs.get(key, None) is None:
+            return [key]
+
+    def index_switch(self, index, **kwargs):
+        key = "text%d" % index
+        return (kwargs[key],)
+
+class conditioningIndexSwitch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs =  {
+            "required": {
+                "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            },
+            "optional": {
+            }
+        }
+        for i in range(DEFAULT_FLOW_NUM):
+            inputs["optional"]["cond%d" % i] = ("CONDITIONING",lazy_options)
+        return inputs
+
+    RETURN_TYPES = ("CONDITIONING",)
+    RETURN_NAMES = ("conditioning",)
+    FUNCTION = "index_switch"
+
+    CATEGORY = "EasyUse/Logic/Index Switch"
+
+    def check_lazy_status(self, index, **kwargs):
+        key = "cond%d" % index
+        if kwargs.get(key, None) is None:
+            return [key]
+
+    def index_switch(self, index, **kwargs):
+        key = "cond%d" % index
+        return (kwargs[key],)
+
 # ---------------------------------------------------------------Math----------------------------------------------------------------------#
 class mathIntOperation:
     def __init__(self):
@@ -338,9 +472,81 @@ class mathIntOperation:
         elif operation == "power":
             return (a ** b,)
 
+class mathFloatOperation:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "a": ("FLOAT", {"default": 0, "min": -999999999999.0, "max": 999999999999.0, "step": 1}),
+                "b": ("FLOAT", {"default": 0, "min": -999999999999.0, "max": 999999999999.0, "step": 1}),
+                "operation": (["==", "!=", "<", ">", "<=", ">="],),
+            },
+        }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    FUNCTION = "float_math_operation"
+
+    CATEGORY = "EasyUse/Logic/Math"
+
+    def float_math_operation(self, a, b, operation):
+        if operation == "==":
+            return (a == b,)
+        elif operation == "!=":
+            return (a != b,)
+        elif operation == "<":
+            return (a < b,)
+        elif operation == ">":
+            return (a > b,)
+        elif operation == "<=":
+            return (a <= b,)
+        elif operation == ">=":
+            return (a >= b,)
+
+class mathStringOperation:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "a": ("STRING", {"multiline": False}),
+                "b": ("STRING", {"multiline": False}),
+                "operation": (["a == b", "a != b", "a IN b", "a MATCH REGEX(b)", "a BEGINSWITH b", "a ENDSWITH b"],),
+                "case_sensitive": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    FUNCTION = "string_math_operation"
+
+    CATEGORY = "EasyUse/Logic/Math"
+
+    def string_math_operation(self, a, b, operation, case_sensitive):
+        if not case_sensitive:
+            a = a.lower()
+            b = b.lower()
+
+        if operation == "a == b":
+            return (a == b,)
+        elif operation == "a != b":
+            return (a != b,)
+        elif operation == "a IN b":
+            return (a in b,)
+        elif operation == "a MATCH REGEX(b)":
+            try:
+                return (re.match(b, a) is not None,)
+            except:
+                return (False,)
+        elif operation == "a BEGINSWITH b":
+            return (a.startswith(b),)
+        elif operation == "a ENDSWITH b":
+            return (a.endswith(b),)
+
 # ---------------------------------------------------------------Flow----------------------------------------------------------------------#
-DEFAULT_FLOW_NUM = 2
-MAX_FLOW_NUM = 10
 try:
     from comfy_execution.graph_utils import GraphBuilder, is_link
 except:
@@ -692,8 +898,38 @@ class xyAny:
 
         return (new_x, new_y)
 
+class batchAnything:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "a": (AlwaysEqualProxy("*"),{}),
+                "b": (AlwaysEqualProxy("*"),{})
+            }
+        }
+
+    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_NAMES = ("batch",)
+
+    FUNCTION = "batch"
+    CATEGORY = "EasyUse/Logic"
+
+    def batch(self, a, b):
+        if isinstance(a, torch.Tensor) or isinstance(b, torch.Tensor):
+            if a is None:
+                return (b,)
+            elif b is None:
+                return (a,)
+            if a.shape[1:] != b.shape[1:]:
+                b = comfy.utils.common_upscale(b.movedim(-1, 1), a.shape[2], a.shape[1], "bilinear", "center").movedim(1, -1)
+            return (torch.cat((a, b), 0),)
+        elif isinstance(a, (str, float, int, list, dict, tuple)):
+            return ((a, b),)
+        else:
+            return (a + b,)
+
 # 转换所有类型
-class ConvertAnything:
+class convertAnything:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
@@ -890,10 +1126,16 @@ NODE_CLASS_MAPPINGS = {
   "easy float": Float,
   "easy rangeFloat": RangeFloat,
   "easy boolean": Boolean,
+  "easy mathString": mathStringOperation,
   "easy mathInt": mathIntOperation,
+  "easy mathFloat": mathFloatOperation,
   "easy compare": Compare,
   "easy imageSwitch": imageSwitch,
   "easy textSwitch": textSwitch,
+  "easy anythingIndexSwitch": anythingIndexSwitch,
+  "easy imageIndexSwitch": imageIndexSwitch,
+  "easy textIndexSwitch": textIndexSwitch,
+  "easy conditioningIndexSwitch": conditioningIndexSwitch,
   "easy whileLoopStart": whileLoopStart,
   "easy whileLoopEnd": whileLoopEnd,
   "easy forLoopStart": forLoopStart,
@@ -902,7 +1144,8 @@ NODE_CLASS_MAPPINGS = {
   "easy isNone": isNone,
   "easy isSDXL": isSDXL,
   "easy xyAny": xyAny,
-  "easy convertAnything": ConvertAnything,
+  "easy batchAnything": batchAnything,
+  "easy convertAnything": convertAnything,
   "easy showAnything": showAnything,
   "easy showTensorShape": showTensorShape,
   "easy clearCacheKey": clearCacheKey,
@@ -919,9 +1162,15 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy rangeFloat": "Range(Float)",
   "easy boolean": "Boolean",
   "easy compare": "Compare",
+  "easy mathString": "Math String",
   "easy mathInt": "Math Int",
+  "easy mathFloat": "Math Float",
   "easy imageSwitch": "Image Switch",
   "easy textSwitch": "Text Switch",
+  "easy anythingIndexSwitch": "Any Index Switch",
+  "easy imageIndexSwitch": "Image Index Switch",
+  "easy textIndexSwitch": "Text Index Switch",
+  "easy conditioningIndexSwitch": "Conditioning Index Switch",
   "easy whileLoopStart": "While Loop Start",
   "easy whileLoopEnd": "While Loop End",
   "easy forLoopStart": "For Loop Start",
@@ -930,6 +1179,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy isNone": "Is None",
   "easy isSDXL": "Is SDXL",
   "easy xyAny": "XYAny",
+  "easy batchAnything": "Batch Any",
   "easy convertAnything": "Convert Any",
   "easy showAnything": "Show Any",
   "easy showTensorShape": "Show Tensor Shape",
