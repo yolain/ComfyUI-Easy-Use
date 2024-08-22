@@ -339,7 +339,8 @@ class mathIntOperation:
             return (a ** b,)
 
 # ---------------------------------------------------------------Flow----------------------------------------------------------------------#
-NUM_FLOW_SOCKETS = 3
+DEFAULT_FLOW_NUM = 2
+MAX_FLOW_NUM = 10
 try:
     from comfy_execution.graph_utils import GraphBuilder, is_link
 except:
@@ -358,19 +359,19 @@ class whileLoopStart:
             "optional": {
             },
         }
-        for i in range(NUM_FLOW_SOCKETS):
+        for i in range(MAX_FLOW_NUM):
             inputs["optional"]["initial_value%d" % i] = ("*",)
         return inputs
 
-    RETURN_TYPES = tuple(["FLOW_CONTROL"] + ["*"] * NUM_FLOW_SOCKETS)
-    RETURN_NAMES = tuple(["FLOW_CONTROL"] + ["value%d" % i for i in range(NUM_FLOW_SOCKETS)])
+    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL"] + ["*"] * MAX_FLOW_NUM))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["flow"] + ["value%d" % i for i in range(MAX_FLOW_NUM)]))
     FUNCTION = "while_loop_open"
 
     CATEGORY = "EasyUse/Logic/While Loop"
 
     def while_loop_open(self, condition, **kwargs):
         values = []
-        for i in range(NUM_FLOW_SOCKETS):
+        for i in range(MAX_FLOW_NUM):
             values.append(kwargs.get("initial_value%d" % i, None))
         return tuple(["stub"] + values)
 
@@ -392,12 +393,12 @@ class whileLoopEnd:
                 "unique_id": "UNIQUE_ID",
             }
         }
-        for i in range(NUM_FLOW_SOCKETS):
+        for i in range(MAX_FLOW_NUM):
             inputs["optional"]["initial_value%d" % i] = (AlwaysEqualProxy('*'),)
         return inputs
 
-    RETURN_TYPES = tuple([AlwaysEqualProxy('*')] * NUM_FLOW_SOCKETS)
-    RETURN_NAMES = tuple(["value%d" % i for i in range(NUM_FLOW_SOCKETS)])
+    RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy('*')] * MAX_FLOW_NUM))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(MAX_FLOW_NUM)]))
     FUNCTION = "while_loop_close"
 
     CATEGORY = "EasyUse/Logic/While Loop"
@@ -427,7 +428,7 @@ class whileLoopEnd:
         if not condition:
             # We're done with the loop
             values = []
-            for i in range(NUM_FLOW_SOCKETS):
+            for i in range(MAX_FLOW_NUM):
                 values.append(kwargs.get("initial_value%d" % i, None))
             return tuple(values)
 
@@ -458,11 +459,11 @@ class whileLoopEnd:
                 else:
                     node.set_input(k, v)
         new_open = graph.lookup_node(open_node)
-        for i in range(NUM_FLOW_SOCKETS):
+        for i in range(MAX_FLOW_NUM):
             key = "initial_value%d" % i
             new_open.set_input(key, kwargs.get(key, None))
         my_clone = graph.lookup_node("Recurse" )
-        result = map(lambda x: my_clone.out(x), range(NUM_FLOW_SOCKETS))
+        result = map(lambda x: my_clone.out(x), range(MAX_FLOW_NUM))
         return {
             "result": tuple(result),
             "expand": graph.finalize(),
@@ -479,7 +480,7 @@ class forLoopStart:
                 "total": ("INT", {"default": 1, "min": 0, "max": 100000, "step": 1}),
             },
             "optional": {
-                "initial_value%d" % i: (AlwaysEqualProxy("*"),) for i in range(1, NUM_FLOW_SOCKETS)
+                "initial_value%d" % i: (AlwaysEqualProxy("*"),) for i in range(1, DEFAULT_FLOW_NUM)
             },
             "hidden": {
                 "initial_value0": (AlwaysEqualProxy("*"),),
@@ -488,8 +489,8 @@ class forLoopStart:
             }
         }
 
-    RETURN_TYPES = tuple(["FLOW_CONTROL", "INT"] + [AlwaysEqualProxy("*")] * (NUM_FLOW_SOCKETS - 1))
-    RETURN_NAMES = tuple(["flow", "index"] + ["value%d" % i for i in range(1, NUM_FLOW_SOCKETS)])
+    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL", "INT"] + [AlwaysEqualProxy("*")] * (DEFAULT_FLOW_NUM - 1)))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["flow", "index"] + ["value%d" % i for i in range(1, DEFAULT_FLOW_NUM)]))
     FUNCTION = "for_loop_start"
 
     CATEGORY = "EasyUse/Logic/For Loop"
@@ -499,10 +500,9 @@ class forLoopStart:
         i = 0
         if "initial_value0" in kwargs:
             i = kwargs["initial_value0"]
-        initial_values = {("initial_value%d" % num): kwargs.get("initial_value%d" % num, None) for num in range(1, NUM_FLOW_SOCKETS)}
-
+        initial_values = {("initial_value%d" % num): kwargs.get("initial_value%d" % num, None) for num in range(1, MAX_FLOW_NUM)}
         while_open = graph.node("easy whileLoopStart", condition=total, initial_value0=i, **initial_values)
-        outputs = [kwargs.get("initial_value%d" % num, None) for num in range(1, NUM_FLOW_SOCKETS)]
+        outputs = [kwargs.get("initial_value%d" % num, None) for num in range(1, MAX_FLOW_NUM)]
         return {
             "result": tuple(["stub", i] + outputs),
             "expand": graph.finalize(),
@@ -519,13 +519,13 @@ class forLoopEnd:
                 "flow": ("FLOW_CONTROL", {"rawLink": True}),
             },
             "optional": {
-                "initial_value%d" % i: (AlwaysEqualProxy("*"), {"rawLink": True}) for i in range(1, NUM_FLOW_SOCKETS)
+                "initial_value%d" % i: (AlwaysEqualProxy("*"), {"rawLink": True}) for i in range(1, DEFAULT_FLOW_NUM)
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
 
-    RETURN_TYPES = tuple([AlwaysEqualProxy("*")] * (NUM_FLOW_SOCKETS - 1))
-    RETURN_NAMES = tuple(["value%d" % i for i in range(1, NUM_FLOW_SOCKETS)])
+    RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy("*")] * (DEFAULT_FLOW_NUM - 1)))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(1, DEFAULT_FLOW_NUM)]))
     FUNCTION = "for_loop_end"
 
     CATEGORY = "EasyUse/Logic/For Loop"
@@ -542,14 +542,14 @@ class forLoopEnd:
         sub = graph.node("easy mathInt", operation="add", a=[while_open, 1], b=1)
         cond = graph.node("easy compare", a=sub.out(0), b=total, comparison='a < b')
         input_values = {("initial_value%d" % i): kwargs.get("initial_value%d" % i, None) for i in
-                        range(1, NUM_FLOW_SOCKETS)}
+                        range(1, MAX_FLOW_NUM)}
         while_close = graph.node("easy whileLoopEnd",
                                  flow=flow,
                                  condition=cond.out(0),
                                  initial_value0=sub.out(0),
                                  **input_values)
         return {
-            "result": tuple([while_close.out(i) for i in range(1, NUM_FLOW_SOCKETS)]),
+            "result": tuple([while_close.out(i) for i in range(1, MAX_FLOW_NUM)]),
             "expand": graph.finalize(),
         }
 
@@ -707,7 +707,6 @@ class ConvertAnything:
     CATEGORY = "EasyUse/Logic"
 
     def convert(self, *args, **kwargs):
-        print(kwargs)
         anything = kwargs['*']
         output_type = kwargs['output_type']
         params = None
