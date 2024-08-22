@@ -4,6 +4,7 @@ from decimal import Decimal
 from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, compare_revision
 from .libs.cache import remove_cache
 import numpy as np
+import re
 import json
 import torch
 import comfy.utils
@@ -664,11 +665,12 @@ class whileLoopEnd:
                     node.set_input(k, parent.out(v[1]))
                 else:
                     node.set_input(k, v)
+
         new_open = graph.lookup_node(open_node)
         for i in range(MAX_FLOW_NUM):
             key = "initial_value%d" % i
             new_open.set_input(key, kwargs.get(key, None))
-        my_clone = graph.lookup_node("Recurse" )
+        my_clone = graph.lookup_node("Recurse")
         result = map(lambda x: my_clone.out(x), range(MAX_FLOW_NUM))
         return {
             "result": tuple(result),
@@ -686,7 +688,7 @@ class forLoopStart:
                 "total": ("INT", {"default": 1, "min": 0, "max": 100000, "step": 1}),
             },
             "optional": {
-                "initial_value%d" % i: (AlwaysEqualProxy("*"),) for i in range(1, DEFAULT_FLOW_NUM)
+                "initial_value%d" % i: (AlwaysEqualProxy("*"),) for i in range(1, MAX_FLOW_NUM)
             },
             "hidden": {
                 "initial_value0": (AlwaysEqualProxy("*"),),
@@ -695,8 +697,8 @@ class forLoopStart:
             }
         }
 
-    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL", "INT"] + [AlwaysEqualProxy("*")] * (DEFAULT_FLOW_NUM - 1)))
-    RETURN_NAMES = ByPassTypeTuple(tuple(["flow", "index"] + ["value%d" % i for i in range(1, DEFAULT_FLOW_NUM)]))
+    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL", "INT"] + [AlwaysEqualProxy("*")] * (MAX_FLOW_NUM - 1)))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["flow", "index"] + ["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
     FUNCTION = "for_loop_start"
 
     CATEGORY = "EasyUse/Logic/For Loop"
@@ -725,13 +727,13 @@ class forLoopEnd:
                 "flow": ("FLOW_CONTROL", {"rawLink": True}),
             },
             "optional": {
-                "initial_value%d" % i: (AlwaysEqualProxy("*"), {"rawLink": True}) for i in range(1, DEFAULT_FLOW_NUM)
+                "initial_value%d" % i: (AlwaysEqualProxy("*"), {"rawLink": True}) for i in range(1, MAX_FLOW_NUM)
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
 
-    RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy("*")] * (DEFAULT_FLOW_NUM - 1)))
-    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(1, DEFAULT_FLOW_NUM)]))
+    RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy("*")] * (MAX_FLOW_NUM - 1)))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
     FUNCTION = "for_loop_end"
 
     CATEGORY = "EasyUse/Logic/For Loop"
@@ -923,9 +925,23 @@ class batchAnything:
             if a.shape[1:] != b.shape[1:]:
                 b = comfy.utils.common_upscale(b.movedim(-1, 1), a.shape[2], a.shape[1], "bilinear", "center").movedim(1, -1)
             return (torch.cat((a, b), 0),)
-        elif isinstance(a, (str, float, int, list, dict, tuple)):
+        elif isinstance(a, (str, float, int)):
+            if b is None:
+                return (a,)
+            elif isinstance(b, tuple):
+                return (b + (a,),)
             return ((a, b),)
+        elif isinstance(b, (str, float, int)):
+            if a is None:
+                return (b,)
+            elif isinstance(a, tuple):
+                return (a + (b,),)
+            return ((b, a),)
         else:
+            if a is None:
+                return (b,)
+            elif b is None:
+                return (a,)
             return (a + b,)
 
 # 转换所有类型
