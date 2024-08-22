@@ -7,7 +7,6 @@ import folder_paths
 from folder_paths import get_directory_by_type
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
-from .logic import ConvertAnything
 from .libs.model import easyModelManager
 from .libs.utils import getMetadata, cleanGPUUsedForce, get_local_filepath
 from .libs.cache import remove_cache
@@ -122,18 +121,6 @@ async def getStylesImage(request):
         elif styles_name == 'fooocus_styles':
             return web.Response(text=FOOOCUS_STYLES_SAMPLES + name + '.jpg')
     return web.Response(status=400)
-
-# convert type
-@PromptServer.instance.routes.post("/easyuse/convert")
-async def convertType(request):
-    post = await request.post()
-    type = post.get('type')
-    if type:
-        ConvertAnything.RETURN_TYPES = (type.upper(),)
-        ConvertAnything.RETURN_NAMES = (type,)
-        return web.Response(status=200)
-    else:
-        return web.Response(status=400)
 
 # get models lists
 @PromptServer.instance.routes.get("/easyuse/models/list")

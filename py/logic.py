@@ -1,10 +1,17 @@
 from typing import Iterator, List, Tuple, Dict, Any, Union, Optional
 from _decimal import Context, getcontext
 from decimal import Decimal
-from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce
+from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, compare_revision
 from .libs.cache import remove_cache
 import numpy as np
+import re
 import json
+import torch
+import comfy.utils
+
+DEFAULT_FLOW_NUM = 2
+MAX_FLOW_NUM = 10
+lazy_options = {"lazy": True} if compare_revision(2543) else {}
 
 def validate_list_args(args: Dict[str, List[Any]]) -> Tuple[bool, Optional[str], Optional[str]]:
     """
@@ -302,7 +309,457 @@ class textSwitch:
         else:
             return (text2,)
 
-# ---------------------------------------------------------------运算 开始----------------------------------------------------------------------#
+# ---------------------------------------------------------------Index Switch----------------------------------------------------------------------#
+
+class anythingIndexSwitch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs =  {
+            "required": {
+                "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            },
+            "optional": {
+            }
+        }
+        for i in range(DEFAULT_FLOW_NUM):
+            inputs["optional"]["value%d" % i] = (AlwaysEqualProxy("*"),lazy_options)
+        return inputs
+
+    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_NAMES = ("value",)
+    FUNCTION = "index_switch"
+
+    CATEGORY = "EasyUse/Logic/Index Switch"
+
+    def check_lazy_status(self, index, **kwargs):
+        key = "value%d" % index
+        if kwargs.get(key, None) is None:
+            return [key]
+
+    def index_switch(self, index, **kwargs):
+        key = "value%d" % index
+        return (kwargs[key],)
+
+class imageIndexSwitch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs =  {
+            "required": {
+                "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            },
+            "optional": {
+            }
+        }
+        for i in range(DEFAULT_FLOW_NUM):
+            inputs["optional"]["image%d" % i] = ("IMAGE",lazy_options)
+        return inputs
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "index_switch"
+
+    CATEGORY = "EasyUse/Logic/Index Switch"
+
+    def check_lazy_status(self, index, **kwargs):
+        key = "image%d" % index
+        if kwargs.get(key, None) is None:
+            return [key]
+
+    def index_switch(self, index, **kwargs):
+        key = "image%d" % index
+        return (kwargs[key],)
+
+class textIndexSwitch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs =  {
+            "required": {
+                "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            },
+            "optional": {
+            }
+        }
+        for i in range(DEFAULT_FLOW_NUM):
+            inputs["optional"]["text%d" % i] = ("STRING",{**lazy_options,"forceInput":True})
+        return inputs
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("text",)
+    FUNCTION = "index_switch"
+
+    CATEGORY = "EasyUse/Logic/Index Switch"
+
+    def check_lazy_status(self, index, **kwargs):
+        key = "text%d" % index
+        if kwargs.get(key, None) is None:
+            return [key]
+
+    def index_switch(self, index, **kwargs):
+        key = "text%d" % index
+        return (kwargs[key],)
+
+class conditioningIndexSwitch:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs =  {
+            "required": {
+                "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            },
+            "optional": {
+            }
+        }
+        for i in range(DEFAULT_FLOW_NUM):
+            inputs["optional"]["cond%d" % i] = ("CONDITIONING",lazy_options)
+        return inputs
+
+    RETURN_TYPES = ("CONDITIONING",)
+    RETURN_NAMES = ("conditioning",)
+    FUNCTION = "index_switch"
+
+    CATEGORY = "EasyUse/Logic/Index Switch"
+
+    def check_lazy_status(self, index, **kwargs):
+        key = "cond%d" % index
+        if kwargs.get(key, None) is None:
+            return [key]
+
+    def index_switch(self, index, **kwargs):
+        key = "cond%d" % index
+        return (kwargs[key],)
+
+# ---------------------------------------------------------------Math----------------------------------------------------------------------#
+class mathIntOperation:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "a": ("INT", {"default": 0, "min": -0xffffffffffffffff, "max": 0xffffffffffffffff, "step": 1}),
+                "b": ("INT", {"default": 0, "min": -0xffffffffffffffff, "max": 0xffffffffffffffff, "step": 1}),
+                "operation": (["add", "subtract", "multiply", "divide", "modulo", "power"],),
+            },
+        }
+
+    RETURN_TYPES = ("INT",)
+    FUNCTION = "int_math_operation"
+
+    CATEGORY = "EasyUse/Logic/Math"
+
+    def int_math_operation(self, a, b, operation):
+        if operation == "add":
+            return (a + b,)
+        elif operation == "subtract":
+            return (a - b,)
+        elif operation == "multiply":
+            return (a * b,)
+        elif operation == "divide":
+            return (a // b,)
+        elif operation == "modulo":
+            return (a % b,)
+        elif operation == "power":
+            return (a ** b,)
+
+class mathFloatOperation:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "a": ("FLOAT", {"default": 0, "min": -999999999999.0, "max": 999999999999.0, "step": 1}),
+                "b": ("FLOAT", {"default": 0, "min": -999999999999.0, "max": 999999999999.0, "step": 1}),
+                "operation": (["==", "!=", "<", ">", "<=", ">="],),
+            },
+        }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    FUNCTION = "float_math_operation"
+
+    CATEGORY = "EasyUse/Logic/Math"
+
+    def float_math_operation(self, a, b, operation):
+        if operation == "==":
+            return (a == b,)
+        elif operation == "!=":
+            return (a != b,)
+        elif operation == "<":
+            return (a < b,)
+        elif operation == ">":
+            return (a > b,)
+        elif operation == "<=":
+            return (a <= b,)
+        elif operation == ">=":
+            return (a >= b,)
+
+class mathStringOperation:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "a": ("STRING", {"multiline": False}),
+                "b": ("STRING", {"multiline": False}),
+                "operation": (["a == b", "a != b", "a IN b", "a MATCH REGEX(b)", "a BEGINSWITH b", "a ENDSWITH b"],),
+                "case_sensitive": ("BOOLEAN", {"default": True}),
+            },
+        }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    FUNCTION = "string_math_operation"
+
+    CATEGORY = "EasyUse/Logic/Math"
+
+    def string_math_operation(self, a, b, operation, case_sensitive):
+        if not case_sensitive:
+            a = a.lower()
+            b = b.lower()
+
+        if operation == "a == b":
+            return (a == b,)
+        elif operation == "a != b":
+            return (a != b,)
+        elif operation == "a IN b":
+            return (a in b,)
+        elif operation == "a MATCH REGEX(b)":
+            try:
+                return (re.match(b, a) is not None,)
+            except:
+                return (False,)
+        elif operation == "a BEGINSWITH b":
+            return (a.startswith(b),)
+        elif operation == "a ENDSWITH b":
+            return (a.endswith(b),)
+
+# ---------------------------------------------------------------Flow----------------------------------------------------------------------#
+try:
+    from comfy_execution.graph_utils import GraphBuilder, is_link
+except:
+    GraphBuilder = None
+
+class whileLoopStart:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs = {
+            "required": {
+                "condition": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+            },
+        }
+        for i in range(MAX_FLOW_NUM):
+            inputs["optional"]["initial_value%d" % i] = ("*",)
+        return inputs
+
+    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL"] + ["*"] * MAX_FLOW_NUM))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["flow"] + ["value%d" % i for i in range(MAX_FLOW_NUM)]))
+    FUNCTION = "while_loop_open"
+
+    CATEGORY = "EasyUse/Logic/While Loop"
+
+    def while_loop_open(self, condition, **kwargs):
+        values = []
+        for i in range(MAX_FLOW_NUM):
+            values.append(kwargs.get("initial_value%d" % i, None))
+        return tuple(["stub"] + values)
+
+class whileLoopEnd:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        inputs = {
+            "required": {
+                "flow": ("FLOW_CONTROL", {"rawLink": True}),
+                "condition": ("BOOLEAN", {"forceInput": True}),
+            },
+            "optional": {
+            },
+            "hidden": {
+                "dynprompt": "DYNPROMPT",
+                "unique_id": "UNIQUE_ID",
+            }
+        }
+        for i in range(MAX_FLOW_NUM):
+            inputs["optional"]["initial_value%d" % i] = (AlwaysEqualProxy('*'),)
+        return inputs
+
+    RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy('*')] * MAX_FLOW_NUM))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(MAX_FLOW_NUM)]))
+    FUNCTION = "while_loop_close"
+
+    CATEGORY = "EasyUse/Logic/While Loop"
+
+    def explore_dependencies(self, node_id, dynprompt, upstream):
+        node_info = dynprompt.get_node(node_id)
+        if "inputs" not in node_info:
+            return
+        for k, v in node_info["inputs"].items():
+            if is_link(v):
+                parent_id = v[0]
+                if parent_id not in upstream:
+                    upstream[parent_id] = []
+                    self.explore_dependencies(parent_id, dynprompt, upstream)
+                upstream[parent_id].append(node_id)
+
+    def collect_contained(self, node_id, upstream, contained):
+        if node_id not in upstream:
+            return
+        for child_id in upstream[node_id]:
+            if child_id not in contained:
+                contained[child_id] = True
+                self.collect_contained(child_id, upstream, contained)
+
+
+    def while_loop_close(self, flow, condition, dynprompt=None, unique_id=None, **kwargs):
+        if not condition:
+            # We're done with the loop
+            values = []
+            for i in range(MAX_FLOW_NUM):
+                values.append(kwargs.get("initial_value%d" % i, None))
+            return tuple(values)
+
+        # We want to loop
+        this_node = dynprompt.get_node(unique_id)
+        upstream = {}
+        # Get the list of all nodes between the open and close nodes
+        self.explore_dependencies(unique_id, dynprompt, upstream)
+
+        contained = {}
+        open_node = flow[0]
+        self.collect_contained(open_node, upstream, contained)
+        contained[unique_id] = True
+        contained[open_node] = True
+
+        graph = GraphBuilder()
+        for node_id in contained:
+            original_node = dynprompt.get_node(node_id)
+            node = graph.node(original_node["class_type"], "Recurse" if node_id == unique_id else node_id)
+            node.set_override_display_id(node_id)
+        for node_id in contained:
+            original_node = dynprompt.get_node(node_id)
+            node = graph.lookup_node("Recurse" if node_id == unique_id else node_id)
+            for k, v in original_node["inputs"].items():
+                if is_link(v) and v[0] in contained:
+                    parent = graph.lookup_node(v[0])
+                    node.set_input(k, parent.out(v[1]))
+                else:
+                    node.set_input(k, v)
+
+        new_open = graph.lookup_node(open_node)
+        for i in range(MAX_FLOW_NUM):
+            key = "initial_value%d" % i
+            new_open.set_input(key, kwargs.get(key, None))
+        my_clone = graph.lookup_node("Recurse")
+        result = map(lambda x: my_clone.out(x), range(MAX_FLOW_NUM))
+        return {
+            "result": tuple(result),
+            "expand": graph.finalize(),
+        }
+
+class forLoopStart:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "total": ("INT", {"default": 1, "min": 0, "max": 100000, "step": 1}),
+            },
+            "optional": {
+                "initial_value%d" % i: (AlwaysEqualProxy("*"),) for i in range(1, MAX_FLOW_NUM)
+            },
+            "hidden": {
+                "initial_value0": (AlwaysEqualProxy("*"),),
+                "prompt": "PROMPT",
+                "unique_id": "UNIQUE_ID"
+            }
+        }
+
+    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL", "INT"] + [AlwaysEqualProxy("*")] * (MAX_FLOW_NUM - 1)))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["flow", "index"] + ["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
+    FUNCTION = "for_loop_start"
+
+    CATEGORY = "EasyUse/Logic/For Loop"
+
+    def for_loop_start(self, total, prompt=None, unique_id=None, **kwargs):
+        graph = GraphBuilder()
+        i = 0
+        if "initial_value0" in kwargs:
+            i = kwargs["initial_value0"]
+        initial_values = {("initial_value%d" % num): kwargs.get("initial_value%d" % num, None) for num in range(1, MAX_FLOW_NUM)}
+        while_open = graph.node("easy whileLoopStart", condition=total, initial_value0=i, **initial_values)
+        outputs = [kwargs.get("initial_value%d" % num, None) for num in range(1, MAX_FLOW_NUM)]
+        return {
+            "result": tuple(["stub", i] + outputs),
+            "expand": graph.finalize(),
+        }
+
+class forLoopEnd:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "flow": ("FLOW_CONTROL", {"rawLink": True}),
+            },
+            "optional": {
+                "initial_value%d" % i: (AlwaysEqualProxy("*"), {"rawLink": True}) for i in range(1, MAX_FLOW_NUM)
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy("*")] * (MAX_FLOW_NUM - 1)))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
+    FUNCTION = "for_loop_end"
+
+    CATEGORY = "EasyUse/Logic/For Loop"
+
+    def for_loop_end(self, flow, prompt=None, extra_pnginfo=None, my_unique_id=None, **kwargs):
+        graph = GraphBuilder()
+        while_open = flow[0]
+        total = None
+        if extra_pnginfo:
+            node = next((x for x in extra_pnginfo['workflow']['nodes'] if x['id'] == int(while_open)), None)
+            total = node['widgets_values'][0] if "widgets_values" in node else None
+        if total is None:
+            raise Exception("Unable to get parameters for the start of the loop")
+        sub = graph.node("easy mathInt", operation="add", a=[while_open, 1], b=1)
+        cond = graph.node("easy compare", a=sub.out(0), b=total, comparison='a < b')
+        input_values = {("initial_value%d" % i): kwargs.get("initial_value%d" % i, None) for i in
+                        range(1, MAX_FLOW_NUM)}
+        while_close = graph.node("easy whileLoopEnd",
+                                 flow=flow,
+                                 condition=cond.out(0),
+                                 initial_value0=sub.out(0),
+                                 **input_values)
+        return {
+            "result": tuple([while_close.out(i) for i in range(1, MAX_FLOW_NUM)]),
+            "expand": graph.finalize(),
+        }
 
 COMPARE_FUNCTIONS = {
     "a == b": lambda a, b: a == b,
@@ -317,46 +774,70 @@ COMPARE_FUNCTIONS = {
 class Compare:
     @classmethod
     def INPUT_TYPES(s):
-        s.compare_functions = list(COMPARE_FUNCTIONS.keys())
+        compare_functions = list(COMPARE_FUNCTIONS.keys())
         return {
             "required": {
                 "a": (AlwaysEqualProxy("*"), {"default": 0}),
                 "b": (AlwaysEqualProxy("*"), {"default": 0}),
-                "comparison": (s.compare_functions, {"default": "a == b"}),
+                "comparison": (compare_functions, {"default": "a == b"}),
             },
         }
 
     RETURN_TYPES = ("BOOLEAN",)
     RETURN_NAMES = ("boolean",)
     FUNCTION = "compare"
-    CATEGORY = "EasyUse/Logic/Math"
+    CATEGORY = "EasyUse/Logic"
 
     def compare(self, a, b, comparison):
         return (COMPARE_FUNCTIONS[comparison](a, b),)
 
 # 判断
-class If:
+class IfElse:
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
-                "any": (AlwaysEqualProxy("*"),),
-                "if": (AlwaysEqualProxy("*"),),
-                "else": (AlwaysEqualProxy("*"),),
+                "boolean": ("BOOLEAN",),
+                "on_true": (AlwaysEqualProxy("*"), lazy_options),
+                "on_false": (AlwaysEqualProxy("*"), lazy_options),
             },
         }
 
     RETURN_TYPES = (AlwaysEqualProxy("*"),)
-    RETURN_NAMES = ("?",)
+    RETURN_NAMES = ("*",)
     FUNCTION = "execute"
-    CATEGORY = "EasyUse/Logic/Math"
+    CATEGORY = "EasyUse/Logic"
+
+    def check_lazy_status(self, boolean, on_true=None, on_false=None):
+        if boolean and on_true is None:
+            return ["on_true"]
+        if not boolean and on_false is None:
+            return ["on_false"]
 
     def execute(self, *args, **kwargs):
-        return (kwargs['if'] if kwargs['any'] else kwargs['else'],)
-
+        return (kwargs['on_true'] if kwargs['boolean'] else kwargs['on_false'],)
 
 #是否为SDXL
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
+class isNone:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "any": (AlwaysEqualProxy("*"),)
+            },
+            "optional": {
+            }
+        }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    RETURN_NAMES = ("boolean",)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic"
+
+    def execute(self, any):
+        return (True if any is None else False,)
+
 class isSDXL:
     @classmethod
     def INPUT_TYPES(s):
@@ -419,8 +900,52 @@ class xyAny:
 
         return (new_x, new_y)
 
+class batchAnything:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "a": (AlwaysEqualProxy("*"),{}),
+                "b": (AlwaysEqualProxy("*"),{})
+            }
+        }
+
+    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_NAMES = ("batch",)
+
+    FUNCTION = "batch"
+    CATEGORY = "EasyUse/Logic"
+
+    def batch(self, a, b):
+        if isinstance(a, torch.Tensor) or isinstance(b, torch.Tensor):
+            if a is None:
+                return (b,)
+            elif b is None:
+                return (a,)
+            if a.shape[1:] != b.shape[1:]:
+                b = comfy.utils.common_upscale(b.movedim(-1, 1), a.shape[2], a.shape[1], "bilinear", "center").movedim(1, -1)
+            return (torch.cat((a, b), 0),)
+        elif isinstance(a, (str, float, int)):
+            if b is None:
+                return (a,)
+            elif isinstance(b, tuple):
+                return (b + (a,),)
+            return ((a, b),)
+        elif isinstance(b, (str, float, int)):
+            if a is None:
+                return (b,)
+            elif isinstance(a, tuple):
+                return (a + (b,),)
+            return ((b, a),)
+        else:
+            if a is None:
+                return (b,)
+            elif b is None:
+                return (a,)
+            return (a + b,)
+
 # 转换所有类型
-class ConvertAnything:
+class convertAnything:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
@@ -434,7 +959,6 @@ class ConvertAnything:
     CATEGORY = "EasyUse/Logic"
 
     def convert(self, *args, **kwargs):
-        print(kwargs)
         anything = kwargs['*']
         output_type = kwargs['output_type']
         params = None
@@ -577,8 +1101,39 @@ class clearCacheAll:
         remove_cache('*')
         return ()
 
+# Deprecated
+class If:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "any": (AlwaysEqualProxy("*"),),
+                "if": (AlwaysEqualProxy("*"),),
+                "else": (AlwaysEqualProxy("*"),),
+            },
+        }
 
+    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_NAMES = ("?",)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/🚫 Deprecated"
 
+    def execute(self, *args, **kwargs):
+        return (kwargs['if'] if kwargs['any'] else kwargs['else'],)
+
+class poseEditor:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required": {
+        "image": ("STRING", {"default":""})
+    }}
+
+  FUNCTION = "output_pose"
+  CATEGORY = "EasyUse/🚫 Deprecated"
+  RETURN_TYPES = ()
+  RETURN_NAMES = ()
+  def output_pose(self, image):
+      return ()
 
 NODE_CLASS_MAPPINGS = {
   "easy string": String,
@@ -587,18 +1142,33 @@ NODE_CLASS_MAPPINGS = {
   "easy float": Float,
   "easy rangeFloat": RangeFloat,
   "easy boolean": Boolean,
+  "easy mathString": mathStringOperation,
+  "easy mathInt": mathIntOperation,
+  "easy mathFloat": mathFloatOperation,
   "easy compare": Compare,
   "easy imageSwitch": imageSwitch,
   "easy textSwitch": textSwitch,
-  "easy if": If,
+  "easy anythingIndexSwitch": anythingIndexSwitch,
+  "easy imageIndexSwitch": imageIndexSwitch,
+  "easy textIndexSwitch": textIndexSwitch,
+  "easy conditioningIndexSwitch": conditioningIndexSwitch,
+  "easy whileLoopStart": whileLoopStart,
+  "easy whileLoopEnd": whileLoopEnd,
+  "easy forLoopStart": forLoopStart,
+  "easy forLoopEnd": forLoopEnd,
+  "easy ifElse": IfElse,
+  "easy isNone": isNone,
   "easy isSDXL": isSDXL,
   "easy xyAny": xyAny,
-  "easy convertAnything": ConvertAnything,
+  "easy batchAnything": batchAnything,
+  "easy convertAnything": convertAnything,
   "easy showAnything": showAnything,
   "easy showTensorShape": showTensorShape,
   "easy clearCacheKey": clearCacheKey,
   "easy clearCacheAll": clearCacheAll,
   "easy cleanGpuUsed": cleanGPUUsed,
+  "easy if": If,
+  "easy poseEditor": poseEditor
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy string": "String",
@@ -608,15 +1178,30 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy rangeFloat": "Range(Float)",
   "easy boolean": "Boolean",
   "easy compare": "Compare",
+  "easy mathString": "Math String",
+  "easy mathInt": "Math Int",
+  "easy mathFloat": "Math Float",
   "easy imageSwitch": "Image Switch",
   "easy textSwitch": "Text Switch",
-  "easy if": "If",
+  "easy anythingIndexSwitch": "Any Index Switch",
+  "easy imageIndexSwitch": "Image Index Switch",
+  "easy textIndexSwitch": "Text Index Switch",
+  "easy conditioningIndexSwitch": "Conditioning Index Switch",
+  "easy whileLoopStart": "While Loop Start",
+  "easy whileLoopEnd": "While Loop End",
+  "easy forLoopStart": "For Loop Start",
+  "easy forLoopEnd": "For Loop End",
+  "easy ifElse": "If else",
+  "easy isNone": "Is None",
   "easy isSDXL": "Is SDXL",
   "easy xyAny": "XYAny",
+  "easy batchAnything": "Batch Any",
   "easy convertAnything": "Convert Any",
   "easy showAnything": "Show Any",
   "easy showTensorShape": "Show Tensor Shape",
   "easy clearCacheKey": "Clear Cache Key",
   "easy clearCacheAll": "Clear Cache All",
-  "easy cleanGpuUsed": "Clean GPU Used"
+  "easy cleanGpuUsed": "Clean GPU Used",
+  "easy if": "If (🚫Deprecated)",
+  "easy poseEditor": "PoseEditor (🚫Deprecated)"
 }
