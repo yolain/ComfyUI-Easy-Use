@@ -221,7 +221,7 @@ class easyLoader:
                 del self.loaded_objects[obj_type][item[0]]
                 current_memory = self.get_memory_usage()
 
-    def load_checkpoint(self, ckpt_name, config_name=None, load_vision=False):
+    def load_checkpoint(self, ckpt_name, config_name=None, load_vision=False, load_clip=None):
         cache_name = ckpt_name
         if config_name not in [None, "Default"]:
             cache_name = ckpt_name + "_" + config_name
@@ -232,23 +232,26 @@ class easyLoader:
 
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
 
-        output_clip = False if load_vision else True
-        output_clipvision = True if load_vision else False
+        if load_clip is not None:
+            output_clip = load_clip
+        else:
+            output_clip = not load_vision
+        output_clipvision = load_vision
+
         if config_name not in [None, "Default"]:
             config_path = folder_paths.get_full_path("configs", config_name)
-            loaded_ckpt = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=output_clip, embedding_directory=folder_paths.get_folder_paths("embeddings"))
+            model, clip, vae = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=output_clip, embedding_directory=folder_paths.get_folder_paths("embeddings"))
+            clip_vision = None
         else:
             model_options = {}
             if re.search("nf4", ckpt_name):
                 from ..bitsandbytes_NF4 import OPS
                 model_options = {"custom_operations": OPS}
-            loaded_ckpt = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options=model_options)
+            model, clip, vae, clip_vision = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options=model_options)
 
-        self.add_to_cache("ckpt", cache_name, loaded_ckpt[0])
-        self.add_to_cache("bvae", cache_name, loaded_ckpt[2])
+        self.add_to_cache("ckpt", cache_name, model)
+        self.add_to_cache("bvae", cache_name, vae)
 
-        clip = loaded_ckpt[1]
-        clip_vision = loaded_ckpt[3]
         if clip:
             self.add_to_cache("clip", cache_name, clip)
         if clip_vision:
@@ -256,7 +259,7 @@ class easyLoader:
 
         self.eviction_based_on_memory()
 
-        return loaded_ckpt[0], clip, loaded_ckpt[2], clip_vision
+        return model, clip, vae, clip_vision
 
     def load_vae(self, vae_name):
         if vae_name in self.loaded_objects["vae"]:
@@ -449,14 +452,14 @@ class easyLoader:
             model = model_override
             clip = clip_override
             vae = vae_override
-        elif model_override is not None:
-            raise Exception(f"[ERROR] clip or vae is missing")
-        elif vae_override is not None:
-            raise Exception(f"[ERROR] model or clip is missing")
-        elif clip_override is not None:
-            raise Exception(f"[ERROR] model or vae is missing")
         else:
-            model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name, config_name)
+            model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name, config_name, load_clip=clip_override is None)
+            if model_override is not None:
+                model = model_override
+            if vae_override is not None:
+                vae = vae_override
+            if clip_override is not None:
+                clip = clip_override
 
         if optional_lora_stack is not None and can_load_lora:
             for lora in optional_lora_stack:
