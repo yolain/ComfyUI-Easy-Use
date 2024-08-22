@@ -221,7 +221,7 @@ class easyLoader:
                 del self.loaded_objects[obj_type][item[0]]
                 current_memory = self.get_memory_usage()
 
-    def load_checkpoint(self, ckpt_name, config_name=None, load_vision=False, load_clip=None):
+    def load_checkpoint(self, ckpt_name, config_name=None, load_vision=False, load_clip=None, load_vae=True):
         cache_name = ckpt_name
         if config_name not in [None, "Default"]:
             cache_name = ckpt_name + "_" + config_name
@@ -237,20 +237,22 @@ class easyLoader:
         else:
             output_clip = not load_vision
         output_clipvision = load_vision
+        output_vae = load_vae
 
         if config_name not in [None, "Default"]:
             config_path = folder_paths.get_full_path("configs", config_name)
-            model, clip, vae = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=True, output_clip=output_clip, embedding_directory=folder_paths.get_folder_paths("embeddings"))
+            model, clip, vae = comfy.sd.load_checkpoint(config_path, ckpt_path, output_vae=output_vae, output_clip=output_clip, embedding_directory=folder_paths.get_folder_paths("embeddings"))
             clip_vision = None
         else:
             model_options = {}
             if re.search("nf4", ckpt_name):
                 from ..bitsandbytes_NF4 import OPS
                 model_options = {"custom_operations": OPS}
-            model, clip, vae, clip_vision = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options=model_options)
+            model, clip, vae, clip_vision = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=output_vae, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options=model_options)
 
         self.add_to_cache("ckpt", cache_name, model)
-        self.add_to_cache("bvae", cache_name, vae)
+        if vae:
+            self.add_to_cache("bvae", cache_name, vae)
 
         if clip:
             self.add_to_cache("clip", cache_name, clip)
@@ -453,7 +455,7 @@ class easyLoader:
             clip = clip_override
             vae = vae_override
         else:
-            model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name, config_name, load_clip=clip_override is None)
+            model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name, config_name, load_clip=clip_override is None, load_vae=model_override is None)
             if model_override is not None:
                 model = model_override
             if vae_override is not None:
