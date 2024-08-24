@@ -591,7 +591,7 @@ class whileLoopEnd:
         inputs = {
             "required": {
                 "flow": ("FLOW_CONTROL", {"rawLink": True}),
-                "condition": ("BOOLEAN", {"forceInput": True}),
+                "condition": ("BOOLEAN", {}),
             },
             "optional": {
             },
@@ -905,8 +905,8 @@ class batchAnything:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "a": (AlwaysEqualProxy("*"),{}),
-                "b": (AlwaysEqualProxy("*"),{})
+                "any_1": (AlwaysEqualProxy("*"),{}),
+                "any_2": (AlwaysEqualProxy("*"),{})
             }
         }
 
@@ -916,33 +916,33 @@ class batchAnything:
     FUNCTION = "batch"
     CATEGORY = "EasyUse/Logic"
 
-    def batch(self, a, b):
-        if isinstance(a, torch.Tensor) or isinstance(b, torch.Tensor):
-            if a is None:
-                return (b,)
-            elif b is None:
-                return (a,)
-            if a.shape[1:] != b.shape[1:]:
-                b = comfy.utils.common_upscale(b.movedim(-1, 1), a.shape[2], a.shape[1], "bilinear", "center").movedim(1, -1)
-            return (torch.cat((a, b), 0),)
-        elif isinstance(a, (str, float, int)):
-            if b is None:
-                return (a,)
-            elif isinstance(b, tuple):
-                return (b + (a,),)
-            return ((a, b),)
-        elif isinstance(b, (str, float, int)):
-            if a is None:
-                return (b,)
-            elif isinstance(a, tuple):
-                return (a + (b,),)
-            return ((b, a),)
+    def batch(self, any_1, any_2):
+        if isinstance(any_1, torch.Tensor) or isinstance(any_2, torch.Tensor):
+            if any_1 is None:
+                return (any_2,)
+            elif any_2 is None:
+                return (any_1,)
+            if any_1.shape[1:] != any_2.shape[1:]:
+                any_2 = comfy.utils.common_upscale(any_2.movedim(-1, 1), any_1.shape[2], any_1.shape[1], "bilinear", "center").movedim(1, -1)
+            return (torch.cat((any_1, any_2), 0),)
+        elif isinstance(any_1, (str, float, int)):
+            if any_2 is None:
+                return (any_1,)
+            elif isinstance(any_2, tuple):
+                return (any_2 + (any_1,),)
+            return ((any_1, any_2),)
+        elif isinstance(any_2, (str, float, int)):
+            if any_1 is None:
+                return (any_2,)
+            elif isinstance(any_1, tuple):
+                return (any_1 + (any_2,),)
+            return ((any_2, any_1),)
         else:
-            if a is None:
-                return (b,)
-            elif b is None:
-                return (a,)
-            return (a + b,)
+            if any_1 is None:
+                return (any_2,)
+            elif any_2 is None:
+                return (any_1,)
+            return (any_1 + any_2,)
 
 # 转换所有类型
 class convertAnything:
@@ -1042,6 +1042,24 @@ class showTensorShape:
         tensorShape(tensor)
 
         return {"ui": {"text": shapes}}
+
+class outputToList:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "tuple": (AlwaysEqualProxy("*"), {}),
+            }, "optional": {},
+        }
+
+    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_NAMES = ("list",)
+    OUTPUT_IS_LIST = (True,)
+    FUNCTION = "output_to_List"
+    CATEGORY = "EasyUse/Logic"
+
+    def output_to_List(self, tuple):
+        return (tuple,)
 
 # cleanGpuUsed
 class cleanGPUUsed:
@@ -1159,6 +1177,7 @@ NODE_CLASS_MAPPINGS = {
   "easy ifElse": IfElse,
   "easy isNone": isNone,
   "easy isSDXL": isSDXL,
+  "easy outputToList": outputToList,
   "easy xyAny": xyAny,
   "easy batchAnything": batchAnything,
   "easy convertAnything": convertAnything,
@@ -1194,6 +1213,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy ifElse": "If else",
   "easy isNone": "Is None",
   "easy isSDXL": "Is SDXL",
+  "easy outputToList": "Output to List",
   "easy xyAny": "XYAny",
   "easy batchAnything": "Batch Any",
   "easy convertAnything": "Convert Any",
