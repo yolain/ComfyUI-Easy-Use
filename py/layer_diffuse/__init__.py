@@ -2,6 +2,7 @@
 #from https://github.com/huchenlei/ComfyUI-layerdiffuse
 import torch
 import comfy.model_management
+import comfy.lora
 import copy
 from typing import Optional
 from enum import Enum
@@ -59,7 +60,10 @@ class LayerDiffuse:
             image = image.movedim(-1, 1)
 
         try:
-            ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
+            if hasattr(comfy.lora, "calculate_weight"):
+                comfy.lora.calculate_weight = calculate_weight_adjust_channel(comfy.lora.calculate_weight)
+            else:
+                ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
         except:
             pass
 

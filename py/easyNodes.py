@@ -5245,9 +5245,6 @@ class samplerFull:
             if image_output in ("Sender", "Sender&Save"):
                 PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
 
-            if hasattr(ModelPatcher, "original_calculate_weight"):
-                ModelPatcher.calculate_weight = ModelPatcher.original_calculate_weight
-
             return {"ui": {"images": results},
                     "result": sampler.get_output(new_pipe,)}
 
@@ -5359,9 +5356,6 @@ class samplerFull:
             }
 
             del pipe
-
-            if hasattr(ModelPatcher, "original_calculate_weight"):
-                ModelPatcher.calculate_weight = ModelPatcher.original_calculate_weight
 
             if image_output in ("Hide", "Hide&Save"):
                 return sampler.get_output(new_pipe)
@@ -5799,7 +5793,6 @@ class samplerSDTurbo:
 
         if image_output in ("Sender", "Sender&Save"):
             PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
-
 
         return {"ui": {"images": results},
                 "result": sampler.get_output(new_pipe, )}

@@ -141,9 +141,12 @@ class ICLight:
                 return image
 
 
-    def apply(self, ic_model_path, model: ModelPatcher, c_concat: dict, ic_model=None) -> Tuple[ModelPatcher]:
+    def apply(self, ic_model_path, model, c_concat: dict, ic_model=None) -> Tuple[ModelPatcher]:
         try:
-            ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
+            if hasattr(comfy.lora, "calculate_weight"):
+                comfy.lora.calculate_weight = calculate_weight_adjust_channel(comfy.lora.calculate_weight)
+            else:
+                ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
         except:
             pass
 
