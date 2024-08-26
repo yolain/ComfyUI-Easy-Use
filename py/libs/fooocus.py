@@ -10,7 +10,10 @@ from comfy.model_management import cast_to_device
 from .log import log_node_warn, log_node_error, log_node_info
 
 # Inpaint
-original_calculate_weight = ModelPatcher.calculate_weight
+if hasattr(comfy.lora, "calculate_weight"):
+  original_calculate_weight = comfy.lora.calculate_weight
+else:
+    original_calculate_weight = ModelPatcher.calculate_weight
 injected_model_patcher_calculate_weight = False
 
 class InpaintHead(torch.nn.Module):
@@ -22,7 +25,7 @@ class InpaintHead(torch.nn.Module):
         x = F.pad(x, (1, 1, 1, 1), "replicate")
         return F.conv2d(x, weight=self.head)
 
-def calculate_weight_patched(self: ModelPatcher, patches, weight, key):
+def calculate_weight_patched(patches, weight, key, intermediate_type=torch.float32):
     remaining = []
 
     for p in patches:
@@ -49,7 +52,7 @@ def calculate_weight_patched(self: ModelPatcher, patches, weight, key):
                 # )
 
         if len(remaining) > 0:
-            return original_calculate_weight(self, remaining, weight, key)
+            return original_calculate_weight(remaining, weight, key, intermediate_type)
     return weight
 
 def inject_patched_calculate_weight():
@@ -58,7 +61,10 @@ def inject_patched_calculate_weight():
         print(
             "[comfyui-inpaint-nodes] Injecting patched comfy.model_patcher.ModelPatcher.calculate_weight"
         )
-        ModelPatcher.calculate_weight = calculate_weight_patched
+        if hasattr(comfy.lora, "calculate_weight"):
+            comfy.lora.calculate_weight = calculate_weight_patched
+        else:
+            ModelPatcher.calculate_weight = calculate_weight_patched
         injected_model_patcher_calculate_weight = True
 
 class InpaintWorker:
