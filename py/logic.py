@@ -685,7 +685,7 @@ class forLoopStart:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "total": ("INT", {"default": 1, "min": 0, "max": 100000, "step": 1}),
+                "total": ("INT", {"default": 1, "min": 1, "max": 100000, "step": 1}),
             },
             "optional": {
                 "initial_value%d" % i: (AlwaysEqualProxy("*"),) for i in range(1, MAX_FLOW_NUM)
@@ -693,6 +693,7 @@ class forLoopStart:
             "hidden": {
                 "initial_value0": (AlwaysEqualProxy("*"),),
                 "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
                 "unique_id": "UNIQUE_ID"
             }
         }
@@ -703,9 +704,13 @@ class forLoopStart:
 
     CATEGORY = "EasyUse/Logic/For Loop"
 
-    def for_loop_start(self, total, prompt=None, unique_id=None, **kwargs):
+    def for_loop_start(self, total, prompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
         graph = GraphBuilder()
         i = 0
+        unique_id = unique_id.split('.')[len(unique_id.split('.'))-1] if "." in unique_id else unique_id
+        node = next((x for x in extra_pnginfo['workflow']['nodes'] if x['id'] == int(unique_id)), None)
+        if node:
+            node['properties']['total'] = total
         if "initial_value0" in kwargs:
             i = kwargs["initial_value0"]
         initial_values = {("initial_value%d" % num): kwargs.get("initial_value%d" % num, None) for num in range(1, MAX_FLOW_NUM)}
@@ -744,7 +749,11 @@ class forLoopEnd:
         total = None
         if extra_pnginfo:
             node = next((x for x in extra_pnginfo['workflow']['nodes'] if x['id'] == int(while_open)), None)
-            total = node['widgets_values'][0] if "widgets_values" in node else None
+            if node:
+                if 'properties' in node and 'total' in node['properties']:
+                    total = node['properties']['total']
+                else:
+                    total = node['widgets_values'][0] if "widgets_values" in node else None
         if total is None:
             raise Exception("Unable to get parameters for the start of the loop")
         sub = graph.node("easy mathInt", operation="add", a=[while_open, 1], b=1)
