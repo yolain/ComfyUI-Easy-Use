@@ -81,7 +81,6 @@ class wildcardsPrompt:
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("text", "populated_text")
     OUTPUT_IS_LIST = (True, True)
-    OUTPUT_NODE = True
     FUNCTION = "main"
 
     CATEGORY = "EasyUse/Prompt"
@@ -162,7 +161,6 @@ class stylesPromptSelector:
 
     CATEGORY = 'EasyUse/Prompt'
     FUNCTION = 'run'
-    OUTPUT_NODE = True
 
     def run(self, styles, positive='', negative='', prompt=None, extra_pnginfo=None, my_unique_id=None):
         values = []
@@ -667,7 +665,6 @@ class latentCompositeMaskedWithCond:
     RETURN_TYPES = ("PIPE_LINE", "LATENT", "CONDITIONING")
     RETURN_NAMES = ("pipe", "latent", "conditioning",)
     FUNCTION = "run"
-    OUTPUT_NODE = True
 
     CATEGORY = "EasyUse/Latent"
 
@@ -804,8 +801,6 @@ class easySeed:
     FUNCTION = "doit"
 
     CATEGORY = "EasyUse/Seed"
-
-    OUTPUT_NODE = True
 
     def doit(self, seed=0, prompt=None, extra_pnginfo=None, my_unique_id=None):
         return seed,
@@ -2248,7 +2243,6 @@ class controlnetSimple:
 
     RETURN_TYPES = ("PIPE_LINE", "CONDITIONING", "CONDITIONING")
     RETURN_NAMES = ("pipe", "positive", "negative")
-    OUTPUT_NODE = True
 
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loaders"
@@ -2297,7 +2291,6 @@ class controlnetAdvanced:
 
     RETURN_TYPES = ("PIPE_LINE", "CONDITIONING", "CONDITIONING")
     RETURN_NAMES = ("pipe", "positive", "negative")
-    OUTPUT_NODE = True
 
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loaders"
@@ -2349,7 +2342,6 @@ class controlnetPlusPlus:
 
     RETURN_TYPES = ("PIPE_LINE", "CONDITIONING", "CONDITIONING")
     RETURN_NAMES = ("pipe", "positive", "negative")
-    OUTPUT_NODE = True
 
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loaders"
@@ -2778,7 +2770,6 @@ class icLightApply:
     RETURN_TYPES = ("MODEL", "IMAGE")
     RETURN_NAMES = ("model", "lighting_image")
     FUNCTION = "apply"
-    OUTPUT_NODE = True
     CATEGORY = "EasyUse/Adapter"
 
     def batch(self, image1, image2):
@@ -3724,7 +3715,6 @@ class instantIDApply(instantID):
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING")
     RETURN_NAMES = ("pipe", "model", "positive", "negative")
-    OUTPUT_NODE = True
 
     FUNCTION = "apply"
     CATEGORY = "EasyUse/Adapter"
@@ -3772,7 +3762,6 @@ class instantIDApplyAdvanced(instantID):
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING")
     RETURN_NAMES = ("pipe", "model", "positive", "negative")
-    OUTPUT_NODE = True
 
     FUNCTION = "apply_advanced"
     CATEGORY = "EasyUse/Adapter"
@@ -3917,7 +3906,6 @@ class samplerSettings:
 
     RETURN_TYPES = ("PIPE_LINE", )
     RETURN_NAMES = ("pipe",)
-    OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -3998,7 +3986,6 @@ class samplerSettingsAdvanced:
 
     RETURN_TYPES = ("PIPE_LINE", )
     RETURN_NAMES = ("pipe",)
-    OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4084,7 +4071,6 @@ class samplerSettingsNoiseIn:
 
     RETURN_TYPES = ("PIPE_LINE", )
     RETURN_NAMES = ("pipe",)
-    OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4248,7 +4234,6 @@ class samplerCustomSettings:
 
     RETURN_TYPES = ("PIPE_LINE", )
     RETURN_NAMES = ("pipe",)
-    OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4357,7 +4342,6 @@ class sdTurboSettings:
 
     RETURN_TYPES = ("PIPE_LINE",)
     RETURN_NAMES = ("pipe",)
-    OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4455,7 +4439,6 @@ class cascadeSettings:
 
     RETURN_TYPES = ("PIPE_LINE",)
     RETURN_NAMES = ("pipe",)
-    OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4563,7 +4546,6 @@ class layerDiffusionSettings:
 
     RETURN_TYPES = ("PIPE_LINE",)
     RETURN_NAMES = ("pipe",)
-    OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4664,7 +4646,6 @@ class layerDiffusionSettingsADDTL:
 
     RETURN_TYPES = ("PIPE_LINE",)
     RETURN_NAMES = ("pipe",)
-    OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4726,7 +4707,6 @@ class dynamicCFGSettings:
 
     RETURN_TYPES = ("PIPE_LINE",)
     RETURN_NAMES = ("pipe",)
-    OUTPUT_NODE = True
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -7526,7 +7506,6 @@ class sliderControl:
     RETURN_NAMES = ("layer_weights",)
 
     FUNCTION = "control"
-    OUTPUT_NODE = True
 
     CATEGORY = "EasyUse/Util"
 
