@@ -50,7 +50,7 @@ class positivePrompt:
         }
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("positive",)
+    RETURN_NAMES = ("POSITIVE",)
     FUNCTION = "main"
 
     CATEGORY = "EasyUse/Prompt"
@@ -79,7 +79,7 @@ class wildcardsPrompt:
         }
 
     RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("text", "populated_text")
+    RETURN_NAMES = ("TEXT", "POPULATED_TEXT")
     OUTPUT_IS_LIST = (True, True)
     FUNCTION = "main"
 
@@ -125,7 +125,7 @@ class negativePrompt:
         }
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("negative",)
+    RETURN_NAMES = ("NEGATIVE",)
     FUNCTION = "main"
 
     CATEGORY = "EasyUse/Prompt"
@@ -157,7 +157,7 @@ class stylesPromptSelector:
         }
 
     RETURN_TYPES = ("STRING", "STRING",)
-    RETURN_NAMES = ("positive", "negative",)
+    RETURN_NAMES = ("POSITIVE", "NEGATIVE",)
 
     CATEGORY = 'EasyUse/Prompt'
     FUNCTION = 'run'
@@ -237,7 +237,7 @@ class prompt:
         }}
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("prompt",)
+    RETURN_NAMES = ("PROMPT",)
     FUNCTION = "doit"
 
     CATEGORY = "EasyUse/Prompt"
@@ -268,7 +268,7 @@ class promptList:
         }
 
     RETURN_TYPES = ("LIST", "STRING")
-    RETURN_NAMES = ("prompt_list", "prompt_strings")
+    RETURN_NAMES = ("PROMPT_LIST", "PROMPT_STRINGS")
     OUTPUT_IS_LIST = (False, True)
     FUNCTION = "run"
     CATEGORY = "EasyUse/Prompt"
@@ -335,7 +335,7 @@ class promptConcat:
             },
         }
     RETURN_TYPES = ("STRING", )
-    RETURN_NAMES = ("prompt", )
+    RETURN_NAMES = ("PROMPT", )
     FUNCTION = "concat_text"
     CATEGORY = "EasyUse/Prompt"
 
@@ -362,7 +362,7 @@ class promptReplace:
         }
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("prompt",)
+    RETURN_NAMES = ("PROMPT",)
     FUNCTION = "replace_text"
     CATEGORY = "EasyUse/Prompt"
 
@@ -432,7 +432,7 @@ class portraitMaster:
         }
 
     RETURN_TYPES = ("STRING", "STRING",)
-    RETURN_NAMES = ("positive", "negative",)
+    RETURN_NAMES = ("POSITIVE", "NEGATIVE",)
 
     FUNCTION = "pm"
 
@@ -593,7 +593,7 @@ class latentNoisy:
         }}
 
     RETURN_TYPES = ("PIPE_LINE", "LATENT", "FLOAT",)
-    RETURN_NAMES = ("pipe", "latent", "sigma",)
+    RETURN_NAMES = ("PIPE", "LATENT", "SIGMA",)
     FUNCTION = "run"
 
     CATEGORY = "EasyUse/Latent"
@@ -663,7 +663,7 @@ class latentCompositeMaskedWithCond:
 
     OUTPUT_IS_LIST = (False, False, True)
     RETURN_TYPES = ("PIPE_LINE", "LATENT", "CONDITIONING")
-    RETURN_NAMES = ("pipe", "latent", "conditioning",)
+    RETURN_NAMES = ("PIPE", "LATENT", "CONDITIONING",)
     FUNCTION = "run"
 
     CATEGORY = "EasyUse/Latent"
@@ -797,7 +797,7 @@ class easySeed:
         }
 
     RETURN_TYPES = ("INT",)
-    RETURN_NAMES = ("seed",)
+    RETURN_NAMES = ("SEED",)
     FUNCTION = "doit"
 
     CATEGORY = "EasyUse/Seed"
@@ -841,7 +841,7 @@ class setCkptName:
         }
 
     RETURN_TYPES = (AlwaysEqualProxy('*'),)
-    RETURN_NAMES = ("ckpt_name",)
+    RETURN_NAMES = ("CKPT_NAME",)
     FUNCTION = "set_name"
     CATEGORY = "EasyUse/Util"
 
@@ -858,7 +858,7 @@ class setControlName:
         }
 
     RETURN_TYPES = (AlwaysEqualProxy('*'),)
-    RETURN_NAMES = ("controlnet_name",)
+    RETURN_NAMES = ("CONTROLNET_NAME",)
     FUNCTION = "set_name"
     CATEGORY = "EasyUse/Util"
 
@@ -902,7 +902,7 @@ class fullLoader:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE", "CLIP", "CONDITIONING", "CONDITIONING", "LATENT")
-    RETURN_NAMES = ("pipe", "model", "vae", "clip", "positive", "negative", "latent")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE", "CLIP", "POSITIVE", "NEGATIVE", "LATENT")
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
@@ -1007,7 +1007,7 @@ class a1111Loader(fullLoader):
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE")
 
     FUNCTION = "a1111loader"
     CATEGORY = "EasyUse/Loaders"
@@ -1055,7 +1055,7 @@ class comfyLoader(fullLoader):
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE")
 
     FUNCTION = "comfyloader"
     CATEGORY = "EasyUse/Loaders"
@@ -1101,7 +1101,7 @@ class hunyuanDiTLoader(fullLoader):
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE")
 
     FUNCTION = "hyditloader"
     CATEGORY = "EasyUse/Loaders"
@@ -1154,7 +1154,7 @@ class cascadeLoader:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "LATENT", "VAE")
-    RETURN_NAMES = ("pipe", "model_c", "latent_c", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL_C", "LATENT_C", "VAE")
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
@@ -1324,7 +1324,7 @@ class zero123Loader:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE")
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
@@ -1407,7 +1407,7 @@ class sv3DLoader(EasingBase):
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "STRING")
-    RETURN_NAMES = ("pipe", "model", "interp_log")
+    RETURN_NAMES = ("PIPE", "MODEL", "INTERP_LOG")
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
@@ -1562,7 +1562,7 @@ class svdLoader:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE")
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
@@ -1680,7 +1680,7 @@ class dynamiCrafterLoader(DynamiCrafter):
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE")
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
@@ -1843,7 +1843,7 @@ class kolorsLoader:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE")
 
     FUNCTION = "adv_pipeloader"
     CATEGORY = "EasyUse/Loaders"
@@ -1957,7 +1957,7 @@ class fluxLoader(fullLoader):
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE")
 
     FUNCTION = "fluxloader"
     CATEGORY = "EasyUse/Loaders"
@@ -2017,7 +2017,7 @@ class pixArtLoader:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
+    RETURN_NAMES = ("PIPE", "MODEL", "VAE")
     FUNCTION = "pixart_pipeloader"
     CATEGORY = "EasyUse/Loaders"
 
@@ -2135,7 +2135,7 @@ class loraStack:
         return inputs
 
     RETURN_TYPES = ("LORA_STACK",)
-    RETURN_NAMES = ("lora_stack",)
+    RETURN_NAMES = ("LORA_STACK",)
     FUNCTION = "stack"
 
     CATEGORY = "EasyUse/Loaders"
@@ -2193,7 +2193,7 @@ class controlnetStack:
         return inputs
 
     RETURN_TYPES = ("CONTROL_NET_STACK",)
-    RETURN_NAMES = ("controlnet_stack",)
+    RETURN_NAMES = ("CONTROLNET_STACK",)
     FUNCTION = "stack"
     CATEGORY = "EasyUse/Loaders"
 
@@ -2242,7 +2242,7 @@ class controlnetSimple:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "CONDITIONING", "CONDITIONING")
-    RETURN_NAMES = ("pipe", "positive", "negative")
+    RETURN_NAMES = ("PIPE", "POSITIVE", "NEGATIVE")
 
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loaders"
@@ -2290,7 +2290,7 @@ class controlnetAdvanced:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "CONDITIONING", "CONDITIONING")
-    RETURN_NAMES = ("pipe", "positive", "negative")
+    RETURN_NAMES = ("PIPE", "POSITIVE", "NEGATIVE")
 
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loaders"
@@ -2341,7 +2341,7 @@ class controlnetPlusPlus:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "CONDITIONING", "CONDITIONING")
-    RETURN_NAMES = ("pipe", "positive", "negative")
+    RETURN_NAMES = ("PIPE", "POSITIVE", "NEGATIVE")
 
     FUNCTION = "controlnetApply"
     CATEGORY = "EasyUse/Loaders"
@@ -2446,7 +2446,7 @@ class applyFooocusInpaint:
         }
 
     RETURN_TYPES = ("MODEL",)
-    RETURN_NAMES = ("model",)
+    RETURN_NAMES = ("MODEL",)
     CATEGORY = "EasyUse/Inpaint"
     FUNCTION = "apply"
 
@@ -2490,7 +2490,7 @@ class applyBrushNet:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     CATEGORY = "EasyUse/Inpaint"
     FUNCTION = "apply"
 
@@ -2547,7 +2547,7 @@ class applyPowerPaint:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     CATEGORY = "EasyUse/Inpaint"
     FUNCTION = "apply"
 
@@ -2610,7 +2610,7 @@ class applyInpaint:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     CATEGORY = "EasyUse/Inpaint"
     FUNCTION = "apply"
 
@@ -2768,7 +2768,7 @@ class icLightApply:
         }
 
     RETURN_TYPES = ("MODEL", "IMAGE")
-    RETURN_NAMES = ("model", "lighting_image")
+    RETURN_NAMES = ("MODEL", "LIGHTING_IMAGE")
     FUNCTION = "apply"
     CATEGORY = "EasyUse/Adapter"
 
@@ -3164,7 +3164,7 @@ class ipadapterApply(ipadapter):
         }
 
     RETURN_TYPES = ("MODEL", "IMAGE", "MASK", "IPADAPTER",)
-    RETURN_NAMES = ("model", "images", "masks", "ipadapter", )
+    RETURN_NAMES = ("MODEL", "IMAGES", "MASKS", "IPADAPTER", )
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
@@ -3233,7 +3233,7 @@ class ipadapterApplyAdvanced(ipadapter):
         }
 
     RETURN_TYPES = ("MODEL", "IMAGE", "MASK", "IPADAPTER",)
-    RETURN_NAMES = ("model", "images", "masks", "ipadapter", )
+    RETURN_NAMES = ("MODEL", "IMAGES", "MASKS", "IPADAPTER", )
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
@@ -3347,7 +3347,7 @@ class ipadapterStyleComposition(ipadapter):
     CATEGORY = "EasyUse/Adapter"
 
     RETURN_TYPES = ("MODEL", "IPADAPTER",)
-    RETURN_NAMES = ("model", "ipadapter",)
+    RETURN_NAMES = ("MODEL", "IPADAPTER",)
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
@@ -3395,7 +3395,7 @@ class ipadapterApplyEncoder(ipadapter):
         return inputs
 
     RETURN_TYPES = ("MODEL", "CLIP_VISION","IPADAPTER", "EMBEDS", "EMBEDS", )
-    RETURN_NAMES = ("model", "clip_vision","ipadapter", "pos_embed", "neg_embed",)
+    RETURN_NAMES = ("MODEL", "CLIP_VISION","IPADAPTER", "POS_EMBED", "NEG_EMBED",)
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
@@ -3481,7 +3481,7 @@ class ipadapterApplyEmbeds(ipadapter):
         }
 
     RETURN_TYPES = ("MODEL", "IPADAPTER",)
-    RETURN_NAMES = ("model", "ipadapter", )
+    RETURN_NAMES = ("MODEL", "IPADAPTER", )
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
@@ -3524,7 +3524,7 @@ class ipadapterApplyRegional(ipadapter):
         }
 
     RETURN_TYPES = ("PIPE_LINE", "IPADAPTER_PARAMS", "CONDITIONING", "CONDITIONING")
-    RETURN_NAMES = ("pipe", "ipadapter_params", "positive", "negative")
+    RETURN_NAMES = ("PIPE", "IPADAPTER_PARAMS", "POSITIVE", "NEGATIVE")
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
@@ -3610,7 +3610,7 @@ class ipadapterApplyFromParams(ipadapter):
         }
 
     RETURN_TYPES = ("MODEL", "IPADAPTER",)
-    RETURN_NAMES = ("model", "ipadapter", )
+    RETURN_NAMES = ("MODEL", "IPADAPTER", )
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
 
@@ -3714,7 +3714,7 @@ class instantIDApply(instantID):
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING")
-    RETURN_NAMES = ("pipe", "model", "positive", "negative")
+    RETURN_NAMES = ("PIPE", "MODEL", "POSITIVE", "NEGATIVE")
 
     FUNCTION = "apply"
     CATEGORY = "EasyUse/Adapter"
@@ -3761,7 +3761,7 @@ class instantIDApplyAdvanced(instantID):
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING")
-    RETURN_NAMES = ("pipe", "model", "positive", "negative")
+    RETURN_NAMES = ("PIPE", "MODEL", "POSITIVE", "NEGATIVE")
 
     FUNCTION = "apply_advanced"
     CATEGORY = "EasyUse/Adapter"
@@ -3793,7 +3793,7 @@ class applyPulID:
         }
 
     RETURN_TYPES = ("MODEL",)
-    RETURN_NAMES = ("model",)
+    RETURN_NAMES = ("MODEL",)
 
     FUNCTION = "run"
     CATEGORY = "EasyUse/Adapter"
@@ -3905,7 +3905,7 @@ class samplerSettings:
                 }
 
     RETURN_TYPES = ("PIPE_LINE", )
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -3985,7 +3985,7 @@ class samplerSettingsAdvanced:
                 }
 
     RETURN_TYPES = ("PIPE_LINE", )
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4070,7 +4070,7 @@ class samplerSettingsNoiseIn:
                 }
 
     RETURN_TYPES = ("PIPE_LINE", )
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4233,7 +4233,7 @@ class samplerCustomSettings:
                 }
 
     RETURN_TYPES = ("PIPE_LINE", )
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4341,7 +4341,7 @@ class sdTurboSettings:
                 }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4438,7 +4438,7 @@ class cascadeSettings:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4545,7 +4545,7 @@ class layerDiffusionSettings:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4645,7 +4645,7 @@ class layerDiffusionSettingsADDTL:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4706,7 +4706,7 @@ class dynamicCFGSettings:
                 }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
 
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
@@ -4855,7 +4855,7 @@ class samplerFull:
                 }
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE", "MODEL", "CONDITIONING", "CONDITIONING", "LATENT", "VAE", "CLIP", "INT",)
-    RETURN_NAMES = ("pipe",  "image", "model", "positive", "negative", "latent", "vae", "clip", "seed",)
+    RETURN_NAMES = ("PIPE",  "IMAGE", "MODEL", "POSITIVE", "NEGATIVE", "LATENT", "VAE", "CLIP", "SEED",)
     OUTPUT_NODE = True
     FUNCTION = "run"
     CATEGORY = "EasyUse/Sampler"
@@ -5378,7 +5378,7 @@ class samplerSimple(samplerFull):
 
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE",)
-    RETURN_NAMES = ("pipe", "image",)
+    RETURN_NAMES = ("PIPE", "IMAGE",)
     OUTPUT_NODE = True
     FUNCTION = "simple"
     CATEGORY = "EasyUse/Sampler"
@@ -5414,7 +5414,7 @@ class samplerSimpleTiled(samplerFull):
                 }
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE",)
-    RETURN_NAMES = ("pipe", "image",)
+    RETURN_NAMES = ("PIPE", "IMAGE",)
     OUTPUT_NODE = True
     FUNCTION = "tiled"
     CATEGORY = "EasyUse/Sampler"
@@ -5449,7 +5449,7 @@ class samplerSimpleLayerDiffusion(samplerFull):
                 }
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE", "IMAGE", "MASK")
-    RETURN_NAMES = ("pipe", "final_image", "original_image", "alpha")
+    RETURN_NAMES = ("PIPE", "FINAL_IMAGE", "ORIGINAL_IMAGE", "ALPHA")
     OUTPUT_NODE = True
     OUTPUT_IS_LIST = (False, False, False, True)
     FUNCTION = "layerDiffusion"
@@ -5495,7 +5495,7 @@ class samplerSimpleDownscaleUnet(samplerFull):
 
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE",)
-    RETURN_NAMES = ("pipe", "image",)
+    RETURN_NAMES = ("PIPE", "IMAGE",)
     OUTPUT_NODE = True
     FUNCTION = "downscale_unet"
     CATEGORY = "EasyUse/Sampler"
@@ -5549,7 +5549,7 @@ class samplerSimpleInpainting(samplerFull):
                 }
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE", "VAE")
-    RETURN_NAMES = ("pipe", "image", "vae")
+    RETURN_NAMES = ("PIPE", "IMAGE", "VAE")
     OUTPUT_NODE = True
     FUNCTION = "inpainting"
     CATEGORY = "EasyUse/Sampler"
@@ -5686,7 +5686,7 @@ class samplerSDTurbo:
                 }
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE",)
-    RETURN_NAMES = ("pipe", "image",)
+    RETURN_NAMES = ("PIPE", "IMAGE",)
     OUTPUT_NODE = True
     FUNCTION = "run"
 
@@ -5812,7 +5812,7 @@ class samplerCascadeFull:
                 }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "LATENT")
-    RETURN_NAMES = ("pipe", "model_b", "latent_b")
+    RETURN_NAMES = ("PIPE", "MODEL_B", "LATENT_B")
     OUTPUT_NODE = True
 
     FUNCTION = "run"
@@ -5975,7 +5975,7 @@ class samplerCascadeSimple(samplerCascadeFull):
 
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE",)
-    RETURN_NAMES = ("pipe", "image",)
+    RETURN_NAMES = ("PIPE", "IMAGE",)
     OUTPUT_NODE = True
     FUNCTION = "simple"
     CATEGORY = "EasyUse/Sampler"
@@ -6007,7 +6007,7 @@ class unsampler:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "LATENT",)
-    RETURN_NAMES = ("pipe", "latent",)
+    RETURN_NAMES = ("PIPE", "LATENT",)
     FUNCTION = "unsampler"
 
     CATEGORY = "EasyUse/Sampler"
@@ -6115,7 +6115,7 @@ class hiresFix:
                 }
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE", "LATENT", )
-    RETURN_NAMES = ('pipe', 'image', "latent", )
+    RETURN_NAMES = ("PIPE", "IMAGE", "LATENT", )
 
     FUNCTION = "upscale"
     CATEGORY = "EasyUse/Fix"
@@ -6250,7 +6250,7 @@ class preDetailerFix:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     OUTPUT_IS_LIST = (False,)
     FUNCTION = "doit"
 
@@ -6372,7 +6372,7 @@ class preMaskDetailerFix:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     OUTPUT_IS_LIST = (False,)
     FUNCTION = "doit"
 
@@ -6497,7 +6497,7 @@ class detailerFix:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "IMAGE", "IMAGE", "IMAGE")
-    RETURN_NAMES = ("pipe", "image", "cropped_refined", "cropped_enhanced_alpha")
+    RETURN_NAMES = ("PIPE", "IMAGE", "CROPPED_REFINED", "CROPPED_ENHANCED_ALPHA")
     OUTPUT_NODE = True
     OUTPUT_IS_LIST = (False, False, True, True)
     FUNCTION = "doit"
@@ -6650,7 +6650,7 @@ class ultralyticsDetectorForDetailerFix:
                 }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("bbox_segm_pipe",)
+    RETURN_NAMES = ("BBOX_SEGM_PIPE",)
     FUNCTION = "doit"
 
     CATEGORY = "EasyUse/Fix"
@@ -6682,7 +6682,7 @@ class samLoaderForDetailerFix:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("sam_pipe",)
+    RETURN_NAMES = ("SAM_PIPE",)
     FUNCTION = "doit"
 
     CATEGORY = "EasyUse/Fix"
@@ -6722,7 +6722,7 @@ class pipeIn:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     FUNCTION = "flush"
 
     CATEGORY = "EasyUse/Pipe"
@@ -6798,7 +6798,7 @@ class pipeOut:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING", "LATENT", "VAE", "CLIP", "IMAGE", "INT",)
-    RETURN_NAMES = ("pipe", "model", "pos", "neg", "latent", "vae", "clip", "image", "seed",)
+    RETURN_NAMES = ("PIPE", "MODEL", "POS", "NEG", "LATENT", "VAE", "CLIP", "IMAGE", "SEED",)
     FUNCTION = "flush"
 
     CATEGORY = "EasyUse/Pipe"
@@ -6853,7 +6853,7 @@ class pipeEdit:
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "CONDITIONING", "CONDITIONING", "LATENT", "VAE", "CLIP", "IMAGE")
-    RETURN_NAMES = ("pipe", "model", "pos", "neg", "latent", "vae", "clip", "image")
+    RETURN_NAMES = ("PIPE", "MODEL", "POS", "NEG", "LATENT", "VAE", "CLIP", "IMAGE")
     FUNCTION = "edit"
 
     CATEGORY = "EasyUse/Pipe"
@@ -6947,7 +6947,7 @@ class pipeEditPrompt:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     FUNCTION = "edit"
 
     CATEGORY = "EasyUse/Pipe"
@@ -7018,7 +7018,7 @@ class pipeToBasicPipe:
         }
 
     RETURN_TYPES = ("BASIC_PIPE",)
-    RETURN_NAMES = ("basic_pipe",)
+    RETURN_NAMES = ("BASIC_PIPE",)
     FUNCTION = "doit"
 
     CATEGORY = "EasyUse/Pipe"
@@ -7039,7 +7039,7 @@ class pipeBatchIndex:
                 "hidden": {"my_unique_id": "UNIQUE_ID"},}
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     FUNCTION = "doit"
 
     CATEGORY = "EasyUse/Pipe"
@@ -7119,7 +7119,7 @@ class pipeXYPlot:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     FUNCTION = "plot"
 
     CATEGORY = "EasyUse/Pipe"
@@ -7202,7 +7202,7 @@ class pipeXYPlotAdvanced:
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
-    RETURN_NAMES = ("pipe",)
+    RETURN_NAMES = ("PIPE",)
     FUNCTION = "plot"
 
     CATEGORY = "EasyUse/Pipe"
@@ -7458,7 +7458,7 @@ class showLoaderSettingsNames:
         }
 
     RETURN_TYPES = ("STRING", "STRING", "STRING",)
-    RETURN_NAMES = ("ckpt_name", "vae_name", "lora_name")
+    RETURN_NAMES = ("CKPT_NAME", "VAE_NAME", "LORA_NAME")
 
     FUNCTION = "notify"
     OUTPUT_NODE = True
@@ -7503,7 +7503,7 @@ class sliderControl:
         }
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("layer_weights",)
+    RETURN_NAMES = ("LAYER_WEIGHTS",)
 
     FUNCTION = "control"
 
@@ -7542,7 +7542,7 @@ class stableDiffusion3API:
         }
 
     RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
+    RETURN_NAMES = ("IMAGE",)
 
     FUNCTION = "generate"
     OUTPUT_NODE = False
