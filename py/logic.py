@@ -70,7 +70,7 @@ class String:
         }
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("string",)
+    RETURN_NAMES = ("STRING",)
     FUNCTION = "execute"
     CATEGORY = "EasyUse/Logic/Type"
 
@@ -86,7 +86,7 @@ class Int:
         }
 
     RETURN_TYPES = ("INT",)
-    RETURN_NAMES = ("int",)
+    RETURN_NAMES = ("INT",)
     FUNCTION = "execute"
     CATEGORY = "EasyUse/Logic/Type"
 
@@ -112,7 +112,7 @@ class RangeInt:
         }
 
     RETURN_TYPES = ("INT", "INT")
-    RETURN_NAMES = ("range", "range_sizes")
+    RETURN_NAMES = ("RANGE", "RANGE_SIZES")
     INPUT_IS_LIST = True
     OUTPUT_IS_LIST = (True, True)
     FUNCTION = "build_range"
@@ -155,7 +155,7 @@ class Float:
         }
 
     RETURN_TYPES = ("FLOAT",)
-    RETURN_NAMES = ("float",)
+    RETURN_NAMES = ("FLOAT",)
     FUNCTION = "execute"
     CATEGORY = "EasyUse/Logic/Type"
 
@@ -182,7 +182,7 @@ class RangeFloat:
         }
 
     RETURN_TYPES = ("FLOAT", "INT")
-    RETURN_NAMES = ("range", "range_sizes")
+    RETURN_NAMES = ("RANGE", "RANGE_SIZES")
     INPUT_IS_LIST = True
     OUTPUT_IS_LIST = (True, True)
     FUNCTION = "build_range"
@@ -251,7 +251,7 @@ class Boolean:
         }
 
     RETURN_TYPES = ("BOOLEAN",)
-    RETURN_NAMES = ("boolean",)
+    RETURN_NAMES = ("BOOLEAN",)
     FUNCTION = "execute"
     CATEGORY = "EasyUse/Logic/Type"
 
@@ -329,7 +329,7 @@ class anythingIndexSwitch:
         return inputs
 
     RETURN_TYPES = (AlwaysEqualProxy("*"),)
-    RETURN_NAMES = ("value",)
+    RETURN_NAMES = ("VALUE",)
     FUNCTION = "index_switch"
 
     CATEGORY = "EasyUse/Logic/Index Switch"
@@ -361,7 +361,7 @@ class imageIndexSwitch:
         return inputs
 
     RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
+    RETURN_NAMES = ("IMAGE",)
     FUNCTION = "index_switch"
 
     CATEGORY = "EasyUse/Logic/Index Switch"
@@ -393,7 +393,7 @@ class textIndexSwitch:
         return inputs
 
     RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("text",)
+    RETURN_NAMES = ("TEXT",)
     FUNCTION = "index_switch"
 
     CATEGORY = "EasyUse/Logic/Index Switch"
@@ -425,7 +425,7 @@ class conditioningIndexSwitch:
         return inputs
 
     RETURN_TYPES = ("CONDITIONING",)
-    RETURN_NAMES = ("conditioning",)
+    RETURN_NAMES = ("CONDITIONING",)
     FUNCTION = "index_switch"
 
     CATEGORY = "EasyUse/Logic/Index Switch"
@@ -571,7 +571,7 @@ class whileLoopStart:
         return inputs
 
     RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL"] + ["*"] * MAX_FLOW_NUM))
-    RETURN_NAMES = ByPassTypeTuple(tuple(["flow"] + ["value%d" % i for i in range(MAX_FLOW_NUM)]))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["FLOW"] + ["VALUE%d" % i for i in range(MAX_FLOW_NUM)]))
     FUNCTION = "while_loop_open"
 
     CATEGORY = "EasyUse/Logic/While Loop"
@@ -605,7 +605,7 @@ class whileLoopEnd:
         return inputs
 
     RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy('*')] * MAX_FLOW_NUM))
-    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(MAX_FLOW_NUM)]))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["VALUE%d" % i for i in range(MAX_FLOW_NUM)]))
     FUNCTION = "while_loop_close"
 
     CATEGORY = "EasyUse/Logic/While Loop"
@@ -699,7 +699,7 @@ class forLoopStart:
         }
 
     RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL", "INT"] + [AlwaysEqualProxy("*")] * (MAX_FLOW_NUM - 1)))
-    RETURN_NAMES = ByPassTypeTuple(tuple(["flow", "index"] + ["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["FLOW", "INDEX"] + ["VALUE%d" % i for i in range(1, MAX_FLOW_NUM)]))
     FUNCTION = "for_loop_start"
 
     CATEGORY = "EasyUse/Logic/For Loop"
@@ -738,7 +738,7 @@ class forLoopEnd:
         }
 
     RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy("*")] * (MAX_FLOW_NUM - 1)))
-    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["VALUE%d" % i for i in range(1, MAX_FLOW_NUM)]))
     FUNCTION = "for_loop_end"
 
     CATEGORY = "EasyUse/Logic/For Loop"
@@ -793,7 +793,7 @@ class Compare:
         }
 
     RETURN_TYPES = ("BOOLEAN",)
-    RETURN_NAMES = ("boolean",)
+    RETURN_NAMES = ("BOOLEAN",)
     FUNCTION = "compare"
     CATEGORY = "EasyUse/Logic"
 
@@ -840,7 +840,7 @@ class isNone:
         }
 
     RETURN_TYPES = ("BOOLEAN",)
-    RETURN_NAMES = ("boolean",)
+    RETURN_NAMES = ("BOOLEAN",)
     FUNCTION = "execute"
     CATEGORY = "EasyUse/Logic"
 
@@ -859,7 +859,7 @@ class isSDXL:
         }
 
     RETURN_TYPES = ("BOOLEAN",)
-    RETURN_NAMES = ("boolean",)
+    RETURN_NAMES = ("BOOLEAN",)
     FUNCTION = "execute"
     CATEGORY = "EasyUse/Logic"
 
@@ -920,7 +920,7 @@ class batchAnything:
         }
 
     RETURN_TYPES = (AlwaysEqualProxy("*"),)
-    RETURN_NAMES = ("batch",)
+    RETURN_NAMES = ("BATCH",)
 
     FUNCTION = "batch"
     CATEGORY = "EasyUse/Logic"
@@ -1062,7 +1062,7 @@ class outputToList:
         }
 
     RETURN_TYPES = (AlwaysEqualProxy("*"),)
-    RETURN_NAMES = ("list",)
+    RETURN_NAMES = ("LIST",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "output_to_List"
     CATEGORY = "EasyUse/Logic"
