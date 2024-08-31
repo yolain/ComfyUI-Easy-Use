@@ -8,10 +8,9 @@ import comfy.model_management
 from comfy.sd import load_unet
 from comfy.ldm.models.autoencoder import AutoencoderKL
 from comfy.model_base import BaseModel
+from comfy.model_patcher import ModelPatcher
 from PIL import Image
 from nodes import VAEEncode
-
-from ..layer_diffuse.model import ModelPatcher, calculate_weight_adjust_channel
 from ..libs.image import np2tensor, pil2tensor
 
 class UnetParams(TypedDict):
@@ -19,7 +18,6 @@ class UnetParams(TypedDict):
     timestep: torch.Tensor
     c: dict
     cond_or_uncond: torch.Tensor
-
 
 class VAEEncodeArgMax(VAEEncode):
     def encode(self, vae, pixels):
@@ -142,14 +140,6 @@ class ICLight:
 
 
     def apply(self, ic_model_path, model, c_concat: dict, ic_model=None) -> Tuple[ModelPatcher]:
-        try:
-            if hasattr(comfy.lora, "calculate_weight"):
-                comfy.lora.calculate_weight = calculate_weight_adjust_channel(comfy.lora.calculate_weight)
-            else:
-                ModelPatcher.calculate_weight = calculate_weight_adjust_channel(ModelPatcher.calculate_weight)
-        except:
-            pass
-
         device = comfy.model_management.get_torch_device()
         dtype = comfy.model_management.unet_dtype()
         work_model = model.clone()
@@ -182,7 +172,13 @@ class ICLight:
 
         work_model.add_patches(
             patches={
-                ("diffusion_model." + key): (value.to(dtype=dtype, device=device),)
+                ("diffusion_model." + key): (
+                    'diff',
+                    [
+                        value.to(dtype=dtype, device=device),
+                        {"pad_weight": key == 'input_blocks.0.0.weight'}
+                    ]
+                )
                 for key, value in ic_model_state_dict.items()
             }
         )

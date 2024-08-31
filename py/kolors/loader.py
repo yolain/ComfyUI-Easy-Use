@@ -1,6 +1,8 @@
 import json
 import os
 import torch
+import subprocess
+import sys
 import comfy.supported_models
 import comfy.model_patcher
 import comfy.model_management

@@ -7,7 +7,6 @@ import einops
 from comfy import model_management, utils
 from comfy.ldm.modules.attention import optimized_attention
 
-
 module_mapping_sd15 = {
     0: "input_blocks.1.1.transformer_blocks.0.attn1",
     1: "input_blocks.1.1.transformer_blocks.0.attn2",
