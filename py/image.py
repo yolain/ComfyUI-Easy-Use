@@ -404,46 +404,6 @@ class imagePixelPerfect:
 
     return {"ui": {"text": text}, "result": (result,)}
 
-# 图片到遮罩
-class imageToMask:
-  @classmethod
-  def INPUT_TYPES(s):
-    return {"required": {
-        "image": ("IMAGE",),
-        "channel": (['red', 'green', 'blue'],),
-       }
-    }
-
-  RETURN_TYPES = ("MASK",)
-  FUNCTION = "convert"
-  CATEGORY = "EasyUse/Image"
-
-  def convert_to_single_channel(self, image, channel='red'):
-    # Convert to RGB mode to access individual channels
-    image = image.convert('RGB')
-
-    # Extract the desired channel and convert to greyscale
-    if channel == 'red':
-      channel_img = image.split()[0].convert('L')
-    elif channel == 'green':
-      channel_img = image.split()[1].convert('L')
-    elif channel == 'blue':
-      channel_img = image.split()[2].convert('L')
-    else:
-      raise ValueError(
-        "Invalid channel option. Please choose 'red', 'green', or 'blue'.")
-
-    # Convert the greyscale channel back to RGB mode
-    channel_img = Image.merge(
-      'RGB', (channel_img, channel_img, channel_img))
-
-    return channel_img
-
-  def convert(self, image, channel='red'):
-    image = self.convert_to_single_channel(tensor2pil(image), channel)
-    image = pil2tensor(image)
-    return (image.squeeze().mean(2),)
-
 # 图像保存 (简易)
 from nodes import PreviewImage, SaveImage
 class imageSaveSimple:
@@ -1575,7 +1535,6 @@ NODE_CLASS_MAPPINGS = {
   "easy imageScaleDownBy": imageScaleDownBy,
   "easy imageScaleDownToSize": imageScaleDownToSize,
   "easy imageRatio": imageRatio,
-  "easy imageToMask": imageToMask,
   "easy imageConcat": imageConcat,
   "easy imageListToImageBatch": imageListToImageBatch,
   "easy imageBatchToImageList": imageBatchToImageList,
@@ -1608,7 +1567,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageScaleDownBy": "Image Scale Down By",
   "easy imageScaleDownToSize": "Image Scale Down To Size",
   "easy imageRatio": "ImageRatio",
-  "easy imageToMask": "ImageToMask",
   "easy imageHSVMask": "ImageHSVMask",
   "easy imageConcat": "imageConcat",
   "easy imageListToImageBatch": "Image List To Image Batch",

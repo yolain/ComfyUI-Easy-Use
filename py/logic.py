@@ -1144,6 +1144,7 @@ class If:
     RETURN_NAMES = ("?",)
     FUNCTION = "execute"
     CATEGORY = "EasyUse/🚫 Deprecated"
+    DEPRECATED = True
 
     def execute(self, *args, **kwargs):
         return (kwargs['if'] if kwargs['any'] else kwargs['else'],)
@@ -1157,10 +1158,53 @@ class poseEditor:
 
   FUNCTION = "output_pose"
   CATEGORY = "EasyUse/🚫 Deprecated"
+  DEPRECATED = True
   RETURN_TYPES = ()
   RETURN_NAMES = ()
   def output_pose(self, image):
       return ()
+
+class imageToMask:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required": {
+        "image": ("IMAGE",),
+        "channel": (['red', 'green', 'blue'],),
+       }
+    }
+
+  RETURN_TYPES = ("MASK",)
+  FUNCTION = "convert"
+  CATEGORY = "EasyUse/🚫 Deprecated"
+  DEPRECATED = True
+
+  def convert_to_single_channel(self, image, channel='red'):
+    from PIL import Image
+    # Convert to RGB mode to access individual channels
+    image = image.convert('RGB')
+
+    # Extract the desired channel and convert to greyscale
+    if channel == 'red':
+      channel_img = image.split()[0].convert('L')
+    elif channel == 'green':
+      channel_img = image.split()[1].convert('L')
+    elif channel == 'blue':
+      channel_img = image.split()[2].convert('L')
+    else:
+      raise ValueError(
+        "Invalid channel option. Please choose 'red', 'green', or 'blue'.")
+
+    # Convert the greyscale channel back to RGB mode
+    channel_img = Image.merge(
+      'RGB', (channel_img, channel_img, channel_img))
+
+    return channel_img
+
+  def convert(self, image, channel='red'):
+    from .libs.image import pil2tensor, tensor2pil
+    image = self.convert_to_single_channel(tensor2pil(image), channel)
+    image = pil2tensor(image)
+    return (image.squeeze().mean(2),)
 
 NODE_CLASS_MAPPINGS = {
   "easy string": String,
@@ -1196,7 +1240,8 @@ NODE_CLASS_MAPPINGS = {
   "easy clearCacheAll": clearCacheAll,
   "easy cleanGpuUsed": cleanGPUUsed,
   "easy if": If,
-  "easy poseEditor": poseEditor
+  "easy poseEditor": poseEditor,
+  "easy imageToMask": imageToMask
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy string": "String",
@@ -1232,5 +1277,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy clearCacheAll": "Clear Cache All",
   "easy cleanGpuUsed": "Clean GPU Used",
   "easy if": "If (🚫Deprecated)",
-  "easy poseEditor": "PoseEditor (🚫Deprecated)"
+  "easy poseEditor": "PoseEditor (🚫Deprecated)",
+  "easy imageToMask": "ImageToMask (🚫Deprecated)"
 }
