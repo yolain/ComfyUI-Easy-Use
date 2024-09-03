@@ -2431,8 +2431,6 @@ class LLLiteLoader:
 #---------------------------------------------------------------Inpaint 开始----------------------------------------------------------------------#
 
 # FooocusInpaint
-from .libs.fooocus import InpaintHead, InpaintWorker
-
 class applyFooocusInpaint:
     @classmethod
     def INPUT_TYPES(s):
@@ -2451,7 +2449,7 @@ class applyFooocusInpaint:
     FUNCTION = "apply"
 
     def apply(self, model, latent, head, patch):
-
+        from .fooocus import InpaintHead, InpaintWorker
         head_file = get_local_filepath(FOOOCUS_INPAINT_HEAD[head]["model_url"], INPAINT_DIR)
         inpaint_head_model = InpaintHead()
         sd = torch.load(head_file, map_location='cpu')
