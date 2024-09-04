@@ -34,6 +34,7 @@ Docs (Cooming Soon) |
 - Support SD3's model
 - Support Kolors‘s model
 - Support Flux's model
+- Support lazy if else and for loops
 
 ## 👨🏻‍🔧 Installation
 Clone the repo into the **custom_nodes** directory and install the requirements:
@@ -57,9 +58,14 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.2**
 
+- Added `easy batchAny`
+- Added `easy anythingIndexSwitch`
+- Added `easy forLoopStart` and `easy forLoopEnd`  
+- Added `easy ifElse`  
 - Added v2 web frond-end code
 - Added `easy fluxLoader`
 - Added support for `controlnetApply` Related nodes with SD3 and hunyuanDiT
+- Fixed after using `easy applyFooocusInpaint`, all lora models become unusable
 
 **v1.2.1**
 

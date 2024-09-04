@@ -38,6 +38,7 @@
 - 支持 sd3 模型
 - 支持 kolors 模型
 - 支持 flux 模型
+- 支持 惰性条件判断（ifElse）和 for循环
 
 ## 👨🏻‍🔧 安装
 
@@ -62,9 +63,14 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.2**
 
+- 增加 `easy batchAny`
+- 增加 `easy anythingIndexSwitch`
+- 增加 `easy forLoopStart` 和 `easy forLoopEnd`  
+- 增加 `easy ifElse`
 - 增加 v2 版本新前端代码
 - 增加 `easy fluxLoader`
 - 增加 `controlnetApply` 相关节点对sd3和hunyuanDiT的支持
+- 修复 当使用fooocus inpaint后，再使用Lora模型无法生效的问题
 
 **v1.2.1**
 
