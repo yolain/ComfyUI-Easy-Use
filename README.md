@@ -61,7 +61,7 @@ Double-click install.bat to install the required dependencies
 - Using FluxGuidance when you are using a flux model and choose basicGuider and set the cfg>0 on `easy preSamplingCustom`
 - Added `easy loraStackApply` and `easy controlnetStackApply` - Apply loraStack and controlnetStack
 
-- **v1.2.2**
+**v1.2.2**
 
 - Added `easy batchAny`
 - Added `easy anythingIndexSwitch`
