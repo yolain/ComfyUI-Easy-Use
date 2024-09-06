@@ -61,6 +61,11 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.2.3**
+
+- 当你在 `easy preSamplingCustom` 节点上选择basicGuider，CFG>0 且当前模型为Flux时，将使用FluxGuidance
+- 增加 `easy loraStackApply` and `easy controlnetStackApply`
+
 **v1.2.2**
 
 - 增加 `easy batchAny`

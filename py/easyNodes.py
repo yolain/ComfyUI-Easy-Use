@@ -1965,6 +1965,9 @@ class fluxLoader(fullLoader):
                     a1111_prompt_style=False, prompt=None,
                     my_unique_id=None):
 
+        if positive == '':
+            positive = None
+
         return super().adv_pipeloader(ckpt_name, 'Default', vae_name, 0,
                                       lora_name, lora_model_strength, lora_clip_strength,
                                       resolution, empty_latent_width, empty_latent_height,
@@ -2425,7 +2428,6 @@ class LLLiteLoader:
 # ---------------------------------------------------------------加载器 结束----------------------------------------------------------------------#
 
 #---------------------------------------------------------------Inpaint 开始----------------------------------------------------------------------#
-
 # FooocusInpaint
 class applyFooocusInpaint:
     @classmethod
@@ -2720,6 +2722,69 @@ class applyInpaint:
 # ---------------------------------------------------------------Inpaint 结束----------------------------------------------------------------------#
 
 #---------------------------------------------------------------适配器 开始----------------------------------------------------------------------#
+class applyLoraStack:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "lora_stack": ("LORA_STACK",),
+                "model": ("MODEL",),
+            },
+            "optional": {
+                "optional_clip": ("CLIP",),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL", "CLIP")
+    RETURN_NAMES = ("model", "clip")
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def apply(self, lora_stack, model, optional_clip=None):
+        clip = None
+        if lora_stack is not None and len(lora_stack) > 0:
+            for lora in lora_stack:
+                lora = {"lora_name": lora[0], "model": model, "clip": optional_clip, "model_strength": lora[1],
+                        "clip_strength": lora[2]}
+                model, clip = easyCache.load_lora(lora, model, optional_clip, use_cache=False)
+        return (model, clip)
+
+class applyControlnetStack:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "controlnet_stack": ("CONTROLNET_STACK",),
+                "pipe": ("PIPE",),
+            },
+            "optional": {
+            }
+        }
+
+    RETURN_TYPES = ("PIPE",)
+    RETURN_NAMES = ("pipe",)
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def apply(self, controlnet_stack, pipe):
+
+        positive = pipe['positive']
+        negative = pipe['negative']
+        model = pipe['model']
+        vae = pipe['vae']
+
+        if controlnet_stack is not None and len(controlnet_stack) >0:
+            for controlnet in controlnet_stack:
+                positive, negative = easyControlnet().apply(controlnet[0], controlnet[5], positive, negative, controlnet[1], start_percent=controlnet[2], end_percent=controlnet[3], control_net=None, scale_soft_weights=controlnet[4], mask=None, easyCache=easyCache, use_cache=False, model=model, vae=vae)
+
+        new_pipe = {
+            **pipe,
+            "positive": positive,
+            "negetive": negative,
+        }
+        del pipe
+
+        return (new_pipe,)
 
 # 风格对齐
 from .libs.styleAlign import styleAlignBatch, SHARE_NORM_OPTIONS, SHARE_ATTN_OPTIONS
@@ -7595,6 +7660,8 @@ NODE_CLASS_MAPPINGS = {
     "easy controlnetLoader++": controlnetPlusPlus,
     "easy LLLiteLoader": LLLiteLoader,
     # Adapter 适配器
+    "easy loraStackApply": applyLoraStack,
+    "easy controlnetStackApply": applyControlnetStack,
     "easy ipadapterApply": ipadapterApply,
     "easy ipadapterApplyADV": ipadapterApplyAdvanced,
     "easy ipadapterApplyFaceIDKolors": ipadapterApplyFaceIDKolors,
@@ -7717,6 +7784,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy controlnetLoader++": "EasyControlnet++",
     "easy LLLiteLoader": "EasyLLLite",
     # Adapter 适配器
+    "easy loraStackApply": "Easy Apply LoraStack",
+    "easy controlnetStackApply": "Easy Apply CnetStack",
     "easy ipadapterApply": "Easy Apply IPAdapter",
     "easy ipadapterApplyADV": "Easy Apply IPAdapter (Advanced)",
     "easy ipadapterApplyFaceIDKolors": "Easy Apply IPAdapter (FaceID Kolors)",

@@ -323,7 +323,7 @@ class easyLoader:
 
         return load_clip
 
-    def load_lora(self, lora, model=None, clip=None, type=None):
+    def load_lora(self, lora, model=None, clip=None, type=None , use_cache=True):
         lora_name = lora["lora_name"]
         model = model if model is not None else lora["model"]
         clip = clip if clip is not None else lora["clip"]
@@ -338,7 +338,7 @@ class easyLoader:
 
         unique_id = f'{model_hash};{clip_hash};{lora_name};{model_strength};{clip_strength}'
 
-        if unique_id in self.loaded_objects["lora"]:
+        if use_cache and unique_id in self.loaded_objects["lora"]:
             log_node_info("Load LORA",f"{lora_name} cached")
             return self.loaded_objects["lora"][unique_id][0]
 
@@ -396,8 +396,9 @@ class easyLoader:
                 else:
                     model, clip = comfy.sd.load_lora_for_models(model, clip, _lora, model_strength, clip_strength)
 
-            self.add_to_cache("lora", unique_id, (model, clip))
-            self.eviction_based_on_memory()
+            if use_cache:
+                self.add_to_cache("lora", unique_id, (model, clip))
+                self.eviction_based_on_memory()
         else:
             log_node_error(f"LORA NOT FOUND", orig_lora_name)
 
