@@ -8,18 +8,19 @@ from nodes import ConditioningConcat, ConditioningCombine, ConditioningAverage, 
 
 def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_normalization, prompt_weight_interpretation, a1111_prompt_style ,my_unique_id, prompt, easyCache, can_load_lora=True, steps=None, model_type=None):
     styles_selector = is_linked_styles_selector(prompt, my_unique_id, type)
-    title = "正面提示词" if type == 'positive' else "负面提示词"
-    log_node_warn("正在进行" + title + "...")
-
-    if model_type in ['hydit', 'flux']:
-        if model_type == 'flux':
-            text = zh_to_en([text])[0] if has_chinese(text) else text
-        embeddings_final, = CLIPTextEncode().encode(clip, text)
-        return (embeddings_final, "", model, clip)
+    title = "Positive encoding" if type == 'positive' else "Negative encoding"
 
     # Translate cn to en
-    if has_chinese(text):
+    if model_type not in ['hydit'] and text is not None and has_chinese(text):
         text = zh_to_en([text])[0]
+
+    if model_type in ['hydit', 'flux']:
+        log_node_warn(title + "...")
+        embeddings_final, = CLIPTextEncode().encode(clip, text) if text is not None else (None,)
+
+        return (embeddings_final, "", model, clip)
+
+    log_node_warn(title + "...")
 
     positive_seed = find_wildcards_seed(my_unique_id, text, prompt)
     model, clip, text, cond_decode, show_prompt, pipe_lora_stack = process_with_loras(
@@ -30,12 +31,11 @@ def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_
     if clip_skip != 0:
         clipped.clip_layer(clip_skip)
 
-    log_node_warn("正在进行" + title + "编码...")
     steps = steps if steps is not None else find_nearest_steps(my_unique_id, prompt)
     return (advanced_encode(clipped, text, prompt_token_normalization,
                             prompt_weight_interpretation, w_max=1.0,
                             apply_to_pooled='enable',
-                            a1111_prompt_style=a1111_prompt_style, steps=steps), wildcard_prompt, model, clipped)
+                            a1111_prompt_style=a1111_prompt_style, steps=steps) if text is not None else None, wildcard_prompt, model, clipped)
 
 def set_cond(old_cond, new_cond, mode, average_strength, old_cond_start, old_cond_end, new_cond_start, new_cond_end):
     if not old_cond:

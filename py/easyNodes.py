@@ -687,7 +687,7 @@ class latentCompositeMaskedWithCond:
             a1111_prompt_style = pipe["loader_settings"]["a1111_prompt_style"]
             positive_cond = pipe["positive"]
 
-            log_node_warn("正在处理提示词编码...")
+            log_node_warn("Positive encoding...")
             steps = pipe["loader_settings"]["steps"] if "steps" in pipe["loader_settings"] else 1
             positive_embeddings_final = advanced_encode(clip, positive,
                                          positive_token_normalization,
@@ -920,7 +920,7 @@ class fullLoader:
         easyCache.update_loaded_objects(prompt)
 
         # Load models
-        log_node_warn("正在加载模型...")
+        log_node_warn("Loading models...")
         model, clip, vae, clip_vision, lora_stack = easyCache.load_main(ckpt_name, config_name, vae_name, lora_name, lora_model_strength, lora_clip_strength, optional_lora_stack, model_override, clip_override, vae_override, prompt)
 
         # Create Empty Latent
@@ -937,7 +937,6 @@ class fullLoader:
             for controlnet in optional_controlnet_stack:
                 positive_embeddings_final, negative_embeddings_final = easyControlnet().apply(controlnet[0], controlnet[5], positive_embeddings_final, negative_embeddings_final, controlnet[1], start_percent=controlnet[2], end_percent=controlnet[3], control_net=None, scale_soft_weights=controlnet[4], mask=None, easyCache=easyCache, use_cache=True, model=model, vae=vae)
 
-        log_node_warn("加载完毕...")
         pipe = {
             "model": model,
             "positive": positive_embeddings_final,
@@ -1222,7 +1221,6 @@ class cascadeLoader:
         is_positive_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'positive')
         is_negative_linked_styles_selector = is_linked_styles_selector(prompt, my_unique_id, 'negative')
 
-        log_node_warn("正在处理提示词...")
         positive_seed = find_wildcards_seed(my_unique_id, positive, prompt)
         # Translate cn to en
         if has_chinese(positive):
@@ -1258,7 +1256,6 @@ class cascadeLoader:
 
         image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
 
-        log_node_warn("处理结束...")
         pipe = {
             "model": model,
             "positive": positive_embeddings_final,
@@ -1880,15 +1877,14 @@ class kolorsLoader:
 
 
         # text encode
-        log_node_warn("正在进行正向提示词编码...")
+        log_node_warn("Positive encoding...")
         positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive, auto_clean_gpu)
-        log_node_warn("正在进行负面提示词编码...")
+        log_node_warn("Negative encoding...")
         negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative, auto_clean_gpu)
 
         # empty latent
         samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size)
 
-        log_node_warn("处理完毕...")
         pipe = {
             "model": model,
             "chatglm3_model": chatglm3_model,
@@ -1973,7 +1969,7 @@ class fluxLoader(fullLoader):
                                       lora_name, lora_model_strength, lora_clip_strength,
                                       resolution, empty_latent_width, empty_latent_height,
                                       positive, 'none', 'comfy',
-                                      '', 'none', 'comfy',
+                                      None, 'none', 'comfy',
                                       batch_size, model_override, clip_override, vae_override, optional_lora_stack=optional_lora_stack,
                                       optional_controlnet_stack=optional_controlnet_stack,
                                       a1111_prompt_style=a1111_prompt_style, prompt=prompt,
@@ -4203,8 +4199,8 @@ class samplerCustomSettings:
         return {"required": {
                      "pipe": ("PIPE_LINE",),
                      "guider": (['CFG','DualCFG','IP2P+DualCFG','Basic'],{"default":"Basic"}),
-                     "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                     "cfg_negative": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+                     "cfg": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0}),
+                     "cfg_negative": ("FLOAT", {"default": 1.5, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS + ['inversed_euler'],),
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS + ['karrasADV','exponentialADV','polyExponential', 'sdturbo', 'vp', 'alignYourSteps', 'gits'],),
                      "coeff": ("FLOAT", {"default": 1.20, "min": 0.80, "max": 1.50, "step": 0.05}),
@@ -4827,7 +4823,7 @@ class samplerFull:
         return {"required":
                 {"pipe": ("PIPE_LINE",),
                  "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                 "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+                 "cfg": ("FLOAT", {"default": 8, "min": 0.0, "max": 100.0}),
                  "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                  "scheduler": (comfy.samplers.KSampler.SCHEDULERS+new_schedulers,),
                  "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
@@ -5003,6 +4999,14 @@ class samplerFull:
             mp['total_steps'] = 1
         #######################################################################################
         # guider
+        if cfg > 0 and get_sd_version(model) == 'flux':
+            c = []
+            for t in positive:
+                n = [t[0], t[1]]
+                n[1]['guidance'] = cfg
+                c.append(n)
+            positive = c
+
         if guider == 'CFG':
             _guider, = self.get_custom_cls('CFGGuider').get_guider(model, positive, negative, cfg)
         elif guider in ['DualCFG', 'IP2P+DualCFG']:
@@ -5074,19 +5078,19 @@ class samplerFull:
                             width_downscale_factor = float(width / context_dim)
                             height_downscale_factor = float(height / context_dim)
                             if width_downscale_factor > 1.75:
-                                log_node_warn("正在收缩模型Unet...")
-                                log_node_warn("收缩系数:" + str(width_downscale_factor))
+                                log_node_warn("Patch model unet add downscale...")
+                                log_node_warn("Downscale factor:" + str(width_downscale_factor))
                                 (samp_model,) = cls().patch(samp_model, downscale_options['block_number'], width_downscale_factor, 0, 0.35, True, "bicubic",
                                                             "bicubic")
                             elif height_downscale_factor > 1.25:
-                                log_node_warn("正在收缩模型Unet...")
-                                log_node_warn("收缩系数:" + str(height_downscale_factor))
+                                log_node_warn("Patch model unet add downscale....")
+                                log_node_warn("Downscale factor:" + str(height_downscale_factor))
                                 (samp_model,) = cls().patch(samp_model, downscale_options['block_number'], height_downscale_factor, 0, 0.35, True, "bicubic",
                                                             "bicubic")
                 else:
                     cls = ALL_NODE_CLASS_MAPPINGS['PatchModelAddDownscale']
-                    log_node_warn("正在收缩模型Unet...")
-                    log_node_warn("收缩系数:" + str(downscale_options['downscale_factor']))
+                    log_node_warn("Patch model unet add downscale....")
+                    log_node_warn("Downscale factor:" + str(downscale_options['downscale_factor']))
                     (samp_model,) = cls().patch(samp_model, downscale_options['block_number'], downscale_options['downscale_factor'], downscale_options['start_percent'], downscale_options['end_percent'], downscale_options['downscale_after_skip'], downscale_options['downscale_method'], downscale_options['upscale_method'])
             return samp_model
 
@@ -6961,9 +6965,9 @@ class pipeEditPrompt:
             auto_clean_gpu = pipe["loader_settings"]["auto_clean_gpu"] if "auto_clean_gpu" in pipe["loader_settings"] else False
             chatglm3_model = pipe["chatglm3_model"] if "chatglm3_model" in pipe else None
             # text encode
-            log_node_warn("正在进行正向提示词编码...")
+            log_node_warn("Positive encoding...")
             positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive, auto_clean_gpu)
-            log_node_warn("正在进行负面提示词编码...")
+            log_node_warn("Negative encoding...")
             negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative, auto_clean_gpu)
         else:
             clip_skip = pipe["loader_settings"]["clip_skip"] if "clip_skip" in pipe["loader_settings"] else -1
