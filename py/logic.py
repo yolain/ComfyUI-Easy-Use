@@ -909,6 +909,24 @@ class xyAny:
 
         return (new_x, new_y)
 
+class lengthAnything:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "any": (AlwaysEqualProxy("*"), {}),
+            }
+        }
+
+    RETURN_TYPES = ("INT",)
+    RETURN_NAMES = ("length",)
+
+    FUNCTION = "getLength"
+    CATEGORY = "EasyUse/Logic"
+
+    def getLength(self, any):
+        return (len(any),)
+
 class batchAnything:
     @classmethod
     def INPUT_TYPES(s):
@@ -1232,6 +1250,7 @@ NODE_CLASS_MAPPINGS = {
   "easy isSDXL": isSDXL,
   "easy outputToList": outputToList,
   "easy xyAny": xyAny,
+  "easy lengthAnything": lengthAnything,
   "easy batchAnything": batchAnything,
   "easy convertAnything": convertAnything,
   "easy showAnything": showAnything,
@@ -1268,7 +1287,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy isNone": "Is None",
   "easy isSDXL": "Is SDXL",
   "easy outputToList": "Output to List",
-  "easy xyAny": "XYAny",
+  "easy xyAny": "XY Any",
+  "easy lengthAnything": "Length Any",
   "easy batchAnything": "Batch Any",
   "easy convertAnything": "Convert Any",
   "easy showAnything": "Show Any",
