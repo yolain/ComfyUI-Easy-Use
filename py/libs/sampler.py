@@ -163,7 +163,7 @@ class easySampler:
         out["samples"] = samples
         return out
 
-    def custom_advanced_ksampler(self, noise, guider, sampler, sigmas, latent_image):
+    def custom_advanced_ksampler(self, noise, guider, sampler, sigmas, latent_image, preview_latent=False):
         latent = latent_image
         latent_image = latent["samples"]
         latent = latent.copy()
@@ -175,7 +175,26 @@ class easySampler:
             noise_mask = latent["noise_mask"]
 
         x0_output = {}
-        callback = latent_preview.prepare_callback(guider.model_patcher, sigmas.shape[-1] - 1, x0_output)
+        previewer = False
+
+        model = guider.model_patcher
+        steps = sigmas.shape[-1] - 1
+        if preview_latent:
+            previewer = latent_preview.get_previewer(model.load_device, model.model.latent_format)
+
+        pbar = comfy.utils.ProgressBar(steps)
+
+        preview_format = "JPEG"
+        if preview_format not in ["JPEG", "PNG"]:
+            preview_format = "JPEG"
+        def callback(step, x0, x, total_steps):
+            if x0_output is not None:
+                x0_output["x0"] = x0
+
+            preview_bytes = None
+            if previewer:
+                preview_bytes = previewer.decode_latent_to_preview_image(preview_format, x0)
+            pbar.update_absolute(step + 1, total_steps, preview_bytes)
 
         disable_pbar = not comfy.utils.PROGRESS_BAR_ENABLED
         samples = guider.sample(noise.generate_noise(latent), latent_image, sampler, sigmas, denoise_mask=noise_mask,
@@ -189,7 +208,6 @@ class easySampler:
             out_denoised["samples"] = guider.model_patcher.model.process_latent_out(x0_output["x0"].cpu())
         else:
             out_denoised = out
-
         return (out, out_denoised)
 
     def get_value_by_id(self, key: str, my_unique_id: Any) -> Optional[Any]:
