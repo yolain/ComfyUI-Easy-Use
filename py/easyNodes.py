@@ -732,7 +732,7 @@ class injectNoiseToLatent:
                 "noise": ("LATENT",),
                 "mask": ("MASK",),
                 "mix_randn_amount": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1000.0, "step": 0.001}),
-                # "seed": ("INT", {"default": 123, "min": 0, "max": 0xffffffffffffffff, "step": 1}),
+                "seed": ("INT", {"default": 123, "min": 0, "max": 0xffffffffffffffff, "step": 1}),
             }
         }
 
@@ -740,7 +740,7 @@ class injectNoiseToLatent:
     FUNCTION = "inject"
     CATEGORY = "EasyUse/Latent"
 
-    def inject(self,strength, normalize, average, pipe_to_noise=None, noise=None, image_to_latent=None, latent=None, mix_randn_amount=0, mask=None):
+    def inject(self,strength, normalize, average, pipe_to_noise=None, noise=None, image_to_latent=None, latent=None, mix_randn_amount=0, mask=None, seed=None):
 
         vae = pipe_to_noise["vae"] if pipe_to_noise is not None else pipe_to_noise["vae"]
         batch_size = pipe_to_noise["loader_settings"]["batch_size"] if pipe_to_noise is not None and "batch_size" in pipe_to_noise["loader_settings"] else 1
@@ -755,7 +755,7 @@ class injectNoiseToLatent:
         elif latent is not None:
             latents = latent
         else:
-            raise Exception("InjectNoiseToLatent: No input latent provided")
+            latents = {"samples": noise["samples"].clone()}
 
         samples = latents.copy()
         if latents["samples"].shape != noise["samples"].shape:
@@ -774,8 +774,8 @@ class injectNoiseToLatent:
                 mask = mask.repeat((noised.shape[0] - 1) // mask.shape[0] + 1, 1, 1, 1)[:noised.shape[0]]
             noised = mask * noised + (1 - mask) * latents["samples"]
         if mix_randn_amount > 0:
-            # if seed is not None:
-            #     torch.manual_seed(seed)
+            if seed is not None:
+                torch.manual_seed(seed)
             rand_noise = torch.randn_like(noised)
             noised = ((1 - mix_randn_amount) * noised + mix_randn_amount *
                       rand_noise) / ((mix_randn_amount ** 2 + (1 - mix_randn_amount) ** 2) ** 0.5)
@@ -4892,7 +4892,7 @@ class samplerFull:
                  "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                  "scheduler": (comfy.samplers.KSampler.SCHEDULERS+new_schedulers,),
                  "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save"],),
+                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -5198,7 +5198,7 @@ class samplerFull:
             # 开始推理
             if samp_custom is not None:
                 noise, _guider, _sampler, sigmas = self.get_sampler_custom(samp_model, samp_positive, samp_negative, samp_seed, samp_custom)
-                samp_samples, _ = sampler.custom_advanced_ksampler(noise, _guider, _sampler, sigmas, samp_samples)
+                samp_samples, samp_blend_samples = sampler.custom_advanced_ksampler(noise, _guider, _sampler, sigmas, samp_samples, preview_latent=preview_latent)
             elif scheduler == 'align_your_steps':
                 model_type = get_sd_version(samp_model)
                 if model_type == 'unknown':
@@ -5217,23 +5217,27 @@ class samplerFull:
             latent = samp_samples["samples"]
 
             # 解码图片
-            if tile_size is not None:
-                samp_images = samp_vae.decode_tiled(latent, tile_x=tile_size // 8, tile_y=tile_size // 8, )
+            if image_output == 'None':
+                samp_images, new_images, alpha, results = None, None, None, None
+                spent_time = 'Diffusion:' + str((end_time - start_time) / 1000) + '″'
             else:
-                samp_images = samp_vae.decode(latent).cpu()
+                if tile_size is not None:
+                    samp_images = samp_vae.decode_tiled(latent, tile_x=tile_size // 8, tile_y=tile_size // 8, )
+                else:
+                    samp_images = samp_vae.decode(latent).cpu()
 
-            # LayerDiffusion Decode
-            if layerDiffuse is not None:
-                new_images, samp_images, alpha = layerDiffuse.layer_diffusion_decode(layer_diffusion_method, latent, samp_blend_samples, samp_images, samp_model)
-            else:
-                new_images = samp_images
-                alpha = None
+                # LayerDiffusion Decode
+                if layerDiffuse is not None:
+                    new_images, samp_images, alpha = layerDiffuse.layer_diffusion_decode(layer_diffusion_method, latent, samp_blend_samples, samp_images, samp_model)
+                else:
+                    new_images = samp_images
+                    alpha = None
 
-            # 推理总耗时（包含解码）
-            end_decode_time = int(time.time() * 1000)
-            spent_time = 'Diffusion:' + str((end_time-start_time)/1000)+'″, VAEDecode:' + str((end_decode_time-end_time)/1000)+'″ '
+                # 推理总耗时（包含解码）
+                end_decode_time = int(time.time() * 1000)
+                spent_time = 'Diffusion:' + str((end_time-start_time)/1000)+'″, VAEDecode:' + str((end_decode_time-end_time)/1000)+'″ '
 
-            results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
+                results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
 
             new_pipe = {
                 **pipe,
@@ -5285,9 +5289,8 @@ class samplerFull:
                 return {"ui": {"images": results},
                         "result": sampler.get_output(new_pipe,)}
 
-            if image_output in ("Hide", "Hide&Save"):
-                return {"ui": {},
-                    "result": sampler.get_output(new_pipe,)}
+            if image_output in ("Hide", "Hide&Save", "None"):
+                return {"ui":{}, "result":sampler.get_output(new_pipe,)}
 
             if image_output in ("Sender", "Sender&Save"):
                 PromptServer.instance.send_sync("img-send", {"link_id": link_id, "images": results})
@@ -5404,13 +5407,13 @@ class samplerFull:
 
             del pipe
 
-            if image_output in ("Hide", "Hide&Save"):
-                return sampler.get_output(new_pipe)
+            if image_output in ("Hide", "Hide&Save", "None"):
+                return {"ui": {}, "result": sampler.get_output(new_pipe,)}
 
-            return {"ui": {"images": results}, "result": (sampler.get_output(new_pipe))}
+            return {"ui": {"images": results}, "result": sampler.get_output(new_pipe)}
 
         preview_latent = True
-        if image_output in ("Hide", "Hide&Save"):
+        if image_output in ("Hide", "Hide&Save", "None"):
             preview_latent = False
 
         xyplot_id = next((x for x in prompt if "XYPlot" in str(prompt[x]["class_type"])), None)
@@ -5430,7 +5433,7 @@ class samplerSimple(samplerFull):
     def INPUT_TYPES(cls):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
-                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -5456,6 +5459,42 @@ class samplerSimple(samplerFull):
                                  None, model, None, None, None, None, None, None,
                                  None, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
 
+class samplerSimpleCustom(samplerFull):
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required":
+                {"pipe": ("PIPE_LINE",),
+                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],{"default": "None"}),
+                 "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
+                 "save_prefix": ("STRING", {"default": "ComfyUI"}),
+                 },
+                "optional": {
+                    "model": ("MODEL",),
+                },
+                "hidden":
+                  {"tile_size": "INT", "prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID",
+                    "embeddingsList": (folder_paths.get_filename_list("embeddings"),)
+                  }
+                }
+
+
+    RETURN_TYPES = ("PIPE_LINE", "LATENT", "LATENT", "IMAGE")
+    RETURN_NAMES = ("pipe", "output", "denoised_output", "image")
+    OUTPUT_NODE = True
+    FUNCTION = "simple"
+    CATEGORY = "EasyUse/Sampler"
+
+    def simple(self, pipe, image_output, link_id, save_prefix, model=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False):
+
+        result = super().run(pipe, None, None, None, None, None, image_output, link_id, save_prefix,
+                                 None, model, None, None, None, None, None, None,
+                                 None, prompt, extra_pnginfo, my_unique_id, force_full_denoise, disable_noise)
+
+        pipe = result["result"][0] if "result" in result else None
+
+        return ({"ui": result['ui'], "result": (pipe, pipe["samples"], pipe["blend_samples"], pipe["images"])})
+
 # 简易采样器 (Tiled)
 class samplerSimpleTiled(samplerFull):
 
@@ -5467,7 +5506,7 @@ class samplerSimpleTiled(samplerFull):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
                  "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
-                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"})
                  },
@@ -5502,7 +5541,7 @@ class samplerSimpleLayerDiffusion(samplerFull):
     def INPUT_TYPES(cls):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
-                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save"], {"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"})
                  },
@@ -7698,6 +7737,7 @@ NODE_CLASS_MAPPINGS = {
     # kSampler k采样器
     "easy fullkSampler": samplerFull,
     "easy kSampler": samplerSimple,
+    "easy kSamplerCustom": samplerSimpleCustom,
     "easy kSamplerTiled": samplerSimpleTiled,
     "easy kSamplerLayerDiffusion": samplerSimpleLayerDiffusion,
     "easy kSamplerInpainting": samplerSimpleInpainting,
@@ -7821,6 +7861,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy preSamplingLayerDiffusionADDTL": "PreSampling (LayerDiffuse ADDTL)",
     # kSampler k采样器
     "easy kSampler": "EasyKSampler",
+    "easy kSamplerCustom": "EasyKSampler (Custom)",
     "easy fullkSampler": "EasyKSampler (Full)",
     "easy kSamplerTiled": "EasyKSampler (Tiled Decode)",
     "easy kSamplerLayerDiffusion": "EasyKSampler (LayerDiffuse)",
