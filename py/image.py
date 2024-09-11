@@ -318,6 +318,30 @@ class imageScaleDownToSize(imageScaleDownBy):
     scale_by = min(scale_by, 1.0)
     return self.image_scale_down_by(images, scale_by)
 
+class imageScaleToNormPixels:
+  upscale_methods = ["nearest-exact", "bilinear", "area", "bicubic", "lanczos"]
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "image": ("IMAGE",),
+        "upscale_method": (s.upscale_methods,),
+        "scale_by": ("FLOAT", {"default": 1.0, "min": 0.01, "max": 8.0, "step": 0.01}),
+      }
+    }
+
+  RETURN_TYPES = ("IMAGE",)
+  RETURN_NAMES = ("image",)
+  FUNCTION = "scale"
+  CATEGORY = "EasyUse/Image"
+
+  def scale(self, image, upscale_method, scale_by):
+    height, width = image.shape[1:3]
+    width = int(width * scale_by - width * scale_by % 8)
+    height = int(height * scale_by - height * scale_by % 8)
+    upscale_image_cls = ALL_NODE_CLASS_MAPPINGS['ImageScale']
+    image, = upscale_image_cls().upscale(image, upscale_method, width, height, "disabled")
+    return (image,)
 
 # 图像比率
 class imageRatio:
@@ -607,6 +631,65 @@ class imageSplitGrid:
 
     return (torch.cat(new_images, dim=0),)
 
+class imageSplitTiles:
+
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "image": ("IMAGE",),
+        "overlap_ratio": ("FLOAT", {"default": 0, "min": 0, "max": 0.5, "step": 0.01, }),
+        "overlap_offset": ("INT", {"default": 0, "min": - MAX_RESOLUTION // 2, "max": MAX_RESOLUTION // 2, "step": 1, }),
+        "tiles_num": ("INT", {"default": 2, "min": 2, "max": 50, "step": 1}),
+      },
+      "optional": {
+        "norm": ("BOOLEAN", {"default": True}),
+      }
+    }
+
+  RETURN_TYPES = ("IMAGE", "MASK", "INT", "INT")
+  RETURN_NAMES = ("tiles", "masks", "overlap_x", "overlap_y")
+  FUNCTION = "doit"
+  CATEGORY = "EasyUse/Image"
+
+  def doit(self, image, overlap_ratio, overlap_offset, tiles_num, norm=True):
+    height, width = image.shape[1:3]
+
+    is_landscape = width >= height
+
+    tite_w = width // tiles_num
+    tile_h = height // tiles_num
+    overlap = int(tite_w * overlap_ratio) + overlap_offset  if is_landscape else int(tile_h * overlap_ratio) + overlap_offset
+    overlap_w = tite_w + overlap if is_landscape else width
+    overlap_h = height if is_landscape else tile_h + overlap
+    if norm:
+      overlap_w = int(overlap_w - overlap_w % 8)
+      overlap_h = int(overlap_h - overlap_h % 8)
+    else:
+      overlap_w = int(overlap_w)
+      overlap_h = int(overlap_h)
+    cls = ALL_NODE_CLASS_MAPPINGS['ImageCrop']
+    solid_mask_cls = ALL_NODE_CLASS_MAPPINGS['SolidMask']
+    feather_mask_cls = ALL_NODE_CLASS_MAPPINGS['FeatherMask']
+
+    overlap_x = int((width - overlap_w) / (tiles_num - 1)) if is_landscape else 0
+    overlap_y = 0 if is_landscape else int((height - overlap_h) / (tiles_num - 1))
+
+    tiles, masks = [], []
+    for i in range(tiles_num):
+      tile, = cls().crop(image, overlap_w, overlap_h, int(overlap_x * i), int(overlap_y * i))
+      tiles.append(tile)
+      fearing_left = int(overlap) if overlap_x * i > 0 else 0
+      fearing_top = int(overlap) if overlap_y * i > 0 else 0
+      mask, = solid_mask_cls().solid(1, overlap_w, overlap_h)
+      mask, = feather_mask_cls().feather(mask, fearing_left, fearing_top, 0, 0)
+      masks.append(mask)
+
+    tiles = torch.cat(tiles, dim=0)
+    masks = torch.cat(masks, dim=0)
+
+    return (tiles, masks, overlap_x, overlap_y)
+
 class imagesSplitImage:
     @classmethod
     def INPUT_TYPES(s):
@@ -624,7 +707,6 @@ class imagesSplitImage:
     def split(self, images,):
       new_images = torch.chunk(images, len(images), dim=0)
       return new_images
-
 
 class imageConcat:
   @classmethod
@@ -1143,75 +1225,6 @@ class humanSegmentation:
 
       return (output_image, mask, bbox)
 
-class imageSplitTiles:
-
-  @classmethod
-  def INPUT_TYPES(s):
-    return {
-      "required": {
-        "image": ("IMAGE",),
-        "overlap_rate": ("FLOAT", {"default": 0, "min": 0, "max": 0.5, "step": 0.01, }),
-        "overlap_offset": ("INT", {"default": 0, "min": - MAX_RESOLUTION // 2, "max": MAX_RESOLUTION // 2, "step": 1, }),
-        "tiles_num": ("INT", {"default": 2, "min": 2, "max": 50, "step": 1}),
-      },
-      "optional": {
-        "norm": ("BOOLEAN", {"default": True}),
-      }
-    }
-
-  RETURN_TYPES = ("IMAGE", "MASK", "INT", "INT")
-  RETURN_NAMES = ("tiles", "masks", "overlap_x", "overlap_y")
-  FUNCTION = "doit"
-  CATEGORY = "EasyUse/Image"
-
-  def doit(self, image, overlap_rate, overlap_offset, tiles_num, norm=True):
-    # if norm:
-    #   width = int(width * scale_by - width * scale_by % 8)
-    #   height = int(height * scale_by - height * scale_by % 8)
-    # else:
-    #   width = int(width * scale_by)
-    #   height = int(height * scale_by)
-    # if scale_by != 1:
-    #   upscale_image_cls = ALL_NODE_CLASS_MAPPINGS['ImageScale']
-    #   image, = upscale_image_cls().upscale(image, "nearest-exact", width, height, "disabled")
-
-    height, width = image.shape[1:3]
-
-    is_landscape = width >= height
-
-    tite_w = width // tiles_num
-    tile_h = height // tiles_num
-    overlap = int(tite_w * overlap_rate) + overlap_offset  if is_landscape else int(tile_h * overlap_rate) + overlap_offset
-    overlap_w = tite_w + overlap if is_landscape else width
-    overlap_h = height if is_landscape else tile_h + overlap
-    if norm:
-      overlap_w = int(overlap_w - overlap_w % 8)
-      overlap_h = int(overlap_h - overlap_h % 8)
-    else:
-      overlap_w = int(overlap_w)
-      overlap_h = int(overlap_h)
-    cls = ALL_NODE_CLASS_MAPPINGS['ImageCrop']
-    solid_mask_cls = ALL_NODE_CLASS_MAPPINGS['SolidMask']
-    feather_mask_cls = ALL_NODE_CLASS_MAPPINGS['FeatherMask']
-
-    overlap_x = int((width - overlap_w) / (tiles_num - 1)) if is_landscape else 0
-    overlap_y = 0 if is_landscape else int((height - overlap_h) / (tiles_num - 1))
-
-    tiles, masks = [], []
-    for i in range(tiles_num):
-      tile, = cls().crop(image, overlap_w, overlap_h, int(overlap_x * i), int(overlap_y * i))
-      tiles.append(tile)
-      fearing_left = int(overlap) if overlap_x * i > 0 else 0
-      fearing_top = int(overlap) if overlap_y * i > 0 else 0
-      mask, = solid_mask_cls().solid(1, overlap_w, overlap_h)
-      mask, = feather_mask_cls().feather(mask, fearing_left, fearing_top, 0, 0)
-      masks.append(mask)
-
-    tiles = torch.cat(tiles, dim=0)
-    masks = torch.cat(masks, dim=0)
-
-    return (tiles, masks, overlap_x, overlap_y)
-
 class imageCropFromMask:
     @classmethod
     def INPUT_TYPES(s):
@@ -1630,6 +1643,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageScaleDown": imageScaleDown,
   "easy imageScaleDownBy": imageScaleDownBy,
   "easy imageScaleDownToSize": imageScaleDownToSize,
+  "easy imageScaleToNormPixels": imageScaleToNormPixels,
   "easy imageRatio": imageRatio,
   "easy imageConcat": imageConcat,
   "easy imageListToImageBatch": imageListToImageBatch,
@@ -1664,6 +1678,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageScaleDown": "Image Scale Down",
   "easy imageScaleDownBy": "Image Scale Down By",
   "easy imageScaleDownToSize": "Image Scale Down To Size",
+  "easy imageScaleToNormPixels": "ImageScaleToNormPixels",
   "easy imageRatio": "ImageRatio",
   "easy imageHSVMask": "ImageHSVMask",
   "easy imageConcat": "imageConcat",
