@@ -246,9 +246,9 @@ def to_lora_patch_dict(state_dict: dict) -> dict:
 def easySave(images, filename_prefix, output_type, prompt=None, extra_pnginfo=None):
     """Save or Preview Image"""
     from nodes import PreviewImage, SaveImage
-    if output_type == "Hide":
+    if output_type in ["Hide", "None"]:
         return list()
-    if output_type in ["Preview", "Preview&Choose"]:
+    elif output_type in ["Preview", "Preview&Choose"]:
         filename_prefix = 'easyPreview'
         results = PreviewImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
         return results['ui']['images']

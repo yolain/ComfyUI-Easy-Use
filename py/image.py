@@ -7,7 +7,7 @@ import comfy.utils
 import comfy.model_management
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
-from nodes import MAX_RESOLUTION
+from nodes import MAX_RESOLUTION, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
 from PIL import Image, ImageDraw, ImageFilter
 from torchvision.transforms import Resize, CenterCrop, GaussianBlur
 from torchvision.transforms.functional import to_pil_image
@@ -18,7 +18,7 @@ from .libs.colorfix import adain_color_fix, wavelet_color_fix
 from .libs.chooser import ChooserMessage, ChooserCancelled
 from .config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS, MEDIAPIPE_MODELS, MEDIAPIPE_DIR
 
-
+any_type = AlwaysEqualProxy("*")
 # 图像数量
 class imageCount:
   @classmethod
@@ -437,6 +437,34 @@ class imageSaveSimple:
     else:
       return SaveImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
 
+class imageSaveWithText(SaveImage):
+
+  @classmethod
+  def INPUT_TYPES(s):
+    input_types = SaveImage.INPUT_TYPES()
+    input_types['optional'] = {
+      "text": ("STRING", {"default": "", "forceInput": True})
+    }
+    return input_types
+
+  RETURN_TYPES = ("IMAGE", "STRING")
+  RETURN_NAMES = ('image', "text")
+
+  FUNCTION = "save"
+  OUTPUT_NODE = True
+  CATEGORY = "EasyUse/Image"
+
+  def save(self, images, filename_prefix="ComfyUI", text=None, prompt=None, extra_pnginfo=None):
+    result = self.save_images(images, filename_prefix, prompt, extra_pnginfo)
+    if text is not None:
+      for image in result['ui']['images']:
+        path = os.path.join(folder_paths.output_directory, image['subfolder'], image['filename'])
+        text_path = os.path.splitext(path)[0] + '.txt'
+        with open(text_path, 'w') as f:
+            f.write(text)
+      result['result']['text'] = text
+    result['result']['images'] = images
+    return result
 
 # 图像批次合并
 class JoinImageBatch:
@@ -1115,6 +1143,74 @@ class humanSegmentation:
 
       return (output_image, mask, bbox)
 
+class imageSplitTiles:
+
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "image": ("IMAGE",),
+        "overlap_rate": ("FLOAT", {"default": 0, "min": 0, "max": 0.5, "step": 0.01, }),
+        "overlap_offset": ("INT", {"default": 0, "min": - MAX_RESOLUTION // 2, "max": MAX_RESOLUTION // 2, "step": 1, }),
+        "tiles_num": ("INT", {"default": 2, "min": 2, "max": 50, "step": 1}),
+      },
+      "optional": {
+        "norm": ("BOOLEAN", {"default": True}),
+      }
+    }
+
+  RETURN_TYPES = ("IMAGE", "MASK", "INT", "INT")
+  RETURN_NAMES = ("tiles", "masks", "overlap_x", "overlap_y")
+  FUNCTION = "doit"
+  CATEGORY = "EasyUse/Image"
+
+  def doit(self, image, overlap_rate, overlap_offset, tiles_num, norm=True):
+    # if norm:
+    #   width = int(width * scale_by - width * scale_by % 8)
+    #   height = int(height * scale_by - height * scale_by % 8)
+    # else:
+    #   width = int(width * scale_by)
+    #   height = int(height * scale_by)
+    # if scale_by != 1:
+    #   upscale_image_cls = ALL_NODE_CLASS_MAPPINGS['ImageScale']
+    #   image, = upscale_image_cls().upscale(image, "nearest-exact", width, height, "disabled")
+
+    height, width = image.shape[1:3]
+
+    is_landscape = width >= height
+
+    tite_w = width // tiles_num
+    tile_h = height // tiles_num
+    overlap = int(tite_w * overlap_rate) + overlap_offset  if is_landscape else int(tile_h * overlap_rate) + overlap_offset
+    overlap_w = tite_w + overlap if is_landscape else width
+    overlap_h = height if is_landscape else tile_h + overlap
+    if norm:
+      overlap_w = int(overlap_w - overlap_w % 8)
+      overlap_h = int(overlap_h - overlap_h % 8)
+    else:
+      overlap_w = int(overlap_w)
+      overlap_h = int(overlap_h)
+    cls = ALL_NODE_CLASS_MAPPINGS['ImageCrop']
+    solid_mask_cls = ALL_NODE_CLASS_MAPPINGS['SolidMask']
+    feather_mask_cls = ALL_NODE_CLASS_MAPPINGS['FeatherMask']
+
+    overlap_x = int((width - overlap_w) / (tiles_num - 1)) if is_landscape else 0
+    overlap_y = 0 if is_landscape else int((height - overlap_h) / (tiles_num - 1))
+
+    tiles, masks = [], []
+    for i in range(tiles_num):
+      tile, = cls().crop(image, overlap_w, overlap_h, int(overlap_x * i), int(overlap_y * i))
+      tiles.append(tile)
+      fearing_left = int(overlap) if overlap_x * i > 0 else 0
+      fearing_top = int(overlap) if overlap_y * i > 0 else 0
+      mask, = solid_mask_cls().solid(1, overlap_w, overlap_h)
+      mask, = feather_mask_cls().feather(mask, fearing_left, fearing_top, 0, 0)
+      masks.append(mask)
+
+    tiles = torch.cat(tiles, dim=0)
+    masks = torch.cat(masks, dim=0)
+
+    return (tiles, masks, overlap_x, overlap_y)
 
 class imageCropFromMask:
     @classmethod
@@ -1445,7 +1541,7 @@ class removeLocalImage:
   def INPUT_TYPES(s):
       return {
         "required": {
-          "any": (AlwaysEqualProxy("*"),),
+          "any": (any_type,),
           "file_name": ("STRING",{"default":""}),
         },
       }
@@ -1541,9 +1637,11 @@ NODE_CLASS_MAPPINGS = {
   "easy imageSplitList": imageSplitList,
   "easy imageSplitGrid": imageSplitGrid,
   "easy imagesSplitImage": imagesSplitImage,
+  "easy imageSplitTiles": imageSplitTiles,
   "easy imageCropFromMask": imageCropFromMask,
   "easy imageUncropFromBBOX": imageUncropFromBBOX,
   "easy imageSave": imageSaveSimple,
+  # "easy imageSaveWithText": imageSaveWithText,
   "easy imageRemBg": imageRemBg,
   "easy imageChooser": imageChooser,
   "easy imageColorMatch": imageColorMatch,
@@ -1573,10 +1671,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageBatchToImageList": "Image Batch To Image List",
   "easy imageSplitList": "imageSplitList",
   "easy imageSplitGrid": "imageSplitGrid",
+  "easy imageSplitTiles": "imageSplitTiles",
   "easy imagesSplitImage": "imagesSplitImage",
   "easy imageCropFromMask": "imageCropFromMask",
   "easy imageUncropFromBBOX": "imageUncropFromBBOX",
-  "easy imageSave": "SaveImage (Simple)",
+  "easy imageSave": "Save Image (Simple)",
+  # "easy imageSaveWithText": "Save Image With Text",
   "easy imageRemBg": "Image Remove Bg",
   "easy imageChooser": "Image Chooser",
   "easy imageColorMatch": "Image Color Match",
