@@ -2,17 +2,19 @@ from typing import Iterator, List, Tuple, Dict, Any, Union, Optional
 from _decimal import Context, getcontext
 from decimal import Decimal
 from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, compare_revision
-from .libs.cache import remove_cache
+from .libs.cache import cache, update_cache, remove_cache
 import numpy as np
 import re
 import json
 import torch
 import comfy.utils
 
+
 DEFAULT_FLOW_NUM = 2
 MAX_FLOW_NUM = 10
 lazy_options = {"lazy": True} if compare_revision(2543) else {}
 
+any_type = AlwaysEqualProxy("*")
 def validate_list_args(args: Dict[str, List[Any]]) -> Tuple[bool, Optional[str], Optional[str]]:
     """
     Checks that if there are multiple arguments, they are all the same length or 1
@@ -325,10 +327,10 @@ class anythingIndexSwitch:
             }
         }
         for i in range(DEFAULT_FLOW_NUM):
-            inputs["optional"]["value%d" % i] = (AlwaysEqualProxy("*"),lazy_options)
+            inputs["optional"]["value%d" % i] = (any_type,lazy_options)
         return inputs
 
-    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("value",)
     FUNCTION = "index_switch"
 
@@ -481,30 +483,30 @@ class mathFloatOperation:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "a": ("FLOAT", {"default": 0, "min": -999999999999.0, "max": 999999999999.0, "step": 1}),
-                "b": ("FLOAT", {"default": 0, "min": -999999999999.0, "max": 999999999999.0, "step": 1}),
-                "operation": (["==", "!=", "<", ">", "<=", ">="],),
+                "a": ("FLOAT", {"default": 0, "min": -999999999999.0, "max": 999999999999.0, "step": 0.01}),
+                "b": ("FLOAT", {"default": 0, "min": -999999999999.0, "max": 999999999999.0, "step": 0.01}),
+                "operation": (["add", "subtract", "multiply", "divide", "modulo", "power"],),
             },
         }
 
-    RETURN_TYPES = ("BOOLEAN",)
+    RETURN_TYPES = ("FLOAT",)
     FUNCTION = "float_math_operation"
 
     CATEGORY = "EasyUse/Logic/Math"
 
     def float_math_operation(self, a, b, operation):
-        if operation == "==":
-            return (a == b,)
-        elif operation == "!=":
-            return (a != b,)
-        elif operation == "<":
-            return (a < b,)
-        elif operation == ">":
-            return (a > b,)
-        elif operation == "<=":
-            return (a <= b,)
-        elif operation == ">=":
-            return (a >= b,)
+        if operation == "add":
+            return (a + b,)
+        elif operation == "subtract":
+            return (a - b,)
+        elif operation == "multiply":
+            return (a * b,)
+        elif operation == "divide":
+            return (a // b,)
+        elif operation == "modulo":
+            return (a % b,)
+        elif operation == "power":
+            return (a ** b,)
 
 class mathStringOperation:
     def __init__(self):
@@ -688,17 +690,17 @@ class forLoopStart:
                 "total": ("INT", {"default": 1, "min": 1, "max": 100000, "step": 1}),
             },
             "optional": {
-                "initial_value%d" % i: (AlwaysEqualProxy("*"),) for i in range(1, MAX_FLOW_NUM)
+                "initial_value%d" % i: (any_type,) for i in range(1, MAX_FLOW_NUM)
             },
             "hidden": {
-                "initial_value0": (AlwaysEqualProxy("*"),),
+                "initial_value0": (any_type,),
                 "prompt": "PROMPT",
                 "extra_pnginfo": "EXTRA_PNGINFO",
                 "unique_id": "UNIQUE_ID"
             }
         }
 
-    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL", "INT"] + [AlwaysEqualProxy("*")] * (MAX_FLOW_NUM - 1)))
+    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL", "INT"] + [any_type] * (MAX_FLOW_NUM - 1)))
     RETURN_NAMES = ByPassTypeTuple(tuple(["flow", "index"] + ["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
     FUNCTION = "for_loop_start"
 
@@ -708,11 +710,10 @@ class forLoopStart:
         graph = GraphBuilder()
         i = 0
         unique_id = unique_id.split('.')[len(unique_id.split('.'))-1] if "." in unique_id else unique_id
-        node = next((x for x in extra_pnginfo['workflow']['nodes'] if x['id'] == int(unique_id)), None)
-        if node:
-            node['properties']['total'] = total
+        update_cache('forloop'+str(unique_id), 'forloop', total)
         if "initial_value0" in kwargs:
             i = kwargs["initial_value0"]
+
         initial_values = {("initial_value%d" % num): kwargs.get("initial_value%d" % num, None) for num in range(1, MAX_FLOW_NUM)}
         while_open = graph.node("easy whileLoopStart", condition=total, initial_value0=i, **initial_values)
         outputs = [kwargs.get("initial_value%d" % num, None) for num in range(1, MAX_FLOW_NUM)]
@@ -732,28 +733,31 @@ class forLoopEnd:
                 "flow": ("FLOW_CONTROL", {"rawLink": True}),
             },
             "optional": {
-                "initial_value%d" % i: (AlwaysEqualProxy("*"), {"rawLink": True}) for i in range(1, MAX_FLOW_NUM)
+                "initial_value%d" % i: (any_type, {"rawLink": True}) for i in range(1, MAX_FLOW_NUM)
             },
-            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+            "hidden": {
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+                "unique_id": "UNIQUE_ID"
+            },
         }
 
-    RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy("*")] * (MAX_FLOW_NUM - 1)))
+    RETURN_TYPES = ByPassTypeTuple(tuple([any_type] * (MAX_FLOW_NUM - 1)))
     RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
     FUNCTION = "for_loop_end"
 
     CATEGORY = "EasyUse/Logic/For Loop"
 
-    def for_loop_end(self, flow, prompt=None, extra_pnginfo=None, my_unique_id=None, **kwargs):
+    def for_loop_end(self, flow, prompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
         graph = GraphBuilder()
         while_open = flow[0]
         total = None
-        if extra_pnginfo:
-            node = next((x for x in extra_pnginfo['workflow']['nodes'] if x['id'] == int(while_open)), None)
-            if node:
-                if 'properties' in node and 'total' in node['properties']:
-                    total = node['properties']['total']
-                else:
-                    total = node['widgets_values'][0] if "widgets_values" in node else None
+        if "forloop"+str(while_open) in cache:
+            total = cache['forloop'+str(while_open)][1]
+        elif extra_pnginfo:
+            all_nodes = extra_pnginfo['workflow']['nodes']
+            start_node = next((x for x in all_nodes if x['id'] == int(while_open)), None)
+            total = start_node['widgets_values'][0] if "widgets_values" in start_node else None
         if total is None:
             raise Exception("Unable to get parameters for the start of the loop")
         sub = graph.node("easy mathInt", operation="add", a=[while_open, 1], b=1)
@@ -786,8 +790,8 @@ class Compare:
         compare_functions = list(COMPARE_FUNCTIONS.keys())
         return {
             "required": {
-                "a": (AlwaysEqualProxy("*"), {"default": 0}),
-                "b": (AlwaysEqualProxy("*"), {"default": 0}),
+                "a": (any_type, {"default": 0}),
+                "b": (any_type, {"default": 0}),
                 "comparison": (compare_functions, {"default": "a == b"}),
             },
         }
@@ -807,12 +811,12 @@ class IfElse:
         return {
             "required": {
                 "boolean": ("BOOLEAN",),
-                "on_true": (AlwaysEqualProxy("*"), lazy_options),
-                "on_false": (AlwaysEqualProxy("*"), lazy_options),
+                "on_true": (any_type, lazy_options),
+                "on_false": (any_type, lazy_options),
             },
         }
 
-    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("*",)
     FUNCTION = "execute"
     CATEGORY = "EasyUse/Logic"
@@ -833,7 +837,7 @@ class isNone:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "any": (AlwaysEqualProxy("*"),)
+                "any": (any_type,)
             },
             "optional": {
             }
@@ -872,6 +876,50 @@ class isSDXL:
         else:
             return (False,)
 
+from nodes import MAX_RESOLUTION
+from .config import BASE_RESOLUTIONS
+class pixels:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        resolution_strings = [
+            f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for
+            width, height in BASE_RESOLUTIONS]
+        return {
+            "required": {
+                "resolution": (resolution_strings,),
+                "width": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "height": ("INT", {"default": 512, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "scale": ("FLOAT", {"default": 2.000, "min": 0.001, "max": 10, "step": 0.001}),
+                "flip_w/h": ("BOOLEAN", {"default": False}),
+            }
+        }
+
+    RETURN_TYPES = ("INT", "INT", any_type, any_type, any_type)
+    RETURN_NAMES = ("width_norm", "height_norm", "width", "height", "scale_factor")
+    CATEGORY = "EasyUse/Logic"
+    FUNCTION = "create"
+
+    def create(self, resolution, width, height, scale, **kwargs):
+        if resolution not in ["自定义 x 自定义", 'width x height (custom)']:
+            try:
+                _width, _height = map(int, resolution.split(' x '))
+                width = _width
+                height = _height
+            except ValueError:
+                raise ValueError("Invalid base_resolution format.")
+
+        width = width * scale
+        height = height * scale
+        width_norm = width - width % 8
+        height_norm = height - height % 8
+        flip_wh = kwargs['flip_w/h']
+        if flip_wh:
+            width, height = height, width
+            width_norm, height_norm = height_norm, width_norm
+
+        return (width_norm, height_norm, width, height, scale)
+
 #xy矩阵
 class xyAny:
 
@@ -880,13 +928,13 @@ class xyAny:
 
         return {
             "required": {
-                "X": (AlwaysEqualProxy("*"), {}),
-                "Y": (AlwaysEqualProxy("*"), {}),
+                "X": (any_type, {}),
+                "Y": (any_type, {}),
                 "direction": (["horizontal", "vertical"], {"default": "horizontal"})
             }
         }
 
-    RETURN_TYPES = (AlwaysEqualProxy("*"), AlwaysEqualProxy("*"))
+    RETURN_TYPES = (any_type, any_type)
     RETURN_NAMES = ("X", "Y")
     INPUT_IS_LIST = True
     OUTPUT_IS_LIST = (True, True)
@@ -914,7 +962,7 @@ class lengthAnything:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "any": (AlwaysEqualProxy("*"), {}),
+                "any": (any_type, {}),
             }
         }
 
@@ -925,6 +973,8 @@ class lengthAnything:
     CATEGORY = "EasyUse/Logic"
 
     def getLength(self, any):
+        if isinstance(any, tuple):
+            return
         return (len(any),)
 
 class batchAnything:
@@ -932,12 +982,12 @@ class batchAnything:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "any_1": (AlwaysEqualProxy("*"),{}),
-                "any_2": (AlwaysEqualProxy("*"),{})
+                "any_1": (any_type,{}),
+                "any_2": (any_type,{})
             }
         }
 
-    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("batch",)
 
     FUNCTION = "batch"
@@ -976,11 +1026,11 @@ class convertAnything:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-            "*": (AlwaysEqualProxy("*"),),
+            "*": (any_type,),
             "output_type": (["string", "int", "float", "boolean"], {"default": "string"}),
         }}
 
-    RETURN_TYPES = ByPassTypeTuple((AlwaysEqualProxy("*"),))
+    RETURN_TYPES = ByPassTypeTuple((any_type,))
     OUTPUT_NODE = True
     FUNCTION = "convert"
     CATEGORY = "EasyUse/Logic"
@@ -1003,7 +1053,7 @@ class convertAnything:
 class showAnything:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {}, "optional": {"anything": (AlwaysEqualProxy("*"), {}), },
+        return {"required": {}, "optional": {"anything": (any_type, {}), },
                 "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",
             }}
 
@@ -1043,7 +1093,7 @@ class showAnything:
 class showTensorShape:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {"tensor": (AlwaysEqualProxy("*"),)}, "optional": {},
+        return {"required": {"tensor": (any_type,)}, "optional": {},
                 "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"
                }}
 
@@ -1075,11 +1125,11 @@ class outputToList:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "tuple": (AlwaysEqualProxy("*"), {}),
+                "tuple": (any_type, {}),
             }, "optional": {},
         }
 
-    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("list",)
     OUTPUT_IS_LIST = (True,)
     FUNCTION = "output_to_List"
@@ -1092,7 +1142,7 @@ class outputToList:
 class cleanGPUUsed:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {"anything": (AlwaysEqualProxy("*"), {})}, "optional": {},
+        return {"required": {"anything": (any_type, {})}, "optional": {},
                 "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",
                            }}
 
@@ -1111,7 +1161,7 @@ class clearCacheKey:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-            "anything": (AlwaysEqualProxy("*"), {}),
+            "anything": (any_type, {}),
             "cache_key": ("STRING", {"default": "*"}),
         }, "optional": {},
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",}
@@ -1131,7 +1181,7 @@ class clearCacheAll:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-            "anything": (AlwaysEqualProxy("*"), {}),
+            "anything": (any_type, {}),
         }, "optional": {},
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",}
         }
@@ -1152,13 +1202,13 @@ class If:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "any": (AlwaysEqualProxy("*"),),
-                "if": (AlwaysEqualProxy("*"),),
-                "else": (AlwaysEqualProxy("*"),),
+                "any": (any_type,),
+                "if": (any_type,),
+                "else": (any_type,),
             },
         }
 
-    RETURN_TYPES = (AlwaysEqualProxy("*"),)
+    RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("?",)
     FUNCTION = "execute"
     CATEGORY = "EasyUse/🚫 Deprecated"
@@ -1249,6 +1299,7 @@ NODE_CLASS_MAPPINGS = {
   "easy isNone": isNone,
   "easy isSDXL": isSDXL,
   "easy outputToList": outputToList,
+  "easy pixels": pixels,
   "easy xyAny": xyAny,
   "easy lengthAnything": lengthAnything,
   "easy batchAnything": batchAnything,
@@ -1287,6 +1338,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy isNone": "Is None",
   "easy isSDXL": "Is SDXL",
   "easy outputToList": "Output to List",
+  "easy pixels": "Pixels W/H Norm",
   "easy xyAny": "XY Any",
   "easy lengthAnything": "Length Any",
   "easy batchAnything": "Batch Any",
