@@ -5421,10 +5421,30 @@ class samplerFull:
             xyPlot = None
         else:
             xyPlot = pipe["loader_settings"]["xyplot"] if "xyplot" in pipe["loader_settings"] else xyPlot
-        if xyPlot is not None:
-            return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom)
+
+        # Fooocus model patch
+        model_options = samp_model.model_options if samp_model.model_options else samp_model.model.model_options
+        transformer_options = model_options["transformer_options"] if "transformer_options" in model_options else {}
+        if "fooocus" in transformer_options:
+            from .fooocus import applyFooocusInpaint
+            del transformer_options["fooocus"]
+            with applyFooocusInpaint():
+                if xyPlot is not None:
+                    return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
+                                          samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output,
+                                          link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id,
+                                          preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom)
+                else:
+                    return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed,
+                                                samp_positive, samp_negative, steps, start_step, last_step, cfg,
+                                                sampler_name, scheduler, denoise, image_output, link_id, save_prefix,
+                                                tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent,
+                                                force_full_denoise, disable_noise, samp_custom)
         else:
-            return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, force_full_denoise, disable_noise, samp_custom)
+            if xyPlot is not None:
+                return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom)
+            else:
+                return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, force_full_denoise, disable_noise, samp_custom)
 
 # 简易采样器
 class samplerSimple(samplerFull):

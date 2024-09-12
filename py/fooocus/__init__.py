@@ -18,9 +18,11 @@ class InpaintHead(torch.nn.Module):
         x = F.pad(x, (1, 1, 1, 1), "replicate")
         return F.conv2d(x, weight=self.head)
 
+# injected_model_patcher_calculate_weight = False
+# original_calculate_weight = None
 
-class applyFooocusPatch:
-    def calculate_weight_patched(self, patches, weight, key, intermediate_type=torch.float32):
+class applyFooocusInpaint:
+    def calculate_weight_patched(self, patches, weight, key, intermediate_dtype=torch.float32):
         remaining = []
 
         for p in patches:
@@ -41,13 +43,12 @@ class applyFooocusPatch:
                     w1 = (w1 / 255.0) * (w_max - w_min) + w_min
                     weight += alpha * cast_to_device(w1, weight.device, weight.dtype)
                 else:
-                    pass
-                    # log_node_warn(self.node_name,
-                    #     f"Shape mismatch {key}, weight not merged ({w1.shape} != {weight.shape})"
-                    # )
+                    print(
+                        f"[ApplyFooocusInpaint] Shape mismatch {key}, weight not merged ({w1.shape} != {weight.shape})"
+                    )
 
-            if len(remaining) > 0:
-                return self.original_calculate_weight(remaining, weight, key, intermediate_type)
+        if len(remaining) > 0:
+            return original_calculate_weight(remaining, weight, key, intermediate_dtype)
         return weight
 
     def __enter__(self):
@@ -59,11 +60,27 @@ class applyFooocusPatch:
             print("[comfyui-easy-use] Injecting patched comfy.model_patcher.ModelPatcher.calculate_weight")
             self.original_calculate_weight = ModelPatcher.calculate_weight
             ModelPatcher.calculate_weight = self.calculate_weight_patched
-    def __exit__(self, type, value, traceback):
+
+    def __exit__(self, exc_type, exc_value, traceback):
         try:
             comfy.lora.calculate_weight = self.original_calculate_weight
-        except AttributeError:
+        except:
             ModelPatcher.calculate_weight = self.original_calculate_weight
+
+# def inject_patched_calculate_weight():
+#     global injected_model_patcher_calculate_weight
+#     if not injected_model_patcher_calculate_weight:
+#         try:
+#             print("[comfyui-easy-use] Injecting patched comfy.lora.calculate_weight.calculate_weight")
+#             original_calculate_weight = comfy.lora.calculate_weight
+#             comfy.lora.original_calculate_weight = original_calculate_weight
+#             comfy.lora.calculate_weight = calculate_weight_patched
+#         except AttributeError:
+#             print("[comfyui-easy-use] Injecting patched comfy.model_patcher.ModelPatcher.calculate_weight")
+#             original_calculate_weight = ModelPatcher.calculate_weight
+#             ModelPatcher.original_calculate_weight = original_calculate_weight
+#             ModelPatcher.calculate_weight = calculate_weight_patched
+#         injected_model_patcher_calculate_weight = True
 
 
 class InpaintWorker:
@@ -85,33 +102,38 @@ class InpaintWorker:
             )
         return patch_dict
 
+    def _input_block_patch(self, h: torch.Tensor, transformer_options: dict):
+        if transformer_options["block"][1] == 0:
+            if self._inpaint_block is None or self._inpaint_block.shape != h.shape:
+                assert self._inpaint_head_feature is not None
+                batch = h.shape[0] // self._inpaint_head_feature.shape[0]
+                self._inpaint_block = self._inpaint_head_feature.to(h).repeat(batch, 1, 1, 1)
+            h = h + self._inpaint_block
+        return h
 
     def patch(self, model, latent, patch):
-        with applyFooocusPatch():
-            base_model: BaseModel = model.model
-            latent_pixels = base_model.process_latent_in(latent["samples"])
-            noise_mask = latent["noise_mask"].round()
-            latent_mask = F.max_pool2d(noise_mask, (8, 8)).round().to(latent_pixels)
+        base_model: BaseModel = model.model
+        latent_pixels = base_model.process_latent_in(latent["samples"])
+        noise_mask = latent["noise_mask"].round()
+        latent_mask = F.max_pool2d(noise_mask, (8, 8)).round().to(latent_pixels)
 
-            inpaint_head_model, inpaint_lora = patch
-            feed = torch.cat([latent_mask, latent_pixels], dim=1)
-            inpaint_head_model.to(device=feed.device, dtype=feed.dtype)
-            inpaint_head_feature = inpaint_head_model(feed)
+        inpaint_head_model, inpaint_lora = patch
+        feed = torch.cat([latent_mask, latent_pixels], dim=1)
+        inpaint_head_model.to(device=feed.device, dtype=feed.dtype)
+        self._inpaint_head_feature = inpaint_head_model(feed)
+        self._inpaint_block = None
 
-            def input_block_patch(h, transformer_options):
-                if transformer_options["block"][1] == 0:
-                    h = h + inpaint_head_feature.to(h)
-                return h
+        lora_keys = comfy.lora.model_lora_keys_unet(model.model, {})
+        lora_keys.update({x: x for x in base_model.state_dict().keys()})
+        loaded_lora = self.load_fooocus_patch(inpaint_lora, lora_keys)
 
-            lora_keys = comfy.lora.model_lora_keys_unet(model.model, {})
-            lora_keys.update({x: x for x in base_model.state_dict().keys()})
-            loaded_lora = self.load_fooocus_patch(inpaint_lora, lora_keys)
+        m = model.clone()
+        m.set_model_input_block_patch(self._input_block_patch)
+        patched = m.add_patches(loaded_lora, 1.0)
+        m.model_options['transformer_options']['fooocus'] = True
+        not_patched_count = sum(1 for x in loaded_lora if x not in patched)
+        if not_patched_count > 0:
+            log_node_error(self.node_name, f"Failed to patch {not_patched_count} keys")
 
-            m = model.clone()
-            m.set_model_input_block_patch(input_block_patch)
-            patched = m.add_patches(loaded_lora, 1.0)
-
-            not_patched_count = sum(1 for x in loaded_lora if x not in patched)
-            if not_patched_count > 0:
-                log_node_error(self.node_name, f"Failed to patch {not_patched_count} keys")
-            return (m,)
+        # inject_patched_calculate_weight()
+        return (m,)
