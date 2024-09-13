@@ -313,6 +313,60 @@ class textSwitch:
 
 # ---------------------------------------------------------------Index Switch----------------------------------------------------------------------#
 
+class ab:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+                "A or B": ("BOOLEAN", {"default": True,  "label_on": "A", "label_off": "B"}),
+                "in": (any_type,),
+            },
+            "hidden": {"unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = (any_type, any_type,)
+    RETURN_NAMES = ("A", "B",)
+    FUNCTION = "switch"
+
+    CATEGORY = "EasyUse/Logic"
+
+    def blocker(self, value, block=False):
+        from comfy_execution.graph import ExecutionBlocker
+        return ExecutionBlocker(None) if block else value
+
+    def switch(self,  unique_id, **kwargs):
+        is_a = kwargs['A or B']
+        a = self.blocker(kwargs['in'], not is_a)
+        b = self.blocker(kwargs['in'], is_a)
+        return (a, b)
+
+class anythingInversedSwitch:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            "in": (any_type,),
+        },
+            "hidden": {"unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ByPassTypeTuple(tuple([any_type]))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["out0"]))
+    FUNCTION = "switch"
+
+    CATEGORY = "EasyUse/Logic"
+
+    def switch(self, index, unique_id, **kwargs):
+        from comfy_execution.graph import ExecutionBlocker
+        res = []
+
+        for i in range(0, MAX_FLOW_NUM):
+            if index == i:
+                res.append(kwargs['in'])
+            else:
+                res.append(ExecutionBlocker(None))
+        return res
+
 class anythingIndexSwitch:
     def __init__(self):
         pass
@@ -799,7 +853,7 @@ class Compare:
     RETURN_TYPES = ("BOOLEAN",)
     RETURN_NAMES = ("boolean",)
     FUNCTION = "compare"
-    CATEGORY = "EasyUse/Logic"
+    CATEGORY = "EasyUse/Logic/Math"
 
     def compare(self, a, b, comparison):
         return (COMPARE_FUNCTIONS[comparison](a, b),)
@@ -829,6 +883,26 @@ class IfElse:
 
     def execute(self, *args, **kwargs):
         return (kwargs['on_true'] if kwargs['boolean'] else kwargs['on_false'],)
+
+
+class Blocker:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "continue": ("BOOLEAN", {"default": False}),
+                "in": (any_type, {"default": None}),
+            },
+        }
+
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ("out",)
+    CATEGORY = "EasyUse/Logic"
+    FUNCTION = "execute"
+
+    def execute(self, **kwargs):
+        from comfy_execution.graph import ExecutionBlocker
+        return (kwargs['in'] if kwargs['continue'] else ExecutionBlocker(None) ,)
 
 #是否为SDXL
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
@@ -1287,14 +1361,17 @@ NODE_CLASS_MAPPINGS = {
   "easy compare": Compare,
   "easy imageSwitch": imageSwitch,
   "easy textSwitch": textSwitch,
-  "easy anythingIndexSwitch": anythingIndexSwitch,
   "easy imageIndexSwitch": imageIndexSwitch,
   "easy textIndexSwitch": textIndexSwitch,
   "easy conditioningIndexSwitch": conditioningIndexSwitch,
+  "easy anythingIndexSwitch": anythingIndexSwitch,
+  "easy ab": ab,
+  "easy anythingInversedSwitch": anythingInversedSwitch,
   "easy whileLoopStart": whileLoopStart,
   "easy whileLoopEnd": whileLoopEnd,
   "easy forLoopStart": forLoopStart,
   "easy forLoopEnd": forLoopEnd,
+  "easy blocker": Blocker,
   "easy ifElse": IfElse,
   "easy isNone": isNone,
   "easy isSDXL": isSDXL,
@@ -1326,15 +1403,18 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy mathFloat": "Math Float",
   "easy imageSwitch": "Image Switch",
   "easy textSwitch": "Text Switch",
-  "easy anythingIndexSwitch": "Any Index Switch",
   "easy imageIndexSwitch": "Image Index Switch",
   "easy textIndexSwitch": "Text Index Switch",
   "easy conditioningIndexSwitch": "Conditioning Index Switch",
+  "easy anythingIndexSwitch": "Any Index Switch",
+  "easy ab": "A or B",
+  "easy anythingInversedSwitch": "Any Inversed Switch",
   "easy whileLoopStart": "While Loop Start",
   "easy whileLoopEnd": "While Loop End",
   "easy forLoopStart": "For Loop Start",
   "easy forLoopEnd": "For Loop End",
   "easy ifElse": "If else",
+  "easy blocker": "Blocker",
   "easy isNone": "Is None",
   "easy isSDXL": "Is SDXL",
   "easy outputToList": "Output to List",
