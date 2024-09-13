@@ -313,7 +313,7 @@ class textSwitch:
 
 # ---------------------------------------------------------------Index Switch----------------------------------------------------------------------#
 
-class abTest:
+class ab:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
@@ -1365,7 +1365,7 @@ NODE_CLASS_MAPPINGS = {
   "easy textIndexSwitch": textIndexSwitch,
   "easy conditioningIndexSwitch": conditioningIndexSwitch,
   "easy anythingIndexSwitch": anythingIndexSwitch,
-  "easy a/b": abTest,
+  "easy ab": ab,
   "easy anythingInversedSwitch": anythingInversedSwitch,
   "easy whileLoopStart": whileLoopStart,
   "easy whileLoopEnd": whileLoopEnd,
@@ -1407,7 +1407,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy textIndexSwitch": "Text Index Switch",
   "easy conditioningIndexSwitch": "Conditioning Index Switch",
   "easy anythingIndexSwitch": "Any Index Switch",
-  "easy a/b": "A or B",
+  "easy ab": "A or B",
   "easy anythingInversedSwitch": "Any Inversed Switch",
   "easy whileLoopStart": "While Loop Start",
   "easy whileLoopEnd": "While Loop End",
