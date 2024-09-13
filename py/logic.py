@@ -313,6 +313,35 @@ class textSwitch:
 
 # ---------------------------------------------------------------Index Switch----------------------------------------------------------------------#
 
+class anythingInversedSwitch:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "index": ("INT", {"default": 0, "min": 0, "max": 9, "step": 1}),
+            "in": (any_type,),
+        },
+            "hidden": {"unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ByPassTypeTuple(tuple([any_type] * (MAX_FLOW_NUM - 1)))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["out%d" % i for i in range(1, MAX_FLOW_NUM)]))
+    FUNCTION = "switch"
+
+    CATEGORY = "EasyUse/Logic"
+
+    def switch(self, select, unique_id, **kwargs):
+        from comfy_execution.graph import ExecutionBlocker
+        res = []
+
+        for i in range(0, select):
+            if select == i + 1:
+                res.append(kwargs['in'])
+            else:
+                res.append(ExecutionBlocker(None))
+
+        return res
+
 class anythingIndexSwitch:
     def __init__(self):
         pass
@@ -830,6 +859,26 @@ class IfElse:
     def execute(self, *args, **kwargs):
         return (kwargs['on_true'] if kwargs['boolean'] else kwargs['on_false'],)
 
+
+class Blocker:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "continue": ("BOOLEAN", {"default": False}),
+                "in": (any_type, {"default": None}),
+            },
+        }
+
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ("out",)
+    CATEGORY = "EasyUse/Logic"
+    FUNCTION = "execute"
+
+    def execute(self, **kwargs):
+        from comfy_execution.graph import ExecutionBlocker
+        return (kwargs['in'] if kwargs['continue'] else ExecutionBlocker(None) ,)
+
 #是否为SDXL
 from comfy.sdxl_clip import SDXLClipModel, SDXLRefinerClipModel, SDXLClipG
 class isNone:
@@ -1287,15 +1336,17 @@ NODE_CLASS_MAPPINGS = {
   "easy compare": Compare,
   "easy imageSwitch": imageSwitch,
   "easy textSwitch": textSwitch,
-  "easy anythingIndexSwitch": anythingIndexSwitch,
   "easy imageIndexSwitch": imageIndexSwitch,
   "easy textIndexSwitch": textIndexSwitch,
   "easy conditioningIndexSwitch": conditioningIndexSwitch,
+  "easy anythingIndexSwitch": anythingIndexSwitch,
+  "easy anythingInversedSwitch": anythingInversedSwitch,
   "easy whileLoopStart": whileLoopStart,
   "easy whileLoopEnd": whileLoopEnd,
   "easy forLoopStart": forLoopStart,
   "easy forLoopEnd": forLoopEnd,
   "easy ifElse": IfElse,
+  "easy blocker": Blocker,
   "easy isNone": isNone,
   "easy isSDXL": isSDXL,
   "easy outputToList": outputToList,
@@ -1326,15 +1377,17 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy mathFloat": "Math Float",
   "easy imageSwitch": "Image Switch",
   "easy textSwitch": "Text Switch",
-  "easy anythingIndexSwitch": "Any Index Switch",
   "easy imageIndexSwitch": "Image Index Switch",
   "easy textIndexSwitch": "Text Index Switch",
   "easy conditioningIndexSwitch": "Conditioning Index Switch",
+  "easy anythingIndexSwitch": "Any Index Switch",
+  "easy anythingInversedSwitch": "Any Inversed Switch",
   "easy whileLoopStart": "While Loop Start",
   "easy whileLoopEnd": "While Loop End",
   "easy forLoopStart": "For Loop Start",
   "easy forLoopEnd": "For Loop End",
   "easy ifElse": "If else",
+  "easy blocker": "Blocker",
   "easy isNone": "Is None",
   "easy isSDXL": "Is SDXL",
   "easy outputToList": "Output to List",
