@@ -313,6 +313,32 @@ class textSwitch:
 
 # ---------------------------------------------------------------Index Switch----------------------------------------------------------------------#
 
+class abTest:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+                "A or B": ("BOOLEAN", {"default": True,  "label_on": "A", "label_off": "B"}),
+                "in": (any_type,),
+            },
+            "hidden": {"unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = (any_type, any_type,)
+    RETURN_NAMES = ("A", "B",)
+    FUNCTION = "switch"
+
+    CATEGORY = "EasyUse/Logic"
+
+    def blocker(self, value, block=False):
+        from comfy_execution.graph import ExecutionBlocker
+        return ExecutionBlocker(None) if block else value
+
+    def switch(self,  unique_id, **kwargs):
+        is_a = kwargs['A or B']
+        a = self.blocker(kwargs['in'], not is_a)
+        b = self.blocker(kwargs['in'], is_a)
+        return (a, b)
+
 class anythingInversedSwitch:
 
     @classmethod
@@ -324,22 +350,21 @@ class anythingInversedSwitch:
             "hidden": {"unique_id": "UNIQUE_ID"},
         }
 
-    RETURN_TYPES = ByPassTypeTuple(tuple([any_type] * (MAX_FLOW_NUM - 1)))
-    RETURN_NAMES = ByPassTypeTuple(tuple(["out%d" % i for i in range(1, MAX_FLOW_NUM)]))
+    RETURN_TYPES = ByPassTypeTuple(tuple([any_type]))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["out0"]))
     FUNCTION = "switch"
 
     CATEGORY = "EasyUse/Logic"
 
-    def switch(self, select, unique_id, **kwargs):
+    def switch(self, index, unique_id, **kwargs):
         from comfy_execution.graph import ExecutionBlocker
         res = []
 
-        for i in range(0, select):
-            if select == i + 1:
+        for i in range(0, MAX_FLOW_NUM):
+            if index == i:
                 res.append(kwargs['in'])
             else:
                 res.append(ExecutionBlocker(None))
-
         return res
 
 class anythingIndexSwitch:
@@ -828,7 +853,7 @@ class Compare:
     RETURN_TYPES = ("BOOLEAN",)
     RETURN_NAMES = ("boolean",)
     FUNCTION = "compare"
-    CATEGORY = "EasyUse/Logic"
+    CATEGORY = "EasyUse/Logic/Math"
 
     def compare(self, a, b, comparison):
         return (COMPARE_FUNCTIONS[comparison](a, b),)
@@ -1340,13 +1365,14 @@ NODE_CLASS_MAPPINGS = {
   "easy textIndexSwitch": textIndexSwitch,
   "easy conditioningIndexSwitch": conditioningIndexSwitch,
   "easy anythingIndexSwitch": anythingIndexSwitch,
+  "easy a/b": abTest,
   "easy anythingInversedSwitch": anythingInversedSwitch,
   "easy whileLoopStart": whileLoopStart,
   "easy whileLoopEnd": whileLoopEnd,
   "easy forLoopStart": forLoopStart,
   "easy forLoopEnd": forLoopEnd,
-  "easy ifElse": IfElse,
   "easy blocker": Blocker,
+  "easy ifElse": IfElse,
   "easy isNone": isNone,
   "easy isSDXL": isSDXL,
   "easy outputToList": outputToList,
@@ -1381,6 +1407,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy textIndexSwitch": "Text Index Switch",
   "easy conditioningIndexSwitch": "Conditioning Index Switch",
   "easy anythingIndexSwitch": "Any Index Switch",
+  "easy a/b": "A or B",
   "easy anythingInversedSwitch": "Any Inversed Switch",
   "easy whileLoopStart": "While Loop Start",
   "easy whileLoopEnd": "While Loop End",
