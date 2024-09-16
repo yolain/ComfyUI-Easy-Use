@@ -380,7 +380,7 @@ class anythingIndexSwitch:
             "optional": {
             }
         }
-        for i in range(DEFAULT_FLOW_NUM):
+        for i in range(MAX_FLOW_NUM):
             inputs["optional"]["value%d" % i] = (any_type,lazy_options)
         return inputs
 
@@ -412,7 +412,7 @@ class imageIndexSwitch:
             "optional": {
             }
         }
-        for i in range(DEFAULT_FLOW_NUM):
+        for i in range(MAX_FLOW_NUM):
             inputs["optional"]["image%d" % i] = ("IMAGE",lazy_options)
         return inputs
 
@@ -444,8 +444,8 @@ class textIndexSwitch:
             "optional": {
             }
         }
-        for i in range(DEFAULT_FLOW_NUM):
-            inputs["optional"]["text%d" % i] = ("STRING",{**lazy_options,"forceInput":True})
+        for i in range(MAX_FLOW_NUM):
+            inputs["optional"]["text%d" % i] = ("STRING", {**lazy_options, "forceInput":True})
         return inputs
 
     RETURN_TYPES = ("STRING",)
@@ -476,7 +476,7 @@ class conditioningIndexSwitch:
             "optional": {
             }
         }
-        for i in range(DEFAULT_FLOW_NUM):
+        for i in range(MAX_FLOW_NUM):
             inputs["optional"]["cond%d" % i] = ("CONDITIONING",lazy_options)
         return inputs
 
