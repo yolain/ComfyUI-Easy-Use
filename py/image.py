@@ -1074,12 +1074,12 @@ class imageInterrogator:
     RETURN_NAMES = ("prompt",)
     FUNCTION = "interrogate"
     CATEGORY = "EasyUse/Image"
-    OUTPUT_NODE = True
+    OUTPUT_NODE = False
     OUTPUT_IS_LIST = (True,)
 
     def interrogate(self, image, mode, use_lowvram=False):
       prompt = ci.image_to_prompt(image, mode, low_vram=use_lowvram)
-      return {"ui":{"text":prompt},"result":(prompt,)}
+      return (prompt,)
 
 # 人类分割器
 class humanSegmentation:
