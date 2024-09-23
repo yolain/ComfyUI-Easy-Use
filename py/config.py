@@ -349,6 +349,9 @@ HUMANPARSING_MODELS = {
     "parsing_lip": {
         "model_url": "https://huggingface.co/levihsu/OOTDiffusion/resolve/main/checkpoints/humanparsing/parsing_lip.onnx",
     },
+    "human-parts":{
+        "model_url":"https://huggingface.co/Metal3d/deeplabv3p-resnet50-human/resolve/main/deeplabv3p-resnet50-human.onnx",
+    }
 }
 
 #mediapipe

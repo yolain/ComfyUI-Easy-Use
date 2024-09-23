@@ -1090,7 +1090,7 @@ class humanSegmentation:
         return {
           "required":{
             "image": ("IMAGE",),
-            "method": (["selfie_multiclass_256x256", "human_parsing_lip"],),
+            "method": (["selfie_multiclass_256x256", "human_parsing_lip", "human_parts (deeplabv3p)"],),
             "confidence": ("FLOAT", {"default": 0.4, "min": 0.05, "max": 0.95, "step": 0.01},),
             "crop_multi": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.001},),
           },
@@ -1217,6 +1217,20 @@ class humanSegmentation:
         alpha = 1.0 - mask
 
         output_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
+
+      elif method == "human_parts (deeplabv3p)":
+        from .human_parsing.run_parsing import HumanParts
+        onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+        human_parts_path = os.path.join(onnx_path, 'human-parts')
+        model_path = get_local_filepath(HUMANPARSING_MODELS['human-parts']['model_url'], human_parts_path)
+        parsing = HumanParts(model_path=model_path)
+
+        mask, = parsing(image, mask_components)
+
+        alpha = 1.0 - mask
+
+        output_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
+
 
       # use crop
       bbox = [[0, 0, 0, 0]]

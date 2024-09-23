@@ -58,6 +58,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.3**
 
+- Added human parts segmentation to `easy humanSegmentation` - Code based on (ComfyUI_Human_Parts)[https://github.com/metal3d/ComfyUI_Human_Parts]
 - Using FluxGuidance when you are using a flux model and choose basicGuider and set the cfg>0 on `easy preSamplingCustom`
 - Added `easy loraStackApply` and `easy controlnetStackApply` - Apply loraStack and controlnetStack
 

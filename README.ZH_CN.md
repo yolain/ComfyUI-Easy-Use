@@ -63,6 +63,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.3**
 
+- 添加新的人体分割在 `easy humanSegmentation` 节点上 - 代码从 (ComfyUI_Human_Parts)[https://github.com/metal3d/ComfyUI_Human_Parts] 整合
 - 当你在 `easy preSamplingCustom` 节点上选择basicGuider，CFG>0 且当前模型为Flux时，将使用FluxGuidance
 - 增加 `easy loraStackApply` and `easy controlnetStackApply`
 
