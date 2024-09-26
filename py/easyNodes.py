@@ -2754,7 +2754,7 @@ class applyControlnetStack:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "controlnet_stack": ("CONTROLNET_STACK",),
+                "controlnet_stack": ("CONTROL_NET_STACK",),
                 "pipe": ("PIPE",),
             },
             "optional": {
