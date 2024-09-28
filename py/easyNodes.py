@@ -2755,13 +2755,13 @@ class applyControlnetStack:
         return {
             "required": {
                 "controlnet_stack": ("CONTROL_NET_STACK",),
-                "pipe": ("PIPE",),
+                "pipe": ("PIPE_LINE",),
             },
             "optional": {
             }
         }
 
-    RETURN_TYPES = ("PIPE",)
+    RETURN_TYPES = ("PIPE_LINE",)
     RETURN_NAMES = ("pipe",)
     CATEGORY = "EasyUse/Adapter"
     FUNCTION = "apply"
