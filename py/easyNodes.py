@@ -895,7 +895,8 @@ class fullLoader:
             "negative_token_normalization": (["none", "mean", "length", "length+mean"],),
             "negative_weight_interpretation": (["comfy",  "A1111", "comfy++", "compel", "fixed attention"],),
 
-            "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+            "batch_size": (
+            "INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
         },
             "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",), "optional_lora_stack": ("LORA_STACK",), "optional_controlnet_stack": ("CONTROL_NET_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),},
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
@@ -995,7 +996,7 @@ class a1111Loader(fullLoader):
 
                 "positive": ("STRING", {"default":"", "placeholder": "Positive", "multiline": True}),
                 "negative": ("STRING", {"default":"", "placeholder": "Negative", "multiline": True}),
-                "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
             },
             "optional": {
                 "optional_lora_stack": ("LORA_STACK",),
@@ -1047,7 +1048,7 @@ class comfyLoader(fullLoader):
                 "positive": ("STRING", {"default": "", "placeholder": "Positive", "multiline": True}),
                 "negative": ("STRING", {"default": "", "placeholder": "Negative", "multiline": True}),
 
-                "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
             },
             "optional": {"optional_lora_stack": ("LORA_STACK",), "optional_controlnet_stack": ("CONTROL_NET_STACK",),},
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
