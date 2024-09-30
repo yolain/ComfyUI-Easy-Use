@@ -1131,7 +1131,8 @@ class showAnything:
                 "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",
             }}
 
-    RETURN_TYPES = ()
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ('output',)
     INPUT_IS_LIST = True
     OUTPUT_NODE = True
     FUNCTION = "log_input"
@@ -1162,7 +1163,7 @@ class showAnything:
             if node:
                 node["widgets_values"] = [values]
 
-        return {"ui": {"text": values}}
+        return {"ui": {"text": values}, "result": (values,),}
 
 class showTensorShape:
     @classmethod
@@ -1220,8 +1221,8 @@ class cleanGPUUsed:
                 "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",
                            }}
 
-    RETURN_TYPES = ()
-    RETURN_NAMES = ()
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ("output",)
     OUTPUT_NODE = True
     FUNCTION = "empty_cache"
     CATEGORY = "EasyUse/Logic"
@@ -1229,7 +1230,7 @@ class cleanGPUUsed:
     def empty_cache(self, anything, unique_id=None, extra_pnginfo=None):
         cleanGPUUsedForce()
         remove_cache('*')
-        return ()
+        return (anything,)
 
 class clearCacheKey:
     @classmethod
@@ -1241,15 +1242,15 @@ class clearCacheKey:
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",}
         }
 
-    RETURN_TYPES = ()
-    RETURN_NAMES = ()
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ('output',)
     OUTPUT_NODE = True
     FUNCTION = "empty_cache"
     CATEGORY = "EasyUse/Logic"
 
     def empty_cache(self, anything, cache_name, unique_id=None, extra_pnginfo=None):
         remove_cache(cache_name)
-        return ()
+        return (anything,)
 
 class clearCacheAll:
     @classmethod
@@ -1260,15 +1261,15 @@ class clearCacheAll:
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",}
         }
 
-    RETURN_TYPES = ()
-    RETURN_NAMES = ()
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ("output",)
     OUTPUT_NODE = True
     FUNCTION = "empty_cache"
     CATEGORY = "EasyUse/Logic"
 
     def empty_cache(self, anything, unique_id=None, extra_pnginfo=None):
         remove_cache('*')
-        return ()
+        return (anything,)
 
 # Deprecated
 class If:
