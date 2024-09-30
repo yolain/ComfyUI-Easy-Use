@@ -3590,24 +3590,32 @@ class ipadapterApplyRegional(ipadapter):
 
     def apply(self, pipe, image, positive, negative, image_weight, prompt_weight, weight_type, start_at, end_at, mask=None, optional_ipadapter_params=None, prompt=None, my_unique_id=None):
         model = pipe['model']
-        clip = pipe['clip']
-        clip_skip = pipe['loader_settings']['clip_skip']
-        a1111_prompt_style = pipe['loader_settings']['a1111_prompt_style']
-        pipe_lora_stack = pipe['loader_settings']['lora_stack']
-        positive_token_normalization = pipe['loader_settings']['positive_token_normalization']
-        positive_weight_interpretation = pipe['loader_settings']['positive_weight_interpretation']
-        negative_token_normalization = pipe['loader_settings']['negative_token_normalization']
-        negative_weight_interpretation = pipe['loader_settings']['negative_weight_interpretation']
+
         if positive == '':
             positive = pipe['loader_settings']['positive']
         if negative == '':
             negative = pipe['loader_settings']['negative']
 
-        if not clip:
-            raise Exception("No CLIP found")
+        if "clip" not in pipe or not pipe['clip']:
+            if "chatglm3_model" in pipe:
+                chatglm3_model = pipe['chatglm3_model']
+                # text encode
+                log_node_warn("Positive encoding...")
+                positive_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, positive, False)
+                log_node_warn("Negative encoding...")
+                negative_embeddings_final = chatglm3_adv_text_encode(chatglm3_model, negative, False)
+        else:
+            clip = pipe['clip']
+            clip_skip = pipe['loader_settings']['clip_skip']
+            a1111_prompt_style = pipe['loader_settings']['a1111_prompt_style']
+            pipe_lora_stack = pipe['loader_settings']['lora_stack']
+            positive_token_normalization = pipe['loader_settings']['positive_token_normalization']
+            positive_weight_interpretation = pipe['loader_settings']['positive_weight_interpretation']
+            negative_token_normalization = pipe['loader_settings']['negative_token_normalization']
+            negative_weight_interpretation = pipe['loader_settings']['negative_weight_interpretation']
 
-        positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, pipe_lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
-        negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, pipe_lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
+            positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, pipe_lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
+            negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, pipe_lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache)
 
         #ipadapter regional
         if "IPAdapterRegionalConditioning" not in ALL_NODE_CLASS_MAPPINGS:
