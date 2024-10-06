@@ -8,11 +8,12 @@ import comfy.model_management
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
 from nodes import MAX_RESOLUTION, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageOps
 from torchvision.transforms import Resize, CenterCrop, GaussianBlur
 from torchvision.transforms.functional import to_pil_image
 from .libs.log import log_node_info
-from .libs.utils import AlwaysEqualProxy
+from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple
+from .libs.cache import cache, update_cache, remove_cache
 from .libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask
 from .libs.colorfix import adain_color_fix, wavelet_color_fix
 from .libs.chooser import ChooserMessage, ChooserCancelled
@@ -460,35 +461,6 @@ class imageSaveSimple:
       return ()
     else:
       return SaveImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
-
-class imageSaveWithText(SaveImage):
-
-  @classmethod
-  def INPUT_TYPES(s):
-    input_types = SaveImage.INPUT_TYPES()
-    input_types['optional'] = {
-      "text": ("STRING", {"default": "", "forceInput": True})
-    }
-    return input_types
-
-  RETURN_TYPES = ("IMAGE", "STRING")
-  RETURN_NAMES = ('image', "text")
-
-  FUNCTION = "save"
-  OUTPUT_NODE = True
-  CATEGORY = "EasyUse/Image"
-
-  def save(self, images, filename_prefix="ComfyUI", text=None, prompt=None, extra_pnginfo=None):
-    result = self.save_images(images, filename_prefix, prompt, extra_pnginfo)
-    if text is not None:
-      for image in result['ui']['images']:
-        path = os.path.join(folder_paths.output_directory, image['subfolder'], image['filename'])
-        text_path = os.path.splitext(path)[0] + '.txt'
-        with open(text_path, 'w') as f:
-            f.write(text)
-      result['result']['text'] = text
-    result['result']['images'] = images
-    return result
 
 # 图像批次合并
 class JoinImageBatch:
@@ -1604,7 +1576,83 @@ class removeLocalImage:
       PromptServer.instance.send_sync("easyuse-toast", {"content": "Removed Failed", "type": 'error'})
     return ()
 
+try:
+    from comfy_execution.graph_utils import GraphBuilder, is_link
+except:
+    GraphBuilder = None
+class loadImagesForLoop:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "directory": ("STRING", {"default": ""}),
+      },
+      "optional": {
+        "start_index": ("INT", {"default": 0, "min": 0, "step": 1}),
+        "limit": ("INT", {"default":-1, "min":-1, "max": 10000}),
+        "initial_value1": (any_type,),
+        "initial_value2": (any_type,),
+      },
+      "hidden": {
+        "initial_value0": (any_type,),
+        "prompt": "PROMPT",
+        "extra_pnginfo": "EXTRA_PNGINFO",
+        "unique_id": "UNIQUE_ID"
+      }
+    }
 
+  RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL", "INT", "IMAGE", "MASK", "STRING", any_type, any_type]))
+  RETURN_NAMES = ByPassTypeTuple(tuple(["flow", "index", "image", "mask", "name", "value1", "value2"]))
+
+  FUNCTION = "load_images"
+
+  CATEGORY = "image"
+
+  def load_images(self, directory: str, start_index: int = 0, limit: int =-1, prompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
+    if not os.path.isdir(directory):
+      raise FileNotFoundError(f"Directory '{directory}' cannot be found.")
+    dir_files = os.listdir(directory)
+    if len(dir_files) == 0:
+      raise FileNotFoundError(f"No files in directory '{directory}'.")
+
+    # Filter files by extension
+    valid_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+    dir_files = [f for f in dir_files if any(f.lower().endswith(ext) for ext in valid_extensions)]
+
+    dir_files = sorted(dir_files)
+    dir_files = [os.path.join(directory, x) for x in dir_files]
+
+    graph = GraphBuilder()
+    index = 0
+    total = len(dir_files) if limit == -1 else limit
+    unique_id = unique_id.split('.')[len(unique_id.split('.')) - 1] if "." in unique_id else unique_id
+    update_cache('forloop' + str(unique_id), 'forloop', total)
+    if "initial_value0" in kwargs:
+      index = kwargs["initial_value0"]
+    # start at start_index
+    image_path = dir_files[start_index+index]
+
+    name = os.path.splitext(os.path.basename(image_path))[0]
+
+    i = Image.open(image_path)
+    i = ImageOps.exif_transpose(i)
+    image = i.convert("RGB")
+    image = np.array(image).astype(np.float32) / 255.0
+    image = torch.from_numpy(image)[None,]
+
+    if 'A' in i.getbands():
+      mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
+      mask = 1. - torch.from_numpy(mask)
+    else:
+      mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+
+    while_open = graph.node("easy whileLoopStart", condition=total, initial_value0=index, initial_value1=kwargs.get('initial_value1',None), initial_value2=kwargs.get('initial_value2',None))
+    outputs = [kwargs.get('initial_value1',None), kwargs.get('initial_value2',None)]
+
+    return {
+      "result": tuple(["stub", index, image, mask, name] + outputs),
+      "expand": graph.finalize(),
+    }
 # 姿势编辑器
 # class poseEditor:
 #   @classmethod
@@ -1669,7 +1717,6 @@ NODE_CLASS_MAPPINGS = {
   "easy imageCropFromMask": imageCropFromMask,
   "easy imageUncropFromBBOX": imageUncropFromBBOX,
   "easy imageSave": imageSaveSimple,
-  # "easy imageSaveWithText": imageSaveWithText,
   "easy imageRemBg": imageRemBg,
   "easy imageChooser": imageChooser,
   "easy imageColorMatch": imageColorMatch,
@@ -1680,6 +1727,7 @@ NODE_CLASS_MAPPINGS = {
   "easy joinImageBatch": JoinImageBatch,
   "easy humanSegmentation": humanSegmentation,
   "easy removeLocalImage": removeLocalImage,
+  "easy loadImagesForLoop": loadImagesForLoop,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -1705,7 +1753,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageCropFromMask": "imageCropFromMask",
   "easy imageUncropFromBBOX": "imageUncropFromBBOX",
   "easy imageSave": "Save Image (Simple)",
-  # "easy imageSaveWithText": "Save Image With Text",
   "easy imageRemBg": "Image Remove Bg",
   "easy imageChooser": "Image Chooser",
   "easy imageColorMatch": "Image Color Match",
@@ -1716,4 +1763,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageToBase64": "Image To Base64",
   "easy humanSegmentation": "Human Segmentation",
   "easy removeLocalImage": "Remove Local Image",
+  "easy loadImagesForLoop": "Load Images For Loop",
 }
