@@ -3,7 +3,10 @@ from _decimal import Context, getcontext
 from decimal import Decimal
 from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, compare_revision
 from .libs.cache import cache, update_cache, remove_cache
+from .libs.log import log_node_info, log_node_warn
+from nodes import PreviewImage, SaveImage
 import numpy as np
+import os
 import re
 import json
 import torch
@@ -950,6 +953,38 @@ class isSDXL:
         else:
             return (False,)
 
+class isFileExist:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "file_path": ("STRING", {"default": ""}),
+                "file_name": ("STRING", {"default": ""}),
+                "file_extension": ("STRING", {"default": ""}),
+            },
+            "optional": {
+            }
+        }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    RETURN_NAMES = ("boolean",)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic"
+
+    def execute(self, file_path, file_name, file_extension):
+        if not file_path:
+            raise Exception("file_path is missing")
+
+        if file_name:
+            file_path = os.path.join(file_path, file_name)
+        if file_extension:
+            file_path = file_path + "." + file_extension
+
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return (True,)
+        else:
+            return (False,)
+
 from nodes import MAX_RESOLUTION
 from .config import BASE_RESOLUTIONS
 class pixels:
@@ -1349,6 +1384,87 @@ class imageToMask:
     image = pil2tensor(image)
     return (image.squeeze().mean(2),)
 
+class saveText(SaveImage):
+  @classmethod
+  def INPUT_TYPES(s):
+    input_types = {}
+    input_types['required'] = {
+      "text": ("STRING", {"default": "", "forceInput": True}),
+      "output_file_path": ("STRING", {"multiline": False, "default": ""}),
+      "file_name": ("STRING", {"multiline": False, "default": ""}),
+      "file_extension": (["txt", "csv"],),
+      "overwrite": ("BOOLEAN", {"default": True}),
+    }
+    input_types['optional'] = {
+      "image": ("IMAGE",),
+    }
+    return input_types
+
+  RETURN_TYPES = ("STRING", "IMAGE")
+  RETURN_NAMES = ("text", 'image',)
+
+  FUNCTION = "save_text"
+  OUTPUT_NODE = True
+  CATEGORY = "EasyUse/Logic"
+
+  def save_text(self, text, output_file_path, file_name, file_extension, overwrite, image=None, prompt=None, extra_pnginfo=None):
+    print(output_file_path)
+    print(file_name)
+    if isinstance(file_name, list):
+        file_name = file_name[0]
+    filepath = str(os.path.join(output_file_path, file_name)) + "." + file_extension
+    index = 1
+
+    if (output_file_path == "" or file_name == ""):
+      log_node_warn("Save Text", "No file details found. No file output.")
+      return ()
+
+    if not os.path.exists(output_file_path):
+      os.makedirs(output_file_path)
+
+    if not overwrite:
+      while os.path.exists(filepath):
+        if os.path.exists(filepath):
+          filepath = str(os.path.join(output_file_path, file_name)) + "_" + str(index) + "." + file_extension
+          index = index + 1
+        else:
+          break
+
+    log_node_info("Save Text", f"Saving to {filepath}")
+
+    if file_extension == "csv":
+      text_list = []
+      for i in text.split("\n"):
+        text_list.append(i.strip())
+
+      with open(filepath, "w", newline="") as csv_file:
+        csv_writer = csv.writer(csv_file)
+        # Write each line as a separate row in the CSV file
+        for line in text_list:
+          csv_writer.writerow([line])
+    else:
+      with open(filepath, "w", newline="") as text_file:
+        for line in text:
+          text_file.write(line)
+
+    result = {"result":(text, None)}
+
+    if image is not None:
+        imagepath = output_file_path + "\\" + file_name + ".png"
+        image_index = 1
+        if not overwrite:
+            while os.path.exists(filepath):
+                if os.path.exists(filepath):
+                    imagepath = output_file_path + "\\" + file_name + "_" + str(index) + ".png"
+                    index = index + 1
+                else:
+                    break
+        result = self.save_images(image, imagepath, prompt, extra_pnginfo)
+        log_node_info("Save Text", f"Saving Image to {imagepath}")
+        result['result'][1] = images
+
+    return result
+
 NODE_CLASS_MAPPINGS = {
   "easy string": String,
   "easy int": Int,
@@ -1376,6 +1492,7 @@ NODE_CLASS_MAPPINGS = {
   "easy ifElse": IfElse,
   "easy isNone": isNone,
   "easy isSDXL": isSDXL,
+  "easy isFileExist": isFileExist,
   "easy outputToList": outputToList,
   "easy pixels": pixels,
   "easy xyAny": xyAny,
@@ -1387,9 +1504,10 @@ NODE_CLASS_MAPPINGS = {
   "easy clearCacheKey": clearCacheKey,
   "easy clearCacheAll": clearCacheAll,
   "easy cleanGpuUsed": cleanGPUUsed,
+  "easy saveText": saveText,
   "easy if": If,
   "easy poseEditor": poseEditor,
-  "easy imageToMask": imageToMask
+  "easy imageToMask": imageToMask,
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy string": "String",
@@ -1418,6 +1536,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy blocker": "Blocker",
   "easy isNone": "Is None",
   "easy isSDXL": "Is SDXL",
+  "easy isFileExist": "Is File Exist",
   "easy outputToList": "Output to List",
   "easy pixels": "Pixels W/H Norm",
   "easy xyAny": "XY Any",
@@ -1428,7 +1547,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy showTensorShape": "Show Tensor Shape",
   "easy clearCacheKey": "Clear Cache Key",
   "easy clearCacheAll": "Clear Cache All",
-  "easy cleanGpuUsed": "Clean GPU Used",
+  "easy cleanGpuUsed": "Clean VRAM Used",
+  "easy saveText": "Save Text",
   "easy if": "If (🚫Deprecated)",
   "easy poseEditor": "PoseEditor (🚫Deprecated)",
   "easy imageToMask": "ImageToMask (🚫Deprecated)"
