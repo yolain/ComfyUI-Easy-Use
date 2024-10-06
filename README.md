@@ -56,10 +56,16 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.2.4**
+
+- Added `easy loadImageForLoop`
+- Added `easy isFileExist`
+- Added `easy saveText`
+
 **v1.2.3**
 
 - `easy showAnything` and `easy cleanGPUUsed` added slot of output
-- Added human parts segmentation to `easy humanSegmentation` - Code based on (ComfyUI_Human_Parts)[https://github.com/metal3d/ComfyUI_Human_Parts]
+- Added human parts segmentation to `easy humanSegmentation` - Code based on [ComfyUI_Human_Parts](https://github.com/metal3d/ComfyUI_Human_Parts)
 - Using FluxGuidance when you are using a flux model and choose basicGuider and set the cfg>0 on `easy preSamplingCustom`
 - Added `easy loraStackApply` and `easy controlnetStackApply` - Apply loraStack and controlnetStack
 

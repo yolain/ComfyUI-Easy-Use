@@ -1408,8 +1408,6 @@ class saveText(SaveImage):
   CATEGORY = "EasyUse/Logic"
 
   def save_text(self, text, output_file_path, file_name, file_extension, overwrite, image=None, prompt=None, extra_pnginfo=None):
-    print(output_file_path)
-    print(file_name)
     if isinstance(file_name, list):
         file_name = file_name[0]
     filepath = str(os.path.join(output_file_path, file_name)) + "." + file_extension
