@@ -1449,7 +1449,7 @@ class imageToMask:
         return (image.squeeze().mean(2),)
 
 
-class saveText():
+class saveText:
 
     def __init__(self):
         self.output_dir = folder_paths.output_directory
@@ -1627,6 +1627,15 @@ class saveText():
 
         return result
 
+class saveTextLazy(saveText):
+
+    RETURN_TYPES = ("STRING", "IMAGE")
+    RETURN_NAMES = ("text", 'image',)
+
+    FUNCTION = "save_text"
+    OUTPUT_NODE = False
+    CATEGORY = "EasyUse/Logic"
+
 
 NODE_CLASS_MAPPINGS = {
     "easy string": String,
@@ -1669,6 +1678,7 @@ NODE_CLASS_MAPPINGS = {
     "easy clearCacheAll": clearCacheAll,
     "easy cleanGpuUsed": cleanGPUUsed,
     "easy saveText": saveText,
+    "easy saveTextLazy": saveTextLazy,
     "easy if": If,
     "easy poseEditor": poseEditor,
     "easy imageToMask": imageToMask,
@@ -1714,6 +1724,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy clearCacheAll": "Clear Cache All",
     "easy cleanGpuUsed": "Clean VRAM Used",
     "easy saveText": "Save Text",
+    "easy saveTextLazy": "Save Text (Lazy)",
     "easy if": "If (🚫Deprecated)",
     "easy poseEditor": "PoseEditor (🚫Deprecated)",
     "easy imageToMask": "ImageToMask (🚫Deprecated)"
