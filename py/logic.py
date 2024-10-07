@@ -1200,7 +1200,6 @@ class convertAnything:
             params = bool(anything)
         return (params,)
 
-
 # 将所有类型的内容都转成字符串输出
 class showAnything:
     @classmethod
@@ -1243,6 +1242,19 @@ class showAnything:
 
         return {"ui": {"text": values}, "result": (values,), }
 
+class showAnythingLazy(showAnything):
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {}, "optional": {"anything": (any_type, {}), },
+                "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",
+                           }}
+
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ('output',)
+    INPUT_IS_LIST = True
+    OUTPUT_NODE = False
+    FUNCTION = "log_input"
+    CATEGORY = "EasyUse/Logic"
 
 class showTensorShape:
     @classmethod
@@ -1651,6 +1663,7 @@ NODE_CLASS_MAPPINGS = {
     "easy batchAnything": batchAnything,
     "easy convertAnything": convertAnything,
     "easy showAnything": showAnything,
+    "easy showAnythingLazy": showAnythingLazy,
     "easy showTensorShape": showTensorShape,
     "easy clearCacheKey": clearCacheKey,
     "easy clearCacheAll": clearCacheAll,
@@ -1695,6 +1708,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy batchAnything": "Batch Any",
     "easy convertAnything": "Convert Any",
     "easy showAnything": "Show Any",
+    "easy showAnythingLazy": "Show Any (Lazy)",
     "easy showTensorShape": "Show Tensor Shape",
     "easy clearCacheKey": "Clear Cache Key",
     "easy clearCacheAll": "Clear Cache All",
