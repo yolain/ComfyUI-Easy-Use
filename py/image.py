@@ -514,7 +514,7 @@ class imageListToImageBatch:
         if image1.shape[1:] != image2.shape[1:]:
           image2 = comfy.utils.common_upscale(image2.movedim(-1, 1), image1.shape[2], image1.shape[1], "lanczos",
                                               "center").movedim(1, -1)
-        image1 = torch.cat((image1, image2), dim=0)
+      image1 = torch.cat((image1, image2), dim=0)
       return (image1,)
 
 
@@ -1624,7 +1624,11 @@ class loadImagesForLoop:
 
     graph = GraphBuilder()
     index = 0
-    total = len(dir_files) if limit == -1 else limit
+    if limit == -1:
+      files_length = len(dir_files)
+      total = files_length - start_index if start_index > 0 else files_length
+    else:
+      total = limit
     unique_id = unique_id.split('.')[len(unique_id.split('.')) - 1] if "." in unique_id else unique_id
     update_cache('forloop' + str(unique_id), 'forloop', total)
     if "initial_value0" in kwargs:
@@ -1695,6 +1699,18 @@ class loadImagesForLoop:
 #       m.update(f.read())
 #     return m.digest().hex()
 
+# class saveImageLazy(SaveImage):
+#
+#   RETURN_TYPES = ("IMAGE",)
+#   RETURN_NAMES = ("images",)
+#   OUTPUT_NODE = False
+#   FUNCTION = "save"
+#   CATEGORY = "EasyUse/Image"
+#
+#   def save(self, images, filename_prefix, prompt=None, extra_pnginfo=None):
+#     self.save_images(images, filename_prefix=filename_prefix, prompt=None, extra_pnginfo=None)
+#     return (images,)
+
 NODE_CLASS_MAPPINGS = {
   "easy imageInsetCrop": imageInsetCrop,
   "easy imageCount": imageCount,
@@ -1722,12 +1738,13 @@ NODE_CLASS_MAPPINGS = {
   "easy imageColorMatch": imageColorMatch,
   "easy imageDetailTransfer": imageDetailTransfer,
   "easy imageInterrogator": imageInterrogator,
+  "easy loadImagesForLoop": loadImagesForLoop,
   "easy loadImageBase64": loadImageBase64,
   "easy imageToBase64": imageToBase64,
   "easy joinImageBatch": JoinImageBatch,
   "easy humanSegmentation": humanSegmentation,
   "easy removeLocalImage": removeLocalImage,
-  "easy loadImagesForLoop": loadImagesForLoop,
+  # "easy saveImageLazy": saveImageLazy,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -1760,8 +1777,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageInterrogator": "Image To Prompt",
   "easy joinImageBatch": "JoinImageBatch",
   "easy loadImageBase64": "Load Image (Base64)",
+  "easy loadImagesForLoop": "Load Images For Loop",
   "easy imageToBase64": "Image To Base64",
   "easy humanSegmentation": "Human Segmentation",
   "easy removeLocalImage": "Remove Local Image",
-  "easy loadImagesForLoop": "Load Images For Loop",
+  # "easy saveImageLazy": "Save Image (Lazy)",
 }
