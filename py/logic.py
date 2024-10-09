@@ -1057,8 +1057,8 @@ class pixels:
 
         width = width * scale
         height = height * scale
-        width_norm = width - width % 8
-        height_norm = height - height % 8
+        width_norm = int(width - width % 8)
+        height_norm = int(height - height % 8)
         flip_wh = kwargs['flip_w/h']
         if flip_wh:
             width, height = height, width
@@ -1239,8 +1239,10 @@ class showAnything:
             node = next((x for x in workflow["nodes"] if str(x["id"]) == unique_id[0]), None)
             if node:
                 node["widgets_values"] = [values]
-
-        return {"ui": {"text": values}, "result": (values,), }
+        if isinstance(values, list) and len(values) == 1:
+            return {"ui": {"text": values}, "result": (values[0],), }
+        else:
+            return {"ui": {"text": values}, "result": (values,), }
 
 class showAnythingLazy(showAnything):
     @classmethod
@@ -1253,6 +1255,7 @@ class showAnythingLazy(showAnything):
     RETURN_NAMES = ('output',)
     INPUT_IS_LIST = True
     OUTPUT_NODE = False
+    OUTPUT_IS_LIST = (False,)
     FUNCTION = "log_input"
     CATEGORY = "EasyUse/Logic"
 
