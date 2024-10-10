@@ -1,12 +1,13 @@
 import os, torch
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
-from .utils import easySave
+from .utils import easySave, get_sd_version
 from .adv_encode import advanced_encode
 from .controlnet import easyControlnet
 from .log import log_node_warn
 from ..layer_diffuse import LayerDiffuse
 from ..config import RESOURCES_DIR
+from nodes import CLIPTextEncode
 
 class easyXYPlot():
 
@@ -184,6 +185,8 @@ class easyXYPlot():
         clip = clip if clip is not None else plot_image_vars["clip"]
         steps = plot_image_vars['steps'] if "steps" in plot_image_vars else 1
 
+        sd_version = get_sd_version(plot_image_vars['model'])
+
         # 高级用法
         if plot_image_vars["x_node_type"] == "advanced" or plot_image_vars["y_node_type"] == "advanced":
             if self.x_type == "Seeds++ Batch" or self.y_type == "Seeds++ Batch":
@@ -352,11 +355,14 @@ class easyXYPlot():
                 if self.x_type == 'Positive Prompt S/R' or self.y_type == 'Positive Prompt S/R':
                     positive = x_value if self.x_type == "Positive Prompt S/R" else y_value
 
-                positive = advanced_encode(clip, positive,
-                                            plot_image_vars['positive_token_normalization'],
-                                            plot_image_vars['positive_weight_interpretation'],
-                                            w_max=1.0,
-                                            apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
+                if sd_version == 'flux':
+                    positive, = CLIPTextEncode().encode(clip, positive)
+                else:
+                    positive = advanced_encode(clip, positive,
+                                                plot_image_vars['positive_token_normalization'],
+                                                plot_image_vars['positive_weight_interpretation'],
+                                                w_max=1.0,
+                                                apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
 
                 # if "positive_cond" in plot_image_vars:
                 #     positive = positive + plot_image_vars["positive_cond"]
@@ -365,11 +371,14 @@ class easyXYPlot():
                 if self.x_type == 'Negative Prompt S/R' or self.y_type == 'Negative Prompt S/R':
                     negative = x_value if self.x_type == "Negative Prompt S/R" else y_value
 
-                negative = advanced_encode(clip, negative,
-                                            plot_image_vars['negative_token_normalization'],
-                                            plot_image_vars['negative_weight_interpretation'],
-                                            w_max=1.0,
-                                            apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
+                if sd_version == 'flux':
+                    negative, = CLIPTextEncode().encode(clip, negative)
+                else:
+                    negative = advanced_encode(clip, negative,
+                                                plot_image_vars['negative_token_normalization'],
+                                                plot_image_vars['negative_weight_interpretation'],
+                                                w_max=1.0,
+                                                apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
                 # if "negative_cond" in plot_image_vars:
                 #     negative = negative + plot_image_vars["negative_cond"]
 
@@ -407,15 +416,21 @@ class easyXYPlot():
             clip = clip.clone()
             clip.clip_layer(plot_image_vars['clip_skip'])
 
-            positive = advanced_encode(clip, plot_image_vars['positive'],
-                                                        plot_image_vars['positive_token_normalization'],
-                                                        plot_image_vars['positive_weight_interpretation'], w_max=1.0,
-                                                        apply_to_pooled="enable",a1111_prompt_style=a1111_prompt_style, steps=steps)
+            if sd_version == 'flux':
+                positive, = CLIPTextEncode().encode(clip, positive)
+            else:
+                positive = advanced_encode(clip, plot_image_vars['positive'],
+                                                            plot_image_vars['positive_token_normalization'],
+                                                            plot_image_vars['positive_weight_interpretation'], w_max=1.0,
+                                                            apply_to_pooled="enable",a1111_prompt_style=a1111_prompt_style, steps=steps)
 
-            negative = advanced_encode(clip, plot_image_vars['negative'],
-                                                        plot_image_vars['negative_token_normalization'],
-                                                        plot_image_vars['negative_weight_interpretation'], w_max=1.0,
-                                                        apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
+            if sd_version == 'flux':
+                negative, = CLIPTextEncode().encode(clip, negative)
+            else:
+                negative = advanced_encode(clip, plot_image_vars['negative'],
+                                                            plot_image_vars['negative_token_normalization'],
+                                                            plot_image_vars['negative_weight_interpretation'], w_max=1.0,
+                                                            apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
 
         model = model if model is not None else plot_image_vars["model"]
         vae = vae if vae is not None else plot_image_vars["vae"]

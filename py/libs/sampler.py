@@ -78,6 +78,7 @@ class easySampler:
                         preview_latent=True, disable_pbar=False):
         device = comfy.model_management.get_torch_device()
         latent_image = latent["samples"]
+        latent_image = comfy.sample.fix_empty_latent_channels(model, latent_image)
 
         noise_mask = None
         if "noise_mask" in latent:
