@@ -7261,7 +7261,7 @@ class pipeXYPlot:
 
     CATEGORY = "EasyUse/Pipe"
 
-    def plot(self, grid_spacing, output_individuals, flip_xy, x_axis, x_values, y_axis, y_values, pipe=None):
+    def plot(self, grid_spacing, output_individuals, flip_xy, x_axis, x_values, y_axis, y_values, pipe=None, font_path=None):
         def clean_values(values):
             original_values = values.split("; ")
             cleaned_values = []
@@ -7308,6 +7308,7 @@ class pipeXYPlot:
                    "x_vals": x_values,
                    "y_axis": y_axis,
                    "y_vals": y_values,
+                   "custom_font": font_path,
                    "grid_spacing": grid_spacing,
                    "output_individuals": output_individuals}
 
@@ -7321,9 +7322,33 @@ class pipeXYPlot:
         return (new_pipe, xy_plot,)
 
 # pipeXYPlotAdvanced
+import platform
 class pipeXYPlotAdvanced:
+    if platform.system() == "Windows":
+        system_root = os.environ.get("SystemRoot")
+        user_root = os.environ.get("USERPROFILE")
+        font_dir = os.path.join(system_root, "Fonts") if system_root else None
+        user_font_dir = os.path.join(user_root, "AppData","Local","Microsoft","Windows", "Fonts") if user_root else None
+
+    # Default debian-based Linux & MacOS font dirs
+    elif platform.system() == "Linux":
+        font_dir = "/usr/share/fonts/truetype"
+    elif platform.system() == "Darwin":
+        font_dir = "/System/Library/Fonts"
+    else:
+        font_dir = None
+
     @classmethod
     def INPUT_TYPES(s):
+        if s.font_dir:
+            font_dir = s.font_dir
+            files_list = [f for f in os.listdir(font_dir) if os.path.isfile(os.path.join(font_dir, f)) and f.lower().endswith(".ttf")]
+        else:
+            flies_list = []
+
+        if s.user_font_dir:
+            files_list = files_list + [f for f in os.listdir(s.user_font_dir) if os.path.isfile(os.path.join(s.user_font_dir, f)) and f.lower().endswith(".ttf")]
+
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
@@ -7334,6 +7359,7 @@ class pipeXYPlotAdvanced:
             "optional": {
                 "X": ("X_Y",),
                 "Y": ("X_Y",),
+                "font": (["None"] + files_list,)
             },
             "hidden": {"my_unique_id": "UNIQUE_ID"}
         }
@@ -7344,7 +7370,12 @@ class pipeXYPlotAdvanced:
 
     CATEGORY = "EasyUse/Pipe"
 
-    def plot(self, pipe, grid_spacing, output_individuals, flip_xy, X=None, Y=None, my_unique_id=None):
+
+    def plot(self, pipe, grid_spacing, output_individuals, flip_xy, X=None, Y=None, font=None, my_unique_id=None):
+        font_path = os.path.join(self.font_dir, font) if font != "None" else None
+        if font_path and not os.path.exists(font_path):
+            font_path = os.path.join(self.user_font_dir, font)
+
         if X != None:
             x_axis = X.get('axis')
             x_values = X.get('values')
@@ -7543,7 +7574,7 @@ class pipeXYPlotAdvanced:
 
             del pipe
 
-        return pipeXYPlot().plot(grid_spacing, output_individuals, flip_xy, x_axis, x_values, y_axis, y_values, new_pipe)
+        return pipeXYPlot().plot(grid_spacing, output_individuals, flip_xy, x_axis, x_values, y_axis, y_values, new_pipe, font_path)
 
 #---------------------------------------------------------------节点束 结束----------------------------------------------------------------------
 
