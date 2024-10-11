@@ -1,7 +1,9 @@
 import os
+import json
 import comfy
 import folder_paths
 from .config import RESOURCES_DIR
+from .libs.utils import getMetadata
 def load_preset(filename):
     path = os.path.join(RESOURCES_DIR, filename)
     path = os.path.abspath(path)
@@ -525,7 +527,8 @@ class XYplot_Lora:
             inputs["required"][f"clip_str_{i}"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
 
         inputs["optional"] = {
-            "optional_lora_stack": ("LORA_STACK",)
+            "optional_lora_stack": ("LORA_STACK",),
+            "display_trigger_word": ("BOOLEAN", {"display_trigger_word": True, "tooltip": "Trigger words showing lora model pass through the model's metadata, but not necessarily accurately."}),
         }
         return inputs
 
@@ -535,7 +538,39 @@ class XYplot_Lora:
 
     CATEGORY = "EasyUse/XY Inputs"
 
-    def xy_value(self, input_mode, lora_count, model_strength, clip_strength, **kwargs):
+    def sort_tags_by_frequency(self, meta_tags):
+        if meta_tags is None:
+            return []
+        if "ss_tag_frequency" in meta_tags:
+            meta_tags = meta_tags["ss_tag_frequency"]
+            meta_tags = json.loads(meta_tags)
+            sorted_tags = {}
+            for _, dataset in meta_tags.items():
+                for tag, count in dataset.items():
+                    tag = str(tag).strip()
+                    if tag in sorted_tags:
+                        sorted_tags[tag] = sorted_tags[tag] + count
+                    else:
+                        sorted_tags[tag] = count
+            # sort tags by training frequency. Most seen tags firsts
+            sorted_tags = dict(sorted(sorted_tags.items(), key=lambda item: item[1], reverse=True))
+            return list(sorted_tags.keys())
+        else:
+            return []
+
+    def get_trigger_words(self, lora_name, display=False):
+        if not display:
+            return ""
+
+        file_path = folder_paths.get_full_path('loras', lora_name)
+        if not file_path:
+            return ''
+        header = getMetadata(file_path)
+        header_json = json.loads(header)
+        meta = header_json["__metadata__"] if "__metadata__" in header_json else None
+        tags = self.sort_tags_by_frequency(meta)
+        return ' '+ tags[0] if len(tags) > 0 else ''
+    def xy_value(self, input_mode, lora_count, model_strength, clip_strength, display_trigger_words=True, **kwargs):
 
         axis = "advanced: Lora"
         # Extract values from kwargs
@@ -550,7 +585,7 @@ class XYplot_Lora:
                 clip_strs[i] = clip_strength
 
         # Extend each sub-array with lora_stack if it's not None
-        values = [lora.replace(',', '*')+','+str(model_str)+','+str(clip_str) for lora, model_str, clip_str
+        values = [lora.replace(',', '*')+','+str(model_str)+','+str(clip_str) +',' + self.get_trigger_words(lora, display_trigger_words) for lora, model_str, clip_str
                     in zip(loras, model_strs, clip_strs) if lora != "None"]
 
         optional_lora_stack = kwargs.get("optional_lora_stack") if "optional_lora_stack" in kwargs else []

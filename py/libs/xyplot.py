@@ -16,6 +16,7 @@ class easyXYPlot():
         self.y_node_type, self.y_type = sampler.safe_split(xyPlotData.get("y_axis"), ': ')
         self.x_values = xyPlotData.get("x_vals") if self.x_type != "None" else []
         self.y_values = xyPlotData.get("y_vals") if self.y_type != "None" else []
+        self.custom_font = xyPlotData.get("custom_font")
 
         self.grid_spacing = xyPlotData.get("grid_spacing")
         self.latent_id = 0
@@ -55,7 +56,10 @@ class easyXYPlot():
             value_label = f"ControlNet {index + 1}"
 
         if value_type in ['Lora', 'Checkpoint']:
-            value_label = f"{os.path.basename(os.path.splitext(value.split(',')[0])[0])}"
+            arr = value.split(',')
+            model_name = os.path.basename(os.path.splitext(arr[0])[0])
+            trigger_words = ' ' + arr[3] if len(arr[3]) > 2 else ''
+            value_label = f"{model_name}{trigger_words}"
 
         if value_type in ["ModelMergeBlocks"]:
             if ":" in value:
@@ -88,8 +92,10 @@ class easyXYPlot():
         return plot_image_vars, value_label
 
     @staticmethod
-    def get_font(font_size):
-        return ImageFont.truetype(str(Path(os.path.join(RESOURCES_DIR, 'OpenSans-Medium.ttf'))), font_size)
+    def get_font(font_size, font_path=None):
+        if font_path is None:
+            font_path = str(Path(os.path.join(RESOURCES_DIR, 'OpenSans-Medium.ttf')))
+        return ImageFont.truetype(font_path, font_size)
 
     @staticmethod
     def update_label(label, value, num_items):
@@ -119,7 +125,7 @@ class easyXYPlot():
         return bg_width, bg_height, x_offset_initial, y_offset
 
     def adjust_font_size(self, text, initial_font_size, label_width):
-        font = self.get_font(initial_font_size)
+        font = self.get_font(initial_font_size, self.custom_font)
         text_width = font.getbbox(text)
         if text_width and text_width[2]:
             text_width = text_width[2]
@@ -147,7 +153,7 @@ class easyXYPlot():
         label_bg = Image.new('RGBA', (label_width, label_height), color=(255, 255, 255, 0))
         d = ImageDraw.Draw(label_bg)
 
-        font = self.get_font(font_size)
+        font = self.get_font(font_size, self.custom_font)
 
         # Check if text will fit, if not insert ellipsis and reduce text
         if self.textsize(d, text, font=font)[0] > label_width:
@@ -341,7 +347,7 @@ class easyXYPlot():
                 clip = clip if clip is not None else plot_image_vars["clip"]
 
                 xy_values = x_value if self.x_type == "Lora" else y_value
-                lora_name, lora_model_strength, lora_clip_strength = xy_values.split(",")
+                lora_name, lora_model_strength, lora_clip_strength, _ = xy_values.split(",")
                 lora_stack = [{"lora_name": lora_name, "model": model, "clip" :clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)}]
                 if 'lora_stack' in plot_image_vars:
                     lora_stack = lora_stack + plot_image_vars['lora_stack']
