@@ -122,6 +122,28 @@ class XYplot_CFG:
         values = generate_floats(batch_count, first_cfg, last_cfg)
         return ({"axis": axis, "values": values},) if values else (None,)
 
+class XYplot_FluxGuidance:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "batch_count": ("INT", {"default": 3, "min": 0, "max": 50}),
+                "first_guidance": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 100.0}),
+                "last_guidance": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0}),
+            }
+        }
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, batch_count, first_guidance, last_guidance):
+        axis = "advanced: Flux Guidance"
+        values = generate_floats(batch_count, first_guidance, last_guidance)
+        return ({"axis": axis, "values": values},) if values else (None,)
+
 # Step Values
 class XYplot_Sampler_Scheduler:
     parameters = ["sampler", "scheduler", "sampler & scheduler"]

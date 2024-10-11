@@ -8,6 +8,10 @@ from .log import log_node_warn
 from ..layer_diffuse import LayerDiffuse
 from ..config import RESOURCES_DIR
 from nodes import CLIPTextEncode
+try:
+    from comfy_extras.nodes_flux import FluxGuidance
+except:
+    FluxGuidance = None
 
 class easyXYPlot():
 
@@ -403,6 +407,11 @@ class easyXYPlot():
                         start_percent = item[3]
                         end_percent = item[4]
                         positive, negative = easyControlnet().apply(control_net_name, image, positive, negative, strength, start_percent, end_percent, None, 1)
+            # Flux guidance
+            if self.x_type == "Flux Guidance" or self.y_type == "Flux Guidance":
+                positive = plot_image_vars["positive_cond"] if "positive" in plot_image_vars else None
+                flux_guidance = float(x_value) if self.x_type == "Flux Guidance" else float(y_value)
+                positive, = FluxGuidance().append(positive, flux_guidance)
 
         # 简单用法
         if plot_image_vars["x_node_type"] == "loader" or plot_image_vars["y_node_type"] == "loader":

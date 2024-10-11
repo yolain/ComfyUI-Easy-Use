@@ -16,7 +16,7 @@ from server import PromptServer
 from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint, InpaintModelConditioning, ConditioningZeroOut
 from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, POWERPAINT_MODELS, IPADAPTER_DIR, IPADAPTER_CLIPVISION_MODELS, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS, IC_LIGHT_MODELS
 from .layer_diffuse import LayerDiffuse, LayerMethod
-from .xyplot import XYplot_ModelMergeBlocks, XYplot_CFG, XYplot_Lora, XYplot_Checkpoint, XYplot_Denoise, XYplot_Steps, XYplot_PromptSR, XYplot_Positive_Cond, XYplot_Negative_Cond, XYplot_Positive_Cond_List, XYplot_Negative_Cond_List, XYplot_SeedsBatch, XYplot_Control_Net, XYplot_Sampler_Scheduler
+from .xyplot import *
 
 from .libs.log import log_node_info, log_node_error, log_node_warn
 from .libs.adv_encode import advanced_encode
@@ -7370,7 +7370,6 @@ class pipeXYPlotAdvanced:
 
     CATEGORY = "EasyUse/Pipe"
 
-
     def plot(self, pipe, grid_spacing, output_individuals, flip_xy, X=None, Y=None, font=None, my_unique_id=None):
         font_path = os.path.join(self.font_dir, font) if font != "None" else None
         if font_path and not os.path.exists(font_path):
@@ -7828,6 +7827,7 @@ NODE_CLASS_MAPPINGS = {
     "easy XYInputs: Seeds++ Batch": XYplot_SeedsBatch,
     "easy XYInputs: Steps": XYplot_Steps,
     "easy XYInputs: CFG Scale": XYplot_CFG,
+    "easy XYInputs: FluxGuidance": XYplot_FluxGuidance,
     "easy XYInputs: Sampler/Scheduler": XYplot_Sampler_Scheduler,
     "easy XYInputs: Denoise": XYplot_Denoise,
     "easy XYInputs: Checkpoint": XYplot_Checkpoint,
@@ -7953,6 +7953,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy XYInputs: Seeds++ Batch": "XY Inputs: Seeds++ Batch //EasyUse",
     "easy XYInputs: Steps": "XY Inputs: Steps //EasyUse",
     "easy XYInputs: CFG Scale": "XY Inputs: CFG Scale //EasyUse",
+    "easy XYInputs: FluxGuidance": "XY Inputs: Flux Guidance //EasyUse",
     "easy XYInputs: Sampler/Scheduler": "XY Inputs: Sampler/Scheduler //EasyUse",
     "easy XYInputs: Denoise": "XY Inputs: Denoise //EasyUse",
     "easy XYInputs: Checkpoint": "XY Inputs: Checkpoint //EasyUse",
