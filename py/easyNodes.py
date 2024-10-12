@@ -7333,10 +7333,13 @@ class pipeXYPlotAdvanced:
     # Default debian-based Linux & MacOS font dirs
     elif platform.system() == "Linux":
         font_dir = "/usr/share/fonts/truetype"
+        user_font_dir = None
     elif platform.system() == "Darwin":
         font_dir = "/System/Library/Fonts"
+        user_font_dir = None
     else:
         font_dir = None
+        user_font_dir = None
 
     @classmethod
     def INPUT_TYPES(s):
