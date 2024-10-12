@@ -514,7 +514,7 @@ class imageListToImageBatch:
         if image1.shape[1:] != image2.shape[1:]:
           image2 = comfy.utils.common_upscale(image2.movedim(-1, 1), image1.shape[2], image1.shape[1], "lanczos",
                                               "center").movedim(1, -1)
-      image1 = torch.cat((image1, image2), dim=0)
+        image1 = torch.cat((image1, image2), dim=0)
       return (image1,)
 
 
