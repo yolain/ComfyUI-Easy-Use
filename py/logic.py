@@ -649,10 +649,10 @@ class whileLoopStart:
             },
         }
         for i in range(MAX_FLOW_NUM):
-            inputs["optional"]["initial_value%d" % i] = ("*",)
+            inputs["optional"]["initial_value%d" % i] = (any_type,)
         return inputs
 
-    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL"] + ["*"] * MAX_FLOW_NUM))
+    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL"] + [any_type] * MAX_FLOW_NUM))
     RETURN_NAMES = ByPassTypeTuple(tuple(["flow"] + ["value%d" % i for i in range(MAX_FLOW_NUM)]))
     FUNCTION = "while_loop_open"
 
@@ -684,10 +684,10 @@ class whileLoopEnd:
             }
         }
         for i in range(MAX_FLOW_NUM):
-            inputs["optional"]["initial_value%d" % i] = (AlwaysEqualProxy('*'),)
+            inputs["optional"]["initial_value%d" % i] = (any_type,)
         return inputs
 
-    RETURN_TYPES = ByPassTypeTuple(tuple([AlwaysEqualProxy('*')] * MAX_FLOW_NUM))
+    RETURN_TYPES = ByPassTypeTuple(tuple([any_type] * MAX_FLOW_NUM))
     RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(MAX_FLOW_NUM)]))
     FUNCTION = "while_loop_close"
 
