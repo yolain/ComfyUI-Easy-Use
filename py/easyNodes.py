@@ -7343,13 +7343,13 @@ class pipeXYPlotAdvanced:
 
     @classmethod
     def INPUT_TYPES(s):
-        if s.font_dir:
+        if s.font_dir and os.path.exists(s.font_dir):
             font_dir = s.font_dir
             files_list = [f for f in os.listdir(font_dir) if os.path.isfile(os.path.join(font_dir, f)) and f.lower().endswith(".ttf")]
         else:
             flies_list = []
 
-        if s.user_font_dir:
+        if s.user_font_dir and os.path.exists(s.user_font_dir):
             files_list = files_list + [f for f in os.listdir(s.user_font_dir) if os.path.isfile(os.path.join(s.user_font_dir, f)) and f.lower().endswith(".ttf")]
 
         return {
