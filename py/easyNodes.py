@@ -6878,9 +6878,9 @@ class pipeIn:
         vae = vae if vae is not None else pipe.get("vae")
         if vae is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "VAE missing from pipeLine")
-        clip = clip if clip is not None else pipe.get("clip")
-        if clip is None:
-            log_node_warn(f'pipeIn[{my_unique_id}]', "Clip missing from pipeLine")
+        clip = clip if clip is not None else pipe.get("clip") if pipe is not None and "clip" in pipe else None
+        # if clip is None:
+        #     log_node_warn(f'pipeIn[{my_unique_id}]', "Clip missing from pipeLine")
         if latent is not None:
             samples = latent
         elif image is None:
