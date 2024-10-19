@@ -1,4 +1,5 @@
 import os
+import json
 import hashlib
 import folder_paths
 import torch
@@ -9,6 +10,7 @@ from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
 from nodes import MAX_RESOLUTION, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
+from PIL.PngImagePlugin import PngInfo
 from torchvision.transforms import Resize, CenterCrop, GaussianBlur
 from torchvision.transforms.functional import to_pil_image
 from .libs.log import log_node_info
@@ -1699,17 +1701,83 @@ class loadImagesForLoop:
 #       m.update(f.read())
 #     return m.digest().hex()
 
-# class saveImageLazy(SaveImage):
-#
-#   RETURN_TYPES = ("IMAGE",)
-#   RETURN_NAMES = ("images",)
-#   OUTPUT_NODE = False
-#   FUNCTION = "save"
-#   CATEGORY = "EasyUse/Image"
-#
-#   def save(self, images, filename_prefix, prompt=None, extra_pnginfo=None):
-#     self.save_images(images, filename_prefix=filename_prefix, prompt=None, extra_pnginfo=None)
-#     return (images,)
+class saveImageLazy():
+  def __init__(self):
+    self.output_dir = folder_paths.get_output_directory()
+    self.type = "output"
+    self.compress_level = 4
+
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required":
+          {"images": ("IMAGE",),
+           "filename_prefix": ("STRING", {"default": "ComfyUI"}),
+           "save_metadata": ("BOOLEAN", {"default": True}),
+           },
+        "optional":{},
+        "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+      }
+
+  RETURN_TYPES = ("IMAGE",)
+  RETURN_NAMES = ("images",)
+  OUTPUT_NODE = False
+  FUNCTION = "save"
+  CATEGORY = "EasyUse/Image"
+
+  def save(self, images, filename_prefix, save_metadata, prompt=None, extra_pnginfo=None):
+    extension = 'png'
+
+    full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
+      filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
+
+    results = list()
+    for (batch_number, image) in enumerate(images):
+      i = 255. * image.cpu().numpy()
+      img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+      metadata = None
+
+      filename_with_batch_num = filename.replace(
+        "%batch_num%", str(batch_number))
+
+      counter = 1
+
+      if os.path.exists(full_output_folder) and os.listdir(full_output_folder):
+        filtered_filenames = list(filter(
+          lambda filename: filename.startswith(
+            filename_with_batch_num + "_")
+                           and filename[len(filename_with_batch_num) + 1:-4].isdigit(),
+          os.listdir(full_output_folder)
+        ))
+
+        if filtered_filenames:
+          max_counter = max(
+            int(filename[len(filename_with_batch_num) + 1:-4])
+            for filename in filtered_filenames
+          )
+          counter = max_counter + 1
+
+      file = f"{filename_with_batch_num}_{counter:05}.{extension}"
+
+      save_path = os.path.join(full_output_folder, file)
+
+      if save_metadata:
+        metadata = PngInfo()
+        if prompt is not None:
+          metadata.add_text("prompt", json.dumps(prompt))
+        if extra_pnginfo is not None:
+          for x in extra_pnginfo:
+            metadata.add_text(
+              x, json.dumps(extra_pnginfo[x]))
+
+      img.save(save_path, pnginfo=metadata)
+
+      results.append({
+        "filename": file,
+        "subfolder": subfolder,
+        "type": self.type
+      })
+
+    return {"ui": {"images": results} , "result": (images,)}
 
 NODE_CLASS_MAPPINGS = {
   "easy imageInsetCrop": imageInsetCrop,
@@ -1744,7 +1812,7 @@ NODE_CLASS_MAPPINGS = {
   "easy joinImageBatch": JoinImageBatch,
   "easy humanSegmentation": humanSegmentation,
   "easy removeLocalImage": removeLocalImage,
-  # "easy saveImageLazy": saveImageLazy,
+  "easy saveImageLazy": saveImageLazy,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -1781,5 +1849,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageToBase64": "Image To Base64",
   "easy humanSegmentation": "Human Segmentation",
   "easy removeLocalImage": "Remove Local Image",
-  # "easy saveImageLazy": "Save Image (Lazy)",
+  "easy saveImageLazy": "Save Image (Lazy)",
 }
