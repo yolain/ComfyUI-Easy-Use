@@ -1142,7 +1142,23 @@ class batchAnything:
     FUNCTION = "batch"
     CATEGORY = "EasyUse/Logic"
 
+    def latentBatch(self, any_1, any_2):
+        samples_out = any_1.copy()
+        s1 = any_1["samples"]
+        s2 = any_2["samples"]
+
+        if s1.shape[1:] != s2.shape[1:]:
+            s2 = comfy.utils.common_upscale(s2, s1.shape[3], s1.shape[2], "bilinear", "center")
+        s = torch.cat((s1, s2), dim=0)
+        samples_out["samples"] = s
+        samples_out["batch_index"] = any_1.get("batch_index",
+                                               [x for x in range(0, s1.shape[0])]) + any_2.get(
+            "batch_index", [x for x in range(0, s2.shape[0])])
+
+        return samples_out
+
     def batch(self, any_1, any_2):
+
         if isinstance(any_1, torch.Tensor) or isinstance(any_2, torch.Tensor):
             if any_1 is None:
                 return (any_2,)
@@ -1164,6 +1180,16 @@ class batchAnything:
             elif isinstance(any_1, tuple):
                 return (any_1 + (any_2,),)
             return ((any_2, any_1),)
+        elif isinstance(any_1, dict) and 'samples' in any_1:
+            if any_2 is None:
+                return (any_1,)
+            elif isinstance(any_2, dict) and 'samples' in any_2:
+                return (self.latentBatch(any_1, any_2),)
+        elif isinstance(any_2, dict) and 'samples' in any_2:
+            if any_1 is None:
+                return (any_2,)
+            elif isinstance(any_1, dict) and 'samples' in any_1:
+                return (self.latentBatch(any_2, any_1),)
         else:
             if any_1 is None:
                 return (any_2,)
