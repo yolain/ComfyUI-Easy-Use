@@ -58,6 +58,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.4**
 
+- Added `easy saveImageLazy`
 - Added `easy loadImageForLoop`
 - Added `easy isFileExist`
 - Added `easy saveText`

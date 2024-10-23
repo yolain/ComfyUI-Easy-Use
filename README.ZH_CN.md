@@ -63,6 +63,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.4**
 
+- 增加 `easy saveImageLazy`
 - 增加 `easy loadImageForLoop`
 - 增加 `easy isFileExist`
 - 增加 `easy saveText`
