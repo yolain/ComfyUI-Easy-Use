@@ -898,7 +898,15 @@ class fullLoader:
             "batch_size": (
             "INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
         },
-            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",), "optional_lora_stack": ("LORA_STACK",), "optional_controlnet_stack": ("CONTROL_NET_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),},
+            "optional": {"model_override": ("MODEL",), 
+                         "clip_override": ("CLIP",), 
+                         "vae_override": ("VAE",), 
+                         "optional_lora_stack": ("LORA_STACK",), 
+                         "optional_controlnet_stack": ("CONTROL_NET_STACK",), 
+                         "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),
+                         "positive_text": ("STRING", {"default": "", "forceInput": True}), 
+                         "negtive_text": ("STRING", {"default": "", "forceInput": True}), 
+                         },
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
@@ -913,7 +921,10 @@ class fullLoader:
                        resolution, empty_latent_width, empty_latent_height,
                        positive, positive_token_normalization, positive_weight_interpretation,
                        negative, negative_token_normalization, negative_weight_interpretation,
-                       batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, prompt=None,
+                       batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False,
+                       positive_text=None,
+                       negtive_text=None,
+                       prompt=None,
                        my_unique_id=None
                        ):
 
@@ -930,8 +941,8 @@ class fullLoader:
         samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size, sd3=sd3)
 
         # Prompt to Conditioning
-        positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache, model_type=model_type)
-        negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, lora_stack, negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache, model_type=model_type)
+        positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, lora_stack, positive_text if positive_text else positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache, model_type=model_type)
+        negative_embeddings_final, negative_wildcard_prompt, model, clip = prompt_to_cond('negative', model, clip, clip_skip, lora_stack, negtive_text  if negtive_text else negative, negative_token_normalization, negative_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache, model_type=model_type)
 
         if negative_embeddings_final is None:
             negative_embeddings_final, = ConditioningZeroOut().zero_out(positive_embeddings_final)
