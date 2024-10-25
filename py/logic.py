@@ -1125,6 +1125,25 @@ class lengthAnything:
             return
         return (len(any),)
 
+class indexAnything:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "any": (any_type, {}),
+                "index": ("INT", {"default": 0, "min": 0, "max": 1000000, "step": 1}),
+            }
+        }
+
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ("out",)
+
+    FUNCTION = "getIndex"
+    CATEGORY = "EasyUse/Logic"
+
+    def getIndex(self, any, index):
+        return (any[index],)
+
 
 class batchAnything:
     @classmethod
@@ -1698,6 +1717,7 @@ NODE_CLASS_MAPPINGS = {
     "easy pixels": pixels,
     "easy xyAny": xyAny,
     "easy lengthAnything": lengthAnything,
+    "easy indexAnything": indexAnything,
     "easy batchAnything": batchAnything,
     "easy convertAnything": convertAnything,
     "easy showAnything": showAnything,
@@ -1744,6 +1764,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy pixels": "Pixels W/H Norm",
     "easy xyAny": "XY Any",
     "easy lengthAnything": "Length Any",
+    "easy indexAnything": "Index Any",
     "easy batchAnything": "Batch Any",
     "easy convertAnything": "Convert Any",
     "easy showAnything": "Show Any",
