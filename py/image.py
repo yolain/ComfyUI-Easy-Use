@@ -697,6 +697,10 @@ class imageConcat:
   CATEGORY = "EasyUse/Image"
 
   def concat(self, image1, image2, direction, match_image_size):
+    if image1 is None:
+      return (image2,)
+    elif image2 is None:
+      return (image1,)
     if match_image_size:
       image2 = torch.nn.functional.interpolate(image2, size=(image1.shape[2], image1.shape[3]), mode="bilinear")
     if direction == 'right':
