@@ -63,6 +63,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.4**
 
+- 支持 `model_override`,`vae_override`,`clip_override` 可以在 `easy fullLoader` 中单独输入
 - 增加 `easy saveImageLazy`
 - 增加 `easy loadImageForLoop`
 - 增加 `easy isFileExist`

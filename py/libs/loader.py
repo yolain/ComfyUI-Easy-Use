@@ -445,19 +445,19 @@ class easyLoader:
                 ckpt_name_1 = node["inputs"]["ckpt_name_1"]
                 model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name_1)
                 can_load_lora = False
-        # Load models
         elif model_override is not None and clip_override is not None and vae_override is not None:
             model = model_override
             clip = clip_override
             vae = vae_override
-        elif model_override is not None:
-            raise Exception(f"[ERROR] clip or vae is missing")
-        elif vae_override is not None:
-            raise Exception(f"[ERROR] model or clip is missing")
-        elif clip_override is not None:
-            raise Exception(f"[ERROR] model or vae is missing")
         else:
             model, clip, vae, clip_vision = self.load_checkpoint(ckpt_name, config_name)
+            if model_override is not None:
+                model = model_override
+            if vae_override is not None:
+                vae = vae_override
+            elif clip_override is not None:
+                clip = clip_override
+
 
         if optional_lora_stack is not None and can_load_lora:
             for lora in optional_lora_stack:

@@ -58,6 +58,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.4**
 
+- Support `model_override`,`vae_override`,`clip_override` can be input separately to `easy fullLoader`
 - Added `easy saveImageLazy`
 - Added `easy loadImageForLoop`
 - Added `easy isFileExist`
