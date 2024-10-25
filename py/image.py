@@ -511,13 +511,15 @@ class imageListToImageBatch:
     if len(images) <= 1:
       return (images[0],)
     else:
-      image1 = images[0]
-      for image2 in images[1:]:
-        if image1.shape[1:] != image2.shape[1:]:
-          image2 = comfy.utils.common_upscale(image2.movedim(-1, 1), image1.shape[2], image1.shape[1], "lanczos",
+      image_shape = images[0].shape
+      for i, img in enumerate(images):
+        if image_shape[1:] == img[1:]:
+          continue
+        else:
+          images[i] = comfy.utils.common_upscale(img.movedim(-1, 1), img.shape[2], image_shape[1], "lanczos",
                                               "center").movedim(1, -1)
-        image1 = torch.cat((image1, image2), dim=0)
-      return (image1,)
+      images = torch.cat(images, dim=0)
+      return (images,)
 
 
 class imageBatchToImageList:
