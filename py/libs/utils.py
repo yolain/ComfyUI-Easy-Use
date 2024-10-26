@@ -182,8 +182,9 @@ def find_wildcards_seed(clip_id, text, prompt):
     else:
         return None
 
-def is_linked_styles_selector(prompt, my_unique_id, prompt_type='positive'):
-    inputs_values = prompt[my_unique_id]['inputs'][prompt_type] if prompt_type in prompt[my_unique_id][
+def is_linked_styles_selector(prompt, unique_id, prompt_type='positive'):
+    unique_id = unique_id.split('.')[len(unique_id.split('.')) - 1] if "." in unique_id else unique_id
+    inputs_values = prompt[unique_id]['inputs'][prompt_type] if prompt_type in prompt[unique_id][
         'inputs'] else None
     if type(inputs_values) == list and inputs_values != 'undefined' and inputs_values[0]:
         return True if prompt[inputs_values[0]] and prompt[inputs_values[0]]['class_type'] == 'easy stylesSelector' else False
