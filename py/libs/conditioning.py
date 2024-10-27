@@ -29,7 +29,7 @@ def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_
 
     clipped = clip.clone()
     # 当clip模型不存在t5xxl时，可执行跳过层
-    if clip.cond_stage_model.t5xxl is None:
+    if not hasattr(clip.cond_stage_model, 't5xxl'):
         if clip_skip != 0:
             clipped.clip_layer(clip_skip)
 

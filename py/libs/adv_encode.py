@@ -354,7 +354,7 @@ def advanced_encode(clip, text, token_normalization, weight_interpretation, w_ma
                 pooled = torch.cat((l_pooled, g_pooled), dim=-1)
 
             # t5xxl
-            if 't5xxl' in tokenized and clip.cond_stage_model.t5xxl is not None:
+            if 't5xxl' in tokenized:
                 t5_out, t5_pooled = advanced_encode_from_tokens(tokenized['t5xxl'],
                                token_normalization,
                                weight_interpretation,
