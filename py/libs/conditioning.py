@@ -28,8 +28,10 @@ def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_
     wildcard_prompt = cond_decode if show_prompt or styles_selector else ""
 
     clipped = clip.clone()
-    if clip_skip != 0:
-        clipped.clip_layer(clip_skip)
+    # 当clip模型不存在t5xxl时，可执行跳过层
+    if clip.cond_stage_model.t5xxl is None:
+        if clip_skip != 0:
+            clipped.clip_layer(clip_skip)
 
     steps = steps if steps is not None else find_nearest_steps(my_unique_id, prompt)
     return (advanced_encode(clipped, text, prompt_token_normalization,
