@@ -736,7 +736,6 @@ class imageTilesFromBatch:
     x = tile_w * (index % tiles_cols) - overlap_w if (index % tiles_cols) > 0 else 0
     y = tile_h * (index // tiles_cols) - overlap_h if tiles_rows > 1 and index > tiles_cols - 1 else 0
 
-    print(x,y)
     return (tile, mask, x, y)
 
 
