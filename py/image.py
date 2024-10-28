@@ -11,6 +11,7 @@ from server import PromptServer
 from nodes import MAX_RESOLUTION, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 from PIL.PngImagePlugin import PngInfo
+import torch.nn.functional as F
 from torchvision.transforms import Resize, CenterCrop, GaussianBlur
 from torchvision.transforms.functional import to_pil_image
 from .libs.log import log_node_info
@@ -976,13 +977,17 @@ class imageDetailTransfer:
 
 
   def transfer(self, target, source, mode, blur_sigma, blend_factor, image_output, save_prefix, mask=None, prompt=None, extra_pnginfo=None):
-    batch_size, height, width, _ = target.shape
+    batch_size, height, width, _ = source.shape
     device = comfy.model_management.get_torch_device()
     target_tensor = target.permute(0, 3, 1, 2).clone().to(device)
     source_tensor = source.permute(0, 3, 1, 2).clone().to(device)
 
     if target.shape[1:] != source.shape[1:]:
-      source_tensor = comfy.utils.common_upscale(source_tensor, width, height, "bilinear", "disabled")
+      target_tensor = comfy.utils.common_upscale(target_tensor, width, height, "bilinear", "disabled")
+    if mask is not None and target.shape[1:] != mask.shape[1:]:
+      mask = mask.unsqueeze(1)
+      mask = F.interpolate(mask, size=(height, width), mode="bilinear")
+      mask = mask.squeeze(1)
 
     if source.shape[0] < batch_size:
       source = source[0].unsqueeze(0).repeat(batch_size, 1, 1, 1)
