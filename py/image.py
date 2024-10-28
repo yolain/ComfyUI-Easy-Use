@@ -617,55 +617,129 @@ class imageSplitTiles:
         "image": ("IMAGE",),
         "overlap_ratio": ("FLOAT", {"default": 0, "min": 0, "max": 0.5, "step": 0.01, }),
         "overlap_offset": ("INT", {"default": 0, "min": - MAX_RESOLUTION // 2, "max": MAX_RESOLUTION // 2, "step": 1, }),
-        "tiles_num": ("INT", {"default": 2, "min": 2, "max": 50, "step": 1}),
+        "tiles_rows": ("INT", {"default": 2, "min": 1, "max": 50, "step": 1}),
+        "tiles_cols": ("INT", {"default": 2, "min": 1, "max": 50, "step": 1}),
       },
       "optional": {
         "norm": ("BOOLEAN", {"default": True}),
       }
     }
 
-  RETURN_TYPES = ("IMAGE", "MASK", "INT", "INT")
-  RETURN_NAMES = ("tiles", "masks", "overlap_x", "overlap_y")
+  RETURN_TYPES = ("IMAGE", "MASK", "OVERLAP", "INT")
+  RETURN_NAMES = ("tiles", "masks", "overlap", "total")
   FUNCTION = "doit"
   CATEGORY = "EasyUse/Image"
 
-  def doit(self, image, overlap_ratio, overlap_offset, tiles_num, norm=True):
+  def doit(self, image, overlap_ratio, overlap_offset, tiles_rows, tiles_cols, norm=True):
     height, width = image.shape[1:3]
 
-    is_landscape = width >= height
+    total = tiles_rows * tiles_cols
+    tile_w = int(width // tiles_cols)
+    tile_h = int(height // tiles_rows)
 
-    tite_w = width // tiles_num
-    tile_h = height // tiles_num
-    overlap = int(tite_w * overlap_ratio) + overlap_offset  if is_landscape else int(tile_h * overlap_ratio) + overlap_offset
-    overlap_w = tite_w + overlap if is_landscape else width
-    overlap_h = height if is_landscape else tile_h + overlap
+    overlap_w = int(tile_w * overlap_ratio) + overlap_offset
+    overlap_h = int(tile_h * overlap_ratio) + overlap_offset
+
+    overlap_w = min(tile_w // 2, overlap_w)
+    overlap_h = min(tile_h // 2, overlap_h)
+
     if norm:
       overlap_w = int(overlap_w - overlap_w % 8)
       overlap_h = int(overlap_h - overlap_h % 8)
-    else:
-      overlap_w = int(overlap_w)
-      overlap_h = int(overlap_h)
-    cls = ALL_NODE_CLASS_MAPPINGS['ImageCrop']
+
+    if tiles_rows == 1:
+      overlap_h = 0
+    if tiles_cols == 1:
+      overlap_w = 0
+
     solid_mask_cls = ALL_NODE_CLASS_MAPPINGS['SolidMask']
     feather_mask_cls = ALL_NODE_CLASS_MAPPINGS['FeatherMask']
 
-    overlap_x = int((width - overlap_w) / (tiles_num - 1)) if is_landscape else 0
-    overlap_y = 0 if is_landscape else int((height - overlap_h) / (tiles_num - 1))
-
     tiles, masks = [], []
-    for i in range(tiles_num):
-      tile, = cls().crop(image, overlap_w, overlap_h, int(overlap_x * i), int(overlap_y * i))
-      tiles.append(tile)
-      fearing_left = int(overlap) if overlap_x * i > 0 else 0
-      fearing_top = int(overlap) if overlap_y * i > 0 else 0
-      mask, = solid_mask_cls().solid(1, overlap_w, overlap_h)
-      mask, = feather_mask_cls().feather(mask, fearing_left, fearing_top, 0, 0)
-      masks.append(mask)
+
+    x, y = 0, 0
+    for i in range(tiles_rows):
+      for j in range(tiles_cols):
+        y1 = i * tile_h
+        x1 = j * tile_w
+
+        if i > 0:
+          y1 -= overlap_h
+        if j > 0:
+          x1 -= overlap_w
+
+        y2 = y1 + tile_h + overlap_h
+        x2 = x1 + tile_w + overlap_w
+
+        if y2 > height:
+          y2 = height
+          y1 = y2 - tile_h - overlap_h
+        if x2 > width:
+          x2 = width
+          x1 = x2 - tile_w - overlap_w
+
+        tile = image[:, y1:y2, x1:x2, :]
+        h = tile.shape[1]
+        w = tile.shape[2]
+        tiles.append(tile)
+
+        fearing_left = overlap_w if overlap_w * j > 0 else 0
+        fearing_top = overlap_h if overlap_h * i > 0 else 0
+        fearing_right = 0
+        fearing_bottom = 0
+
+        mask, = solid_mask_cls().solid(1, w, h)
+        mask, = feather_mask_cls().feather(mask, fearing_left, fearing_top, fearing_right, fearing_bottom)
+        masks.append(mask)
 
     tiles = torch.cat(tiles, dim=0)
     masks = torch.cat(masks, dim=0)
 
-    return (tiles, masks, overlap_x, overlap_y)
+    return (tiles, masks, (overlap_w, overlap_h, tile_w, tile_h, tiles_rows, tiles_cols), total)
+
+class imageTilesFromBatch:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "tiles": ("IMAGE",),
+        "masks": ("MASK",),
+        "overlap": ("OVERLAP",),
+        "index":("INT", {"default": 0, "min": 0, "max": 10000, "step": 1}),
+      },
+    }
+
+  RETURN_TYPES = ("IMAGE", "MASK", "INT", "INT")
+  RETURN_NAMES = ("image", "mask", "x", "y")
+  FUNCTION = "doit"
+  CATEGORY = "EasyUse/Image"
+
+  def imageFromBatch(self, image, batch_index, length=1):
+    s_in = image
+    batch_index = min(s_in.shape[0] - 1, batch_index)
+    length = min(s_in.shape[0] - batch_index, length)
+    s = s_in[batch_index:batch_index + length].clone()
+    return s
+
+  def maskFromBatch(self, mask, start, length=1):
+    if length > mask.shape[0]:
+        length = mask.shape[0]
+    start = min(start, mask.shape[0]-1)
+    length = min(mask.shape[0]-start, length)
+    return mask[start:start + length]
+
+  def doit(self, tiles, masks, overlap, index):
+    tile = self.imageFromBatch(tiles, index)
+    mask = self.maskFromBatch(masks, index)
+    overlap_w, overlap_h, tile_w, tile_h, tiles_rows, tiles_cols = overlap
+
+    x = tile_w * (index % tiles_cols) - overlap_w if (index % tiles_cols) > 0 else 0
+    y = tile_h * (index // tiles_cols) - overlap_h if tiles_rows > 1 and index > tiles_cols - 1 else 0
+
+    print(x,y)
+    return (tile, mask, x, y)
+
+
 
 class imagesSplitImage:
     @classmethod
@@ -1809,6 +1883,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageSplitGrid": imageSplitGrid,
   "easy imagesSplitImage": imagesSplitImage,
   "easy imageSplitTiles": imageSplitTiles,
+  "easy imageTilesFromBatch": imageTilesFromBatch,
   "easy imageCropFromMask": imageCropFromMask,
   "easy imageUncropFromBBOX": imageUncropFromBBOX,
   "easy imageSave": imageSaveSimple,
@@ -1845,6 +1920,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageSplitList": "imageSplitList",
   "easy imageSplitGrid": "imageSplitGrid",
   "easy imageSplitTiles": "imageSplitTiles",
+  "easy imageTilesFromBatch": "imageTilesFromBatch",
   "easy imagesSplitImage": "imagesSplitImage",
   "easy imageCropFromMask": "imageCropFromMask",
   "easy imageUncropFromBBOX": "imageUncropFromBBOX",
