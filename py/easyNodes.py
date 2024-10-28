@@ -186,7 +186,7 @@ class stylesPromptSelector:
         for index, val in enumerate(values):
             if 'prompt' in all_styles[val]:
                 if "{prompt}" in all_styles[val]['prompt'] and has_prompt == False:
-                    positive_prompt = all_styles[val]['prompt'].format(prompt=positive)
+                    positive_prompt = all_styles[val]['prompt'].replace('{prompt}', positive)
                     has_prompt = True
                 else:
                     positive_prompt += ', ' + all_styles[val]['prompt'].replace(', {prompt}', '').replace('{prompt}', '')
