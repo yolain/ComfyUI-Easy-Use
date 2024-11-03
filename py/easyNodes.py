@@ -3469,20 +3469,19 @@ class ipadapterApplyEncoder(ipadapter):
         embeds = [embed for embed in embeds if embed is not None]
         embeds = torch.cat(embeds, dim=0)
 
-        match method:
-            case "add":
-                embeds = torch.sum(embeds, dim=0).unsqueeze(0)
-            case "subtract":
-                embeds = embeds[0] - torch.mean(embeds[1:], dim=0)
-                embeds = embeds.unsqueeze(0)
-            case "average":
-                embeds = torch.mean(embeds, dim=0).unsqueeze(0)
-            case "norm average":
-                embeds = torch.mean(embeds / torch.norm(embeds, dim=0, keepdim=True), dim=0).unsqueeze(0)
-            case "max":
-                embeds = torch.max(embeds, dim=0).values.unsqueeze(0)
-            case "min":
-                embeds = torch.min(embeds, dim=0).values.unsqueeze(0)
+        if method == "add":
+            embeds = torch.sum(embeds, dim=0).unsqueeze(0)
+        elif method == "subtract":
+            embeds = embeds[0] - torch.mean(embeds[1:], dim=0)
+            embeds = embeds.unsqueeze(0)
+        elif method == "average":
+            embeds = torch.mean(embeds, dim=0).unsqueeze(0)
+        elif method == "norm average":
+            embeds = torch.mean(embeds / torch.norm(embeds, dim=0, keepdim=True), dim=0).unsqueeze(0)
+        elif method == "max":
+            embeds = torch.max(embeds, dim=0).values.unsqueeze(0)
+        elif method == "min":
+            embeds = torch.min(embeds, dim=0).values.unsqueeze(0)
 
         return embeds
 
@@ -4437,15 +4436,14 @@ class sdTurboSettings:
                 "unsharp_sigma": unsharp_sigma,
                 "unsharp_strength": unsharp_strength,
             }
-        match sampler_name:
-            case "euler_ancestral":
-                sample_function = sample_euler_ancestral
-            case "dpmpp_2s_ancestral":
-                sample_function = sample_dpmpp_2s_ancestral
-            case "dpmpp_2m_sde":
-                sample_function = sample_dpmpp_2m_sde
-            case "lcm":
-                sample_function = sample_lcm
+        if sampler_name == "euler_ancestral":
+            sample_function = sample_euler_ancestral
+        elif sampler_name == "dpmpp_2s_ancestral":
+            sample_function = sample_dpmpp_2s_ancestral
+        elif sampler_name == "dpmpp_2m_sde":
+            sample_function = sample_dpmpp_2m_sde
+        elif sampler_name == "lcm":
+            sample_function = sample_lcm
 
         if sample_function is not None:
             unsharp_kernel_size = unsharp_kernel_size if unsharp_kernel_size % 2 == 1 else unsharp_kernel_size + 1
@@ -5750,46 +5748,49 @@ class samplerSimpleInpainting(samplerFull):
             if vae is None:
                 raise Exception("No VAE found")
 
-        match additional:
-            case 'Differential Diffusion':
-                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
-            case 'InpaintModelCond':
-                if mask is not None:
-                    mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
-                positive, negative, latent = InpaintModelConditioning().encode(positive, negative, images, vae, mask)
-            case 'Fooocus Inpaint':
-                head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
-                patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
-                if mask is not None:
-                    latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
-                _model, = applyFooocusInpaint().apply(_model, latent, head, patch)
-            case 'Fooocus Inpaint + DD':
-                head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
-                patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
-                if mask is not None:
-                    latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
-                _model, = applyFooocusInpaint().apply(_model, latent, head, patch)
-                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
-            case 'Brushnet Random':
+        if additional == 'Differential Diffusion':
+            positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
+        elif additional == 'InpaintModelCond':
+            if mask is not None:
                 mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
-                brush_name = self.get_brushnet_model('random', _model)
-                _model, positive, negative, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive, negative)
-            case 'Brushnet Random + DD':
-                mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
-                brush_name = self.get_brushnet_model('random', _model)
-                _model, positive, negative, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive, negative)
-                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
-            case 'Brushnet Segmentation':
-                mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
-                brush_name = self.get_brushnet_model('segmentation', _model)
-                _model, positive, negative, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive, negative)
-            case 'Brushnet Segmentation + DD':
-                mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
-                brush_name = self.get_brushnet_model('segmentation', _model)
-                _model, positive, negative, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive, negative)
-                positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
-            case _:
+            positive, negative, latent = InpaintModelConditioning().encode(positive, negative, images, vae, mask)
+        elif additional == 'Fooocus Inpaint':
+            head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
+            patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
+            if mask is not None:
                 latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
+            _model, = applyFooocusInpaint().apply(_model, latent, head, patch)
+        elif additional == 'Fooocus Inpaint + DD':
+            head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
+            patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
+            if mask is not None:
+                latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
+            _model, = applyFooocusInpaint().apply(_model, latent, head, patch)
+            positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
+        elif additional == 'Brushnet Random':
+            mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
+            brush_name = self.get_brushnet_model('random', _model)
+            _model, positive, negative, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive,
+                                                                     negative)
+        elif additional == 'Brushnet Random + DD':
+            mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
+            brush_name = self.get_brushnet_model('random', _model)
+            _model, positive, negative, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive,
+                                                                     negative)
+            positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
+        elif additional == 'Brushnet Segmentation':
+            mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
+            brush_name = self.get_brushnet_model('segmentation', _model)
+            _model, positive, negative, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive,
+                                                                     negative)
+        elif additional == 'Brushnet Segmentation + DD':
+            mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
+            brush_name = self.get_brushnet_model('segmentation', _model)
+            _model, positive, negative, latent = self.apply_brushnet(brush_name, _model, vae, images, mask, positive,
+                                                                     negative)
+            positive, negative, latent, _model = self.dd(_model, positive, negative, images, vae, mask)
+        else:
+            latent, = VAEEncodeForInpaint().encode(vae, images, mask, grow_mask_by)
 
         results = super().run(pipe, None, None,None,None,None, image_output, link_id, save_prefix,
                                None, _model, positive, negative, latent, vae, None, None,

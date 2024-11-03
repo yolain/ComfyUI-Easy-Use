@@ -66,77 +66,75 @@ class ICLight:
 
     def generate_lighting_image(self, original_image, direction):
         _, image_height, image_width, _ = original_image.shape
-        match direction:
-            case 'Left Light':
-                gradient = np.linspace(255, 0, image_width)
-                image = np.tile(gradient, (image_height, 1))
-                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
-                return np2tensor(input_bg)
-            case 'Right Light':
-                gradient = np.linspace(0, 255, image_width)
-                image = np.tile(gradient, (image_height, 1))
-                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
-                return np2tensor(input_bg)
-            case 'Top Light':
-                gradient = np.linspace(255, 0, image_height)[:, None]
-                image = np.tile(gradient, (1, image_width))
-                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
-                return np2tensor(input_bg)
-            case 'Bottom Light':
-                gradient = np.linspace(0, 255, image_height)[:, None]
-                image = np.tile(gradient, (1, image_width))
-                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
-                return np2tensor(input_bg)
-            case 'Circle Light':
-                x = np.linspace(-1, 1, image_width)
-                y = np.linspace(-1, 1, image_height)
-                x, y = np.meshgrid(x, y)
-                r = np.sqrt(x ** 2 + y ** 2)
-                r = r / r.max()
-                color1 = np.array([0, 0, 0])[np.newaxis, np.newaxis, :]
-                color2 = np.array([255, 255, 255])[np.newaxis, np.newaxis, :]
-                gradient = (color1 * r[..., np.newaxis] + color2 * (1 - r)[..., np.newaxis]).astype(np.uint8)
-                image = pil2tensor(Image.fromarray(gradient))
-                return image
-            case _:
-                image = pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
-                return image
+        if direction == 'Left Light':
+            gradient = np.linspace(255, 0, image_width)
+            image = np.tile(gradient, (image_height, 1))
+            input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+            return np2tensor(input_bg)
+        elif direction == 'Right Light':
+            gradient = np.linspace(0, 255, image_width)
+            image = np.tile(gradient, (image_height, 1))
+            input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+            return np2tensor(input_bg)
+        elif direction == 'Top Light':
+            gradient = np.linspace(255, 0, image_height)[:, None]
+            image = np.tile(gradient, (1, image_width))
+            input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+            return np2tensor(input_bg)
+        elif direction == 'Bottom Light':
+            gradient = np.linspace(0, 255, image_height)[:, None]
+            image = np.tile(gradient, (1, image_width))
+            input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+            return np2tensor(input_bg)
+        elif direction == 'Circle Light':
+            x = np.linspace(-1, 1, image_width)
+            y = np.linspace(-1, 1, image_height)
+            x, y = np.meshgrid(x, y)
+            r = np.sqrt(x ** 2 + y ** 2)
+            r = r / r.max()
+            color1 = np.array([0, 0, 0])[np.newaxis, np.newaxis, :]
+            color2 = np.array([255, 255, 255])[np.newaxis, np.newaxis, :]
+            gradient = (color1 * r[..., np.newaxis] + color2 * (1 - r)[..., np.newaxis]).astype(np.uint8)
+            image = pil2tensor(Image.fromarray(gradient))
+            return image
+        else:
+            image = pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
+            return image
 
     def generate_source_image(self, original_image, source):
         batch_size, image_height, image_width, _ = original_image.shape
-        match source:
-            case 'Use Flipped Background Image':
-                if batch_size < 2:
-                    raise ValueError('Must be at least 2 image to use flipped background image.')
-                original_image = [img.unsqueeze(0) for img in original_image]
-                image = torch.flip(original_image[1], [2])
-                return image
-            case 'Ambient':
-                input_bg = np.zeros(shape=(image_height, image_width, 3), dtype=np.uint8) + 64
-                return np2tensor(input_bg)
-            case 'Left Light':
-                gradient = np.linspace(224, 32, image_width)
-                image = np.tile(gradient, (image_height, 1))
-                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
-                return np2tensor(input_bg)
-            case 'Right Light':
-                gradient = np.linspace(32, 224, image_width)
-                image = np.tile(gradient, (image_height, 1))
-                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
-                return np2tensor(input_bg)
-            case 'Top Light':
-                gradient = np.linspace(224, 32, image_height)[:, None]
-                image = np.tile(gradient, (1, image_width))
-                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
-                return np2tensor(input_bg)
-            case 'Bottom Light':
-                gradient = np.linspace(32, 224, image_height)[:, None]
-                image = np.tile(gradient, (1, image_width))
-                input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
-                return np2tensor(input_bg)
-            case _:
-                image = pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
-                return image
+        if source == 'Use Flipped Background Image':
+            if batch_size < 2:
+                raise ValueError('Must be at least 2 image to use flipped background image.')
+            original_image = [img.unsqueeze(0) for img in original_image]
+            image = torch.flip(original_image[1], [2])
+            return image
+        elif source == 'Ambient':
+            input_bg = np.zeros(shape=(image_height, image_width, 3), dtype=np.uint8) + 64
+            return np2tensor(input_bg)
+        elif source == 'Left Light':
+            gradient = np.linspace(224, 32, image_width)
+            image = np.tile(gradient, (image_height, 1))
+            input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+            return np2tensor(input_bg)
+        elif source == 'Right Light':
+            gradient = np.linspace(32, 224, image_width)
+            image = np.tile(gradient, (image_height, 1))
+            input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+            return np2tensor(input_bg)
+        elif source == 'Top Light':
+            gradient = np.linspace(224, 32, image_height)[:, None]
+            image = np.tile(gradient, (1, image_width))
+            input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+            return np2tensor(input_bg)
+        elif source == 'Bottom Light':
+            gradient = np.linspace(32, 224, image_height)[:, None]
+            image = np.tile(gradient, (1, image_width))
+            input_bg = np.stack((image,) * 3, axis=-1).astype(np.uint8)
+            return np2tensor(input_bg)
+        else:
+            image = pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
+            return image
 
 
     def apply(self, ic_model_path, model, c_concat: dict, ic_model=None) -> Tuple[ModelPatcher]:
