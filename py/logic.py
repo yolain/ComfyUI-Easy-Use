@@ -579,7 +579,7 @@ class mathFloatOperation:
         elif operation == "multiply":
             return (a * b,)
         elif operation == "divide":
-            return (a // b,)
+            return (a / b,)
         elif operation == "modulo":
             return (a % b,)
         elif operation == "power":
