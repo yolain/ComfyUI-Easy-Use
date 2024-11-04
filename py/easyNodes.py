@@ -5129,6 +5129,7 @@ class samplerFull:
         denoise = denoise if denoise is not None else pipe['loader_settings']['denoise']
         add_noise = pipe['loader_settings']['add_noise'] if 'add_noise' in pipe['loader_settings'] else 'enabled'
         force_full_denoise = pipe['loader_settings']['force_full_denoise'] if 'force_full_denoise' in pipe['loader_settings'] else True
+        noise_device = 'GPU' if 'a1111_prompt_style' in pipe['loader_settings'] and pipe['loader_settings']['a1111_prompt_style'] else 'CPU'
 
         if image is not None and latent is None:
             samp_samples = {"samples": samp_vae.encode(image[:, :, :, :3])}
@@ -5173,7 +5174,7 @@ class samplerFull:
                                  samp_negative,
                                  steps, start_step, last_step, cfg, sampler_name, scheduler, denoise,
                                  image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id,
-                                 preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise, samp_custom=None):
+                                 preview_latent, force_full_denoise=force_full_denoise, disable_noise=disable_noise, samp_custom=None, noise_device='cpu'):
 
             # LayerDiffusion
             layerDiffuse = None
@@ -5215,13 +5216,13 @@ class samplerFull:
                     model_type = 'sdxl'
                 sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
                 _sampler = comfy.samplers.sampler_object(sampler_name)
-                samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent)
+                samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent, noise_device=noise_device)
             elif scheduler == 'gits':
                 sigmas, = gitsScheduler().get_sigmas(coeff=1.2, steps=steps, denoise=denoise)
                 _sampler = comfy.samplers.sampler_object(sampler_name)
-                samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent)
+                samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent, noise_device=noise_device)
             else:
-                samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler, samp_positive, samp_negative, samp_samples, denoise=denoise, preview_latent=preview_latent, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, disable_noise=disable_noise)
+                samp_samples = sampler.common_ksampler(samp_model, samp_seed, steps, cfg, sampler_name, scheduler, samp_positive, samp_negative, samp_samples, denoise=denoise, preview_latent=preview_latent, start_step=start_step, last_step=last_step, force_full_denoise=force_full_denoise, disable_noise=disable_noise, noise_device=noise_device)
             # 推理结束时间
             end_time = int(time.time() * 1000)
             latent = samp_samples["samples"]
@@ -5310,7 +5311,7 @@ class samplerFull:
 
         def process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative,
                            steps, cfg, sampler_name, scheduler, denoise,
-                           image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom):
+                           image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom, noise_device):
 
             sampleXYplot = easyXYPlot(xyPlot, save_prefix, image_output, prompt, extra_pnginfo, my_unique_id, sampler, easyCache)
 
@@ -5318,7 +5319,7 @@ class samplerFull:
                 return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
                                             samp_negative, steps, 0, 10000, cfg,
                                             sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt,
-                                            extra_pnginfo, my_unique_id, preview_latent, samp_custom=samp_custom)
+                                            extra_pnginfo, my_unique_id, preview_latent, samp_custom=samp_custom, noise_device=noise_device)
 
             # Downscale Model Unet
             if samp_model is not None and downscale_options is not None:
@@ -5343,6 +5344,7 @@ class samplerFull:
 
                 "model": samp_model, "vae": samp_vae, "clip": samp_clip, "positive_cond": samp_positive,
                 "negative_cond": samp_negative,
+                "noise_device":noise_device,
 
                 "ckpt_name": pipe['loader_settings']['ckpt_name'] if "ckpt_name" in pipe["loader_settings"] else None,
                 "vae_name": pipe['loader_settings']['vae_name'] if "vae_name" in pipe["loader_settings"] else None,
@@ -5443,18 +5445,18 @@ class samplerFull:
                     return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
                                           samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output,
                                           link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id,
-                                          preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom)
+                                          preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom, noise_device)
                 else:
                     return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed,
                                                 samp_positive, samp_negative, steps, start_step, last_step, cfg,
                                                 sampler_name, scheduler, denoise, image_output, link_id, save_prefix,
                                                 tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent,
-                                                force_full_denoise, disable_noise, samp_custom)
+                                                force_full_denoise, disable_noise, samp_custom, noise_device)
         else:
             if xyPlot is not None:
-                return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom)
+                return process_xyPlot(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, xyPlot, force_full_denoise, disable_noise, samp_custom, noise_device)
             else:
-                return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, force_full_denoise, disable_noise, samp_custom)
+                return process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive, samp_negative, steps, start_step, last_step, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, tile_size, prompt, extra_pnginfo, my_unique_id, preview_latent, force_full_denoise, disable_noise, samp_custom, noise_device)
 
 # 简易采样器
 class samplerSimple(samplerFull):
@@ -6013,6 +6015,7 @@ class samplerCascadeFull:
         sampler_name = sampler_name if sampler_name is not None else pipe['loader_settings']['sampler_name']
         scheduler = scheduler if scheduler is not None else pipe['loader_settings']['scheduler']
         denoise = denoise if denoise is not None else pipe['loader_settings']['denoise']
+        noise_device = 'gpu' if "a1111_prompt_style" in pipe['loader_settings'] and pipe['loader_settings']['a1111_prompt_style'] else 'cpu'
         # 推理初始时间
         start_time = int(time.time() * 1000)
         # 开始推理
@@ -6020,7 +6023,7 @@ class samplerCascadeFull:
                                                samp_positive, samp_negative, samp_samples, denoise=denoise,
                                                preview_latent=False, start_step=start_step,
                                                last_step=last_step, force_full_denoise=False,
-                                               disable_noise=False)
+                                               disable_noise=False, noise_device=noise_device)
         # 推理结束时间
         end_time = int(time.time() * 1000)
         stage_c = samp_samples["samples"]

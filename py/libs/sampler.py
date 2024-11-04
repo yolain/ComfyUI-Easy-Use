@@ -73,10 +73,121 @@ class easySampler:
             samples = ({"samples": latent_c}, {"samples": latent_b})
         return samples
 
+    def prepare_noise(self, latent_image, seed, noise_inds=None, noise_device="cpu", incremental_seed_mode="comfy",
+                      variation_seed=None, variation_strength=None):
+        """
+        creates random noise given a latent image and a seed.
+        optional arg skip can be used to skip and discard x number of noise generations for a given seed
+        """
+
+        latent_size = latent_image.size()
+        latent_size_1batch = [1, latent_size[1], latent_size[2], latent_size[3]]
+
+        if variation_strength is not None and variation_strength > 0 or incremental_seed_mode.startswith(
+                "variation str inc"):
+            if noise_device == "cpu":
+                variation_generator = torch.manual_seed(variation_seed)
+            else:
+                torch.cuda.manual_seed(variation_seed)
+                variation_generator = None
+
+            variation_latent = torch.randn(latent_size_1batch, dtype=latent_image.dtype, layout=latent_image.layout,
+                                           generator=variation_generator, device=noise_device)
+        else:
+            variation_latent = None
+
+        def apply_variation(input_latent, strength_up=None):
+            if variation_latent is None:
+                return input_latent
+            else:
+                strength = variation_strength
+
+                if strength_up is not None:
+                    strength += strength_up
+
+                variation_noise = variation_latent.expand(input_latent.size()[0], -1, -1, -1)
+                result = (1 - strength) * input_latent + strength * variation_noise
+                return result
+
+        # method: incremental seed batch noise
+        if noise_inds is None and incremental_seed_mode == "incremental":
+            batch_cnt = latent_size[0]
+
+            latents = None
+            for i in range(batch_cnt):
+                if noise_device == "cpu":
+                    generator = torch.manual_seed(seed + i)
+                else:
+                    torch.cuda.manual_seed(seed + i)
+                    generator = None
+
+                latent = torch.randn(latent_size_1batch, dtype=latent_image.dtype, layout=latent_image.layout,
+                                     generator=generator, device=noise_device)
+
+                latent = apply_variation(latent)
+
+                if latents is None:
+                    latents = latent
+                else:
+                    latents = torch.cat((latents, latent), dim=0)
+
+            return latents
+
+        # method: incremental variation batch noise
+        elif noise_inds is None and incremental_seed_mode.startswith("variation str inc"):
+            batch_cnt = latent_size[0]
+
+            latents = None
+            for i in range(batch_cnt):
+                if noise_device == "cpu":
+                    generator = torch.manual_seed(seed)
+                else:
+                    torch.cuda.manual_seed(seed)
+                    generator = None
+
+                latent = torch.randn(latent_size_1batch, dtype=latent_image.dtype, layout=latent_image.layout,
+                                     generator=generator, device=noise_device)
+
+                step = float(incremental_seed_mode[18:])
+                latent = apply_variation(latent, step * i)
+
+                if latents is None:
+                    latents = latent
+                else:
+                    latents = torch.cat((latents, latent), dim=0)
+
+            return latents
+
+        # method: comfy batch noise
+        if noise_device == "cpu":
+            generator = torch.manual_seed(seed)
+        else:
+            torch.cuda.manual_seed(seed)
+            generator = None
+
+        if noise_inds is None:
+            latents = torch.randn(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout,
+                                  generator=generator, device=noise_device)
+            latents = apply_variation(latents)
+            return latents
+
+        unique_inds, inverse = np.unique(noise_inds, return_inverse=True)
+        noises = []
+        for i in range(unique_inds[-1] + 1):
+            noise = torch.randn([1] + list(latent_image.size())[1:], dtype=latent_image.dtype,
+                                layout=latent_image.layout,
+                                generator=generator, device=noise_device)
+            if i in unique_inds:
+                noises.append(noise)
+        noises = [noises[i] for i in inverse]
+        noises = torch.cat(noises, axis=0)
+        return noises
+
     def common_ksampler(self, model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=1.0,
                         disable_noise=False, start_step=None, last_step=None, force_full_denoise=False,
-                        preview_latent=True, disable_pbar=False):
+                        preview_latent=True, disable_pbar=False, noise_device='CPU'):
         device = comfy.model_management.get_torch_device()
+        noise_device = 'cpu' if noise_device == 'CPU' else device
         latent_image = latent["samples"]
         latent_image = comfy.sample.fix_empty_latent_channels(model, latent_image)
 
@@ -103,10 +214,10 @@ class easySampler:
 
         if disable_noise:
             noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout,
-                                device="cpu")
+                                device=noise_device)
         else:
             batch_inds = latent["batch_index"] if "batch_index" in latent else None
-            noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
+            noise = self.prepare_noise(latent_image, seed, batch_inds, noise_device=noise_device)
 
         #######################################################################################
         # add model patch
@@ -125,16 +236,18 @@ class easySampler:
         return out
 
     def custom_ksampler(self, model, seed, steps, cfg, _sampler, sigmas, positive, negative, latent,
-                        disable_noise=False, preview_latent=True,  disable_pbar=False):
+                        disable_noise=False, preview_latent=True,  disable_pbar=False, noise_device='CPU'):
 
         device = comfy.model_management.get_torch_device()
+        noise_device = 'cpu' if noise_device == 'CPU' else device
+
         latent_image = latent["samples"]
 
         if disable_noise:
-            noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout, device="cpu")
+            noise = torch.zeros(latent_image.size(), dtype=latent_image.dtype, layout=latent_image.layout, device=noise_device)
         else:
             batch_inds = latent["batch_index"] if "batch_index" in latent else None
-            noise = comfy.sample.prepare_noise(latent_image, seed, batch_inds)
+            noise = self.prepare_noise(latent_image, seed, batch_inds, noise_device=noise_device)
 
         noise_mask = None
         if "noise_mask" in latent:

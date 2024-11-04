@@ -459,6 +459,8 @@ class easyXYPlot():
         scheduler = scheduler if scheduler is not None else plot_image_vars["scheduler"]
         denoise = denoise if denoise is not None else plot_image_vars["denoise"]
 
+        noise_device = plot_image_vars["noise_device"] if "noise_device" in plot_image_vars else 'cpu'
+
         # LayerDiffuse
         layer_diffusion_method = plot_image_vars["layer_diffusion_method"] if "layer_diffusion_method" in plot_image_vars else None
         empty_samples = plot_image_vars["empty_samples"] if "empty_samples" in plot_image_vars else None
@@ -478,7 +480,7 @@ class easyXYPlot():
         samples = self.sampler.common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, samples,
                                           denoise=denoise, disable_noise=disable_noise, preview_latent=preview_latent,
                                           start_step=start_step, last_step=last_step,
-                                          force_full_denoise=force_full_denoise)
+                                          force_full_denoise=force_full_denoise, noise_device=noise_device)
 
         # Decode images and store
         latent = samples["samples"]
