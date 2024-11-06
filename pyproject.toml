@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-easy-use"
 description = "To enhance the usability of ComfyUI, optimizations and integrations have been implemented for several commonly used nodes."
-version = "1.2.3"
+version = "1.2.4"
 license = { file = "LICENSE" }
 dependencies = ["diffusers", "accelerate", "clip_interrogator>=0.6.0", "sentencepiece", "lark-parser", "onnxruntime", "spandrel", "opencv-python"]
 
