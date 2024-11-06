@@ -61,6 +61,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.2.5**
+
+- 实现在循环主体中重复使用终端节点输出（例如预览图像和显示任何内容等输出节点...）
+
 **v1.2.4**
 
 - 增加 `easy imageSplitTiles` and `easy imageTilesFromBatch` - 图像分块
