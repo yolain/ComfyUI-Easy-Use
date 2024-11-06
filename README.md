@@ -56,6 +56,10 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.2.5**
+
+- Implement reuse of end nodes output in the loop body (e.g: previewImage and showAnything and sth.) 
+
 **v1.2.4**
 
 - Added `easy imageSplitTiles` and `easy imageTilesFromBatch`

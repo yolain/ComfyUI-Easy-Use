@@ -4,7 +4,7 @@ from decimal import Decimal
 from .libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, compare_revision
 from .libs.cache import cache, update_cache, remove_cache
 from .libs.log import log_node_info, log_node_warn
-from nodes import PreviewImage, SaveImage
+from nodes import PreviewImage, SaveImage, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 from PIL.PngImagePlugin import PngInfo
 import numpy as np
@@ -682,6 +682,7 @@ class whileLoopEnd:
             "hidden": {
                 "dynprompt": "DYNPROMPT",
                 "unique_id": "UNIQUE_ID",
+                "extra_pnginfo": "EXTRA_PNGINFO",
             }
         }
         for i in range(MAX_FLOW_NUM):
@@ -698,13 +699,34 @@ class whileLoopEnd:
         node_info = dynprompt.get_node(node_id)
         if "inputs" not in node_info:
             return
+
+        parent_ids = []
         for k, v in node_info["inputs"].items():
             if is_link(v):
                 parent_id = v[0]
                 if parent_id not in upstream:
                     upstream[parent_id] = []
                     self.explore_dependencies(parent_id, dynprompt, upstream)
+                display_id = dynprompt.get_display_node_id(parent_id)
+                display_node = dynprompt.get_node(display_id)
+                class_type = display_node["class_type"]
+                if class_type not in ['easy forLoopEnd', 'easy whileLoopEnd']:
+                    parent_ids.append(display_id)
                 upstream[parent_id].append(node_id)
+        return parent_ids
+    def explore_output_nodes(self, dynprompt, upstream, output_nodes, parent_ids, graph):
+        for parent_id in upstream:
+            display_id = dynprompt.get_display_node_id(parent_id)
+            for output_id in output_nodes:
+                id = output_nodes[output_id][0]
+                if id in parent_ids and display_id == id and output_id not in upstream[parent_id]:
+                    if '.' in parent_id:
+                        arr = parent_id.split('.')
+                        arr[len(arr)-1] = output_id
+                        print('.'.join(arr))
+                        upstream[parent_id].append('.'.join(arr))
+                    else:
+                        upstream[parent_id].append(output_id)
 
     def collect_contained(self, node_id, upstream, contained):
         if node_id not in upstream:
@@ -714,7 +736,7 @@ class whileLoopEnd:
                 contained[child_id] = True
                 self.collect_contained(child_id, upstream, contained)
 
-    def while_loop_close(self, flow, condition, dynprompt=None, unique_id=None, **kwargs):
+    def while_loop_close(self, flow, condition, dynprompt=None, unique_id=None,**kwargs):
         if not condition:
             # We're done with the loop
             values = []
@@ -726,15 +748,30 @@ class whileLoopEnd:
         this_node = dynprompt.get_node(unique_id)
         upstream = {}
         # Get the list of all nodes between the open and close nodes
-        self.explore_dependencies(unique_id, dynprompt, upstream)
+        parent_ids = self.explore_dependencies(unique_id, dynprompt, upstream)
+        parent_ids = list(set(parent_ids))
+        # Get the list of all output nodes between the open and close nodes
+        prompts = dynprompt.get_original_prompt()
+        output_nodes = {}
+        for id in prompts:
+            node = prompts[id]
+            if "inputs" not in node:
+                continue
+            class_type = node["class_type"]
+            class_def = ALL_NODE_CLASS_MAPPINGS[class_type]
+            if hasattr(class_def, 'OUTPUT_NODE') and class_def.OUTPUT_NODE == True:
+                for k, v in node['inputs'].items():
+                    if is_link(v):
+                        output_nodes[id] = v
 
+        graph = GraphBuilder()
+        self.explore_output_nodes(dynprompt, upstream, output_nodes, parent_ids, graph)
         contained = {}
         open_node = flow[0]
         self.collect_contained(open_node, upstream, contained)
         contained[unique_id] = True
         contained[open_node] = True
 
-        graph = GraphBuilder()
         for node_id in contained:
             original_node = dynprompt.get_node(node_id)
             node = graph.node(original_node["class_type"], "Recurse" if node_id == unique_id else node_id)
