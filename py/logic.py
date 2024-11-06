@@ -8,6 +8,7 @@ from nodes import PreviewImage, SaveImage
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 from PIL.PngImagePlugin import PngInfo
 import numpy as np
+import time
 import os
 import re
 import csv
@@ -790,8 +791,6 @@ class forLoopStart:
     def for_loop_start(self, total, prompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
         graph = GraphBuilder()
         i = 0
-        unique_id = unique_id.split('.')[len(unique_id.split('.')) - 1] if "." in unique_id else unique_id
-        update_cache('forloop' + str(unique_id), 'forloop', total)
         if "initial_value0" in kwargs:
             i = kwargs["initial_value0"]
 
@@ -819,7 +818,7 @@ class forLoopEnd:
                 "initial_value%d" % i: (any_type, {"rawLink": True}) for i in range(1, MAX_FLOW_NUM)
             },
             "hidden": {
-                "prompt": "PROMPT",
+                "dynprompt": "DYNPROMPT",
                 "extra_pnginfo": "EXTRA_PNGINFO",
                 "unique_id": "UNIQUE_ID"
             },
@@ -831,18 +830,33 @@ class forLoopEnd:
 
     CATEGORY = "EasyUse/Logic/For Loop"
 
-    def for_loop_end(self, flow, prompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
+
+
+    def for_loop_end(self, flow, dynprompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
         graph = GraphBuilder()
         while_open = flow[0]
         total = None
-        if "forloop" + str(while_open) in cache:
-            total = cache['forloop' + str(while_open)][1]
-        elif extra_pnginfo:
-            all_nodes = extra_pnginfo['workflow']['nodes']
-            start_node = next((x for x in all_nodes if x['id'] == int(while_open)), None)
-            total = start_node['widgets_values'][0] if "widgets_values" in start_node else None
-        if total is None:
-            raise Exception("Unable to get parameters for the start of the loop")
+
+        # Using dynprompt to get the original node
+        forstart_node = dynprompt.get_node(while_open)
+        if forstart_node['class_type'] == 'easy forLoopStart':
+            inputs = forstart_node['inputs']
+            total = inputs['total']
+        elif forstart_node['class_type'] == 'easy loadImagesForLoop':
+            inputs = forstart_node['inputs']
+            limit = inputs['limit']
+            start_index = inputs['start_index']
+            # Filter files by extension
+            directory = inputs['directory']
+            dir_files = os.listdir(directory)
+            valid_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+            dir_files = [f for f in dir_files if any(f.lower().endswith(ext) for ext in valid_extensions)]
+            if limit == -1:
+                files_length = len(dir_files)
+                total = files_length - start_index if start_index > 0 else files_length
+            else:
+                total = limit
+
         sub = graph.node("easy mathInt", operation="add", a=[while_open, 1], b=1)
         cond = graph.node("easy compare", a=sub.out(0), b=total, comparison='a < b')
         input_values = {("initial_value%d" % i): kwargs.get("initial_value%d" % i, None) for i in
@@ -1685,6 +1699,25 @@ class saveTextLazy(saveText):
     CATEGORY = "EasyUse/Logic"
 
 
+class sleep:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "any": (any_type, {}),
+                "delay": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1000000, "step": 0.1}),
+            },
+        }
+
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ("out",)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic"
+
+    def execute(self, any, delay):
+        time.sleep(delay)
+        return (any,)
+
 NODE_CLASS_MAPPINGS = {
     "easy string": String,
     "easy int": Int,
@@ -1728,6 +1761,7 @@ NODE_CLASS_MAPPINGS = {
     "easy cleanGpuUsed": cleanGPUUsed,
     "easy saveText": saveText,
     "easy saveTextLazy": saveTextLazy,
+    "easy sleep": sleep,
     "easy if": If,
     "easy poseEditor": poseEditor,
     "easy imageToMask": imageToMask,
@@ -1775,6 +1809,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy cleanGpuUsed": "Clean VRAM Used",
     "easy saveText": "Save Text",
     "easy saveTextLazy": "Save Text (Lazy)",
+    "easy sleep": "Sleep",
     "easy if": "If (🚫Deprecated)",
     "easy poseEditor": "PoseEditor (🚫Deprecated)",
     "easy imageToMask": "ImageToMask (🚫Deprecated)"

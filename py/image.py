@@ -1710,13 +1710,8 @@ class loadImagesForLoop:
 
     graph = GraphBuilder()
     index = 0
-    if limit == -1:
-      files_length = len(dir_files)
-      total = files_length - start_index if start_index > 0 else files_length
-    else:
-      total = limit
-    unique_id = unique_id.split('.')[len(unique_id.split('.')) - 1] if "." in unique_id else unique_id
-    update_cache('forloop' + str(unique_id), 'forloop', total)
+    # unique_id = unique_id.split('.')[len(unique_id.split('.')) - 1] if "." in unique_id else unique_id
+    # update_cache('forloop' + str(unique_id), 'forloop', total)
     if "initial_value0" in kwargs:
       index = kwargs["initial_value0"]
     # start at start_index
@@ -1736,7 +1731,7 @@ class loadImagesForLoop:
     else:
       mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
 
-    while_open = graph.node("easy whileLoopStart", condition=total, initial_value0=index, initial_value1=kwargs.get('initial_value1',None), initial_value2=kwargs.get('initial_value2',None))
+    while_open = graph.node("easy whileLoopStart", condition=True, initial_value0=index, initial_value1=kwargs.get('initial_value1',None), initial_value2=kwargs.get('initial_value2',None))
     outputs = [kwargs.get('initial_value1',None), kwargs.get('initial_value2',None)]
 
     return {
