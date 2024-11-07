@@ -695,26 +695,26 @@ class whileLoopEnd:
 
     CATEGORY = "EasyUse/Logic/While Loop"
 
-    def explore_dependencies(self, node_id, dynprompt, upstream):
+    def explore_dependencies(self, node_id, dynprompt, upstream, parent_ids):
         node_info = dynprompt.get_node(node_id)
         if "inputs" not in node_info:
             return
 
-        parent_ids = []
         for k, v in node_info["inputs"].items():
             if is_link(v):
                 parent_id = v[0]
-                if parent_id not in upstream:
-                    upstream[parent_id] = []
-                    self.explore_dependencies(parent_id, dynprompt, upstream)
                 display_id = dynprompt.get_display_node_id(parent_id)
                 display_node = dynprompt.get_node(display_id)
                 class_type = display_node["class_type"]
                 if class_type not in ['easy forLoopEnd', 'easy whileLoopEnd']:
                     parent_ids.append(display_id)
+                if parent_id not in upstream:
+                    upstream[parent_id] = []
+                    self.explore_dependencies(parent_id, dynprompt, upstream, parent_ids)
+
                 upstream[parent_id].append(node_id)
-        return parent_ids
-    def explore_output_nodes(self, dynprompt, upstream, output_nodes, parent_ids, graph):
+
+    def explore_output_nodes(self, dynprompt, upstream, output_nodes, parent_ids):
         for parent_id in upstream:
             display_id = dynprompt.get_display_node_id(parent_id)
             for output_id in output_nodes:
@@ -723,7 +723,6 @@ class whileLoopEnd:
                     if '.' in parent_id:
                         arr = parent_id.split('.')
                         arr[len(arr)-1] = output_id
-                        print('.'.join(arr))
                         upstream[parent_id].append('.'.join(arr))
                     else:
                         upstream[parent_id].append(output_id)
@@ -748,7 +747,8 @@ class whileLoopEnd:
         this_node = dynprompt.get_node(unique_id)
         upstream = {}
         # Get the list of all nodes between the open and close nodes
-        parent_ids = self.explore_dependencies(unique_id, dynprompt, upstream)
+        parent_ids = []
+        self.explore_dependencies(unique_id, dynprompt, upstream, parent_ids)
         parent_ids = list(set(parent_ids))
         # Get the list of all output nodes between the open and close nodes
         prompts = dynprompt.get_original_prompt()
@@ -765,7 +765,7 @@ class whileLoopEnd:
                         output_nodes[id] = v
 
         graph = GraphBuilder()
-        self.explore_output_nodes(dynprompt, upstream, output_nodes, parent_ids, graph)
+        self.explore_output_nodes(dynprompt, upstream, output_nodes, parent_ids)
         contained = {}
         open_node = flow[0]
         self.collect_contained(open_node, upstream, contained)
