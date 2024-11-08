@@ -143,7 +143,7 @@ class stylesPromptSelector:
         styles_dir = FOOOCUS_STYLES_DIR
         for file_name in os.listdir(styles_dir):
             file = os.path.join(styles_dir, file_name)
-            if os.path.isfile(file) and file_name.endswith(".json") and "styles" in file_name.split(".")[0]:
+            if os.path.isfile(file) and file_name.endswith(".json"):
                 styles.append(file_name.split(".")[0])
         return {
             "required": {

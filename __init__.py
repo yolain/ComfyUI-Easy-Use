@@ -32,6 +32,12 @@ if os.path.exists(wildcards_path):
     read_wildcard_dict(wildcards_path)
 else:
     os.mkdir(wildcards_path)
+# Add custom wildcards example
+example_path = os.path.join(wildcards_path, "example.txt")
+if not os.path.exists(example_path):
+    with open(example_path, 'w') as f:
+        text = "blue\nred\nyellow\ngreen\nbrown\npink\npurple\norange\nblack\nwhite"
+        f.write(text)
 
 #Styles
 styles_path = os.path.join(os.path.dirname(__file__), "styles")
@@ -42,6 +48,23 @@ if os.path.exists(styles_path):
 else:
     os.mkdir(styles_path)
     os.mkdir(samples_path)
+
+# Add custom styles example
+example_path = os.path.join(styles_path, "your_styles.json.example")
+if not os.path.exists(example_path):
+    import json
+    data = [
+        {
+            "name": "Example Style",
+            "name_cn": "示例样式",
+            "prompt": "(masterpiece), (best quality), (ultra-detailed), {prompt} ",
+            "negative_prompt": "text, watermark, logo"
+        },
+    ]
+    # Write to file
+    with open(example_path, 'w') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
 
 # Model thumbnails
 from .py.libs.add_resources import add_static_resource
