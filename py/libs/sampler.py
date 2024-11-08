@@ -51,7 +51,7 @@ class easySampler:
             parts.append('None')
         return parts
 
-    def emptyLatent(self, resolution, empty_latent_width, empty_latent_height, batch_size=1, compression=0, sd3=False):
+    def emptyLatent(self, resolution, empty_latent_width, empty_latent_height, batch_size=1, compression=0, model_type='sd', video_length=25):
         if resolution not in ["自定义 x 自定义", 'width x height (custom)']:
             try:
                 width, height = map(int, resolution.split(' x '))
@@ -59,8 +59,11 @@ class easySampler:
                 empty_latent_height = height
             except ValueError:
                 raise ValueError("Invalid base_resolution format.")
-        if sd3:
+        if model_type == 'sd3':
             latent = torch.ones([batch_size, 16, empty_latent_height // 8, empty_latent_width // 8], device=self.device) * 0.0609
+            samples = {"samples": latent}
+        elif model_type == 'mochi':
+            latent = torch.zeros([batch_size, 12, ((video_length - 1) // 6) + 1, empty_latent_height // 8, empty_latent_width // 8], device=self.device)
             samples = {"samples": latent}
         elif compression == 0:
             latent = torch.zeros([batch_size, 4, empty_latent_height // 8, empty_latent_width // 8], device=self.device)

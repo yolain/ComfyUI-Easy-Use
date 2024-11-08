@@ -121,6 +121,8 @@ def get_sd_version(model):
         return 'hydit'
     elif isinstance(model_config, comfy.supported_models.Flux):
         return 'flux'
+    elif isinstance(model_config, comfy.supported_models.GenmoMochi):
+        return 'mochi'
     else:
         return 'unknown'
 
