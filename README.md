@@ -58,6 +58,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.5**
 
+- Support mochi 
 - Implement reuse of end nodes output in the loop body (e.g: previewImage and showAnything and sth.) 
 
 **v1.2.4**

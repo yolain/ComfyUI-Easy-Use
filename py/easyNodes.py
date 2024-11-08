@@ -898,7 +898,7 @@ class fullLoader:
             "batch_size": (
             "INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
         },
-            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",), "optional_lora_stack": ("LORA_STACK",), "optional_controlnet_stack": ("CONTROL_NET_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}),},
+            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",), "optional_lora_stack": ("LORA_STACK",), "optional_controlnet_stack": ("CONTROL_NET_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}), "video_length": ("INT",{"default":25})},
             "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
@@ -913,7 +913,7 @@ class fullLoader:
                        resolution, empty_latent_width, empty_latent_height,
                        positive, positive_token_normalization, positive_weight_interpretation,
                        negative, negative_token_normalization, negative_weight_interpretation,
-                       batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, prompt=None,
+                       batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, video_length=25, prompt=None,
                        my_unique_id=None
                        ):
 
@@ -926,8 +926,7 @@ class fullLoader:
 
         # Create Empty Latent
         model_type = get_sd_version(model)
-        sd3 = True if model_type == "sd3" else False
-        samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size, sd3=sd3)
+        samples = sampler.emptyLatent(resolution, empty_latent_width, empty_latent_height, batch_size, model_type=model_type, video_length=video_length)
 
         # Prompt to Conditioning
         positive_embeddings_final, positive_wildcard_prompt, model, clip = prompt_to_cond('positive', model, clip, clip_skip, lora_stack, positive, positive_token_normalization, positive_weight_interpretation, a1111_prompt_style, my_unique_id, prompt, easyCache, model_type=model_type)
@@ -2106,6 +2105,54 @@ class pixArtLoader:
         return {"ui": {},
                 "result": (pipe, model, vae, clip, positive_embeddings_final, negative_embeddings_final, samples)}
 
+
+# Mochi加载器
+class mochiLoader(fullLoader):
+    @classmethod
+    def INPUT_TYPES(cls):
+        clip = folder_paths.get_filename_list("text_encoders")
+        checkpoints = folder_paths.get_filename_list("checkpoints")
+        loras = ["None"] + folder_paths.get_filename_list("loras")
+        return {
+            "required": {
+                "ckpt_name": (checkpoints,),
+                "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"), {"default": "mochi_vae.safetensors"}),
+
+                "positive": ("STRING", {"default":"", "placeholder": "Positive", "multiline": True}),
+                "negative": ("STRING", {"default":"", "placeholder": "Negative", "multiline": True}),
+
+                "resolution": (resolution_strings, {"default": "width x height (custom)"}),
+                "empty_latent_width": ("INT", {"default": 848, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "empty_latent_height": ("INT", {"default": 480, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "length": ("INT", {"default": 25, "min": 7, "max": MAX_RESOLUTION, "step": 6}),
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
+            },
+            "optional": {
+                "model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",),
+            },
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
+    RETURN_NAMES = ("pipe", "model", "vae")
+
+    FUNCTION = "mochiLoader"
+    CATEGORY = "EasyUse/Loaders"
+
+    def mochiLoader(self, ckpt_name, vae_name,
+                       positive, negative,
+                       resolution, empty_latent_width, empty_latent_height,
+                       length, batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, prompt=None,
+                       my_unique_id=None):
+
+        return super().adv_pipeloader(ckpt_name, 'Default', vae_name, 0,
+             "None", 1.0, 1.0,
+             resolution, empty_latent_width, empty_latent_height,
+             positive, 'none', 'comfy',
+             negative,'none','comfy',
+             batch_size, model_override, clip_override,  vae_override, a1111_prompt_style=False, video_length=length, prompt=prompt,
+             my_unique_id=my_unique_id
+        )
 # lora
 class loraStack:
     def __init__(self):
@@ -5236,7 +5283,8 @@ class samplerFull:
                     samp_images = samp_vae.decode_tiled(latent, tile_x=tile_size // 8, tile_y=tile_size // 8, )
                 else:
                     samp_images = samp_vae.decode(latent).cpu()
-
+                if len(samp_images.shape) == 5:  # Combine batches
+                    samp_images = samp_images.reshape(-1, samp_images.shape[-3], samp_images.shape[-2], samp_images.shape[-1])
                 # LayerDiffusion Decode
                 if layerDiffuse is not None:
                     new_images, samp_images, alpha = layerDiffuse.layer_diffusion_decode(layer_diffusion_method, latent, samp_blend_samples, samp_images, samp_model)
@@ -7759,6 +7807,7 @@ NODE_CLASS_MAPPINGS = {
     "easy kolorsLoader": kolorsLoader,
     "easy fluxLoader": fluxLoader,
     "easy pixArtLoader": pixArtLoader,
+    "easy mochiLoader": mochiLoader,
     "easy loraStack": loraStack,
     "easy controlnetStack": controlnetStack,
     "easy controlnetLoader": controlnetSimple,
@@ -7885,6 +7934,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy fluxLoader": "EasyLoader (Flux)",
     "easy hunyuanDiTLoader": "EasyLoader (HunyuanDiT)",
     "easy pixArtLoader": "EasyLoader (PixArt)",
+    "easy mochiLoader": "EasyLoader (Mochi)",
     "easy loraStack": "EasyLoraStack",
     "easy controlnetStack": "EasyControlnetStack",
     "easy controlnetLoader": "EasyControlnet",
