@@ -28,16 +28,16 @@ comfy_path = folder_paths.base_path
 #Wildcards
 from .py.libs.wildcards import read_wildcard_dict
 wildcards_path = os.path.join(os.path.dirname(__file__), "wildcards")
-if os.path.exists(wildcards_path):
-    read_wildcard_dict(wildcards_path)
-else:
-    os.mkdir(wildcards_path)
 # Add custom wildcards example
 example_path = os.path.join(wildcards_path, "example.txt")
 if not os.path.exists(example_path):
     with open(example_path, 'w') as f:
         text = "blue\nred\nyellow\ngreen\nbrown\npink\npurple\norange\nblack\nwhite"
         f.write(text)
+if os.path.exists(wildcards_path):
+    read_wildcard_dict(wildcards_path)
+else:
+    os.mkdir(wildcards_path)
 
 #Styles
 styles_path = os.path.join(os.path.dirname(__file__), "styles")
