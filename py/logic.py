@@ -1665,13 +1665,13 @@ class saveText:
             for i in text.split("\n"):
                 text_list.append(i.strip())
 
-            with open(filepath, "w", newline="") as csv_file:
+            with open(filepath, "w", newline="", encoding='utf-8') as csv_file:
                 csv_writer = csv.writer(csv_file)
                 # Write each line as a separate row in the CSV file
                 for line in text_list:
                     csv_writer.writerow([line])
         else:
-            with open(filepath, "w", newline="") as text_file:
+            with open(filepath, "w", newline="", encoding='utf-8') as text_file:
                 for line in text:
                     text_file.write(line)
 
