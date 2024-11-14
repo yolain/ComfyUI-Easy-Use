@@ -2110,9 +2110,7 @@ class pixArtLoader:
 class mochiLoader(fullLoader):
     @classmethod
     def INPUT_TYPES(cls):
-        clip = folder_paths.get_filename_list("text_encoders")
         checkpoints = folder_paths.get_filename_list("checkpoints")
-        loras = ["None"] + folder_paths.get_filename_list("loras")
         return {
             "required": {
                 "ckpt_name": (checkpoints,),
