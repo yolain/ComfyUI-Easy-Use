@@ -1193,7 +1193,12 @@ class indexAnything:
     CATEGORY = "EasyUse/Logic"
 
     def getIndex(self, any, index):
-        return (any[index],)
+        if isinstance(any, torch.Tensor):
+            batch_index = min(any.shape[0] - 1, index)
+            s = any[index:index + 1].clone()
+            return (s,)
+        else:
+            return (any[index],)
 
 
 class batchAnything:
@@ -1651,12 +1656,7 @@ class saveText:
             os.makedirs(output_file_path)
 
         if not overwrite:
-            while os.path.exists(filepath):
-                if os.path.exists(filepath):
-                    filepath = str(os.path.join(output_file_path, file_name)) + "_" + str(index) + "." + file_extension
-                    index = index + 1
-                else:
-                    break
+            pass
 
         log_node_info("Save Text", f"Saving to {filepath}")
 
