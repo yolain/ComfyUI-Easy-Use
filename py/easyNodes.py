@@ -898,8 +898,8 @@ class fullLoader:
             "batch_size": (
             "INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."})
         },
-            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",), "optional_lora_stack": ("LORA_STACK",), "optional_controlnet_stack": ("CONTROL_NET_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default}), "video_length": ("INT",{"default":25})},
-            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
+            "optional": {"model_override": ("MODEL",), "clip_override": ("CLIP",), "vae_override": ("VAE",), "optional_lora_stack": ("LORA_STACK",), "optional_controlnet_stack": ("CONTROL_NET_STACK",), "a1111_prompt_style": ("BOOLEAN", {"default": a1111_prompt_style_default})},
+            "hidden": {"video_length": "INT", "prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
         }
 
     RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE", "CLIP", "CONDITIONING", "CONDITIONING", "LATENT")
@@ -7775,6 +7775,39 @@ class stableDiffusion3API:
         output_image = stableAPI.generate_sd3_image(positive, negative, aspect_ratio, seed=seed, mode=mode, model=model, strength=denoise, image=optional_image)
         return (output_image,)
 
+from .libs.fluxai import fluxaiAPI
+
+class fluxPromptGenAPI:
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "describe": ("STRING", {"default": "", "placeholder": "Describe your image idea (you can use any language)", "multiline": True}),
+            },
+            "optional": {
+                "cookie_override": ("STRING", {"default": "", "forceInput": True}),
+            },
+            "hidden": {
+                "prompt": "PROMPT",
+                "unique_id": "UNIQUE_ID",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("prompt",)
+
+    FUNCTION = "generate"
+    OUTPUT_NODE = False
+
+    CATEGORY = "EasyUse/API"
+
+    def generate(self, describe, cookie_override=None, prompt=None, unique_id=None, extra_pnginfo=None):
+        prompt = fluxaiAPI.promptGenerate(describe, cookie_override)
+        return (prompt,)
+
+
 #---------------------------------------------------------------API 结束----------------------------------------------------------------------
 
 NODE_CLASS_MAPPINGS = {
@@ -7899,6 +7932,7 @@ NODE_CLASS_MAPPINGS = {
     "dynamicThresholdingFull": dynamicThresholdingFull,
     # api 相关
     "easy stableDiffusion3API": stableDiffusion3API,
+    "easy fluxPromptGenAPI": fluxPromptGenAPI,
     # utils
     "easy ckptNames": setCkptName,
     "easy controlnetNames": setControlName,
@@ -8026,6 +8060,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "dynamicThresholdingFull": "DynamicThresholdingFull",
     # api 相关
     "easy stableDiffusion3API": "Stable Diffusion 3 (API)",
+    "easy fluxPromptGenAPI": "Flux Prompt Gen (API)",
     # utils
     "easy ckptNames": "Ckpt Names",
     "easy controlnetNames": "ControlNet Names",
