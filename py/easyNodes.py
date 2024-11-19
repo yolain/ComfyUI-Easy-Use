@@ -1687,7 +1687,7 @@ class dynamiCrafterLoader(DynamiCrafter):
 
     def get_clip_file(self, node_name):
         clip_list = folder_paths.get_filename_list("clip")
-        pattern = 'sd2-1-open-clip|model\.(safetensors|bin)$'
+        pattern = 'sd2-1-open-clip|model.(safetensors|bin)$'
         clip_files = [e for e in clip_list if re.search(pattern, e, re.IGNORECASE)]
 
         clip_name = clip_files[0] if len(clip_files)>0 else None
@@ -1699,7 +1699,7 @@ class dynamiCrafterLoader(DynamiCrafter):
 
     def get_clipvision_file(self, node_name):
         clipvision_list = folder_paths.get_filename_list("clip_vision")
-        pattern = '(ViT.H.14.*s32B.b79K|ipadapter.*sd15|sd1.?5.*model|open_clip_pytorch_model\.(bin|safetensors))'
+        pattern = '(ViT.H.14.*s32B.b79K|ipadapter.*sd15|sd1.?5.*model|open_clip_pytorch_model.(bin|safetensors))'
         clipvision_files = [e for e in clipvision_list if re.search(pattern, e, re.IGNORECASE)]
 
         clipvision_name = clipvision_files[0] if len(clipvision_files)>0 else None
@@ -1711,7 +1711,7 @@ class dynamiCrafterLoader(DynamiCrafter):
 
     def get_vae_file(self, node_name):
         vae_list = folder_paths.get_filename_list("vae")
-        pattern = 'vae-ft-mse-840000-ema-pruned\.(pt|bin|safetensors)$'
+        pattern = 'vae-ft-mse-840000-ema-pruned.(pt|bin|safetensors)$'
         vae_files = [e for e in vae_list if re.search(pattern, e, re.IGNORECASE)]
 
         vae_name = vae_files[0] if len(vae_files)>0 else None
@@ -2675,15 +2675,15 @@ class applyInpaint:
         if type == 'brushnet_random':
             brush_model = BRUSHNET_MODELS['random_mask'][model_type]['model_url']
             if model_type == 'sdxl':
-                pattern = 'brushnet.random.mask.sdxl.*\.(safetensors|bin)$'
+                pattern = 'brushnet.random.mask.sdxl.*.(safetensors|bin)$'
             else:
-                pattern = 'brushnet.random.mask.*\.(safetensors|bin)$'
+                pattern = 'brushnet.random.mask.*.(safetensors|bin)$'
         elif type == 'brushnet_segmentation':
             brush_model = BRUSHNET_MODELS['segmentation_mask'][model_type]['model_url']
             if model_type == 'sdxl':
-                pattern = 'brushnet.segmentation.mask.sdxl.*\.(safetensors|bin)$'
+                pattern = 'brushnet.segmentation.mask.sdxl.*.(safetensors|bin)$'
             else:
-                pattern = 'brushnet.segmentation.mask.*\.(safetensors|bin)$'
+                pattern = 'brushnet.segmentation.mask.*.(safetensors|bin)$'
 
 
         brushfile = [e for e in folder_paths.get_filename_list('inpaint') if re.search(pattern, e, re.IGNORECASE)]
@@ -2986,11 +2986,11 @@ class ipadapter:
         clipvision_list = folder_paths.get_filename_list("clip_vision")
 
         if preset.startswith("plus (kolors") or preset.startswith("faceid plus kolors"):
-            pattern = 'Vit.Large.patch14.336\.(bin|safetensors)$'
+            pattern = 'Vit.Large.patch14.336.(bin|safetensors)$'
         elif preset.startswith("vit-g"):
-            pattern = '(ViT.bigG.14.*39B.b160k|ipadapter.*sdxl|sdxl.*model\.(bin|safetensors))'
+            pattern = '(ViT.bigG.14.*39B.b160k|ipadapter.*sdxl|sdxl.*model.(bin|safetensors))'
         else:
-            pattern = '(ViT.H.14.*s32B.b79K|ipadapter.*sd15|sd1.?5.*model\.(bin|safetensors))'
+            pattern = '(ViT.H.14.*s32B.b79K|ipadapter.*sd15|sd1.?5.*model.(bin|safetensors))'
         clipvision_files = [e for e in clipvision_list if re.search(pattern, e, re.IGNORECASE)]
 
         clipvision_name = clipvision_files[0] if len(clipvision_files)>0 else None
@@ -3009,86 +3009,86 @@ class ipadapter:
         if preset.startswith("light"):
             if is_sdxl:
                 raise Exception("light model is not supported for SDXL")
-            pattern = 'sd15.light.v11\.(safetensors|bin)$'
+            pattern = 'sd15.light.v11.(safetensors|bin)$'
             # if light model v11 is not found, try with the old version
             if not [e for e in ipadapter_list if re.search(pattern, e, re.IGNORECASE)]:
-                pattern = 'sd15.light\.(safetensors|bin)$'
+                pattern = 'sd15.light.(safetensors|bin)$'
         elif preset.startswith("standard"):
             if is_sdxl:
-                pattern = 'ip.adapter.sdxl.vit.h\.(safetensors|bin)$'
+                pattern = 'ip.adapter.sdxl.vit.h.(safetensors|bin)$'
             else:
-                pattern = 'ip.adapter.sd15\.(safetensors|bin)$'
+                pattern = 'ip.adapter.sd15.(safetensors|bin)$'
         elif preset.startswith("vit-g"):
             if is_sdxl:
-                pattern = 'ip.adapter.sdxl\.(safetensors|bin)$'
+                pattern = 'ip.adapter.sdxl.(safetensors|bin)$'
             else:
-                pattern = 'sd15.vit.g\.(safetensors|bin)$'
+                pattern = 'sd15.vit.g.(safetensors|bin)$'
         elif preset.startswith("plus (high"):
             if is_sdxl:
-                pattern = 'plus.sdxl.vit.h\.(safetensors|bin)$'
+                pattern = 'plus.sdxl.vit.h.(safetensors|bin)$'
             else:
-                pattern = 'ip.adapter.plus.sd15\.(safetensors|bin)$'
+                pattern = 'ip.adapter.plus.sd15.(safetensors|bin)$'
         elif preset.startswith("plus (kolors"):
             if is_sdxl:
-                pattern = 'plus.gener(nal|al)\.(safetensors|bin)$'
+                pattern = 'plus.gener(nal|al).(safetensors|bin)$'
             else:
                 raise Exception("kolors model is not supported for SD15")
         elif preset.startswith("plus face"):
             if is_sdxl:
-                pattern = 'plus.face.sdxl.vit.h\.(safetensors|bin)$'
+                pattern = 'plus.face.sdxl.vit.h.(safetensors|bin)$'
             else:
-                pattern = 'plus.face.sd15\.(safetensors|bin)$'
+                pattern = 'plus.face.sd15.(safetensors|bin)$'
         elif preset.startswith("full"):
             if is_sdxl:
                 raise Exception("full face model is not supported for SDXL")
-            pattern = 'full.face.sd15\.(safetensors|bin)$'
+            pattern = 'full.face.sd15.(safetensors|bin)$'
         elif preset.startswith("composition"):
             if is_sdxl:
-                pattern = 'plus.composition.sdxl\.(safetensors|bin)$'
+                pattern = 'plus.composition.sdxl.(safetensors|bin)$'
             else:
-                pattern = 'plus.composition.sd15\.(safetensors|bin)$'
+                pattern = 'plus.composition.sd15.(safetensors|bin)$'
         elif preset.startswith("faceid portrait ("):
             if is_sdxl:
-                pattern = 'portrait.sdxl\.(safetensors|bin)$'
+                pattern = 'portrait.sdxl.(safetensors|bin)$'
             else:
-                pattern = 'portrait.v11.sd15\.(safetensors|bin)$'
+                pattern = 'portrait.v11.sd15.(safetensors|bin)$'
                 # if v11 is not found, try with the old version
                 if not [e for e in ipadapter_list if re.search(pattern, e, re.IGNORECASE)]:
-                    pattern = 'portrait.sd15\.(safetensors|bin)$'
+                    pattern = 'portrait.sd15.(safetensors|bin)$'
             is_insightface = True
         elif preset.startswith("faceid portrait unnorm"):
             if is_sdxl:
-                pattern = r'portrait.sdxl.unnorm\.(safetensors|bin)$'
+                pattern = r'portrait.sdxl.unnorm.(safetensors|bin)$'
             else:
                 raise Exception("portrait unnorm model is not supported for SD1.5")
             is_insightface = True
         elif preset == "faceid":
             if is_sdxl:
-                pattern = 'faceid.sdxl\.(safetensors|bin)$'
-                lora_pattern = 'faceid.sdxl.lora\.safetensors$'
+                pattern = 'faceid.sdxl.(safetensors|bin)$'
+                lora_pattern = 'faceid.sdxl.lora.safetensors$'
             else:
-                pattern = 'faceid.sd15\.(safetensors|bin)$'
-                lora_pattern = 'faceid.sd15.lora\.safetensors$'
+                pattern = 'faceid.sd15.(safetensors|bin)$'
+                lora_pattern = 'faceid.sd15.lora.safetensors$'
             is_insightface = True
         elif preset.startswith("faceid plus kolors"):
             if is_sdxl:
-                pattern = '(kolors.ip.adapter.faceid.plus|ipa.faceid.plus)\.(safetensors|bin)$'
+                pattern = '(kolors.ip.adapter.faceid.plus|ipa.faceid.plus).(safetensors|bin)$'
             else:
                 raise Exception("faceid plus kolors model is not supported for SD1.5")
             is_insightface = True
         elif preset.startswith("faceid plus -"):
             if is_sdxl:
                 raise Exception("faceid plus model is not supported for SDXL")
-            pattern = 'faceid.plus.sd15\.(safetensors|bin)$'
-            lora_pattern = 'faceid.plus.sd15.lora\.safetensors$'
+            pattern = 'faceid.plus.sd15.(safetensors|bin)$'
+            lora_pattern = 'faceid.plus.sd15.lora.safetensors$'
             is_insightface = True
         elif preset.startswith("faceid plus v2"):
             if is_sdxl:
-                pattern = 'faceid.plusv2.sdxl\.(safetensors|bin)$'
-                lora_pattern = 'faceid.plusv2.sdxl.lora\.safetensors$'
+                pattern = 'faceid.plusv2.sdxl.(safetensors|bin)$'
+                lora_pattern = 'faceid.plusv2.sdxl.lora.safetensors$'
             else:
-                pattern = 'faceid.plusv2.sd15\.(safetensors|bin)$'
-                lora_pattern = 'faceid.plusv2.sd15.lora\.safetensors$'
+                pattern = 'faceid.plusv2.sd15.(safetensors|bin)$'
+                lora_pattern = 'faceid.plusv2.sd15.lora.safetensors$'
             is_insightface = True
         else:
             raise Exception(f"invalid type '{preset}'")
@@ -3104,16 +3104,16 @@ class ipadapter:
     def get_lora_pattern(self, file):
         basename = os.path.basename(file)
         lora_pattern = None
-        if re.search(r'faceid.sdxl\.(safetensors|bin)$', basename, re.IGNORECASE):
-            lora_pattern = 'faceid.sdxl.lora\.safetensors$'
-        elif re.search(r'faceid.sd15\.(safetensors|bin)$', basename, re.IGNORECASE):
-            lora_pattern = 'faceid.sd15.lora\.safetensors$'
-        elif re.search(r'faceid.plus.sd15\.(safetensors|bin)$', basename, re.IGNORECASE):
-            lora_pattern = 'faceid.plus.sd15.lora\.safetensors$'
-        elif re.search(r'faceid.plusv2.sdxl\.(safetensors|bin)$', basename, re.IGNORECASE):
-            lora_pattern = 'faceid.plusv2.sdxl.lora\.safetensors$'
-        elif re.search(r'faceid.plusv2.sd15\.(safetensors|bin)$', basename, re.IGNORECASE):
-            lora_pattern = 'faceid.plusv2.sd15.lora\.safetensors$'
+        if re.search(r'faceid.sdxl.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.sdxl.lora.safetensors$'
+        elif re.search(r'faceid.sd15.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.sd15.lora.safetensors$'
+        elif re.search(r'faceid.plus.sd15.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.plus.sd15.lora.safetensors$'
+        elif re.search(r'faceid.plusv2.sdxl.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.plusv2.sdxl.lora.safetensors$'
+        elif re.search(r'faceid.plusv2.sd15.(safetensors|bin)$', basename, re.IGNORECASE):
+            lora_pattern = 'faceid.plusv2.sd15.lora.safetensors$'
 
         return lora_pattern
 
@@ -5752,15 +5752,15 @@ class samplerSimpleInpainting(samplerFull):
         if type == 'random':
             brush_model = BRUSHNET_MODELS['random_mask'][model_type]['model_url']
             if model_type == 'sdxl':
-                pattern = 'brushnet.random.mask.sdxl.*\.(safetensors|bin)$'
+                pattern = 'brushnet.random.mask.sdxl.*.(safetensors|bin)$'
             else:
-                pattern = 'brushnet.random.mask.*\.(safetensors|bin)$'
+                pattern = 'brushnet.random.mask.*.(safetensors|bin)$'
         elif type == 'segmentation':
             brush_model = BRUSHNET_MODELS['segmentation_mask'][model_type]['model_url']
             if model_type == 'sdxl':
-                pattern = 'brushnet.segmentation.mask.sdxl.*\.(safetensors|bin)$'
+                pattern = 'brushnet.segmentation.mask.sdxl.*.(safetensors|bin)$'
             else:
-                pattern = 'brushnet.segmentation.mask.*\.(safetensors|bin)$'
+                pattern = 'brushnet.segmentation.mask.*.(safetensors|bin)$'
 
 
         brushfile = [e for e in folder_paths.get_filename_list('inpaint') if re.search(pattern, e, re.IGNORECASE)]
