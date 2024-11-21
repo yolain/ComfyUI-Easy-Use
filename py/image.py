@@ -798,7 +798,7 @@ class imageRemBg:
     return {
       "required": {
         "images": ("IMAGE",),
-        "rem_mode": (("RMBG-1.4","Inspyrenet"),),
+        "rem_mode": (("RMBG-2.0", "RMBG-1.4","Inspyrenet"), {"default": "RMBG-1.4"}),
         "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
         "save_prefix": ("STRING", {"default": "ComfyUI"}),
 
@@ -819,7 +819,49 @@ class imageRemBg:
   def remove(self, rem_mode, images, image_output, save_prefix, torchscript_jit=False, prompt=None, extra_pnginfo=None):
     new_images = list()
     masks = list()
-    if rem_mode == "RMBG-1.4":
+    if rem_mode == "RMBG-2.0":
+      repo_id = REMBG_MODELS[rem_mode]['model_url']
+      model_path = os.path.join(REMBG_DIR, 'RMBG-2.0')
+      from huggingface_hub import snapshot_download
+      from transformers import AutoModelForImageSegmentation
+      snapshot_download(repo_id=repo_id, local_dir=model_path, ignore_patterns=["*.md", "*.txt"])
+      model = AutoModelForImageSegmentation.from_pretrained(model_path, trust_remote_code=True)
+      torch.set_float32_matmul_precision('high')
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model.to(device)
+      model.eval()
+
+      from torchvision import transforms
+      transform_image = transforms.Compose([
+        transforms.Resize((1024, 1024)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+      ])
+      for image in images:
+        orig_im = tensor2pil(image)
+        input_tensor = transform_image(orig_im).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+          preds = model(input_tensor)[-1].sigmoid().cpu()
+          pred = preds[0].squeeze()
+
+          mask = transforms.ToPILImage()(pred)
+          mask = mask.resize(orig_im.size)
+
+          new_im = orig_im.copy()
+          new_im.putalpha(mask)
+
+          new_im_tensor = pil2tensor(new_im)
+          mask_tensor = pil2tensor(mask)
+
+          new_images.append(new_im_tensor)
+          masks.append(mask_tensor)
+
+      torch.cuda.empty_cache()
+      new_images = torch.cat(new_images, dim=0)
+      masks = torch.cat(masks, dim=0)
+
+    elif rem_mode == "RMBG-1.4":
       # load model
       model_url = REMBG_MODELS[rem_mode]['model_url']
       suffix = model_url.split(".")[-1]

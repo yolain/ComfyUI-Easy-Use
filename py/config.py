@@ -190,6 +190,9 @@ REMBG_DIR = os.path.join(folder_paths.models_dir, "rembg")
 REMBG_MODELS = {
     "RMBG-1.4": {
         "model_url": "https://huggingface.co/briaai/RMBG-1.4/resolve/main/model.pth"
+    },
+    "RMBG-2.0": {
+        "model_url": "briaai/RMBG-2.0"
     }
 }
 
