@@ -58,6 +58,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.5**
 
+- Fix brushnet can not be used with startup arg `--fast` mode
 - Support briaai RMBG-2.0
 - Support mochi 
 - Implement reuse of end nodes output in the loop body (e.g: previewImage and showAnything and sth.) 
