@@ -2634,6 +2634,7 @@ class applyPowerPaint:
         del pipe
         return (new_pipe,)
 
+from node_helpers import conditioning_set_values
 class applyInpaint:
     @classmethod
     def INPUT_TYPES(s):
@@ -2652,6 +2653,9 @@ class applyInpaint:
                 "start_at": ("INT", {"default": 0, "min": 0, "max": 10000}),
                 "end_at": ("INT", {"default": 10000, "min": 0, "max": 10000}),
             },
+            "optional":{
+                "noise_mask": ("BOOLEAN", {"default": True})
+            }
         }
 
     RETURN_TYPES = ("PIPE_LINE",)
@@ -2659,14 +2663,48 @@ class applyInpaint:
     CATEGORY = "EasyUse/Inpaint"
     FUNCTION = "apply"
 
-    def inpaint_model_conditioning(self, pipe, image, vae, mask, grow_mask_by):
+    def inpaint_model_conditioning(self, pipe, image, vae, mask, grow_mask_by, noise_mask=True):
         if grow_mask_by >0:
             mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
-        positive, negative, latent = InpaintModelConditioning().encode(pipe['positive'], pipe['negative'], image,
-                                                                       vae, mask)
-        pipe['positive'] = positive
-        pipe['negative'] = negative
-        pipe['samples'] = latent
+        positive, negative, = pipe['positive'], pipe['negative']
+
+        pixels = image
+        x = (pixels.shape[1] // 8) * 8
+        y = (pixels.shape[2] // 8) * 8
+        mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])),
+                                               size=(pixels.shape[1], pixels.shape[2]), mode="bilinear")
+
+        orig_pixels = pixels
+        pixels = orig_pixels.clone()
+        if pixels.shape[1] != x or pixels.shape[2] != y:
+            x_offset = (pixels.shape[1] % 8) // 2
+            y_offset = (pixels.shape[2] % 8) // 2
+            pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
+            mask = mask[:, :, x_offset:x + x_offset, y_offset:y + y_offset]
+
+        m = (1.0 - mask.round()).squeeze(1)
+        for i in range(3):
+            pixels[:, :, :, i] -= 0.5
+            pixels[:, :, :, i] *= m
+            pixels[:, :, :, i] += 0.5
+        concat_latent = vae.encode(pixels)
+        orig_latent = vae.encode(orig_pixels)
+
+        out_latent = {}
+
+        out_latent["samples"] = orig_latent
+        if noise_mask:
+            out_latent["noise_mask"] = mask
+
+        out = []
+        for conditioning in [positive, negative]:
+            c = conditioning_set_values(conditioning, {"concat_latent_image": concat_latent,
+                                                                    "concat_mask": mask})
+            out.append(c)
+
+        pipe['positive'] = out[0]
+        pipe['negative'] = out[1]
+        pipe['samples'] = out_latent
 
         return pipe
 
@@ -2711,7 +2749,7 @@ class applyInpaint:
         clip_name = os.path.join("powerpaint",os.path.basename(clip_parsed_url.path))
         return model_name, clip_name
 
-    def apply(self, pipe, image, mask, inpaint_mode, encode, grow_mask_by, dtype, fitting, function, scale, start_at, end_at):
+    def apply(self, pipe, image, mask, inpaint_mode, encode, grow_mask_by, dtype, fitting, function, scale, start_at, end_at, noise_mask=True):
         new_pipe = {
             **pipe,
         }
@@ -2746,9 +2784,9 @@ class applyInpaint:
                                                      list(FOOOCUS_INPAINT_HEAD.keys())[0],
                                                      list(FOOOCUS_INPAINT_PATCH.keys())[0])
                 new_pipe['model'] = model
-                new_pipe = self.inpaint_model_conditioning(new_pipe, image, vae, mask, 0)
+                new_pipe = self.inpaint_model_conditioning(new_pipe, image, vae, mask, 0, noise_mask=noise_mask)
             else:
-                new_pipe = self.inpaint_model_conditioning(new_pipe, image, vae, mask, grow_mask_by)
+                new_pipe = self.inpaint_model_conditioning(new_pipe, image, vae, mask, grow_mask_by, noise_mask=noise_mask)
         elif encode == 'different_diffusion':
             if inpaint_mode == 'fooocus_inpaint':
                 latent, = VAEEncodeForInpaint().encode(vae, image, mask, grow_mask_by)
@@ -2757,9 +2795,9 @@ class applyInpaint:
                                                      list(FOOOCUS_INPAINT_HEAD.keys())[0],
                                                      list(FOOOCUS_INPAINT_PATCH.keys())[0])
                 new_pipe['model'] = model
-                new_pipe = self.inpaint_model_conditioning(new_pipe, image, vae, mask, 0)
+                new_pipe = self.inpaint_model_conditioning(new_pipe, image, vae, mask, 0, noise_mask=noise_mask)
             else:
-                new_pipe = self.inpaint_model_conditioning(new_pipe, image, vae, mask, grow_mask_by)
+                new_pipe = self.inpaint_model_conditioning(new_pipe, image, vae, mask, grow_mask_by, noise_mask=noise_mask)
             cls = ALL_NODE_CLASS_MAPPINGS['DifferentialDiffusion']
             if cls is not None:
                 model, = cls().apply(new_pipe['model'])
@@ -4319,7 +4357,7 @@ class samplerCustomSettings:
     def INPUT_TYPES(cls):
         return {"required": {
                      "pipe": ("PIPE_LINE",),
-                     "guider": (['CFG','DualCFG','IP2P+DualCFG','Basic'],{"default":"Basic"}),
+                     "guider": (['CFG','DualCFG','Basic', 'IP2P+CFG', 'IP2P+DualCFG','IP2P+Basic'],{"default":"Basic"}),
                      "cfg": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0}),
                      "cfg_negative": ("FLOAT", {"default": 1.5, "min": 0.0, "max": 100.0}),
                      "sampler_name": (comfy.samplers.KSampler.SAMPLERS + ['inversed_euler'],),
@@ -4353,6 +4391,35 @@ class samplerCustomSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
+    def ip2p(self, positive, negative, vae, pixels, latent=None):
+        if latent is not None:
+            concat_latent = latent
+        else:
+            x = (pixels.shape[1] // 8) * 8
+            y = (pixels.shape[2] // 8) * 8
+
+            if pixels.shape[1] != x or pixels.shape[2] != y:
+                x_offset = (pixels.shape[1] % 8) // 2
+                y_offset = (pixels.shape[2] % 8) // 2
+                pixels = pixels[:,x_offset:x + x_offset, y_offset:y + y_offset,:]
+
+            concat_latent = vae.encode(pixels)
+
+        out_latent = {}
+        out_latent["samples"] = torch.zeros_like(concat_latent)
+
+        out = []
+        for conditioning in [positive, negative]:
+            c = []
+            for t in conditioning:
+                d = t[1].copy()
+                d["concat_latent_image"] = concat_latent
+                n = [t[0], d]
+                c.append(n)
+            out.append(c)
+        return (out[0], out[1], out_latent)
+
+
     def settings(self, pipe, guider, cfg, cfg_negative, sampler_name, scheduler, coeff, steps, sigma_max, sigma_min, rho, beta_d, beta_min, eps_s, flip_sigmas, denoise, add_noise, seed, image_to_latent=None, latent=None, optional_sampler=None, optional_sigmas=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
 
         # 图生图转换
@@ -4368,7 +4435,7 @@ class samplerCustomSettings:
                 samples = pipe["samples"]
                 images = pipe["images"]
             else:
-                if guider == "IP2P+DualCFG":
+                if "IP2P" in guider:
                     positive, negative, latent = self.ip2p(pipe['positive'], pipe['negative'], vae, image_to_latent)
                     samples = latent
                 else:
@@ -4376,7 +4443,7 @@ class samplerCustomSettings:
                     samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
                 images = image_to_latent
         elif latent is not None:
-            if guider == "IP2P+DualCFG":
+            if "IP2P" in guider:
                 positive, negative, latent = self.ip2p(pipe['positive'], pipe['negative'], latent=latent)
                 samples = latent
             else:
@@ -5127,7 +5194,7 @@ class samplerFull:
                 c.append(n)
             positive = c
 
-        if guider == 'CFG':
+        if guider in ['CFG', 'IP2P+CFG']:
             _guider, = self.get_custom_cls('CFGGuider').get_guider(model, positive, negative, cfg)
         elif guider in ['DualCFG', 'IP2P+DualCFG']:
             _guider, = self.get_custom_cls('DualCFGGuider').get_guider(model, positive, middle,
