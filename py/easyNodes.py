@@ -3171,8 +3171,8 @@ class ipadapter:
                 return easyCache.load_lora({"model": model, "clip": clip, "lora_name": lora_name, "model_strength":model_strength, "clip_strength":clip_strength},)
             return (model, clip)
 
-    def ipadapter_model_loader(self, file, is_flux=False):
-        model = torch.load(os.path.join(file), map_location="cpu") if is_flux else comfy.utils.load_torch_file(file, safe_load=True)
+    def ipadapter_model_loader(self, file):
+        model = comfy.utils.load_torch_file(file, safe_load=False)
 
         if file.lower().endswith(".safetensors"):
             st_model = {"image_proj": {}, "ip_adapter": {}}
@@ -3284,7 +3284,7 @@ class ipadapter:
                 log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name} Cached")
                 _, ipadapter = backend_cache.cache[ipadapter_name][1]
             else:
-                ipadapter = self.ipadapter_model_loader(ipadapter_file, preset.lower().startswith("flux"))
+                ipadapter = self.ipadapter_model_loader(ipadapter_file)
                 pipeline['ipadapter']['file'] = ipadapter_file
                 log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name}")
                 if cache_mode in ["all", "ipadapter only"]:
