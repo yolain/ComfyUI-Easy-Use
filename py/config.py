@@ -200,7 +200,7 @@ REMBG_MODELS = {
 IPADAPTER_DIR = os.path.join(folder_paths.models_dir, "ipadapter")
 IPADAPTER_MODELS = {
     "LIGHT - SD1.5 only (low strength)": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15_light_v11.bin"
         },
         "sdxl": {
@@ -208,7 +208,7 @@ IPADAPTER_MODELS = {
         }
     },
     "STANDARD (medium strength)": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15.safetensors"
         },
         "sdxl": {
@@ -216,7 +216,7 @@ IPADAPTER_MODELS = {
         }
     },
     "VIT-G (medium strength)": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter_sd15_vit-G.safetensors"
         },
         "sdxl": {
@@ -224,7 +224,7 @@ IPADAPTER_MODELS = {
         }
     },
     "PLUS (high strength)": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter-plus_sd15.safetensors"
         },
         "sdxl": {
@@ -232,15 +232,21 @@ IPADAPTER_MODELS = {
         }
     },
     "PLUS (kolors genernal)":{
-        "sd15":{
+        "sd1":{
             "model_url":""
         },
         "sdxl":{
             "model_url":"https://huggingface.co/Kwai-Kolors/Kolors-IP-Adapter-Plus/resolve/main/ip_adapter_plus_general.bin"
         }
     },
+    "FLUX.1-dev": {
+       "flux":{
+           "model_url": "https://huggingface.co/InstantX/FLUX.1-dev-IP-Adapter/resolve/main/ip-adapter.bin",
+           "model_file_name": "ip-adapter_flux_1_dev.bin",
+       },
+    },
     "PLUS FACE (portraits)": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter-plus-face_sd15.safetensors"
         },
         "sdxl": {
@@ -248,7 +254,7 @@ IPADAPTER_MODELS = {
         }
     },
     "FULL FACE - SD1.5 only (portraits stronger)": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/ip-adapter-full-face_sd15.safetensors"
         },
         "sdxl": {
@@ -256,7 +262,7 @@ IPADAPTER_MODELS = {
         }
     },
     "FACEID": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid_sd15.bin",
             "lora_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid_sd15_lora.safetensors"
         },
@@ -266,7 +272,7 @@ IPADAPTER_MODELS = {
         }
     },
     "FACEID PLUS - SD1.5 only": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plus_sd15.bin",
             "lora_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plus_sd15_lora.safetensors"
         },
@@ -276,7 +282,7 @@ IPADAPTER_MODELS = {
         }
     },
     "FACEID PLUS V2": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plusv2_sd15.bin",
             "lora_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-plusv2_sd15_lora.safetensors"
         },
@@ -286,7 +292,7 @@ IPADAPTER_MODELS = {
         }
     },
     "FACEID PLUS KOLORS":{
-        "sd15":{
+        "sd1":{
 
         },
         "sdxl":{
@@ -294,7 +300,7 @@ IPADAPTER_MODELS = {
         }
     },
     "FACEID PORTRAIT (style transfer)": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/h94/IP-Adapter-FaceID/resolve/main/ip-adapter-faceid-portrait-v11_sd15.bin",
         },
         "sdxl": {
@@ -302,7 +308,7 @@ IPADAPTER_MODELS = {
         }
     },
     "FACEID PORTRAIT UNNORM - SDXL only (strong)": {
-        "sd15": {
+        "sd1": {
             "model_url":""
         },
         "sdxl": {
@@ -310,7 +316,7 @@ IPADAPTER_MODELS = {
         }
     },
     "COMPOSITION": {
-        "sd15": {
+        "sd1": {
             "model_url": "https://huggingface.co/ostris/ip-composition-adapter/resolve/main/ip_plus_composition_sd15.safetensors"
         },
         "sdxl": {
@@ -324,6 +330,9 @@ IPADAPTER_CLIPVISION_MODELS = {
     },
     "clip-vit-h-14-laion2B-s32B-b79K":{
         "model_url": "https://huggingface.co/laion/CLIP-ViT-H-14-laion2B-s32B-b79K/resolve/main/open_clip_pytorch_model.safetensors"
+    },
+    "sigclip_vision_patch14_384":{
+        "model_url": "https://huggingface.co/Comfy-Org/sigclip_vision_384/resolve/main/sigclip_vision_patch14_384.safetensors"
     }
 }
 

@@ -3000,6 +3000,7 @@ class ipadapter:
             'VIT-G (medium strength)',
             'PLUS (high strength)',
             'PLUS (kolors genernal)',
+            'FLUX.1-dev',
             'PLUS FACE (portraits)',
             'FULL FACE - SD1.5 only (portraits stronger)',
             'COMPOSITION'
@@ -3022,27 +3023,28 @@ class ipadapter:
     def get_clipvision_file(self, preset, node_name):
         preset = preset.lower()
         clipvision_list = folder_paths.get_filename_list("clip_vision")
-
-        if preset.startswith("plus (kolors") or preset.startswith("faceid plus kolors"):
+        if preset.startswith("flux"):
+            # pattern = 'sigclip.vision.patch14.384'
+            pattern = 'siglip.so400m.patch14.384'
+        elif preset.startswith("plus (kolors") or preset.startswith("faceid plus kolors"):
             pattern = 'Vit.Large.patch14.336.(bin|safetensors)$'
         elif preset.startswith("vit-g"):
             pattern = '(ViT.bigG.14.*39B.b160k|ipadapter.*sdxl|sdxl.*model.(bin|safetensors))'
         else:
             pattern = '(ViT.H.14.*s32B.b79K|ipadapter.*sd15|sd1.?5.*model.(bin|safetensors))'
         clipvision_files = [e for e in clipvision_list if re.search(pattern, e, re.IGNORECASE)]
-
         clipvision_name = clipvision_files[0] if len(clipvision_files)>0 else None
         clipvision_file = folder_paths.get_full_path("clip_vision", clipvision_name) if clipvision_name else None
         # if clipvision_name is not None:
         #     log_node_info(node_name, f"Using {clipvision_name}")
-
         return clipvision_file, clipvision_name
 
-    def get_ipadapter_file(self, preset, is_sdxl, node_name):
+    def get_ipadapter_file(self, preset, model_type, node_name):
         preset = preset.lower()
         ipadapter_list = folder_paths.get_filename_list("ipadapter")
         is_insightface = False
         lora_pattern = None
+        is_sdxl = model_type == 'sdxl'
 
         if preset.startswith("light"):
             if is_sdxl:
@@ -3061,6 +3063,8 @@ class ipadapter:
                 pattern = 'ip.adapter.sdxl.(safetensors|bin)$'
             else:
                 pattern = 'sd15.vit.g.(safetensors|bin)$'
+        elif preset.startswith("flux"):
+            pattern = 'ip.adapter.flux.1.dev.(safetensors|bin)$'
         elif preset.startswith("plus (high"):
             if is_sdxl:
                 pattern = 'plus.sdxl.vit.h.(safetensors|bin)$'
@@ -3167,8 +3171,8 @@ class ipadapter:
                 return easyCache.load_lora({"model": model, "clip": clip, "lora_name": lora_name, "model_strength":model_strength, "clip_strength":clip_strength},)
             return (model, clip)
 
-    def ipadapter_model_loader(self, file):
-        model = comfy.utils.load_torch_file(file, safe_load=True)
+    def ipadapter_model_loader(self, file, is_flux=False):
+        model = torch.load(os.path.join(file), map_location="cpu") if is_flux else comfy.utils.load_torch_file(file, safe_load=True)
 
         if file.lower().endswith(".safetensors"):
             st_model = {"image_proj": {}, "ip_adapter": {}}
@@ -3214,7 +3218,29 @@ class ipadapter:
         if not clip_vision:
             clipvision_file, clipvision_name = self.get_clipvision_file(preset, node_name)
             if clipvision_file is None:
-                if preset.lower().startswith("plus (kolors"):
+                if preset.lower().startswith("flux"):
+                    # model_url = IPADAPTER_CLIPVISION_MODELS["sigclip_vision_patch14_384"]["model_url"]
+                    # clipvision_file = get_local_filepath(model_url, IPADAPTER_DIR, "sigclip_vision_patch14_384.bin")
+                    from huggingface_hub import snapshot_download
+                    import shutil
+                    CLIP_PATH = os.path.join(folder_paths.models_dir, "clip_vision", "google--siglip-so400m-patch14-384")
+                    print("CLIP_VISION not found locally. Downloading google/siglip-so400m-patch14-384...")
+                    try:
+                        snapshot_download(
+                            repo_id="google/siglip-so400m-patch14-384",
+                            local_dir=os.path.join(folder_paths.models_dir, "clip_vision",
+                                                   "cache--google--siglip-so400m-patch14-384"),
+                            local_dir_use_symlinks=False,
+                            resume_download=True
+                        )
+                        shutil.move(os.path.join(folder_paths.models_dir, "clip_vision",
+                                                 "cache--google--siglip-so400m-patch14-384"), CLIP_PATH)
+                        print(f"CLIP_VISION has been downloaded to {CLIP_PATH}")
+                    except Exception as e:
+                        print(f"Error downloading CLIP model: {e}")
+                        raise
+                    clipvision_file = CLIP_PATH
+                elif preset.lower().startswith("plus (kolors"):
                     model_url = IPADAPTER_CLIPVISION_MODELS["clip-vit-large-patch14-336"]["model_url"]
                     clipvision_file = get_local_filepath(model_url, IPADAPTER_DIR, "clip-vit-large-patch14-336.bin")
                 else:
@@ -3227,21 +3253,30 @@ class ipadapter:
                 log_node_info("easy ipadapterApply", f"Using ClipVisonModel {clipvision_name} Cached")
                 _, clip_vision = backend_cache.cache[clipvision_name][1]
             else:
-                clip_vision = load_clip_vision(clipvision_file)
+                if preset.lower().startswith("flux"):
+                    from transformers import SiglipVisionModel, AutoProcessor
+                    image_encoder_path = os.path.dirname(clipvision_file)
+                    image_encoder = SiglipVisionModel.from_pretrained(image_encoder_path)
+                    clip_image_processor = AutoProcessor.from_pretrained(image_encoder_path)
+                    clip_vision = {
+                        'image_encoder': image_encoder,
+                        'clip_image_processor': clip_image_processor
+                    }
+                else:
+                    clip_vision = load_clip_vision(clipvision_file)
                 log_node_info("easy ipadapterApply", f"Using ClipVisonModel {clipvision_name}")
                 if cache_mode in ["all", "clip_vision only"]:
                     backend_cache.update_cache(clipvision_name, 'clip_vision', (False, clip_vision))
             pipeline['clipvision']['file'] = clipvision_file
             pipeline['clipvision']['model'] = clip_vision
-
         # 2. Load the ipadapter model
-        is_sdxl = isinstance(model.model, comfy.model_base.SDXL)
+        model_type = get_sd_version(model)
         if not ipadapter:
-            ipadapter_file, ipadapter_name, is_insightface, lora_pattern = self.get_ipadapter_file(preset, is_sdxl, node_name)
-            model_type = 'sdxl' if is_sdxl else 'sd15'
+            ipadapter_file, ipadapter_name, is_insightface, lora_pattern = self.get_ipadapter_file(preset, model_type, node_name)
             if ipadapter_file is None:
                 model_url = IPADAPTER_MODELS[preset][model_type]["model_url"]
-                ipadapter_file = get_local_filepath(model_url, IPADAPTER_DIR)
+                local_file_name = IPADAPTER_MODELS[preset][model_type]['model_file_name'] if "model_file_name" in IPADAPTER_MODELS[preset][model_type] else None
+                ipadapter_file = get_local_filepath(model_url, IPADAPTER_DIR, local_file_name)
                 ipadapter_name = os.path.basename(model_url)
             if ipadapter_file == pipeline['ipadapter']['file']:
                 ipadapter = pipeline['ipadapter']['model']
@@ -3249,7 +3284,7 @@ class ipadapter:
                 log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name} Cached")
                 _, ipadapter = backend_cache.cache[ipadapter_name][1]
             else:
-                ipadapter = self.ipadapter_model_loader(ipadapter_file)
+                ipadapter = self.ipadapter_model_loader(ipadapter_file, preset.lower().startswith("flux"))
                 pipeline['ipadapter']['file'] = ipadapter_file
                 log_node_info("easy ipadapterApply", f"Using IpAdapterModel {ipadapter_name}")
                 if cache_mode in ["all", "ipadapter only"]:
@@ -3317,7 +3352,10 @@ class ipadapterApply(ipadapter):
     def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, start_at, end_at, cache_mode, use_tiled, attn_mask=None, optional_ipadapter=None, weight_kolors=None):
         images, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
-        if use_tiled and preset not in self.faceid_presets:
+        if preset in ['FLUX.1-dev']:
+            from .ipadapter import InstantXFluxIpadapterApply
+            model, images = InstantXFluxIpadapterApply().apply_ipadapter_flux(model, ipadapter, image, weight, start_at, end_at)
+        elif use_tiled and preset not in self.faceid_presets:
             if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
                 self.error()
             cls = ALL_NODE_CLASS_MAPPINGS["IPAdapterTiled"]
