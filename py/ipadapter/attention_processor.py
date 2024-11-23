@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-from diffusers.models.normalization import RMSNorm
 
 class RMSNorm(nn.Module):
     def __init__(self, dim, eps: float, elementwise_affine: bool = True):

@@ -10,21 +10,11 @@ def FluxUpdateModules(flux_model, ip_attn_procs, image_emb, is_patched):
     dsb_count = len(flux_model.diffusion_model.double_blocks)
     ssb_count = len(flux_model.diffusion_model.single_blocks)
     for i in range(dsb_count):
-        if not is_patched:
-            # initial ipa models with image embeddings
-            flux_model.diffusion_model.double_blocks[i] = DoubleStreamBlockIPA(
-                flux_model.diffusion_model.double_blocks[i], ip_attn_procs[f"double_blocks.{i}"], image_emb)
-        else:
-            # replace image embeddings with new embeddings
-            flux_model.diffusion_model.double_blocks[i].image_emb = image_emb
+        flux_model.diffusion_model.double_blocks[i] = DoubleStreamBlockIPA(
+            flux_model.diffusion_model.double_blocks[i], ip_attn_procs[f"double_blocks.{i}"], image_emb)
     for i in range(ssb_count):
-        if not is_patched:
-            # initial ipa models with image embeddings
-            flux_model.diffusion_model.single_blocks[i] = SingleStreamBlockIPA(
-                flux_model.diffusion_model.single_blocks[i], ip_attn_procs[f"single_blocks.{i}"], image_emb)
-        else:
-            # replace image embeddings with new embeddings
-            flux_model.diffusion_model.single_blocks[i].image_emb = image_emb
+        flux_model.diffusion_model.single_blocks[i] = SingleStreamBlockIPA(
+            flux_model.diffusion_model.single_blocks[i], ip_attn_procs[f"single_blocks.{i}"], image_emb)
 
 
 def is_model_pathched(model):
