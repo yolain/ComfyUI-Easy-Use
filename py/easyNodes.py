@@ -3329,7 +3329,7 @@ class ipadapterApply(ipadapter):
                 "image": ("IMAGE",),
                 "preset": (presets,),
                 "lora_strength": ("FLOAT", {"default": 0.6, "min": 0, "max": 1, "step": 0.01}),
-                "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"],),
+                "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"], {"default": "CUDA"}),
                 "weight": ("FLOAT", {"default": 1.0, "min": -1, "max": 3, "step": 0.05}),
                 "weight_faceidv2": ("FLOAT", { "default": 1.0, "min": -1, "max": 5.0, "step": 0.05 }),
                 "start_at": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.001}),
@@ -3354,7 +3354,7 @@ class ipadapterApply(ipadapter):
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
         if preset in ['FLUX.1-dev']:
             from .ipadapter import InstantXFluxIpadapterApply
-            model, images = InstantXFluxIpadapterApply().apply_ipadapter_flux(model, ipadapter, image, weight, start_at, end_at)
+            model, images = InstantXFluxIpadapterApply().apply_ipadapter_flux(model, ipadapter, image, weight, start_at, end_at, provider)
         elif use_tiled and preset not in self.faceid_presets:
             if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
                 self.error()
@@ -3393,7 +3393,7 @@ class ipadapterApplyAdvanced(ipadapter):
                 "image": ("IMAGE",),
                 "preset": (presets,),
                 "lora_strength": ("FLOAT", {"default": 0.6, "min": 0, "max": 1, "step": 0.01}),
-                "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"],),
+                "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"], {"default": "CUDA"}),
                 "weight": ("FLOAT", {"default": 1.0, "min": -1, "max": 3, "step": 0.05}),
                 "weight_faceidv2": ("FLOAT", {"default": 1.0, "min": -1, "max": 5.0, "step": 0.05 }),
                 "weight_type": (weight_types,),
@@ -3470,7 +3470,7 @@ class ipadapterApplyFaceIDKolors(ipadapterApplyAdvanced):
                 "image": ("IMAGE",),
                 "preset": (['FACEID PLUS KOLORS'], {"default":"FACEID PLUS KOLORS"}),
                 "lora_strength": ("FLOAT", {"default": 0.6, "min": 0, "max": 1, "step": 0.01}),
-                "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"],),
+                "provider": (["CPU", "CUDA", "ROCM", "DirectML", "OpenVINO", "CoreML"], {"default": "CUDA"}),
                 "weight": ("FLOAT", {"default": 0.8, "min": -1, "max": 3, "step": 0.05}),
                 "weight_faceidv2": ("FLOAT", {"default": 1.0, "min": -1, "max": 5.0, "step": 0.05}),
                 "weight_kolors": ("FLOAT", {"default": 0.8, "min": -1, "max": 5.0, "step": 0.05}),

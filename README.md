@@ -58,6 +58,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.5**
 
+- Added `FLUX.1-dev` preset for InstantX Flux ipadapter on `easy ipadapterApply`
 - Fix brushnet can not be used with startup arg `--fast` mode
 - Support briaai RMBG-2.0
 - Support mochi 
