@@ -30,6 +30,7 @@ class MLPProjModel(torch.nn.Module):
 class InstantXFluxIpadapterApply:
     def __init__(self, num_tokens=128):
         self.device = None
+        self.dtype = torch.float16
         self.num_tokens = num_tokens
         self.ip_ckpt = None
         self.clip_vision = None
@@ -55,7 +56,7 @@ class InstantXFluxIpadapterApply:
                 num_tokens=self.num_tokens,
                 scale=weight,
                 timestep_range=timestep_range
-            ).to(self.device, dtype=torch.bfloat16)
+            ).to(self.device, dtype=self.dtype)
         ssb_count = len(flux_model.diffusion_model.single_blocks)
         for i in range(ssb_count):
             name = f"single_blocks.{i}"
@@ -65,7 +66,7 @@ class InstantXFluxIpadapterApply:
                 num_tokens=self.num_tokens,
                 scale=weight,
                 timestep_range=timestep_range
-            ).to(self.device, dtype=torch.bfloat16)
+            ).to(self.device, dtype=self.dtype)
         return ip_attn_procs
 
     def load_ip_adapter(self, flux_model, weight, timestep_percent_range=(0.0, 1.0)):
@@ -79,7 +80,7 @@ class InstantXFluxIpadapterApply:
     def get_image_embeds(self, pil_image=None, clip_image_embeds=None):
         # outputs = self.clip_vision.encode_image(pil_image)
         # clip_image_embeds = outputs['image_embeds']
-        # clip_image_embeds = clip_image_embeds.to(self.device, dtype=torch.bfloat16)
+        # clip_image_embeds = clip_image_embeds.to(self.device, dtype=self.dtype)
         # image_prompt_embeds = self.image_proj_model(clip_image_embeds)
         if pil_image is not None:
             if isinstance(pil_image, Image.Image):
@@ -87,18 +88,18 @@ class InstantXFluxIpadapterApply:
             clip_image = self.clip_image_processor(images=pil_image, return_tensors="pt").pixel_values
             clip_image_embeds = self.image_encoder(
                 clip_image.to(self.device, dtype=self.image_encoder.dtype)).pooler_output
-            clip_image_embeds = clip_image_embeds.to(dtype=torch.bfloat16)
+            clip_image_embeds = clip_image_embeds.to(dtype=self.dtype)
         else:
-            clip_image_embeds = clip_image_embeds.to(self.device, dtype=torch.bfloat16)
+            clip_image_embeds = clip_image_embeds.to(self.device, dtype=self.dtype)
         global image_proj_model
         image_prompt_embeds = image_proj_model(clip_image_embeds)
         return image_prompt_embeds
 
-    def apply_ipadapter_flux(self, model, ipadapter, image, weight, start_at, end_at, provider=None):
+    def apply_ipadapter_flux(self, model, ipadapter, image, weight, start_at, end_at, provider=None, use_tiled=False):
         self.device = provider.lower()
         if "clipvision" in ipadapter:
             # self.clip_vision = ipadapter["clipvision"]['model']
-            self.image_encoder = ipadapter["clipvision"]['model']['image_encoder'].to(self.device, dtype=torch.bfloat16)
+            self.image_encoder = ipadapter["clipvision"]['model']['image_encoder'].to(self.device, dtype=self.dtype)
             self.clip_image_processor = ipadapter["clipvision"]['model']['clip_image_processor']
         if "ipadapter" in ipadapter:
             self.ip_ckpt = ipadapter["ipadapter"]['file']
@@ -115,15 +116,14 @@ class InstantXFluxIpadapterApply:
                 id_embeddings_dim=1152,
                 num_tokens=self.num_tokens,
             )
-        image_proj_model.to(self.device, dtype=torch.bfloat16)
+        image_proj_model.to(self.device, dtype=self.dtype)
         ip_attn_procs = self.load_ip_adapter(model.model, weight, (start_at, end_at))
         # process control image
         image_prompt_embeds = self.get_image_embeds(pil_image=pil_image, clip_image_embeds=None)
         # set model
         is_patched = is_model_pathched(model.model)
         bi = model.clone()
-        tyanochky = bi.model
-        FluxUpdateModules(tyanochky, ip_attn_procs, image_prompt_embeds, is_patched)
+        FluxUpdateModules(bi, ip_attn_procs, image_prompt_embeds, is_patched)
 
         return (bi, image)
 

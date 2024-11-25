@@ -76,7 +76,7 @@ class IPAFluxAttnProcessor2_0(nn.Module):
         ip_hidden_states_key_proj = self.norm_added_k(ip_hidden_states_key_proj)
         ip_hidden_states_value_proj = self.norm_added_v(ip_hidden_states_value_proj)
 
-        ip_hidden_states = F.scaled_dot_product_attention(query.to(image_emb.device),
+        ip_hidden_states = F.scaled_dot_product_attention(query.to(image_emb.device).to(image_emb.dtype),
                                                           ip_hidden_states_key_proj,
                                                           ip_hidden_states_value_proj,
                                                           dropout_p=0.0, is_causal=False)

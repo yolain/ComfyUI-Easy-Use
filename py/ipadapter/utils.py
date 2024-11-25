@@ -4,18 +4,19 @@ from .flux.layers import DoubleStreamBlockIPA, SingleStreamBlockIPA
 from comfy.ldm.flux.layers import timestep_embedding
 from types import MethodType
 
-def FluxUpdateModules(flux_model, ip_attn_procs, image_emb, is_patched):
-    if not is_patched:
-        flux_model.diffusion_model.forward_orig = MethodType(forward_orig_ipa, flux_model.diffusion_model)
+def FluxUpdateModules(bi, ip_attn_procs, image_emb, is_patched):
+    flux_model = bi.model
+    bi.add_object_patch(f"diffusion_model.forward_orig", MethodType(forward_orig_ipa, flux_model.diffusion_model))
     dsb_count = len(flux_model.diffusion_model.double_blocks)
     ssb_count = len(flux_model.diffusion_model.single_blocks)
     for i in range(dsb_count):
-        flux_model.diffusion_model.double_blocks[i] = DoubleStreamBlockIPA(
+        temp_layer = DoubleStreamBlockIPA(
             flux_model.diffusion_model.double_blocks[i], ip_attn_procs[f"double_blocks.{i}"], image_emb)
+        bi.add_object_patch(f"diffusion_model.double_blocks.{i}",temp_layer)
     for i in range(ssb_count):
-        flux_model.diffusion_model.single_blocks[i] = SingleStreamBlockIPA(
+        temp_layer = SingleStreamBlockIPA(
             flux_model.diffusion_model.single_blocks[i], ip_attn_procs[f"single_blocks.{i}"], image_emb)
-
+        bi.add_object_patch(f"diffusion_model.single_blocks.{i}", temp_layer)
 
 def is_model_pathched(model):
     def test(mod):
