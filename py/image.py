@@ -1325,12 +1325,18 @@ class humanSegmentation:
         model_path = get_local_filepath(HUMANPARSING_MODELS['human-parts']['model_url'], human_parts_path)
         parsing = HumanParts(model_path=model_path)
 
-        mask, = parsing(image, mask_components)
+        ret_images = []
+        ret_masks = []
+        for img in image:
+          mask, = parsing(img, mask_components)
+          _mask = tensor2pil(mask).convert('L')
 
-        alpha = 1.0 - mask
+          ret_image = RGB2RGBA(tensor2pil(img).convert('RGB'), _mask.convert('L'))
+          ret_images.append(pil2tensor(ret_image))
+          ret_masks.append(image2mask(_mask))
 
-        output_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
-
+        output_image = torch.cat(ret_images, dim=0)
+        mask = torch.cat(ret_masks, dim=0)
 
       # use crop
       bbox = [[0, 0, 0, 0]]
