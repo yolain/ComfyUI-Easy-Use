@@ -152,7 +152,10 @@ class StabilityAPI:
             PromptServer.instance.send_sync('easyuse-toast', {'type': 'error', 'content': self.getErrors(response.status_code)})
             return None
 
-stableAPI = StabilityAPI()
+if os.environ.get("COMFYUI_EASY_USE_DISABLE_STABILITY_API", "0") == "1":
+    print("Stable Diffusion 3 API is not enabled")
+else:
+    stableAPI = StabilityAPI()
 
 
 @PromptServer.instance.routes.get("/easyuse/stability/api_keys")

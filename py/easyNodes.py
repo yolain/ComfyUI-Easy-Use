@@ -7842,43 +7842,48 @@ class sliderControl:
         return (values,)
 
 #---------------------------------------------------------------API 开始----------------------------------------------------------------------#
-from .libs.stability import stableAPI
-class stableDiffusion3API:
+try:
+    from .libs.stability import stableAPI
 
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "positive": ("STRING", {"default": "", "placeholder": "Positive", "multiline": True}),
-                "negative": ("STRING", {"default": "", "placeholder": "Negative", "multiline": True}),
-                "model": (["sd3", "sd3-turbo"],),
-                "aspect_ratio": (['16:9', '1:1', '21:9', '2:3', '3:2', '4:5', '5:4', '9:16', '9:21'],),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 4294967294}),
-                "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0}),
-            },
-            "optional": {
-                "optional_image": ("IMAGE",),
-            },
-            "hidden": {
-                "unique_id": "UNIQUE_ID",
-                "extra_pnginfo": "EXTRA_PNGINFO",
-            },
-        }
+    class stableDiffusion3API:
 
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
+        @classmethod
+        def INPUT_TYPES(s):
+            return {
+                "required": {
+                    "positive": ("STRING", {"default": "", "placeholder": "Positive", "multiline": True}),
+                    "negative": ("STRING", {"default": "", "placeholder": "Negative", "multiline": True}),
+                    "model": (["sd3", "sd3-turbo"],),
+                    "aspect_ratio": (['16:9', '1:1', '21:9', '2:3', '3:2', '4:5', '5:4', '9:16', '9:21'],),
+                    "seed": ("INT", {"default": 0, "min": 0, "max": 4294967294}),
+                    "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0}),
+                },
+                "optional": {
+                    "optional_image": ("IMAGE",),
+                },
+                "hidden": {
+                    "unique_id": "UNIQUE_ID",
+                    "extra_pnginfo": "EXTRA_PNGINFO",
+                },
+            }
 
-    FUNCTION = "generate"
-    OUTPUT_NODE = False
+        RETURN_TYPES = ("IMAGE",)
+        RETURN_NAMES = ("image",)
 
-    CATEGORY = "EasyUse/API"
+        FUNCTION = "generate"
+        OUTPUT_NODE = False
 
-    def generate(self, positive, negative, model, aspect_ratio, seed, denoise, optional_image=None, unique_id=None, extra_pnginfo=None):
-        mode = 'text-to-image'
-        if optional_image is not None:
-            mode = 'image-to-image'
-        output_image = stableAPI.generate_sd3_image(positive, negative, aspect_ratio, seed=seed, mode=mode, model=model, strength=denoise, image=optional_image)
-        return (output_image,)
+        CATEGORY = "EasyUse/API"
+
+        def generate(self, positive, negative, model, aspect_ratio, seed, denoise, optional_image=None, unique_id=None, extra_pnginfo=None):
+            mode = 'text-to-image'
+            if optional_image is not None:
+                mode = 'image-to-image'
+            output_image = stableAPI.generate_sd3_image(positive, negative, aspect_ratio, seed=seed, mode=mode, model=model, strength=denoise, image=optional_image)
+            return (output_image,)
+except Exception:
+    print("Stable Diffusion 3 API is not available")
+
 
 from .libs.fluxai import fluxaiAPI
 
@@ -8036,7 +8041,6 @@ NODE_CLASS_MAPPINGS = {
     "easy sliderControl": sliderControl,
     "dynamicThresholdingFull": dynamicThresholdingFull,
     # api 相关
-    "easy stableDiffusion3API": stableDiffusion3API,
     "easy fluxPromptGenAPI": fluxPromptGenAPI,
     # utils
     "easy ckptNames": setCkptName,
@@ -8164,9 +8168,13 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy sliderControl": "Easy Slider Control",
     "dynamicThresholdingFull": "DynamicThresholdingFull",
     # api 相关
-    "easy stableDiffusion3API": "Stable Diffusion 3 (API)",
     "easy fluxPromptGenAPI": "Flux Prompt Gen (API)",
     # utils
     "easy ckptNames": "Ckpt Names",
     "easy controlnetNames": "ControlNet Names",
 }
+
+
+if "stableDiffusion3API" in dir():
+    NODE_CLASS_MAPPINGS["easy stableDiffusion3API"] = stableDiffusion3API
+    NODE_DISPLAY_NAME_MAPPINGS["easy stableDiffusion3API"] = "Stable Diffusion 3 (API)"
