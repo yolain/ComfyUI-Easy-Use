@@ -1906,6 +1906,92 @@ class saveImageLazy():
 
     return {"ui": {"images": results} , "result": (images,)}
 
+
+class makeImageForICRepaint:
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "image_1": ("IMAGE",),
+        "image_2": ("IMAGE",),
+        "mask_1": ("MASK",),
+        "mask_2": ("MASK",),
+        "direction": (["top-bottom", "left-right"], {"default": "left-right"}),
+      },
+      "optional": {
+        "pixels": ("INT", {"default": 0, "max": MAX_RESOLUTION, "min": 0, "step": 8}),
+      },
+    }
+
+  DESCRIPTION = "make Image for ICLora to Re-paint"
+  CATEGORY = "EasyUse/Image"
+  FUNCTION = "make"
+
+  RETURN_TYPES = ("IMAGE", "MASK", "MASK", "INT", "INT", "INT", "INT")
+  RETURN_NAMES = ("image", "mask", "context_mask", "width", "height", "x", "y")
+
+  def fillMask(self, width, height, mask, box=(0, 0), color=0):
+    bg = Image.new("L", (width, height), color)
+    bg.paste(mask, box, mask)
+    return bg
+
+  def make(self, image_1, image_2, mask_1, mask_2, direction, pixels=0):
+    if pixels > 0:
+      _, img2_h, img2_w, _ = image_2.shape
+      h = output_pixels if direction == 'left-right' else int(img2_h * (pixels / img2_w))
+      w = output_pixels if direction == 'top-bottom' else int(img2_w * (pixels / img2_h))
+
+      image_2 = image_2.movedim(-1, 1)
+      image_2 = comfy.utils.common_upscale(image_2, w, h, 'bicubic', 'disabled')
+      image_2 = image_2.movedim(1, -1)
+
+      orig_image_2 = tensor2pil(image_2)
+      orig_mask_2 = tensor2pil(mask_2).convert('L')
+      orig_mask_2 = orig_mask_2.resize(orig_image_2.size)
+      mask_2 = pil2tensor(orig_mask_2)
+
+    _, img1_h, img1_w, _ = image_1.shape
+    _, img2_h, img2_w, _ = image_2.shape
+
+    image, mask, context_mask = None, None, None
+
+    # resize
+    if img1_h != img2_h and img1_w != img2_w:
+      width, height = img2_w, img2_h
+      if direction == 'left-right' and img1_h != img2_h:
+        scale_factor = img2_h / img1_h
+        width = round(img1_w * scale_factor)
+      elif direction == 'top-bottom' and img1_w != img2_w:
+        scale_factor = img2_w / img1_w
+        height = round(img1_h * scale_factor)
+
+      image_1 = image_1.movedim(-1, 1)
+      image_1 = comfy.utils.common_upscale(image_1, width, height, 'bicubic', 'disabled')
+      image_1 = image_1.movedim(1, -1)
+
+    orig_image_1 = tensor2pil(image_1)
+    orig_mask_1 = tensor2pil(mask_1).convert('L')
+
+    if orig_mask_1.size != orig_image_1.size:
+      orig_mask_1 = orig_mask_1.resize(orig_image_1.size)
+
+    img1_w, img1_h = orig_image_1.size
+    image_1 = pil2tensor(orig_image_1)
+    image = torch.cat((image_1, image_2), dim=2) if direction == 'left-right' else torch.cat((image_1, image_2),
+                                                                                             dim=1)
+
+    context_mask = self.fillMask(image.shape[2], image.shape[1], orig_mask_1)
+    context_mask = pil2tensor(context_mask)
+
+    orig_mask_2 = tensor2pil(mask_2).convert('L')
+    x = img1_w if direction == 'left-right' else 0
+    y = img1_h if direction == 'top-bottom' else 0
+    mask = self.fillMask(image.shape[2], image.shape[1], orig_mask_2, (x, y))
+    mask = pil2tensor(mask)
+
+    return (image, mask, context_mask, img2_w, img2_h, x, y)
+
+
 NODE_CLASS_MAPPINGS = {
   "easy imageInsetCrop": imageInsetCrop,
   "easy imageCount": imageCount,
@@ -1941,6 +2027,7 @@ NODE_CLASS_MAPPINGS = {
   "easy humanSegmentation": humanSegmentation,
   "easy removeLocalImage": removeLocalImage,
   "easy saveImageLazy": saveImageLazy,
+  "easy makeImageForICLora": makeImageForICRepaint
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -1979,4 +2066,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy humanSegmentation": "Human Segmentation",
   "easy removeLocalImage": "Remove Local Image",
   "easy saveImageLazy": "Save Image (Lazy)",
+  "easy makeImageForICLora": "Make Image For ICLora"
 }
