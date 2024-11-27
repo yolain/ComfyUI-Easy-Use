@@ -1347,6 +1347,8 @@ class showAnything:
                 try:
                     if type(val) is str:
                         values.append(val)
+                    elif type(val) is list:
+                        values = val
                     else:
                         val = json.dumps(val)
                         values.append(str(val))
