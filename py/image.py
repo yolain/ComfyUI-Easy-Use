@@ -1913,13 +1913,13 @@ class makeImageForICRepaint:
     return {
       "required": {
         "image_1": ("IMAGE",),
+        "direction": (["top-bottom", "left-right"], {"default": "left-right"}),
+        "pixels": ("INT", {"default": 0, "max": MAX_RESOLUTION, "min": 0, "step": 8, "tooltip": "The pixel of the output image is not set when it is 0"}),
+      },
+      "optional": {
         "image_2": ("IMAGE",),
         "mask_1": ("MASK",),
         "mask_2": ("MASK",),
-        "direction": (["top-bottom", "left-right"], {"default": "left-right"}),
-      },
-      "optional": {
-        "pixels": ("INT", {"default": 0, "max": MAX_RESOLUTION, "min": 0, "step": 8}),
       },
     }
 
@@ -1935,11 +1935,23 @@ class makeImageForICRepaint:
     bg.paste(mask, box, mask)
     return bg
 
-  def make(self, image_1, image_2, mask_1, mask_2, direction, pixels=0):
+  def emptyImage(self, width, height, batch_size=1, color=0):
+    r = torch.full([batch_size, height, width, 1], ((color >> 16) & 0xFF) / 0xFF)
+    g = torch.full([batch_size, height, width, 1], ((color >> 8) & 0xFF) / 0xFF)
+    b = torch.full([batch_size, height, width, 1], ((color) & 0xFF) / 0xFF)
+    return torch.cat((r, g, b), dim=-1)
+
+  def make(self, image_1, direction, pixels=0, image_2=None, mask_1=None, mask_2=None):
+    if image_2 is None:
+      image_2 = self.emptyImage(image_1.shape[2], image_1.shape[1])
+      mask_2 = torch.full((1, image_1.shape[1], image_1.shape[2]), 1, dtype=torch.float32, device="cpu")
+
+    elif image_2 is not None and mask_2 is None:
+      raise ValueError("mask_2 is required when image_2 is provided")
     if pixels > 0:
       _, img2_h, img2_w, _ = image_2.shape
-      h = output_pixels if direction == 'left-right' else int(img2_h * (pixels / img2_w))
-      w = output_pixels if direction == 'top-bottom' else int(img2_w * (pixels / img2_h))
+      h = pixels if direction == 'left-right' else int(img2_h * (pixels / img2_w))
+      w = pixels if direction == 'top-bottom' else int(img2_w * (pixels / img2_h))
 
       image_2 = image_2.movedim(-1, 1)
       image_2 = comfy.utils.common_upscale(image_2, w, h, 'bicubic', 'disabled')
@@ -1968,6 +1980,9 @@ class makeImageForICRepaint:
       image_1 = image_1.movedim(-1, 1)
       image_1 = comfy.utils.common_upscale(image_1, width, height, 'bicubic', 'disabled')
       image_1 = image_1.movedim(1, -1)
+
+    if mask_1 is None:
+      mask_1 = torch.full((1, image_1.shape[1], image_1.shape[2]), 0, dtype=torch.float32, device="cpu")
 
     orig_image_1 = tensor2pil(image_1)
     orig_mask_1 = tensor2pil(mask_1).convert('L')
