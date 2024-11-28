@@ -14,9 +14,9 @@ from PIL import Image
 
 from server import PromptServer
 from nodes import MAX_RESOLUTION, LatentFromBatch, RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, ConditioningSetMask, ConditioningConcat, CLIPTextEncode, VAEEncodeForInpaint, InpaintModelConditioning, ConditioningZeroOut
-from .config import MAX_SEED_NUM, BASE_RESOLUTIONS, RESOURCES_DIR, INPAINT_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_INPAINT_HEAD, FOOOCUS_INPAINT_PATCH, BRUSHNET_MODELS, POWERPAINT_MODELS, IPADAPTER_DIR, IPADAPTER_CLIPVISION_MODELS, IPADAPTER_MODELS, DYNAMICRAFTER_DIR, DYNAMICRAFTER_MODELS, IC_LIGHT_MODELS
 from .layer_diffuse import LayerDiffuse, LayerMethod
 from .xyplot import *
+from .config import *
 
 from .libs.log import log_node_info, log_node_error, log_node_warn
 from .libs.adv_encode import advanced_encode
@@ -4066,6 +4066,30 @@ class applyPulIDADV(applyPulID):
             },
         }
 
+# class applyOminiControl:
+#     @classmethod
+#     def INPUT_TYPES(s):
+#         return {
+#             "required": {
+#                 "model": ("MODEL",),
+#                 "image": ("IMAGE",),
+#                 "vae": ("VAE",),
+#             },
+#             "optional": {
+#             },
+#         }
+#
+#     RETURN_TYPES = ("MODEL",)
+#     RETURN_NAMES = ("model",)
+#
+#     FUNCTION = "apply"
+#     CATEGORY = "EasyUse/Adapter"
+#
+#     def apply(self, model, image, vae):
+#         from .omini_control import apply_omini_control
+#         new_model = apply_omini_control(model, image, vae)
+#         return (new_model,)
+
 # ---------------------------------------------------------------适配器 结束----------------------------------------------------------------------#
 
 #---------------------------------------------------------------预采样 开始----------------------------------------------------------------------#
@@ -5844,7 +5868,7 @@ class samplerSimpleInpainting(samplerFull):
     CATEGORY = "EasyUse/Sampler"
 
     def dd(self, model, positive, negative, pixels, vae, mask):
-        positive, negative, latent = InpaintModelConditioning().encode(positive, negative, pixels, vae, mask)
+        positive, negative, latent = InpaintModelConditioning().encode(positive, negative, pixels, vae, mask, noise_mask=True)
         cls = ALL_NODE_CLASS_MAPPINGS['DifferentialDiffusion']
         if cls is not None:
             model, = cls().apply(model)
@@ -7967,6 +7991,7 @@ NODE_CLASS_MAPPINGS = {
     "easy pulIDApplyADV": applyPulIDADV,
     "easy styleAlignedBatchAlign": styleAlignedBatchAlign,
     "easy icLightApply": icLightApply,
+    # "easy ominiControlApply": applyOminiControl,
     # Inpaint 内补
     "easy applyFooocusInpaint": applyFooocusInpaint,
     "easy applyBrushNet": applyBrushNet,
@@ -8095,6 +8120,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy pulIDApplyADV": "Easy Apply PuLID (Advanced)",
     "easy styleAlignedBatchAlign": "Easy Apply StyleAlign",
     "easy icLightApply": "Easy Apply ICLight",
+    "easy ominiControlApply": "Easy Apply OminiContol",
     # Inpaint 内补
     "easy applyFooocusInpaint": "Easy Apply Fooocus Inpaint",
     "easy applyBrushNet": "Easy Apply BrushNet",
