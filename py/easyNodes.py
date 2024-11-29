@@ -5930,7 +5930,7 @@ class samplerSimpleInpainting(samplerFull):
         elif additional == 'InpaintModelCond':
             if mask is not None:
                 mask, = GrowMask().expand_mask(mask, grow_mask_by, False)
-            positive, negative, latent = InpaintModelConditioning().encode(positive, negative, images, vae, mask)
+            positive, negative, latent = InpaintModelConditioning().encode(positive, negative, images, vae, mask, True)
         elif additional == 'Fooocus Inpaint':
             head = list(FOOOCUS_INPAINT_HEAD.keys())[0]
             patch = list(FOOOCUS_INPAINT_PATCH.keys())[0]
