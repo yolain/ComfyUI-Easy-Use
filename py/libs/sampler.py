@@ -280,12 +280,21 @@ class easySampler:
         out["samples"] = samples
         return out
 
-    def custom_advanced_ksampler(self, noise, guider, sampler, sigmas, latent_image, preview_latent=False):
+    def custom_advanced_ksampler(self, guider, sampler, sigmas, latent_image, add_noise='enable', seed=0, preview_latent=False):
         latent = latent_image
         latent_image = latent["samples"]
         latent = latent.copy()
         latent_image = comfy.sample.fix_empty_latent_channels(guider.model_patcher, latent_image)
         latent["samples"] = latent_image
+
+        device = comfy.model_management.get_torch_device()
+        noise_device = device if add_noise == 'enable (GPU=A1111)' else 'cpu'
+
+        if add_noise == 'disable':
+            noise = torch.zeros(latent_image.shape, dtype=latent_image.dtype, layout=latent_image.layout, device="cpu")
+        else:
+            batch_inds = latent["batch_index"] if "batch_index" in latent else None
+            noise = self.prepare_noise(latent_image, seed, batch_inds, noise_device=noise_device)
 
         noise_mask = None
         if "noise_mask" in latent:
@@ -314,8 +323,8 @@ class easySampler:
             pbar.update_absolute(step + 1, total_steps, preview_bytes)
 
         disable_pbar = not comfy.utils.PROGRESS_BAR_ENABLED
-        samples = guider.sample(noise.generate_noise(latent), latent_image, sampler, sigmas, denoise_mask=noise_mask,
-                                callback=callback, disable_pbar=disable_pbar, seed=noise.seed)
+        samples = guider.sample(noise, latent_image, sampler, sigmas, denoise_mask=noise_mask,
+                                callback=callback, disable_pbar=disable_pbar, seed=seed)
         samples = samples.to(comfy.model_management.intermediate_device())
 
         out = latent.copy()

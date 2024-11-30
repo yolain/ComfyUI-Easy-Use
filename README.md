@@ -58,6 +58,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.5**
 
+- Added `enable (GPU=A1111)` noise mode on `easy preSamplingCustom` and `easy preSamplingAdvanced` 
 - Added `easy makeImageForICLora`
 - Added `FLUX.1-dev` preset for InstantX Flux ipadapter on `easy ipadapterApply`
 - Fix brushnet can not be used with startup arg `--fast` mode

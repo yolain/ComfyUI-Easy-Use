@@ -63,6 +63,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.5**
 
+- 在 `easy preSamplingCustom` 和 `easy preSamplingAdvanced` 上增加 `enable (GPU=A1111)` 噪波生成模式选择项
 - 增加 `easy makeImageForICLora`
 - 在 `easy ipadapterApply` 添加 `FLUX.1-dev` 预置项以支持 InstantX Flux ipadapter 
 - 修复brushnet 无法在 `--fast` 模式下使用 
