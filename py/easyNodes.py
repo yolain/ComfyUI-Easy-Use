@@ -4187,7 +4187,7 @@ class samplerSettingsAdvanced:
                      "scheduler": (comfy.samplers.KSampler.SCHEDULERS + new_schedulers,),
                      "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
                      "end_at_step": ("INT", {"default": 10000, "min": 0, "max": 10000}),
-                     "add_noise": (["enable", "disable"],),
+                     "add_noise": (["enable (CPU)", "enable (GPU=A1111)", "disable"], {"default": "enable (CPU)"}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                      "return_with_leftover_noise": (["disable", "enable"], ),
                      },
@@ -4434,7 +4434,7 @@ class samplerCustomSettings:
                      "eps_s": ("FLOAT", {"default": 0.001, "min": 0.0, "max": 1.0, "step": 0.0001, "round": False}),
                      "flip_sigmas": ("BOOLEAN", {"default": False}),
                      "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "add_noise": (["enable", "disable"], {"default": "enable"}),
+                     "add_noise": (["enable (CPU)", "enable (GPU=A1111)", "disable"], {"default": "enable (CPU)"}),
                      "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
                  },
                 "optional": {
@@ -5177,7 +5177,7 @@ class samplerFull:
             to["model_patch"] = {}
         return to
 
-    def get_sampler_custom(self, model, positive, negative, seed, loader_settings):
+    def get_sampler_custom(self, model, positive, negative, loader_settings):
         _guider = None
         middle = loader_settings['middle'] if "middle" in loader_settings else negative
         steps = loader_settings['steps'] if "steps" in loader_settings else 20
@@ -5195,7 +5195,6 @@ class samplerFull:
         coeff = loader_settings['custom']['coeff'] if "coeff" in loader_settings['custom'] else 1.2
         flip_sigmas = loader_settings['custom']['flip_sigmas'] if "flip_sigmas" in loader_settings['custom'] else False
         denoise = loader_settings['denoise'] if "denoise" in loader_settings else 1.0
-        add_noise = loader_settings['add_noise'] if "add_noise" in loader_settings else "enable"
         optional_sigmas = loader_settings['optional_sigmas'] if "optional_sigmas" in loader_settings else None
         optional_sampler = loader_settings['optional_sampler'] if "optional_sampler" in loader_settings else None
 
@@ -5273,13 +5272,8 @@ class samplerFull:
             else:
                 _sampler, = self.get_custom_cls('KSamplerSelect').get_sampler(sampler_name)
 
-        # noise
-        if add_noise == 'disable':
-            noise, = self.get_custom_cls('DisableNoise').get_noise()
-        else:
-            noise, = self.get_custom_cls('RandomNoise').get_noise(seed)
 
-        return (noise, _guider, _sampler, sigmas)
+        return (_guider, _sampler, sigmas)
 
     def run(self, pipe, steps, cfg, sampler_name, scheduler, denoise, image_output, link_id, save_prefix, seed=None, model=None, positive=None, negative=None, latent=None, vae=None, clip=None, xyPlot=None, tile_size=None, prompt=None, extra_pnginfo=None, my_unique_id=None, force_full_denoise=False, disable_noise=False, downscale_options=None, image=None):
 
@@ -5303,7 +5297,7 @@ class samplerFull:
         denoise = denoise if denoise is not None else pipe['loader_settings']['denoise']
         add_noise = pipe['loader_settings']['add_noise'] if 'add_noise' in pipe['loader_settings'] else 'enabled'
         force_full_denoise = pipe['loader_settings']['force_full_denoise'] if 'force_full_denoise' in pipe['loader_settings'] else True
-        noise_device = 'GPU' if 'a1111_prompt_style' in pipe['loader_settings'] and pipe['loader_settings']['a1111_prompt_style'] else 'CPU'
+        noise_device = 'GPU' if ('a1111_prompt_style' in pipe['loader_settings'] and pipe['loader_settings']['a1111_prompt_style']) or add_noise == 'enable (GPU=A1111)' else 'CPU'
 
         if image is not None and latent is None:
             samp_samples = {"samples": samp_vae.encode(image[:, :, :, :3])}
@@ -5382,8 +5376,8 @@ class samplerFull:
             start_time = int(time.time() * 1000)
             # 开始推理
             if samp_custom is not None:
-                noise, _guider, _sampler, sigmas = self.get_sampler_custom(samp_model, samp_positive, samp_negative, samp_seed, samp_custom)
-                samp_samples, samp_blend_samples = sampler.custom_advanced_ksampler(noise, _guider, _sampler, sigmas, samp_samples, preview_latent=preview_latent)
+                _guider, _sampler, sigmas = self.get_sampler_custom(samp_model, samp_positive, samp_negative, samp_custom)
+                samp_samples, samp_blend_samples = sampler.custom_advanced_ksampler(_guider, _sampler, sigmas, samp_samples, add_noise, samp_seed, preview_latent=preview_latent)
             elif scheduler == 'align_your_steps':
                 model_type = get_sd_version(samp_model)
                 if model_type == 'unknown':
