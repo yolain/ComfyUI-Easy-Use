@@ -62,7 +62,7 @@ class easyXYPlot():
         if value_type in ['Lora', 'Checkpoint']:
             arr = value.split(',')
             model_name = os.path.basename(os.path.splitext(arr[0])[0])
-            trigger_words = ' ' + arr[3] if len(arr[3]) > 2 else ''
+            trigger_words = ' ' + arr[3] if value_type == 'Lora' and len(arr[3]) > 2 else ''
             value_label = f"{model_name}{trigger_words}"
 
         if value_type in ["ModelMergeBlocks"]:
