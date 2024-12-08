@@ -48,7 +48,7 @@ class applyFooocusInpaint:
                     )
 
         if len(remaining) > 0:
-            return original_calculate_weight(remaining, weight, key, intermediate_dtype)
+            return self.original_calculate_weight(remaining, weight, key, intermediate_dtype)
         return weight
 
     def __enter__(self):
