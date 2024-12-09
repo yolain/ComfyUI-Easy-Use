@@ -3000,7 +3000,7 @@ class ipadapter:
             'VIT-G (medium strength)',
             'PLUS (high strength)',
             'PLUS (kolors genernal)',
-            'FLUX.1-dev',
+            'REGULAR - FLUX and SD3.5 only (high strength)',
             'PLUS FACE (portraits)',
             'FULL FACE - SD1.5 only (portraits stronger)',
             'COMPOSITION'
@@ -3023,7 +3023,7 @@ class ipadapter:
     def get_clipvision_file(self, preset, node_name):
         preset = preset.lower()
         clipvision_list = folder_paths.get_filename_list("clip_vision")
-        if preset.startswith("flux"):
+        if preset.startswith("regular"):
             # pattern = 'sigclip.vision.patch14.384'
             pattern = 'siglip.so400m.patch14.384'
         elif preset.startswith("plus (kolors") or preset.startswith("faceid plus kolors"):
@@ -3045,6 +3045,7 @@ class ipadapter:
         is_insightface = False
         lora_pattern = None
         is_sdxl = model_type == 'sdxl'
+        is_flux = model_type == 'flux'
 
         if preset.startswith("light"):
             if is_sdxl:
@@ -3063,8 +3064,11 @@ class ipadapter:
                 pattern = 'ip.adapter.sdxl.(safetensors|bin)$'
             else:
                 pattern = 'sd15.vit.g.(safetensors|bin)$'
-        elif preset.startswith("flux"):
-            pattern = 'ip.adapter.flux.1.dev.(safetensors|bin)$'
+        elif preset.startswith("regular"):
+            if is_flux:
+                pattern = 'ip.adapter.flux.1.dev.(safetensors|bin)$'
+            else:
+                pattern = 'ip.adapter.sd35.(safetensors|bin)$'
         elif preset.startswith("plus (high"):
             if is_sdxl:
                 pattern = 'plus.sdxl.vit.h.(safetensors|bin)$'
@@ -3218,7 +3222,7 @@ class ipadapter:
         if not clip_vision:
             clipvision_file, clipvision_name = self.get_clipvision_file(preset, node_name)
             if clipvision_file is None:
-                if preset.lower().startswith("flux"):
+                if preset.lower().startswith("regular"):
                     # model_url = IPADAPTER_CLIPVISION_MODELS["sigclip_vision_patch14_384"]["model_url"]
                     # clipvision_file = get_local_filepath(model_url, IPADAPTER_DIR, "sigclip_vision_patch14_384.bin")
                     from huggingface_hub import snapshot_download
@@ -3253,7 +3257,7 @@ class ipadapter:
                 log_node_info("easy ipadapterApply", f"Using ClipVisonModel {clipvision_name} Cached")
                 _, clip_vision = backend_cache.cache[clipvision_name][1]
             else:
-                if preset.lower().startswith("flux"):
+                if preset.lower().startswith("regular"):
                     from transformers import SiglipVisionModel, AutoProcessor
                     image_encoder_path = os.path.dirname(clipvision_file)
                     image_encoder = SiglipVisionModel.from_pretrained(image_encoder_path)
@@ -3352,9 +3356,13 @@ class ipadapterApply(ipadapter):
     def apply(self, model, image, preset, lora_strength, provider, weight, weight_faceidv2, start_at, end_at, cache_mode, use_tiled, attn_mask=None, optional_ipadapter=None, weight_kolors=None):
         images, masks = image, [None]
         model, ipadapter = self.load_model(model, preset, lora_strength, provider, clip_vision=None, optional_ipadapter=optional_ipadapter, cache_mode=cache_mode)
-        if preset in ['FLUX.1-dev']:
-            from .ipadapter import InstantXFluxIpadapterApply
-            model, images = InstantXFluxIpadapterApply().apply_ipadapter_flux(model, ipadapter, image, weight, start_at, end_at, provider)
+        if preset == 'REGULAR - FLUX and SD3.5 only (high strength)':
+            from .ipadapter import InstantXFluxIpadapterApply, InstantXSD3IpadapterApply
+            model_type = get_sd_version(model)
+            if model_type == 'flux':
+                model, images = InstantXFluxIpadapterApply().apply_ipadapter(model, ipadapter, image, weight, start_at, end_at, provider)
+            elif model_type == 'sd3':
+                model, images = InstantXSD3IpadapterApply().apply_ipadapter(model, ipadapter, image, weight, start_at, end_at, provider)
         elif use_tiled and preset not in self.faceid_presets:
             if "IPAdapterTiled" not in ALL_NODE_CLASS_MAPPINGS:
                 self.error()

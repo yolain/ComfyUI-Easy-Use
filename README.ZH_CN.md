@@ -50,22 +50,13 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 双击install.bat安装依赖
 ```
 
-## 👨🏻‍🚀 计划
-
-- [x] 更新便于维护的新前端代码
-  - [x] 使用sass维护css样式
-  - [x] 对原有扩展进行优化
-  - [x] 增加新的组件（如节点时间统计等） 
-- [ ] 在[ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Yolain-Workflows)中上传更多的工作流（如kolors,sd3等），并更新english版本的readme  
-- [ ] 更详细功能介绍的 gitbook   
-
 ## 📜 更新日志
 
 **v1.2.5**
 
 - 在 `easy preSamplingCustom` 和 `easy preSamplingAdvanced` 上增加 `enable (GPU=A1111)` 噪波生成模式选择项
 - 增加 `easy makeImageForICLora`
-- 在 `easy ipadapterApply` 添加 `FLUX.1-dev` 预置项以支持 InstantX Flux ipadapter 
+- 在 `easy ipadapterApply` 添加 `REGULAR - FLUX and SD3.5 only (high strength)` 预置项以支持 InstantX Flux ipadapter 
 - 修复brushnet 无法在 `--fast` 模式下使用 
 - 支持briaai RMBG-2.0
 - 支持mochi模型

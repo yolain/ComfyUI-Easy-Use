@@ -231,18 +231,22 @@ IPADAPTER_MODELS = {
             "model_url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors"
         }
     },
-    "PLUS (kolors genernal)":{
-        "sd1":{
-            "model_url":""
+    "PLUS (kolors genernal)": {
+        "sd1": {
+            "model_url": ""
         },
-        "sdxl":{
+        "sdxl": {
             "model_url":"https://huggingface.co/Kwai-Kolors/Kolors-IP-Adapter-Plus/resolve/main/ip_adapter_plus_general.bin"
         }
     },
-    "FLUX.1-dev": {
-       "flux":{
+    "REGULAR - FLUX and SD3.5 only (high strength)": {
+       "flux": {
            "model_url": "https://huggingface.co/InstantX/FLUX.1-dev-IP-Adapter/resolve/main/ip-adapter.bin",
            "model_file_name": "ip-adapter_flux_1_dev.bin",
+       },
+       "sd3": {
+           "model_url": "https://huggingface.co/InstantX/SD3.5-Large-IP-Adapter/resolve/main/ip-adapter.bin",
+           "model_file_name": "ip-adapter_sd35.bin",
        },
     },
     "PLUS FACE (portraits)": {

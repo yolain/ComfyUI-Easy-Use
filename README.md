@@ -45,22 +45,13 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 Double-click install.bat to install the required dependencies
 ```
 
-## 👨🏻‍🚀 Plan
-
-- [x] Updated new front-end code for easier maintenance
-  - [x] Maintain css styles using sass
-  - [x] Optimize existing extensions
-  - [x] Add new components
-- [ ] Upload new workflows to [ComfyUI-Yolain-Workflows](https://github.com/yolain/ComfyUI-Yolain-Workflows) and translate readme to english version.
-- [ ] Write gitbook with more detailed function introdution
-
 ## 📜 Changelog
 
 **v1.2.5**
 
 - Added `enable (GPU=A1111)` noise mode on `easy preSamplingCustom` and `easy preSamplingAdvanced` 
 - Added `easy makeImageForICLora`
-- Added `FLUX.1-dev` preset for InstantX Flux ipadapter on `easy ipadapterApply`
+- Added `REGULAR - FLUX and SD3.5 only (high strength)` preset for InstantX Flux ipadapter on `easy ipadapterApply`
 - Fix brushnet can not be used with startup arg `--fast` mode
 - Support briaai RMBG-2.0
 - Support mochi 
