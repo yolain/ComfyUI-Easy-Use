@@ -956,6 +956,7 @@ class imageChooser(PreviewImage):
 
   def chooser(self, prompt=None, my_unique_id=None, extra_pnginfo=None, **kwargs):
     id = my_unique_id[0]
+    id = id.split('.')[len(id.split('.')) - 1] if "." in id else id
     if id not in ChooserMessage.stash:
       ChooserMessage.stash[id] = {}
     my_stash = ChooserMessage.stash[id]
