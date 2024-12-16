@@ -47,6 +47,10 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.2.6**
+
+- Fix the issue due to set nodes missing custom nodes which their connected, causing canvas to be messed up.
+
 **v1.2.5**
 
 - Added `enable (GPU=A1111)` noise mode on `easy preSamplingCustom` and `easy preSamplingAdvanced` 

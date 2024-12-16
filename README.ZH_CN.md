@@ -52,6 +52,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.2.6**
+
+- 修复因设置节点中缺少相连接的自定义节点而导致弄乱画布的问题
+
 **v1.2.5**
 
 - 在 `easy preSamplingCustom` 和 `easy preSamplingAdvanced` 上增加 `enable (GPU=A1111)` 噪波生成模式选择项
