@@ -42,11 +42,10 @@ class FluxAIAPI:
 
         response = requests.post(url, json=json, headers=headers)
         res = response.json()
-        data = res['data']
-        if "error" in data:
-            return data['error']
-        elif "prompt" in data:
-            return data['prompt']
+        if "error" in res:
+            return res['error']
+        elif "data" in res and "prompt" in res['data']:
+            return res['data']['prompt']
 
 fluxaiAPI = FluxAIAPI()
 
