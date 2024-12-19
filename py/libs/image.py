@@ -105,6 +105,11 @@ class blendImage:
     return blended_image
 
 
+def empty_image(width, height, batch_size=1, color=0):
+    r = torch.full([batch_size, height, width, 1], ((color >> 16) & 0xFF) / 0xFF)
+    g = torch.full([batch_size, height, width, 1], ((color >> 8) & 0xFF) / 0xFF)
+    b = torch.full([batch_size, height, width, 1], ((color) & 0xFF) / 0xFF)
+    return torch.cat((r, g, b), dim=-1)
 
 
 class ResizeMode(Enum):
