@@ -185,7 +185,7 @@ class ChinesePromptTranslate(Transformer):
 
 
 #定义Prompt文法
-grammar = """
+grammar = r"""
 start: sentence
 sentence: phrase ("," phrase)*
 phrase: emphasis | weight | word | lora | embedding | schedule 
