@@ -23,7 +23,11 @@ class easyControlnet:
                 control_net = patch_controlnet(model, control_net)
         else:
             if control_net is None:
-                control_net = easyCache.load_controlnet(control_net_name, scale_soft_weights, use_cache)
+                if easyCache is not None:
+                    control_net = easyCache.load_controlnet(control_net_name, scale_soft_weights, use_cache)
+                else:
+                    controlnet_path = folder_paths.get_full_path("controlnet", control_net_name)
+                    control_net = comfy.controlnet.load_controlnet(controlnet_path)
 
         # union controlnet
         if union_type is not None:

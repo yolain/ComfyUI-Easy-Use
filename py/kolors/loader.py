@@ -296,7 +296,7 @@ class applyKolorsUnet:
 
 
 def is_kolors_model(model):
-    unet_config = model.model.model_config.unet_config
+    unet_config = model.model.model_config.unet_config if hasattr(model, 'model') else None
     if unet_config and "adm_in_channels" in unet_config and unet_config["adm_in_channels"] == 5632:
         return True
     else:
