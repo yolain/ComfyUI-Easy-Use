@@ -4,19 +4,33 @@ from .flux.layers import DoubleStreamBlockIPA, SingleStreamBlockIPA
 from comfy.ldm.flux.layers import timestep_embedding
 from types import MethodType
 
-def FluxUpdateModules(bi, ip_attn_procs, image_emb, is_patched):
+def FluxUpdateModules(bi, ip_attn_procs, image_emb):
     flux_model = bi.model
     bi.add_object_patch(f"diffusion_model.forward_orig", MethodType(forward_orig_ipa, flux_model.diffusion_model))
-    dsb_count = len(flux_model.diffusion_model.double_blocks)
-    ssb_count = len(flux_model.diffusion_model.single_blocks)
-    for i in range(dsb_count):
-        temp_layer = DoubleStreamBlockIPA(
-            flux_model.diffusion_model.double_blocks[i], ip_attn_procs[f"double_blocks.{i}"], image_emb)
-        bi.add_object_patch(f"diffusion_model.double_blocks.{i}",temp_layer)
-    for i in range(ssb_count):
-        temp_layer = SingleStreamBlockIPA(
-            flux_model.diffusion_model.single_blocks[i], ip_attn_procs[f"single_blocks.{i}"], image_emb)
-        bi.add_object_patch(f"diffusion_model.single_blocks.{i}", temp_layer)
+    for i, original in enumerate(flux_model.diffusion_model.double_blocks):
+        patch_name = f"double_blocks.{i}"
+        maybe_patched_layer = bi.get_model_object(f"diffusion_model.{patch_name}")
+        # if there's already a patch there, collect its adapters and replace it
+        procs = [ip_attn_procs[patch_name]]
+        embs = [image_emb]
+        if isinstance(maybe_patched_layer, DoubleStreamBlockIPA):
+            procs = maybe_patched_layer.ip_adapter + procs
+            embs = maybe_patched_layer.image_emb + embs
+        # initial ipa models with image embeddings
+        new_layer = DoubleStreamBlockIPA(original, procs, embs)
+        # for example, ComfyUI internally uses model.add_patches to add loras
+        bi.add_object_patch(f"diffusion_model.{patch_name}", new_layer)
+    for i, original in enumerate(flux_model.diffusion_model.single_blocks):
+        patch_name = f"single_blocks.{i}"
+        maybe_patched_layer = bi.get_model_object(f"diffusion_model.{patch_name}")
+        procs = [ip_attn_procs[patch_name]]
+        embs = [image_emb]
+        if isinstance(maybe_patched_layer, SingleStreamBlockIPA):
+            procs = maybe_patched_layer.ip_adapter + procs
+            embs = maybe_patched_layer.image_emb + embs
+        # initial ipa models with image embeddings
+        new_layer = SingleStreamBlockIPA(original, procs, embs)
+        bi.add_object_patch(f"diffusion_model.{patch_name}", new_layer)
 
 def is_model_pathched(model):
     def test(mod):
@@ -31,6 +45,7 @@ def is_model_pathched(model):
     result = test(model)
     return result
 
+
 def forward_orig_ipa(
     self,
     img: Tensor,
@@ -39,9 +54,10 @@ def forward_orig_ipa(
     txt_ids: Tensor,
     timesteps: Tensor,
     y: Tensor,
-    guidance: Tensor = None,
+    guidance: Tensor|None = None,
     control=None,
     transformer_options={},
+    attn_mask: Tensor = None,
 ) -> Tensor:
     patches_replace = transformer_options.get("patches_replace", {})
     if img.ndim != 3 or txt.ndim != 3:
@@ -67,18 +83,18 @@ def forward_orig_ipa(
             def block_wrap(args):
                 out = {}
                 if isinstance(block, DoubleStreamBlockIPA): # ipadaper
-                    out["img"], out["txt"] = block(img=args["img"], txt=args["txt"], vec=args["vec"], pe=args["pe"], t=args["timesteps"])
+                    out["img"], out["txt"] = block(img=args["img"], txt=args["txt"], vec=args["vec"], pe=args["pe"], t=args["timesteps"], attn_mask=args.get("attn_mask"))
                 else:
-                    out["img"], out["txt"] = block(img=args["img"], txt=args["txt"], vec=args["vec"], pe=args["pe"])
+                    out["img"], out["txt"] = block(img=args["img"], txt=args["txt"], vec=args["vec"], pe=args["pe"], attn_mask=args.get("attn_mask"))
                 return out
-            out = blocks_replace[("double_block", i)]({"img": img, "txt": txt, "vec": vec, "pe": pe, "timesteps": timesteps}, {"original_block": block_wrap})
+            out = blocks_replace[("double_block", i)]({"img": img, "txt": txt, "vec": vec, "pe": pe, "timesteps": timesteps, "attn_mask": attn_mask}, {"original_block": block_wrap})
             txt = out["txt"]
             img = out["img"]
         else:
             if isinstance(block, DoubleStreamBlockIPA): # ipadaper
-                img, txt = block(img=img, txt=txt, vec=vec, pe=pe, t=timesteps)
+                img, txt = block(img=img, txt=txt, vec=vec, pe=pe, t=timesteps, attn_mask=attn_mask)
             else:
-                img, txt = block(img=img, txt=txt, vec=vec, pe=pe)
+                img, txt = block(img=img, txt=txt, vec=vec, pe=pe, attn_mask=attn_mask)
 
         if control is not None: # Controlnet
             control_i = control.get("input")
@@ -94,18 +110,18 @@ def forward_orig_ipa(
             def block_wrap(args):
                 out = {}
                 if isinstance(block, SingleStreamBlockIPA): # ipadaper
-                    out["img"] = block(args["img"], vec=args["vec"], pe=args["pe"], t=args["timesteps"])
+                    out["img"] = block(args["img"], vec=args["vec"], pe=args["pe"], t=args["timesteps"], attn_mask=args.get("attn_mask"))
                 else:
-                    out["img"] = block(args["img"], vec=args["vec"], pe=args["pe"])
+                    out["img"] = block(args["img"], vec=args["vec"], pe=args["pe"], attn_mask=args.get("attn_mask"))
                 return out
 
-            out = blocks_replace[("single_block", i)]({"img": img, "vec": vec, "pe": pe, "timesteps": timesteps}, {"original_block": block_wrap})
+            out = blocks_replace[("single_block", i)]({"img": img, "vec": vec, "pe": pe, "timesteps": timesteps, "attn_mask": attn_mask}, {"original_block": block_wrap})
             img = out["img"]
         else:
             if isinstance(block, SingleStreamBlockIPA): # ipadaper
-                img = block(img, vec=vec, pe=pe, t=timesteps)
+                img = block(img, vec=vec, pe=pe, t=timesteps, attn_mask=attn_mask)
             else:
-                img = block(img, vec=vec, pe=pe)
+                img = block(img, vec=vec, pe=pe, attn_mask=attn_mask)
 
         if control is not None: # Controlnet
             control_o = control.get("output")

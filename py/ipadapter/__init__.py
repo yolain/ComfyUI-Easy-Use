@@ -123,9 +123,9 @@ class InstantXFluxIpadapterApply:
         # process control image
         image_prompt_embeds = self.get_image_embeds(pil_image=pil_image, clip_image_embeds=None)
         # set model
-        is_patched = is_model_pathched(model.model)
+        # is_patched = is_model_pathched(model.model)
         bi = model.clone()
-        FluxUpdateModules(bi, ip_attn_procs, image_prompt_embeds, is_patched)
+        FluxUpdateModules(bi, ip_attn_procs, image_prompt_embeds)
 
         return (bi, image)
 
