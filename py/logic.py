@@ -1728,7 +1728,7 @@ class saveText:
             if not os.path.isabs(output_file_path):
                 output_path = os.path.join(self.output_dir, output_path)
             base_output = os.path.basename(output_path)
-            if output_path.endswith("ComfyUI/output") or output_path.endswith("ComfyUI\output"):
+            if output_path.endswith("ComfyUI/output") or output_path.endswith(r"ComfyUI\output"):
                 base_output = ""
 
             # Check output destination

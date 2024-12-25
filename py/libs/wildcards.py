@@ -168,7 +168,7 @@ def process(text, seed=None):
                 replacements_found = True
                 string = string.replace(f"__{match}__", replacement, 1)
             elif '*' in keyword:
-                subpattern = keyword.replace('*', '.*').replace('+','\+')
+                subpattern = keyword.replace('*', '.*').replace('+', r'\+')
                 total_patterns = []
                 found = False
                 for k, v in easy_wildcard_dict.items():
