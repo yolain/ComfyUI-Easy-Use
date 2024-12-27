@@ -916,10 +916,9 @@ class imageRemBg:
     if add_background != 'none':
 
       _layer = tensor2pil(new_images)
-      _canvas = Image.new('RGBA', _layer.size, (255,255,255,255) if add_background == 'white' else (0, 0, 0, 255))
+      _canvas = Image.new('RGB', _layer.size, (255,255,255) if add_background == 'white' else (0, 0, 0))
       _canvas.paste(_layer, mask=_layer)
       new_images = pil2tensor(_canvas)
-
 
     results = easySave(new_images, save_prefix, image_output, prompt, extra_pnginfo)
 
