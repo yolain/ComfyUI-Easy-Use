@@ -1,7 +1,7 @@
 diffusers
 accelerate
 clip_interrogator>=0.6.0
-lark-parser
+lark
 onnxruntime
 opencv-python
 sentencepiece
