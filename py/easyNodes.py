@@ -877,7 +877,7 @@ class fullLoader:
             "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
             "config_name": (["Default", ] + folder_paths.get_filename_list("configs"), {"default": "Default"}),
             "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
-            "clip_skip": ("INT", {"default": -1, "min": -24, "max": 0, "step": 1}),
+            "clip_skip": ("INT", {"default": -2, "min": -24, "max": 0, "step": 1}),
 
             "lora_name": (["None"] + folder_paths.get_filename_list("loras"),),
             "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
@@ -986,7 +986,7 @@ class a1111Loader(fullLoader):
             "required": {
                 "ckpt_name": (checkpoints,),
                 "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
-                "clip_skip": ("INT", {"default": -1, "min": -24, "max": 0, "step": 1}),
+                "clip_skip": ("INT", {"default": -2, "min": -24, "max": 0, "step": 1}),
 
                 "lora_name": (loras,),
                 "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
@@ -1037,7 +1037,7 @@ class comfyLoader(fullLoader):
             "required": {
                 "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
                 "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
-                "clip_skip": ("INT", {"default": -1, "min": -24, "max": 0, "step": 1}),
+                "clip_skip": ("INT", {"default": -2, "min": -24, "max": 0, "step": 1}),
 
                 "lora_name": (["None"] + folder_paths.get_filename_list("loras"),),
                 "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
