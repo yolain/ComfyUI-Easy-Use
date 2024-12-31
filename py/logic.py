@@ -1256,7 +1256,6 @@ class batchAnything:
         return samples_out
 
     def batch(self, any_1, any_2):
-
         if isinstance(any_1, torch.Tensor) or isinstance(any_2, torch.Tensor):
             if any_1 is None:
                 return (any_2,)
@@ -1271,13 +1270,17 @@ class batchAnything:
                 return (any_1,)
             elif isinstance(any_2, tuple):
                 return (any_2 + (any_1,),)
-            return ((any_1, any_2),)
+            elif isinstance(any_2, list):
+                return (any_2 + [any_1],)
+            return ([any_1, any_2],)
         elif isinstance(any_2, (str, float, int)):
             if any_1 is None:
                 return (any_2,)
             elif isinstance(any_1, tuple):
                 return (any_1 + (any_2,),)
-            return ((any_2, any_1),)
+            elif isinstance(any_1, list):
+                return (any_1 + [any_2],)
+            return ([any_2, any_1],)
         elif isinstance(any_1, dict) and 'samples' in any_1:
             if any_2 is None:
                 return (any_1,)
