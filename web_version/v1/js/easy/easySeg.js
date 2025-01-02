@@ -7,6 +7,7 @@ import {findWidgetByName, toggleWidget} from "../common/utils.js";
 const tags = {
     "selfie_multiclass_256x256": ["Background", "Hair", "Body", "Face", "Clothes", "Others",],
     "human_parsing_lip":["Background","Hat","Hair","Glove","Sunglasses","Upper-clothes","Dress","Coat","Socks","Pants","Jumpsuits","Scarf","Skirt","Face","Left-arm","Right-arm","Left-leg","Right-leg","Left-shoe","Right-shoe"],
+    "human_parts (deeplabv3p)":["Background","face","hair","glasses","top-clothes","bottom-clothes","torso-skin","left-arm","right-arm","left-leg","right-leg","left-foot","right-foot"],
 }
 function getTagList(tags) {
     let rlist=[]
