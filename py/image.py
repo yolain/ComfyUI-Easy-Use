@@ -1192,6 +1192,35 @@ class imageInterrogator:
       prompt = ci.image_to_prompt(image, mode, low_vram=use_lowvram)
       return (prompt,)
 
+
+
+class HumanParsingModelLoader:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "model_name": (["human_parsing_lip", "human_parts (deeplabv3p)"],),
+        }}
+
+    RETURN_TYPES = ("HumanParsing_MODEL", )
+    RETURN_NAMES = ("model", )
+    FUNCTION = "load"
+
+    CATEGORY = "image"
+
+    def load(self, model_name):
+        onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+        if model_name == 'human_parsing_lip':
+          from .human_parsing.run_parsing import HumanParsing
+          model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
+          return (HumanParsing(model_path=model_path,preload_model=1),)
+        elif model_name == 'human_parts (deeplabv3p)':
+          from .human_parsing.run_parsing import HumanParts
+          onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+          human_parts_path = os.path.join(onnx_path, 'human-parts')
+          model_path = get_local_filepath(HUMANPARSING_MODELS['human-parts']['model_url'], human_parts_path)
+          return (HumanParts(model_path=model_path,preload_model=1),)
+
+
 # 人类分割器
 class humanSegmentation:
 
@@ -1204,10 +1233,14 @@ class humanSegmentation:
             "method": (["selfie_multiclass_256x256", "human_parsing_lip", "human_parts (deeplabv3p)"],),
             "confidence": ("FLOAT", {"default": 0.4, "min": 0.05, "max": 0.95, "step": 0.01},),
             "crop_multi": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.001},),
+            "preload_model": ("INT", {"default": 0},),
           },
           "hidden": {
               "prompt": "PROMPT",
               "my_unique_id": "UNIQUE_ID",
+          },
+          "optional":{
+              "parsing_model": ("HumanParsing_MODEL", ),
           }
         }
 
@@ -1229,7 +1262,7 @@ class humanSegmentation:
         numpy_image = cv2.cvtColor(numpy_image, cv2.COLOR_BGR2RGB)
       return mp.Image(image_format=image_format, data=numpy_image)
 
-    def parsing(self, image, confidence, method, crop_multi, prompt=None, my_unique_id=None):
+    def parsing(self, image, confidence, method, crop_multi, prompt=None, my_unique_id=None, preload_model=0, parsing_model=None):
       mask_components = []
       if my_unique_id in prompt:
         if prompt[my_unique_id]["inputs"]['mask_components']:
@@ -1313,13 +1346,18 @@ class humanSegmentation:
             mask = torch.cat(ret_masks, dim=0)
 
       elif method == "human_parsing_lip":
-        from .human_parsing.run_parsing import HumanParsing
-        onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
-        model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
-        parsing = HumanParsing(model_path=model_path)
+        if preload_model == 0:
+          from .human_parsing.run_parsing import HumanParsing
+          onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+          model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
+          parsing = HumanParsing(model_path=model_path)
         model_image = image.squeeze(0)
         model_image = model_image.permute((2, 0, 1))
         model_image = to_pil_image(model_image)
+
+
+        if preload_model == 1:
+          parsing = parsing_model
 
         map_image, mask = parsing(model_image, mask_components)
 
@@ -1330,11 +1368,15 @@ class humanSegmentation:
         output_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
 
       elif method == "human_parts (deeplabv3p)":
-        from .human_parsing.run_parsing import HumanParts
-        onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
-        human_parts_path = os.path.join(onnx_path, 'human-parts')
-        model_path = get_local_filepath(HUMANPARSING_MODELS['human-parts']['model_url'], human_parts_path)
-        parsing = HumanParts(model_path=model_path)
+        if preload_model == 0:
+          from .human_parsing.run_parsing import HumanParts
+          onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+          human_parts_path = os.path.join(onnx_path, 'human-parts')
+          model_path = get_local_filepath(HUMANPARSING_MODELS['human-parts']['model_url'], human_parts_path)
+          parsing = HumanParts(model_path=model_path)
+        
+        if preload_model == 1:
+          parsing = parsing_model
 
         ret_images = []
         ret_masks = []
@@ -2051,6 +2093,7 @@ NODE_CLASS_MAPPINGS = {
   "easy imageToBase64": imageToBase64,
   "easy joinImageBatch": JoinImageBatch,
   "easy humanSegmentation": humanSegmentation,
+  "easy HumanParsingModelLoader": HumanParsingModelLoader,
   "easy removeLocalImage": removeLocalImage,
   "easy saveImageLazy": saveImageLazy,
   "easy makeImageForICLora": makeImageForICRepaint
@@ -2090,6 +2133,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy loadImagesForLoop": "Load Images For Loop",
   "easy imageToBase64": "Image To Base64",
   "easy humanSegmentation": "Human Segmentation",
+  "easy HumanParsingModelLoader": "HumanParsingModelLoader",
   "easy removeLocalImage": "Remove Local Image",
   "easy saveImageLazy": "Save Image (Lazy)",
   "easy makeImageForICLora": "Make Image For ICLora"

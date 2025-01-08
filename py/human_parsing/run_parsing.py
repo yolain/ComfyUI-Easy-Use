@@ -5,29 +5,33 @@ from .parsing_api import onnx_inference
 from ..libs.utils import install_package
 
 class HumanParsing:
-    def __init__(self, model_path):
+    def __init__(self, model_path, preload_model=0):
         self.model_path = model_path
         self.session = None
+        if preload_model == 1:
+          self.init_session()        
 
     def __call__(self, input_image, mask_components):
         if self.session is None:
-            install_package('onnxruntime')
-            import onnxruntime as ort
-
-            session_options = ort.SessionOptions()
-            session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-            session_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-            # session_options.add_session_config_entry('gpu_id', str(gpu_id))
-            self.session = ort.InferenceSession(self.model_path, sess_options=session_options,
-                                                providers=['CPUExecutionProvider'])
-
+          self.init_session()
         parsed_image, mask = onnx_inference(self.session, input_image, mask_components)
         return parsed_image, mask
+
+    def init_session(self):
+        install_package('onnxruntime')
+        import onnxruntime as ort
+
+        session_options = ort.SessionOptions()
+        session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        session_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        # session_options.add_session_config_entry('gpu_id', str(gpu_id))
+        self.session = ort.InferenceSession(self.model_path, sess_options=session_options,
+                                            providers=['CUDAExecutionProvider','CPUExecutionProvider'])
 
 
 class HumanParts:
 
-    def __init__(self, model_path):
+    def __init__(self, model_path, preload_model=0):
         self.model_path = model_path
         self.session = None
         # self.classes_dict = {
@@ -46,14 +50,18 @@ class HumanParts:
         #     "right-foot": 19,
         # },
         self.classes = [0, 13, 2, 4, 5, 9, 10, 14, 15, 16, 17, 18, 19]
+        if preload_model == 1:
+            self.init_session()
+    
+    def init_session(self):
+        install_package('onnxruntime')
+        import onnxruntime as ort
 
+        self.session = ort.InferenceSession(self.model_path, providers=['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider'])
 
     def __call__(self, input_image, mask_components):
         if self.session is None:
-            install_package('onnxruntime')
-            import onnxruntime as ort
-
-            self.session = ort.InferenceSession(self.model_path, providers=['TensorrtExecutionProvider', 'CUDAExecutionProvider', 'CPUExecutionProvider'])
+            self.init_session()
 
         mask, = self.get_mask(self.session, input_image, 0, mask_components)
         return mask
