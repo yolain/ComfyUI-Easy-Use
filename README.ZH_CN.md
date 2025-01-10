@@ -54,7 +54,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.6**
 
+- 修复了在缺少自定义节点时缺少 “红色框框” 样式的问题。
+- 在一些简单的加载器中，将 `clip_skip` 的默认值从 `-1` 调整为 `-2`。
 - 修复因设置节点中缺少相连接的自定义节点而导致弄乱画布的问题
+- 修复 'easy imageChooser' 不能循环使用的问题。
 
 **v1.2.5**
 

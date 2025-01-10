@@ -49,7 +49,10 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.6**
 
+- Fix missing the "Red Rect" styles when you are missing custom nodes.
+- Adjust the default value of `clip_skip` from `-1` to `-2` in some easy loaders.
 - Fix the issue due to set nodes missing custom nodes which their connected, causing canvas to be messed up.
+- Fix the `easy imageChooser` can not using in a loop.
 
 **v1.2.5**
 
