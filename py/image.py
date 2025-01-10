@@ -1244,10 +1244,14 @@ class humanSegmentation:
 
         from functools import reduce
 
-        model_path = get_local_filepath(MEDIAPIPE_MODELS['selfie_multiclass_256x256']['model_url'], MEDIAPIPE_DIR)
-        model_asset_buffer = None
-        with open(model_path, "rb") as f:
-            model_asset_buffer = f.read()
+        if method in cache:
+          _, model_asset_buffer = cache["selfie_multiclass_256x256"][1]
+        else:
+          model_path = get_local_filepath(MEDIAPIPE_MODELS['selfie_multiclass_256x256']['model_url'], MEDIAPIPE_DIR)
+          model_asset_buffer = None
+          with open(model_path, "rb") as f:
+              model_asset_buffer = f.read()
+          update_cache(method, 'human_segmentation', (False, model_asset_buffer))
         image_segmenter_base_options = mp.tasks.BaseOptions(model_asset_buffer=model_asset_buffer)
         options = mp.tasks.vision.ImageSegmenterOptions(
           base_options=image_segmenter_base_options,
@@ -1313,10 +1317,15 @@ class humanSegmentation:
             mask = torch.cat(ret_masks, dim=0)
 
       elif method == "human_parsing_lip":
-        from .human_parsing.run_parsing import HumanParsing
-        onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
-        model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
-        parsing = HumanParsing(model_path=model_path)
+        if method in cache:
+          _, parsing = cache[method][1]
+        else:
+          from .human_parsing.run_parsing import HumanParsing
+          onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+          model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
+          parsing = HumanParsing(model_path=model_path)
+          update_cache(method, 'human_segmentation', (False, parsing))
+
         model_image = image.squeeze(0)
         model_image = model_image.permute((2, 0, 1))
         model_image = to_pil_image(model_image)
@@ -1330,11 +1339,15 @@ class humanSegmentation:
         output_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
 
       elif method == "human_parts (deeplabv3p)":
-        from .human_parsing.run_parsing import HumanParts
-        onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
-        human_parts_path = os.path.join(onnx_path, 'human-parts')
-        model_path = get_local_filepath(HUMANPARSING_MODELS['human-parts']['model_url'], human_parts_path)
-        parsing = HumanParts(model_path=model_path)
+        if method in cache:
+          _, parsing = cache[method][1]
+        else:
+          from .human_parsing.run_parsing import HumanParts
+          onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
+          human_parts_path = os.path.join(onnx_path, 'human-parts')
+          model_path = get_local_filepath(HUMANPARSING_MODELS['human-parts']['model_url'], human_parts_path)
+          parsing = HumanParts(model_path=model_path)
+          update_cache(method, 'human_segmentation', (False, parsing))
 
         ret_images = []
         ret_masks = []
