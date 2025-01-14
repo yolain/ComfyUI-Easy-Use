@@ -415,15 +415,32 @@ class easyXYPlot():
 
         # 简单用法
         if plot_image_vars["x_node_type"] == "loader" or plot_image_vars["y_node_type"] == "loader":
-            model, clip, vae, clip_vision = self.easyCache.load_checkpoint(plot_image_vars['ckpt_name'])
+            if self.x_type == 'ckpt_name' or self.y_type == 'ckpt_name':
+                ckpt_name = x_value if self.x_type == "ckpt_name" else y_value
+                model, clip, vae, clip_vision = self.easyCache.load_checkpoint(ckpt_name)
 
-            if plot_image_vars['lora_name'] != "None":
-                lora = {"lora_name": plot_image_vars['lora_name'], "model": model, "clip": clip, "model_strength": plot_image_vars['lora_model_strength'], "clip_strength": plot_image_vars['lora_clip_strength']}
+            if self.x_type == 'lora_name' or self.y_type == 'lora_name':
+                model, clip, vae, clip_vision = self.easyCache.load_checkpoint(plot_image_vars['ckpt_name'])
+                lora_name = x_value if self.x_type == "lora_name" else y_value
+                lora = {"lora_name": lora_name, "model": model, "clip": clip, "model_strength": 1, "clip_strength": 1}
+                model, clip = self.easyCache.load_lora(lora)
+
+            if self.x_type == 'lora_model_strength' or self.y_type == 'lora_model_strength':
+                model, clip, vae, clip_vision = self.easyCache.load_checkpoint(plot_image_vars['ckpt_name'])
+                lora_model_strength = float(x_value) if self.x_type == "lora_model_strength" else float(y_value)
+                lora = {"lora_name": plot_image_vars['lora_name'], "model": model, "clip": clip, "model_strength": lora_model_strength, "clip_strength": plot_image_vars['lora_clip_strength']}
+                model, clip = self.easyCache.load_lora(lora)
+
+            if self.x_type == 'lora_clip_strength' or self.y_type == 'lora_clip_strength':
+                model, clip, vae, clip_vision = self.easyCache.load_checkpoint(plot_image_vars['ckpt_name'])
+                lora_clip_strength = float(x_value) if self.x_type == "lora_clip_strength" else float(y_value)
+                lora = {"lora_name": plot_image_vars['lora_name'], "model": model, "clip": clip, "model_strength": plot_image_vars['lora_model_strength'], "clip_strength": lora_clip_strength}
                 model, clip = self.easyCache.load_lora(lora)
 
             # Check for custom VAE
-            if plot_image_vars['vae_name'] not in ["Baked-VAE", "Baked VAE"]:
-                vae = self.easyCache.load_vae(plot_image_vars['vae_name'])
+            if self.x_type == 'vae_name' or self.y_type == 'vae_name':
+                vae_name = x_value if self.x_type == "vae_name" else y_value
+                vae = self.easyCache.load_vae(vae_name)
 
             # CLIP skip
             if not clip:

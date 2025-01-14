@@ -5508,8 +5508,8 @@ class samplerFull:
             plot_image_vars = {
                 "x_node_type": sampleXYplot.x_node_type, "y_node_type": sampleXYplot.y_node_type,
                 "lora_name": pipe["loader_settings"]["lora_name"] if "lora_name" in pipe["loader_settings"] else None,
-                "lora_model_strength": pipe["loader_settings"]["lora_model_strength"] if "model_strength" in pipe["loader_settings"] else None,
-                "lora_clip_strength": pipe["loader_settings"]["lora_clip_strength"] if "clip_strength" in pipe["loader_settings"] else None,
+                "lora_model_strength": pipe["loader_settings"]["lora_model_strength"] if "lora_model_strength" in pipe["loader_settings"] else 1.0,
+                "lora_clip_strength": pipe["loader_settings"]["lora_clip_strength"] if "lora_clip_strength" in pipe["loader_settings"] else 1.0,
                 "lora_stack":  pipe["loader_settings"]["lora_stack"] if "lora_stack" in pipe["loader_settings"] else None,
                 "steps": steps,
                 "cfg": cfg,
