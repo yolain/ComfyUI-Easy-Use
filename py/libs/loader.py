@@ -10,14 +10,14 @@ from collections import defaultdict
 from .log import log_node_info, log_node_error
 from ..dit.pixArt.loader import load_pixart
 
-stable_diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy hunyuanDiTLoader","easy zero123Loader", "easy svdLoader"]
+diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy fluxLoader", "easy comfyLoader", "easy hunyuanDiTLoader", "easy zero123Loader", "easy svdLoader"]
 stable_cascade_loaders = ["easy cascadeLoader"]
 dit_loaders = ['easy pixArtLoader']
-controlnet_loaders = ["easy controlnetLoader", "easy controlnetLoaderADV"]
+controlnet_loaders = ["easy controlnetLoader", "easy controlnetLoaderADV", "easy controlnetLoader++"]
 instant_loaders = ["easy instantIDApply", "easy instantIDApplyADV"]
 cascade_vae_node = ["easy preSamplingCascade", "easy fullCascadeKSampler"]
 model_merge_node = ["easy XYInputs: ModelMergeBlocks"]
-lora_widget = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader"]
+lora_widget = ["easy fullLoader", "easy a1111Loader", "easy comfyLoader", "easy fluxLoader"]
 
 class easyLoader:
     def __init__(self):
@@ -33,7 +33,7 @@ class easyLoader:
             "t5": defaultdict(tuple),
             "chatglm3": defaultdict(tuple),
         }
-        self.memory_threshold = self.determine_memory_threshold(0.7)
+        self.memory_threshold = self.determine_memory_threshold(1)
         self.lora_name_cache = []
 
     def clean_values(self, values: str):
@@ -101,7 +101,7 @@ class easyLoader:
                 setting = f'{lora_name};{entry["inputs"]["lora_model_strength"]};{entry["inputs"]["lora_clip_strength"]}'
                 desired_lora_settings.add(setting)
 
-            if class_type in stable_diffusion_loaders:
+            if class_type in diffusion_loaders:
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name", prompt))
                 desired_vae_names.add(self.get_input_value(entry, "vae_name"))
 
