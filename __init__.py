@@ -65,18 +65,6 @@ if not os.path.exists(example_path):
     with open(example_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-
-# Model thumbnails
-from .py.libs.add_resources import add_static_resource
-from .py.libs.model import easyModelManager
-model_config = easyModelManager().models_config
-for model in model_config:
-    paths = folder_paths.get_folder_paths(model)
-    for path in paths:
-        if not Path(path).exists():
-            continue
-        add_static_resource(path, path, limit=True)
-
 # get comfyui revision
 from .py.libs.utils import compare_revision
 
