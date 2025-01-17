@@ -47,6 +47,10 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+`**v1.2.7**
+
+- Using a new way to display the models thumbnails in the loaders (supported diffusion_models、lors、checkpoints)
+`
 **v1.2.6**
 
 - Fix missing the "Red Rect" styles when you are missing custom nodes.

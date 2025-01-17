@@ -572,217 +572,6 @@ class portraitMaster:
 
 # ---------------------------------------------------------------提示词 结束----------------------------------------------------------------------#
 
-# ---------------------------------------------------------------潜空间 开始----------------------------------------------------------------------#
-# 潜空间sigma相乘
-class latentNoisy:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required": {
-            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
-            "steps": ("INT", {"default": 10000, "min": 0, "max": 10000}),
-            "start_at_step": ("INT", {"default": 0, "min": 0, "max": 10000}),
-            "end_at_step": ("INT", {"default": 10000, "min": 1, "max": 10000}),
-            "source": (["CPU", "GPU"],),
-            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-        },
-        "optional": {
-            "pipe": ("PIPE_LINE",),
-            "optional_model": ("MODEL",),
-            "optional_latent": ("LATENT",)
-        }}
-
-    RETURN_TYPES = ("PIPE_LINE", "LATENT", "FLOAT",)
-    RETURN_NAMES = ("pipe", "latent", "sigma",)
-    FUNCTION = "run"
-
-    CATEGORY = "EasyUse/Latent"
-
-    def run(self, sampler_name, scheduler, steps, start_at_step, end_at_step, source, seed, pipe=None, optional_model=None, optional_latent=None):
-        model = optional_model if optional_model is not None else pipe["model"]
-        batch_size = pipe["loader_settings"]["batch_size"]
-        empty_latent_height = pipe["loader_settings"]["empty_latent_height"]
-        empty_latent_width = pipe["loader_settings"]["empty_latent_width"]
-
-        if optional_latent is not None:
-            samples = optional_latent
-        else:
-            torch.manual_seed(seed)
-            if source == "CPU":
-                device = "cpu"
-            else:
-                device = comfy.model_management.get_torch_device()
-            noise = torch.randn((batch_size, 4, empty_latent_height // 8, empty_latent_width // 8), dtype=torch.float32,
-                                device=device).cpu()
-
-            samples = {"samples": noise}
-
-        device = comfy.model_management.get_torch_device()
-        end_at_step = min(steps, end_at_step)
-        start_at_step = min(start_at_step, end_at_step)
-        comfy.model_management.load_model_gpu(model)
-        model_patcher = comfy.model_patcher.ModelPatcher(model.model, load_device=device, offload_device=comfy.model_management.unet_offload_device())
-        sampler = comfy.samplers.KSampler(model_patcher, steps=steps, device=device, sampler=sampler_name,
-                                          scheduler=scheduler, denoise=1.0, model_options=model.model_options)
-        sigmas = sampler.sigmas
-        sigma = sigmas[start_at_step] - sigmas[end_at_step]
-        sigma /= model.model.latent_format.scale_factor
-        sigma = sigma.cpu().numpy()
-
-        samples_out = samples.copy()
-
-        s1 = samples["samples"]
-        samples_out["samples"] = s1 * sigma
-
-        if pipe is None:
-            pipe = {}
-        new_pipe = {
-            **pipe,
-            "samples": samples_out
-        }
-        del pipe
-
-        return (new_pipe, samples_out, sigma)
-
-# Latent遮罩复合
-class latentCompositeMaskedWithCond:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "pipe": ("PIPE_LINE",),
-                "text_combine": ("LIST",),
-                "source_latent": ("LATENT",),
-                "source_mask": ("MASK",),
-                "destination_mask": ("MASK",),
-                "text_combine_mode": (["add", "replace", "cover"], {"default": "add"}),
-                "replace_text": ("STRING", {"default": ""})
-            },
-            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
-        }
-
-    OUTPUT_IS_LIST = (False, False, True)
-    RETURN_TYPES = ("PIPE_LINE", "LATENT", "CONDITIONING")
-    RETURN_NAMES = ("pipe", "latent", "conditioning",)
-    FUNCTION = "run"
-
-    CATEGORY = "EasyUse/Latent"
-
-    def run(self, pipe, text_combine, source_latent, source_mask, destination_mask, text_combine_mode, replace_text, prompt=None, extra_pnginfo=None, my_unique_id=None):
-        positive = None
-        clip = pipe["clip"]
-        destination_latent = pipe["samples"]
-
-        conds = []
-
-        for text in text_combine:
-            if text_combine_mode == 'cover':
-                positive = text
-            elif text_combine_mode == 'replace' and replace_text != '':
-                positive = pipe["loader_settings"]["positive"].replace(replace_text, text)
-            else:
-                positive = pipe["loader_settings"]["positive"] + ',' + text
-            positive_token_normalization = pipe["loader_settings"]["positive_token_normalization"]
-            positive_weight_interpretation = pipe["loader_settings"]["positive_weight_interpretation"]
-            a1111_prompt_style = pipe["loader_settings"]["a1111_prompt_style"]
-            positive_cond = pipe["positive"]
-
-            log_node_warn("Positive encoding...")
-            steps = pipe["loader_settings"]["steps"] if "steps" in pipe["loader_settings"] else 1
-            positive_embeddings_final = advanced_encode(clip, positive,
-                                         positive_token_normalization,
-                                         positive_weight_interpretation, w_max=1.0,
-                                         apply_to_pooled='enable', a1111_prompt_style=a1111_prompt_style, steps=steps)
-
-            # source cond
-            (cond_1,) = ConditioningSetMask().append(positive_cond, source_mask, "default", 1)
-            (cond_2,) = ConditioningSetMask().append(positive_embeddings_final, destination_mask, "default", 1)
-            positive_cond = cond_1 + cond_2
-
-            conds.append(positive_cond)
-        # latent composite masked
-        (samples,) = LatentCompositeMasked().composite(destination_latent, source_latent, 0, 0, False)
-
-        new_pipe = {
-            **pipe,
-            "samples": samples,
-            "loader_settings": {
-                **pipe["loader_settings"],
-                "positive": positive,
-            }
-        }
-
-        del pipe
-
-        return (new_pipe, samples, conds)
-
-# 噪声注入到潜空间
-class injectNoiseToLatent:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required": {
-            "strength": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 200.0, "step": 0.0001}),
-            "normalize": ("BOOLEAN", {"default": False}),
-            "average": ("BOOLEAN", {"default": False}),
-        },
-            "optional": {
-                "pipe_to_noise": ("PIPE_LINE",),
-                "image_to_latent": ("IMAGE",),
-                "latent": ("LATENT",),
-                "noise": ("LATENT",),
-                "mask": ("MASK",),
-                "mix_randn_amount": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1000.0, "step": 0.001}),
-                "seed": ("INT", {"default": 123, "min": 0, "max": 0xffffffffffffffff, "step": 1}),
-            }
-        }
-
-    RETURN_TYPES = ("LATENT",)
-    FUNCTION = "inject"
-    CATEGORY = "EasyUse/Latent"
-
-    def inject(self,strength, normalize, average, pipe_to_noise=None, noise=None, image_to_latent=None, latent=None, mix_randn_amount=0, mask=None, seed=None):
-
-        vae = pipe_to_noise["vae"] if pipe_to_noise is not None else pipe_to_noise["vae"]
-        batch_size = pipe_to_noise["loader_settings"]["batch_size"] if pipe_to_noise is not None and "batch_size" in pipe_to_noise["loader_settings"] else 1
-        if noise is None and pipe_to_noise is not None:
-            noise = pipe_to_noise["samples"]
-        elif noise is None:
-            raise Exception("InjectNoiseToLatent: No noise provided")
-
-        if image_to_latent is not None and vae is not None:
-            samples = {"samples": vae.encode(image_to_latent[:, :, :, :3])}
-            latents = RepeatLatentBatch().repeat(samples, batch_size)[0]
-        elif latent is not None:
-            latents = latent
-        else:
-            latents = {"samples": noise["samples"].clone()}
-
-        samples = latents.copy()
-        if latents["samples"].shape != noise["samples"].shape:
-            raise ValueError("InjectNoiseToLatent: Latent and noise must have the same shape")
-        if average:
-            noised = (samples["samples"].clone() + noise["samples"].clone()) / 2
-        else:
-            noised = samples["samples"].clone() + noise["samples"].clone() * strength
-        if normalize:
-            noised = noised / noised.std()
-        if mask is not None:
-            mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])),
-                                                   size=(noised.shape[2], noised.shape[3]), mode="bilinear")
-            mask = mask.expand((-1, noised.shape[1], -1, -1))
-            if mask.shape[0] < noised.shape[0]:
-                mask = mask.repeat((noised.shape[0] - 1) // mask.shape[0] + 1, 1, 1, 1)[:noised.shape[0]]
-            noised = mask * noised + (1 - mask) * latents["samples"]
-        if mix_randn_amount > 0:
-            if seed is not None:
-                torch.manual_seed(seed)
-            rand_noise = torch.randn_like(noised)
-            noised = ((1 - mix_randn_amount) * noised + mix_randn_amount *
-                      rand_noise) / ((mix_randn_amount ** 2 + (1 - mix_randn_amount) ** 2) ** 0.5)
-        samples["samples"] = noised
-        return (samples,)
-
-# ---------------------------------------------------------------潜空间 结束----------------------------------------------------------------------#
 
 # ---------------------------------------------------------------随机种 开始----------------------------------------------------------------------#
 # 随机种
@@ -1646,169 +1435,6 @@ class svdLoader:
 
         return (pipe, model, vae)
 
-#dynamiCrafter加载器
-from .dynamiCrafter import DynamiCrafter
-class dynamiCrafterLoader(DynamiCrafter):
-
-    def __init__(self):
-        super().__init__()
-
-    @classmethod
-    def INPUT_TYPES(cls):
-
-        return {"required": {
-                "model_name": (list(DYNAMICRAFTER_MODELS.keys()),),
-                "clip_skip": ("INT", {"default": -2, "min": -24, "max": 0, "step": 1}),
-
-                "init_image": ("IMAGE",),
-                "resolution": (resolution_strings, {"default": "512 x 512"}),
-                "empty_latent_width": ("INT", {"default": 256, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
-                "empty_latent_height": ("INT", {"default": 256, "min": 16, "max": MAX_RESOLUTION, "step": 8}),
-
-                "positive": ("STRING", {"default": "", "multiline": True}),
-                "negative": ("STRING", {"default": "", "multiline": True}),
-
-                "use_interpolate": ("BOOLEAN", {"default": False}),
-                "fps": ("INT", {"default": 15, "min": 1, "max": 30, "step": 1},),
-                "frames": ("INT", {"default": 16}),
-                "scale_latents": ("BOOLEAN", {"default": False})
-            },
-            "optional": {
-                "optional_vae": ("VAE",),
-            },
-            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"}
-        }
-
-    RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE")
-    RETURN_NAMES = ("pipe", "model", "vae")
-
-    FUNCTION = "adv_pipeloader"
-    CATEGORY = "EasyUse/Loaders"
-
-    def get_clip_file(self, node_name):
-        clip_list = folder_paths.get_filename_list("clip")
-        pattern = 'sd2-1-open-clip|model.(safetensors|bin)$'
-        clip_files = [e for e in clip_list if re.search(pattern, e, re.IGNORECASE)]
-
-        clip_name = clip_files[0] if len(clip_files)>0 else None
-        clip_file = folder_paths.get_full_path("clip", clip_name) if clip_name else None
-        if clip_name is not None:
-            log_node_info(node_name, f"Using {clip_name}")
-
-        return clip_file, clip_name
-
-    def get_clipvision_file(self, node_name):
-        clipvision_list = folder_paths.get_filename_list("clip_vision")
-        pattern = '(ViT.H.14.*s32B.b79K|ipadapter.*sd15|sd1.?5.*model|open_clip_pytorch_model.(bin|safetensors))'
-        clipvision_files = [e for e in clipvision_list if re.search(pattern, e, re.IGNORECASE)]
-
-        clipvision_name = clipvision_files[0] if len(clipvision_files)>0 else None
-        clipvision_file = folder_paths.get_full_path("clip_vision", clipvision_name) if clipvision_name else None
-        if clipvision_name is not None:
-            log_node_info(node_name, f"Using {clipvision_name}")
-
-        return clipvision_file, clipvision_name
-
-    def get_vae_file(self, node_name):
-        vae_list = folder_paths.get_filename_list("vae")
-        pattern = 'vae-ft-mse-840000-ema-pruned.(pt|bin|safetensors)$'
-        vae_files = [e for e in vae_list if re.search(pattern, e, re.IGNORECASE)]
-
-        vae_name = vae_files[0] if len(vae_files)>0 else None
-        vae_file = folder_paths.get_full_path("vae", vae_name) if vae_name else None
-        if vae_name is not None:
-            log_node_info(node_name, f"Using {vae_name}")
-
-        return vae_file, vae_name
-
-    def adv_pipeloader(self, model_name, clip_skip, init_image, resolution, empty_latent_width, empty_latent_height, positive, negative, use_interpolate, fps, frames, scale_latents, optional_vae=None, prompt=None, my_unique_id=None):
-        positive_embeddings_final, negative_embeddings_final = None, None
-        # resolution
-        if resolution != "自定义 x 自定义":
-            try:
-                width, height = map(int, resolution.split(' x '))
-                empty_latent_width = width
-                empty_latent_height = height
-            except ValueError:
-                raise ValueError("Invalid base_resolution format.")
-
-        # Clean models from loaded_objects
-        easyCache.update_loaded_objects(prompt)
-
-        models_0 = list(DYNAMICRAFTER_MODELS.keys())[0]
-
-        if optional_vae:
-            vae = optional_vae
-            vae_name = None
-        else:
-            vae_file, vae_name = self.get_vae_file("easy dynamiCrafterLoader")
-            if vae_file is None:
-                vae_name = "vae-ft-mse-840000-ema-pruned.safetensors"
-                get_local_filepath(DYNAMICRAFTER_MODELS[models_0]['vae_url'], os.path.join(folder_paths.models_dir, "vae"),
-                                   vae_name)
-            vae = easyCache.load_vae(vae_name)
-
-        clip_file, clip_name = self.get_clip_file("easy dynamiCrafterLoader")
-        if clip_file is None:
-            clip_name = 'sd2-1-open-clip.safetensors'
-            get_local_filepath(DYNAMICRAFTER_MODELS[models_0]['clip_url'], os.path.join(folder_paths.models_dir, "clip"),
-                           clip_name)
-
-        clip = easyCache.load_clip(clip_name)
-        # load clip vision
-        clip_vision_file, clip_vision_name = self.get_clipvision_file("easy dynamiCrafterLoader")
-        if clip_vision_file is None:
-            clip_vision_name = 'CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors'
-            clip_vision_file = get_local_filepath(DYNAMICRAFTER_MODELS[models_0]['clip_vision_url'], os.path.join(folder_paths.models_dir, "clip_vision"),
-                                   clip_vision_name)
-        clip_vision = load_clip_vision(clip_vision_file)
-        # load unet model
-        model_path = get_local_filepath(DYNAMICRAFTER_MODELS[model_name]['model_url'], DYNAMICRAFTER_DIR)
-        model_patcher, image_proj_model = self.load_dynamicrafter(model_path)
-
-        # apply
-        model, empty_latent, image_latent = self.process_image_conditioning(model_patcher, clip_vision, vae, image_proj_model, init_image, use_interpolate, fps, frames, scale_latents)
-
-        clipped = clip.clone()
-        if clip_skip != 0:
-            clipped.clip_layer(clip_skip)
-
-        if positive is not None and positive != '':
-            if has_chinese(positive):
-                positive = zh_to_en([positive])[0]
-            positive_embeddings_final, = CLIPTextEncode().encode(clipped, positive)
-        if negative is not None and negative != '':
-            if has_chinese(negative):
-                negative = zh_to_en([negative])[0]
-            negative_embeddings_final, = CLIPTextEncode().encode(clipped, negative)
-
-        image = easySampler.pil2tensor(Image.new('RGB', (1, 1), (0, 0, 0)))
-
-        pipe = {"model": model,
-                "positive": positive_embeddings_final,
-                "negative": negative_embeddings_final,
-                "vae": vae,
-                "clip": clip,
-                "clip_vision": clip_vision,
-
-                "samples": empty_latent,
-                "images": image,
-                "seed": 0,
-
-                "loader_settings": {"ckpt_name": model_name,
-                                    "vae_name": vae_name,
-
-                                    "positive": positive,
-                                    "negative": negative,
-                                    "resolution": resolution,
-                                    "empty_latent_width": empty_latent_width,
-                                    "empty_latent_height": empty_latent_height,
-                                    "batch_size": 1,
-                                    "seed": 0,
-                                     }
-                }
-
-        return (pipe, model, vae)
 
 # kolors Loader
 from .kolors.text_encode import chatglm3_adv_text_encode
@@ -7760,37 +7386,6 @@ class pipeXYPlotAdvanced:
 
 #---------------------------------------------------------------节点束 结束----------------------------------------------------------------------
 
-# 显示推理时间
-class showSpentTime:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "pipe": ("PIPE_LINE",),
-                "spent_time": ("INFO", {"default": 'Time will be displayed when reasoning is complete', "forceInput": False}),
-            },
-            "hidden": {
-                "unique_id": "UNIQUE_ID",
-                "extra_pnginfo": "EXTRA_PNGINFO",
-            },
-        }
-
-    FUNCTION = "notify"
-    OUTPUT_NODE = True
-    RETURN_TYPES = ()
-    RETURN_NAMES = ()
-
-    CATEGORY = "EasyUse/Util"
-
-    def notify(self, pipe, spent_time=None, unique_id=None, extra_pnginfo=None):
-        if unique_id and extra_pnginfo and "workflow" in extra_pnginfo:
-            workflow = extra_pnginfo["workflow"]
-            node = next((x for x in workflow["nodes"] if str(x["id"]) == unique_id), None)
-            if node:
-                spent_time = pipe['loader_settings']['spent_time'] if 'spent_time' in pipe['loader_settings'] else ''
-                node["widgets_values"] = [spent_time]
-
-        return {"ui": {"text": spent_time}, "result": {}}
 
 # 显示加载器参数中的各种名称
 class showLoaderSettingsNames:
@@ -7964,7 +7559,6 @@ NODE_CLASS_MAPPINGS = {
     "easy svdLoader": svdLoader,
     "easy sv3dLoader": sv3DLoader,
     "easy zero123Loader": zero123Loader,
-    "easy dynamiCrafterLoader": dynamiCrafterLoader,
     "easy cascadeLoader": cascadeLoader,
     "easy kolorsLoader": kolorsLoader,
     "easy fluxLoader": fluxLoader,
@@ -7993,16 +7587,11 @@ NODE_CLASS_MAPPINGS = {
     "easy pulIDApplyADV": applyPulIDADV,
     "easy styleAlignedBatchAlign": styleAlignedBatchAlign,
     "easy icLightApply": icLightApply,
-    # "easy ominiControlApply": applyOminiControl,
     # Inpaint 内补
     "easy applyFooocusInpaint": applyFooocusInpaint,
     "easy applyBrushNet": applyBrushNet,
     "easy applyPowerPaint": applyPowerPaint,
     "easy applyInpaint": applyInpaint,
-    # latent 潜空间
-    "easy latentNoisy": latentNoisy,
-    "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
-    "easy injectNoiseToLatent": injectNoiseToLatent,
     # preSampling 预采样处理
     "easy preSampling": samplerSettings,
     "easy preSamplingAdvanced": samplerSettingsAdvanced,
@@ -8058,7 +7647,6 @@ NODE_CLASS_MAPPINGS = {
     "easy XYInputs: NegativeCond": XYplot_Negative_Cond,
     "easy XYInputs: NegativeCondList": XYplot_Negative_Cond_List,
     # others 其他
-    "easy showSpentTime": showSpentTime,
     "easy showLoaderSettingsNames": showLoaderSettingsNames,
     "easy sliderControl": sliderControl,
     "dynamicThresholdingFull": dynamicThresholdingFull,
@@ -8092,7 +7680,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy svdLoader": "EasyLoader (SVD)",
     "easy sv3dLoader": "EasyLoader (SV3D)",
     "easy zero123Loader": "EasyLoader (Zero123)",
-    "easy dynamiCrafterLoader": "EasyLoader (DynamiCrafter)",
     "easy cascadeLoader": "EasyCascadeLoader",
     "easy kolorsLoader": "EasyLoader (Kolors)",
     "easy fluxLoader": "EasyLoader (Flux)",
@@ -8122,16 +7709,11 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy pulIDApplyADV": "Easy Apply PuLID (Advanced)",
     "easy styleAlignedBatchAlign": "Easy Apply StyleAlign",
     "easy icLightApply": "Easy Apply ICLight",
-    "easy ominiControlApply": "Easy Apply OminiContol",
     # Inpaint 内补
     "easy applyFooocusInpaint": "Easy Apply Fooocus Inpaint",
     "easy applyBrushNet": "Easy Apply BrushNet",
     "easy applyPowerPaint": "Easy Apply PowerPaint",
     "easy applyInpaint": "Easy Apply Inpaint",
-    # latent 潜空间
-    "easy latentNoisy": "LatentNoisy",
-    "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond",
-    "easy injectNoiseToLatent": "InjectNoiseToLatent",
     # preSampling 预采样处理
     "easy preSampling": "PreSampling",
     "easy preSamplingAdvanced": "PreSampling (Advanced)",
@@ -8187,7 +7769,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy XYInputs: NegativeCond": "XY Inputs: NegCond //EasyUse",
     "easy XYInputs: NegativeCondList": "XY Inputs: NegCondList //EasyUse",
     # others 其他
-    "easy showSpentTime": "Show Spent Time",
     "easy showLoaderSettingsNames": "Show Loader Settings Names",
     "easy sliderControl": "Easy Slider Control",
     "dynamicThresholdingFull": "DynamicThresholdingFull",

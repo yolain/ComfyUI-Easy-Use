@@ -11,7 +11,8 @@ node_list = [
     "api",
     "easyNodes",
     "image",
-    "logic"
+    "logic",
+    "deprecated",
 ]
 
 NODE_CLASS_MAPPINGS = {}
