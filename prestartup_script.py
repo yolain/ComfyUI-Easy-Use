@@ -32,6 +32,3 @@ add_folder_path_and_extensions("inpaint", [os.path.join(model_path, "inpaint")],
 add_folder_path_and_extensions("prompt_generator", [os.path.join(model_path, "prompt_generator")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("t5", [os.path.join(model_path, "t5")], folder_paths.supported_pt_extensions)
 add_folder_path_and_extensions("llm", [os.path.join(model_path, "LLM")], folder_paths.supported_pt_extensions)
-
-add_folder_path_and_extensions("checkpoints_thumb", [os.path.join(model_path, "checkpoints")], image_suffixs)
-add_folder_path_and_extensions("loras_thumb", [os.path.join(model_path, "loras")], image_suffixs)
