@@ -96,7 +96,6 @@ class showSpentTime:
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
-                "spent_time": ("INFO", {"default": 'Time will be displayed when reasoning is complete', "forceInput": False}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -119,7 +118,7 @@ class showSpentTime:
                 spent_time = pipe['loader_settings']['spent_time'] if 'spent_time' in pipe['loader_settings'] else ''
                 node["widgets_values"] = [spent_time]
 
-        return {"ui": {"text": spent_time}, "result": {}}
+        return {"ui": {"text": [spent_time]}, "result": {}}
 
 
 # 潜空间sigma相乘

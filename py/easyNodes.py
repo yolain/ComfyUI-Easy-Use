@@ -7394,7 +7394,6 @@ class showLoaderSettingsNames:
         return {
             "required": {
                 "pipe": ("PIPE_LINE",),
-                "names": ("INFO", {"default": '', "forceInput": False}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -7429,7 +7428,7 @@ class showLoaderSettingsNames:
                 names = "ckpt_name: " + ckpt_name + '\n' + "vae_name: " + vae_name + '\n' + "lora_name: " + lora_name
                 node["widgets_values"] = names
 
-        return {"ui": {"text": names}, "result": (ckpt_name, vae_name, lora_name)}
+        return {"ui": {"text": [names]}, "result": (ckpt_name, vae_name, lora_name)}
 
 
 class sliderControl:
