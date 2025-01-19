@@ -2,7 +2,7 @@
 
 <div align="center">
 <a href="https://space.bilibili.com/1840885116">视频介绍</a> |
-文档 (康明孙) | 
+<a href="https://docs.easyuse.yolain.com">文档</a> | 
 <a href="https://github.com/yolain/ComfyUI-Yolain-Workflows">工作流合集</a> |
 <a href="#%EF%B8%8F-donation">捐助</a> 
 <br><br>
@@ -155,7 +155,8 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 增加 `easy imageCount` - 图像数量
 - 增加 `easy textSwitch` - 文字切换
 
-**v1.1.5**
+<details>
+<summary><b>v1.1.5</b></summary>
 
 - 重写 `easy cleanGPUUsed` - 可强制清理comfyUI的模型显存占用
 - 增加 `easy humanSegmentation` - 多类分割、人像分割
@@ -164,8 +165,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 增加 `easy ipadapterApplyFromParams`
 - 增加 `easy imageInterrogator` - 图像反推
 - 增加 `easy stableDiffusion3API` - 简易的Stable Diffusion 3 多账号API节点
+</details>
 
-**v1.1.4**
+<details>
+<summary><b>v1.1.4</b></summary>
 
 - 增加 `easy imageChooser` - 从[cg-image-picker](https://github.com/chrisgoringe/cg-image-picker)简化的图片选择器
 - 增加 `easy preSamplingCustom` - 自定义预采样，可支持cosXL-edit
@@ -173,8 +176,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 增加 在Loaders上右键菜单可查看 checkpoints、lora 信息
 - 修复 `easy preSamplingNoiseIn`、`easy latentNoisy`、`east Unsampler` 以兼容ComfyUI Revision>=2098 [0542088e] 以上版本
 - 修复 FooocusInpaint修改ModelPatcher计算权重引发的问题，理应在生成model后重置ModelPatcher为默认值
+</details>
 
-**v1.1.3**
+<details>
+<summary><b>v1.1.3</b></summary>
 
 - `easy ipadapterApply` 增加 **COMPOSITION** 预置项
 - 增加 对[ResAdapter](https://huggingface.co/jiaxiangc/res-adapter) lora模型 的加载支持
@@ -183,6 +188,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 - 增加 `easy promptConcat`
 - `easy wildcards` 增加 **multiline_mode**属性 
 - 增加 当节点需要下载模型时，若huggingface连接超时，会切换至镜像地址下载模型
+</details>
 
 <details>
 <summary><b>v1.1.2</b></summary>
@@ -203,7 +209,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 </details>
 
 <details>
-<summary><b>v1.1.1/b></summary>
+<summary><b>v1.1.1</b></summary>
 
 - 修复首次添加含seed的节点且当前模式为control_before_generate时，seed为0的问题
 - `easy preSamplingAdvanced` 增加 **return_with_leftover_noise**
@@ -476,7 +482,13 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 [ComfyUI_ExtraModels](https://github.com/city96/ComfyUI_ExtraModels) - DiT架构相关节点（Pixart、混元DiT等）
 
-## ☕️ Donation
+## 免责声明
+
+本开源项目及其内容按 “原样 ”提供，不作任何明示或暗示的保证，包括但不限于适销性、特定用途适用性和非侵权保证。在任何情况下，作者或其他版权所有者均不对因本软件或本软件的使用或其他交易而产生、引起或与之相关的任何索赔、损害或其他责任承担责任，无论是合同诉讼、侵权诉讼还是其他诉讼。
+
+用户应自行负责确保在使用本软件或发布由本软件生成的内容时，遵守所在司法管辖区的所有适用法律和法规。作者和版权所有者不对用户在其各自所在地违反法律或法规的行为负责。
+
+## ☕️ 投喂
 
 **Comfyui-Easy-Use** 是一个 GPL 许可的开源项目。为了项目取得更好、可持续的发展，我希望能够获得更多的支持。 如果我的自定义节点为您的一天增添了价值，请考虑喝杯咖啡来进一步补充能量！ 💖感谢您的支持，每一杯咖啡都是我创作的动力！
 
@@ -486,8 +498,8 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 感谢您的捐助，我将用这些费用来租用 GPU 或购买其他 GPT 服务，以便更好地调试和完善 ComfyUI-Easy-Use 功能
 
-##  🌟Stargazers
+##  🌟大富大贵的人儿
 
-My gratitude extends to the generous souls who bestow a star. Your support is much appreciated!
+我对那些慷慨的赐予一颗星的人表示感谢。非常感谢您的支持！
 
 [![Stargazers repo roster for @yolain/ComfyUI-Easy-Use](https://reporoster.com/stars/yolain/ComfyUI-Easy-Use)](https://github.com/yolain/ComfyUI-Easy-Use/stargazers)
