@@ -203,38 +203,15 @@ class prompt:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-            "prompt": ("STRING", {"default": "", "multiline": True, "placeholder": "Prompt"}),
-            "main": ([
-                'none',
-                'beautiful woman, detailed face',
-                'handsome man, detailed face',
-                'pretty girl',
-                'handsome boy',
-                'dog',
-                'cat',
-                'Buddha',
-                'toy'
-            ], {"default": "none"}),
-            "lighting": ([
-                'none',
-                'sunshine from window',
-                'neon light, city',
-                'sunset over sea',
-                'golden time',
-                'sci-fi RGB glowing, cyberpunk',
-                'natural lighting',
-                'warm atmosphere, at home, bedroom',
-                'magic lit',
-                'evil, gothic, Yharnam',
-                'light and shadow',
-                'shadow from window',
-                'soft studio lighting',
-                'home atmosphere, cozy bedroom illumination',
-                'neon, Wong Kar-wai, warm',
-                'cinemative lighting',
-                'neo punk lighting, cyberpunk',
-            ],{"default":'none'})
-        }}
+            "text": ("STRING", {"default": "", "multiline": True, "placeholder": "Prompt"}),
+            "prefix": (["Select the prefix add to the text"] + PROMPT_TEMPLATE["prefix"], {"default": "Select the prefix add to the text"}),
+            "subject": (["👤Select the subject add to the text"] + PROMPT_TEMPLATE["subject"], {"default": "👤Select the subject add to the text"}),
+            "action": (["🎬Select the action add to the text"] + PROMPT_TEMPLATE["action"], {"default": "🎬Select the action add to the text"}),
+            "clothes": (["👚Select the clothes add to the text"] + PROMPT_TEMPLATE["clothes"], {"default": "👚Select the clothes add to the text"}),
+            "environment": (["☀️Select the illumination environment add to the text"] + PROMPT_TEMPLATE["environment"], {"default": "☀️Select the illumination environment add to the text"}),
+            "background": (["🎞️Select the background add to the text"] + PROMPT_TEMPLATE["background"], {"default": "🎞️Select the background add to the text"}),
+            "nsfw": (["🔞Select the nsfw add to the text"] + PROMPT_TEMPLATE["nsfw"], {"default": "🔞️Select the nsfw add to the text"}),
+        },"hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},}
 
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("prompt",)
@@ -242,15 +219,10 @@ class prompt:
 
     CATEGORY = "EasyUse/Prompt"
 
-    def doit(self, prompt, main, lighting):
-        if lighting != 'none' and main != 'none':
-            prompt = main + ',' + lighting + ',' + prompt
-        elif lighting != 'none' and main == 'none':
-            prompt = prompt + ',' + lighting
-        elif main != 'none':
-            prompt = main + ',' + prompt
+    def doit(self, *args, **kwargs):
+        text = kwargs['text']
+        return (text,)
 
-        return prompt,
 #promptList
 class promptList:
     @classmethod
