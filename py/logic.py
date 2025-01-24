@@ -885,14 +885,7 @@ class forLoopEnd:
             start_index = inputs['start_index']
             # Filter files by extension
             directory = inputs['directory']
-            dir_files = os.listdir(directory)
-            valid_extensions = ['.jpg', '.jpeg', '.png', '.webp']
-            dir_files = [f for f in dir_files if any(f.lower().endswith(ext) for ext in valid_extensions)]
-            if limit == -1:
-                files_length = len(dir_files)
-                total = files_length - start_index if start_index > 0 else files_length
-            else:
-                total = limit
+            total = graph.node('easy imagesCountInDirectory', directory=directory, limit=limit, start_index=start_index, extension='*').out(0)
 
         sub = graph.node("easy mathInt", operation="add", a=[while_open, 1], b=1)
         cond = graph.node("easy compare", a=sub.out(0), b=total, comparison='a < b')

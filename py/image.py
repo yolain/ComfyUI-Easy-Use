@@ -43,6 +43,34 @@ class imageCount:
   def get_count(self, images):
     return (images.size(0),)
 
+class imagesCountInDirectory:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+        "required": {
+            "directory": ("STRING",),
+          "start_index": ("INT", {"default": 0, "min": 0, "step": 1}),
+          "limit": ("INT", {"default": -1, "min": -1, "max": 10000}),
+        }
+      }
+
+    CATEGORY = "EasyUse/Image"
+
+    RETURN_TYPES = ("INT",)
+    RETURN_NAMES = ("count",)
+    FUNCTION = "get_count"
+
+    def get_count(self, directory, start_index, limit, **kwargs):
+      dir_files = os.listdir(directory)
+      valid_extensions = ['.jpg', '.jpeg', '.png', '.webp']
+      dir_files = [f for f in dir_files if any(f.lower().endswith(ext) for ext in valid_extensions)]
+      if limit == -1:
+        files_length = len(dir_files)
+        total = files_length - start_index if start_index > 0 else files_length
+      else:
+        total = limit
+      return (total,)
+
 # 图像裁切
 class imageInsetCrop:
 
@@ -1767,8 +1795,10 @@ class loadImagesForLoop:
   CATEGORY = "image"
 
   def load_images(self, directory: str, start_index: int = 0, limit: int =-1, prompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
+    print(directory)
     if not os.path.isdir(directory):
       raise FileNotFoundError(f"Directory '{directory}' cannot be found.")
+
     dir_files = os.listdir(directory)
     if len(dir_files) == 0:
       raise FileNotFoundError(f"No files in directory '{directory}'.")
@@ -2034,6 +2064,7 @@ class makeImageForICRepaint:
 NODE_CLASS_MAPPINGS = {
   "easy imageInsetCrop": imageInsetCrop,
   "easy imageCount": imageCount,
+  "easy imagesCountInDirectory": imagesCountInDirectory,
   "easy imageSize": imageSize,
   "easy imageSizeBySide": imageSizeBySide,
   "easy imageSizeByLongerSide": imageSizeByLongerSide,
@@ -2072,6 +2103,7 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imageInsetCrop": "ImageInsetCrop",
   "easy imageCount": "ImageCount",
+  "easy imagesCountInDirectory": "imagesCountInDirectory",
   "easy imageSize": "ImageSize",
   "easy imageSizeBySide": "ImageSize (Side)",
   "easy imageSizeByLongerSide": "ImageSize (LongerSide)",
