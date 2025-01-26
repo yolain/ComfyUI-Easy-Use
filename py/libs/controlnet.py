@@ -14,9 +14,9 @@ class easyControlnet:
             return (positive, negative)
 
         # kolors controlnet patch
-        from ..kolors.loader import is_kolors_model, applyKolorsUnet
+        from py.modules.kolors import is_kolors_model, applyKolorsUnet
         if is_kolors_model(model):
-            from ..kolors.model_patch import patch_controlnet
+            from py.modules.kolors import patch_controlnet
             if control_net is None:
                 with applyKolorsUnet():
                     control_net = easyCache.load_controlnet(control_net_name, scale_soft_weights, use_cache)

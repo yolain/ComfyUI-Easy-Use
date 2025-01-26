@@ -164,7 +164,3 @@ def onprompt(json_data):
     return json_data
 
 server.PromptServer.instance.add_on_prompt_handler(onprompt)
-
-
-NODE_CLASS_MAPPINGS = {}
-NODE_DISPLAY_NAME_MAPPINGS = {}
