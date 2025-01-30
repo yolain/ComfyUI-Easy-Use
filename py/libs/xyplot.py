@@ -5,7 +5,7 @@ from .utils import easySave, get_sd_version
 from .adv_encode import advanced_encode
 from .controlnet import easyControlnet
 from .log import log_node_warn
-from ..layer_diffuse import LayerDiffuse
+from ..modules.layer_diffuse import LayerDiffuse
 from ..config import RESOURCES_DIR
 from nodes import CLIPTextEncode
 try:

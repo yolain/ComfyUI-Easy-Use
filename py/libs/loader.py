@@ -8,7 +8,7 @@ from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
-from ..dit.pixArt.loader import load_pixart
+from ..modules.dit.pixArt.loader import load_pixart
 
 diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy fluxLoader", "easy comfyLoader", "easy hunyuanDiTLoader", "easy zero123Loader", "easy svdLoader"]
 stable_cascade_loaders = ["easy cascadeLoader"]
@@ -240,7 +240,7 @@ class easyLoader:
         else:
             model_options = {}
             if re.search("nf4", ckpt_name):
-                from ..bitsandbytes_NF4 import OPS
+                from ..modules.bitsandbytes_NF4 import OPS
                 model_options = {"custom_operations": OPS}
             loaded_ckpt = comfy.sd.load_checkpoint_guess_config(ckpt_path, output_vae=True, output_clip=output_clip, output_clipvision=output_clipvision, embedding_directory=folder_paths.get_folder_paths("embeddings"), model_options=model_options)
 
@@ -391,7 +391,7 @@ class easyLoader:
 
                 # PixArt
                 if type is not None and type == 'PixArt':
-                    from ..dit.pixArt.loader import load_pixart_lora
+                    from ..modules.dit.pixArt.loader import load_pixart_lora
                     model = load_pixart_lora(model, _lora, lora_path, model_strength)
                 else:
                     model, clip = comfy.sd.load_lora_for_models(model, clip, _lora, model_strength, clip_strength)
@@ -489,7 +489,7 @@ class easyLoader:
             log_node_info("Load Kolors UNet", f"{unet_name} cached")
             return self.loaded_objects["unet"][unet_name][0]
         else:
-            from ..kolors.loader import applyKolorsUnet
+            from ..modules.kolors import applyKolorsUnet
             with applyKolorsUnet():
                 unet_path = folder_paths.get_full_path("unet", unet_name)
                 sd = comfy.utils.load_torch_file(unet_path)
@@ -503,7 +503,7 @@ class easyLoader:
                 return model
 
     def load_chatglm3(self, chatglm3_name):
-        from ..kolors.loader import load_chatglm3
+        from ..modules.kolors.loader import load_chatglm3
         if chatglm3_name in self.loaded_objects["chatglm3"]:
             log_node_info("Load ChatGLM3", f"{chatglm3_name} cached")
             return self.loaded_objects["chatglm3"][chatglm3_name][0]
@@ -529,50 +529,6 @@ class easyLoader:
         if model:
             self.add_to_cache("ckpt", ckpt_name + '_' + model_name, model)
             self.eviction_based_on_memory()
-        return model
-
-
-    def load_dit_clip(self, clip_name, **kwargs):
-        if clip_name in self.loaded_objects["clip"]:
-            return self.loaded_objects["clip"][clip_name][0]
-
-        clip_path = folder_paths.get_full_path("clip", clip_name)
-        sd = comfy.utils.load_torch_file(clip_path)
-
-        prefix = "bert."
-        state_dict = {}
-        for key in sd:
-            nkey = key
-            if key.startswith(prefix):
-                nkey = key[len(prefix):]
-            state_dict[nkey] = sd[key]
-
-        m, e = model.load_sd(state_dict)
-        if len(m) > 0 or len(e) > 0:
-            print(f"{clip_name}: clip missing {len(m)} keys ({len(e)} extra)")
-
-        self.add_to_cache("clip", clip_name, model)
-        self.eviction_based_on_memory()
-
-        return model
-
-    def load_dit_t5(self, t5_name, **kwargs):
-        if t5_name in self.loaded_objects["t5"]:
-            return self.loaded_objects["t5"][t5_name][0]
-
-        model_type = kwargs['model_type'] if "model_type" in kwargs else 'HyDiT'
-        if model_type == 'HyDiT':
-            del kwargs['model_type']
-            model = EXM_HyDiT_Tenc_Temp(model_class="mT5", **kwargs)
-        t5_path = folder_paths.get_full_path("t5", t5_name)
-        sd = comfy.utils.load_torch_file(t5_path)
-        m, e = model.load_sd(sd)
-        if len(m) > 0 or len(e) > 0:
-            print(f"{t5_name}: mT5 missing {len(m)} keys ({len(e)} extra)")
-
-        self.add_to_cache("t5", t5_name, model)
-        self.eviction_based_on_memory()
-
         return model
 
     def load_t5_from_sd3_clip(self, sd3_clip, padding):

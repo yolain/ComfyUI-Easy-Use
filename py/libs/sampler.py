@@ -7,7 +7,7 @@ import latent_preview
 from nodes import MAX_RESOLUTION
 from PIL import Image
 from typing import Dict, List, Optional, Tuple, Union, Any
-from ..brushnet.model_patch import add_model_patch
+from ..modules.brushnet.model_patch import add_model_patch
 
 class easySampler:
     def __init__(self):

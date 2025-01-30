@@ -299,6 +299,3 @@ async def download_model(request):
         return web.Response(status=200)
     except:
         return web.Response(status=500)
-
-NODE_CLASS_MAPPINGS = {}
-NODE_DISPLAY_NAME_MAPPINGS = {}
