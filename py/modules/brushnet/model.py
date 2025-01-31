@@ -25,7 +25,7 @@ try:
     from diffusers.models.transformers.dual_transformer_2d import DualTransformer2DModel
     from diffusers.models.transformers.transformer_2d import Transformer2DModel
 
-    from py.modules.brushnet.unet_2d_blocks import (
+    from .unet_2d_blocks import (
         CrossAttnDownBlock2D,
         DownBlock2D,
         get_down_block,
@@ -33,7 +33,7 @@ try:
         get_up_block,
     )
 
-    from py.modules.brushnet.unet_2d_condition import UNet2DConditionModel
+    from .unet_2d_condition import UNet2DConditionModel
 
     logger = logging.get_logger(__name__)
 

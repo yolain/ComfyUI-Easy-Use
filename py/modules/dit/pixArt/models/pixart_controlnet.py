@@ -7,9 +7,9 @@ from torch import Tensor
 from torch.nn import Module, Linear, init
 from typing import Any, Mapping
 
-from py.modules.dit.pixArt.models.PixArt import PixArt, get_2d_sincos_pos_embed
-from py.modules.dit.pixArt.models.PixArtMS import PixArtMSBlock, PixArtMS
-from py.modules.dit.pixArt.models.utils import auto_grad_checkpoint
+from .PixArt import PixArt, get_2d_sincos_pos_embed
+from .PixArtMS import PixArtMSBlock, PixArtMS
+from .utils import auto_grad_checkpoint
 
 # The implementation of ControlNet-Half architrecture
 # https://github.com/lllyasviel/ControlNet/discussions/188
