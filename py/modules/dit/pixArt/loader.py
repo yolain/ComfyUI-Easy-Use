@@ -1,3 +1,6 @@
+import os
+import json
+import copy
 import torch
 import math
 import comfy.supported_models_base
@@ -7,7 +10,7 @@ import comfy.model_base
 import comfy.utils
 import comfy.conds
 from comfy import model_management
-from .diffusers_convert import convert_state_dict
+from .diffusers_convert import convert_state_dict, convert_lora_state_dict
 
 # checkpointbf
 class EXM_PixArt(comfy.supported_models_base.BASE):
@@ -85,23 +88,23 @@ def load_pixart(model_path, model_conf=None):
     )
 
     if model_conf.model_target == "PixArtMS":
-        from py.modules.dit.pixArt.models.PixArtMS import PixArtMS
+        from .models.PixArtMS import PixArtMS
         model.diffusion_model = PixArtMS(**model_conf.unet_config)
     elif model_conf.model_target == "PixArt":
-        from py.modules.dit.pixArt.models.PixArt import PixArt
+        from .models.PixArt import PixArt
         model.diffusion_model = PixArt(**model_conf.unet_config)
     elif model_conf.model_target == "PixArtMSSigma":
-        from py.modules.dit.pixArt.models.PixArtMS import PixArtMS
+        from .models.PixArtMS import PixArtMS
         model.diffusion_model = PixArtMS(**model_conf.unet_config)
         model.latent_format = comfy.latent_formats.SDXL()
     elif model_conf.model_target == "ControlPixArtMSHalf":
-        from py.modules.dit.pixArt.models.PixArtMS import PixArtMS
-        from py.modules.dit.pixArt.models.pixart_controlnet import ControlPixArtMSHalf
+        from .models.PixArtMS import PixArtMS
+        from .models.pixart_controlnet import ControlPixArtMSHalf
         model.diffusion_model = PixArtMS(**model_conf.unet_config)
         model.diffusion_model = ControlPixArtMSHalf(model.diffusion_model)
     elif model_conf.model_target == "ControlPixArtHalf":
-        from py.modules.dit.pixArt.models.PixArt import PixArt
-        from py.modules.dit.pixArt.models.pixart_controlnet import ControlPixArtHalf
+        from .models.PixArt import PixArt
+        from .models.pixart_controlnet import ControlPixArtHalf
         model.diffusion_model = PixArt(**model_conf.unet_config)
         model.diffusion_model = ControlPixArtHalf(model.diffusion_model)
     else:
