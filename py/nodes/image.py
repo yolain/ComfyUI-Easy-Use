@@ -1348,7 +1348,7 @@ class humanSegmentation:
         if method in cache:
           _, parsing = cache[method][1]
         else:
-          from ..modules.human_parsing import HumanParsing
+          from ..modules.human_parsing.run_parsing import HumanParsing
           onnx_path = os.path.join(folder_paths.models_dir, 'onnx')
           model_path = get_local_filepath(HUMANPARSING_MODELS['parsing_lip']['model_url'], onnx_path)
           parsing = HumanParsing(model_path=model_path)
