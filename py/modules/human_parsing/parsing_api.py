@@ -4,7 +4,7 @@ import cv2
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from .simple_extractor_dataset import SimpleFolderDataset
-from transforms import transform_logits
+from .transforms import transform_logits
 from tqdm import tqdm
 from PIL import Image
 
