@@ -1195,12 +1195,13 @@ class lengthAnything:
     def getLength(self, any, prompt=None, my_unique_id=None):
         prompt = prompt[0]
         my_unique_id = my_unique_id[0]
+        my_unique_id = my_unique_id.split('.')[len(my_unique_id.split('.')) - 1] if "." in my_unique_id else my_unique_id
         id, slot = prompt[my_unique_id]['inputs']['any']
         class_type = prompt[id]['class_type']
         node_class = ALL_NODE_CLASS_MAPPINGS[class_type]
         output_is_list = node_class.OUTPUT_IS_LIST[slot] if hasattr(node_class, 'OUTPUT_IS_LIST') else False
 
-        return (len(any) if output_is_list else len(any[0]),)
+        return (len(any) if output_is_list or len(any) > 1 else len(any[0]),)
 
 class indexAnything:
     @classmethod
@@ -1228,12 +1229,13 @@ class indexAnything:
         index = index[0]
         prompt = prompt[0]
         my_unique_id = my_unique_id[0]
+        my_unique_id = my_unique_id.split('.')[len(my_unique_id.split('.')) - 1] if "." in my_unique_id else my_unique_id
         id, slot = prompt[my_unique_id]['inputs']['any']
         class_type = prompt[id]['class_type']
         node_class = ALL_NODE_CLASS_MAPPINGS[class_type]
         output_is_list = node_class.OUTPUT_IS_LIST[slot] if hasattr(node_class, 'OUTPUT_IS_LIST') else False
 
-        if output_is_list:
+        if output_is_list or len(any) > 1:
             return (any[index],)
         elif isinstance(any[0], torch.Tensor):
             batch_index = min(any[0].shape[0] - 1, index)
