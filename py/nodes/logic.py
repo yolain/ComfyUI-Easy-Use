@@ -1177,19 +1177,30 @@ class lengthAnything:
         return {
             "required": {
                 "any": (any_type, {}),
+            },
+            "hidden":{
+                "prompt": "PROMPT",
+                "my_unique_id": "UNIQUE_ID"
             }
         }
 
     RETURN_TYPES = ("INT",)
     RETURN_NAMES = ("length",)
 
+    INPUT_IS_LIST = True
+
     FUNCTION = "getLength"
     CATEGORY = "EasyUse/Logic"
 
-    def getLength(self, any):
-        if isinstance(any, tuple):
-            return
-        return (len(any),)
+    def getLength(self, any, prompt=None, my_unique_id=None):
+        prompt = prompt[0]
+        my_unique_id = my_unique_id[0]
+        id, slot = prompt[my_unique_id]['inputs']['any']
+        class_type = prompt[id]['class_type']
+        node_class = ALL_NODE_CLASS_MAPPINGS[class_type]
+        output_is_list = node_class.OUTPUT_IS_LIST[slot] if hasattr(node_class, 'OUTPUT_IS_LIST') else False
+
+        return (len(any) if output_is_list else len(any[0]),)
 
 class indexAnything:
     @classmethod
@@ -1198,22 +1209,38 @@ class indexAnything:
             "required": {
                 "any": (any_type, {}),
                 "index": ("INT", {"default": 0, "min": 0, "max": 1000000, "step": 1}),
+            },
+            "hidden":{
+                "prompt": "PROMPT",
+                "my_unique_id": "UNIQUE_ID"
             }
         }
 
     RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("out",)
 
+    INPUT_IS_LIST = True
+
     FUNCTION = "getIndex"
     CATEGORY = "EasyUse/Logic"
 
-    def getIndex(self, any, index):
-        if isinstance(any, torch.Tensor):
-            batch_index = min(any.shape[0] - 1, index)
-            s = any[index:index + 1].clone()
+    def getIndex(self, any, index, prompt=None, my_unique_id=None):
+        index = index[0]
+        prompt = prompt[0]
+        my_unique_id = my_unique_id[0]
+        id, slot = prompt[my_unique_id]['inputs']['any']
+        class_type = prompt[id]['class_type']
+        node_class = ALL_NODE_CLASS_MAPPINGS[class_type]
+        output_is_list = node_class.OUTPUT_IS_LIST[slot] if hasattr(node_class, 'OUTPUT_IS_LIST') else False
+
+        if output_is_list:
+            return (any[index],)
+        elif isinstance(any[0], torch.Tensor):
+            batch_index = min(any[0].shape[0] - 1, index)
+            s = any[0][index:index + 1].clone()
             return (s,)
         else:
-            return (any[index],)
+            return (any[0][index],)
 
 
 class batchAnything:
