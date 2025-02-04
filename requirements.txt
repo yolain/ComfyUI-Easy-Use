@@ -7,3 +7,4 @@ opencv-python
 sentencepiece
 spandrel
 matplotlib
+peft
