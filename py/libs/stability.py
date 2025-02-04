@@ -13,13 +13,13 @@ root_path = pathlib.Path(__file__).parent.parent.parent
 config_path = os.path.join(root_path,'config.yaml')
 default_key = [{'name':'Default', 'key':''}]
 
+
 class StabilityAPI:
     def __init__(self):
         self.api_url = "https://api.stability.ai"
         self.api_keys = None
         self.api_current = 0
         self.user_info = {}
-        self.getAPIKeys()
 
     def getErrors(self, code):
         errors = {
@@ -153,7 +153,6 @@ class StabilityAPI:
             return None
 
 stableAPI = StabilityAPI()
-
 
 @PromptServer.instance.routes.get("/easyuse/stability/api_keys")
 async def get_stability_api_keys(request):
