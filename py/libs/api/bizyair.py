@@ -16,10 +16,9 @@ from typing import Any, List, Union
 import numpy as np
 import torch
 from PIL import Image
-from wandb.env import API_KEY
 
 root_path = pathlib.Path(__file__).parent.parent.parent.parent
-config_path = os.path.join(root_path,'config.yaml')
+config_path = os.path.join(root_path, 'config.yaml')
 
 class BizyAIRAPI:
     def __init__(self):
