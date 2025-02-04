@@ -848,18 +848,22 @@ class imageRemBg:
   def remove(self, rem_mode, images, image_output, save_prefix, torchscript_jit=False, add_background='none',prompt=None, extra_pnginfo=None):
     new_images = list()
     masks = list()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if rem_mode == "RMBG-2.0":
-      repo_id = REMBG_MODELS[rem_mode]['model_url']
-      model_path = os.path.join(REMBG_DIR, 'RMBG-2.0')
-      if not os.path.exists(model_path):
-        from huggingface_hub import snapshot_download
-        snapshot_download(repo_id=repo_id, local_dir=model_path, ignore_patterns=["*.md", "*.txt"])
-      from transformers import AutoModelForImageSegmentation
-      model = AutoModelForImageSegmentation.from_pretrained(model_path, trust_remote_code=True)
-      torch.set_float32_matmul_precision('high')
-      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-      model.to(device)
-      model.eval()
+      if rem_mode in cache:
+        _, model = cache[rem_mode][1]
+      else:
+        repo_id = REMBG_MODELS[rem_mode]['model_url']
+        model_path = os.path.join(REMBG_DIR, 'RMBG-2.0')
+        if not os.path.exists(model_path):
+          from huggingface_hub import snapshot_download
+          snapshot_download(repo_id=repo_id, local_dir=model_path, ignore_patterns=["*.md", "*.txt"])
+        from transformers import AutoModelForImageSegmentation
+        model = AutoModelForImageSegmentation.from_pretrained(model_path, trust_remote_code=True)
+        torch.set_float32_matmul_precision('high')
+        model.to(device)
+        model.eval()
+        update_cache(rem_mode, 'remove_background', (False, model))
 
       from torchvision import transforms
       transform_image = transforms.Compose([
@@ -893,16 +897,18 @@ class imageRemBg:
 
     elif rem_mode == "RMBG-1.4":
       from ..modules.briaai.rembg import BriaRMBG, preprocess_image, postprocess_image
-      # load model
-      model_url = REMBG_MODELS[rem_mode]['model_url']
-      suffix = model_url.split(".")[-1]
-      model_path = get_local_filepath(model_url, REMBG_DIR, rem_mode+'.'+suffix)
+      if rem_mode in cache:
+        _, net = cache[rem_mode][1]
+      else:
+        model_url = REMBG_MODELS[rem_mode]['model_url']
+        suffix = model_url.split(".")[-1]
+        model_path = get_local_filepath(model_url, REMBG_DIR, rem_mode+'.'+suffix)
+        net = BriaRMBG()
+        net.load_state_dict(torch.load(model_path, map_location=device))
+        net.to(device)
+        net.eval()
+        update_cache(rem_mode, 'remove_background', (False, net))
 
-      net = BriaRMBG()
-      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-      net.load_state_dict(torch.load(model_path, map_location=device))
-      net.to(device)
-      net.eval()
       # prepare input
       model_input_size = [1024, 1024]
       for image in images:
@@ -922,13 +928,16 @@ class imageRemBg:
       new_images = torch.cat(new_images, dim=0)
       masks = torch.cat(masks, dim=0)
     elif rem_mode == "BEN2":
-      from ..modules.ben.model import BEN_Base
-      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-      model_url = REMBG_MODELS[rem_mode]['model_url']
-      model_path = get_local_filepath(model_url, REMBG_DIR)
+      if rem_mode in cache:
+        _, model = cache[rem_mode][1]
+      else:
+        from ..modules.ben.model import BEN_Base
+        model_url = REMBG_MODELS[rem_mode]['model_url']
+        model_path = get_local_filepath(model_url, REMBG_DIR)
 
-      model = BEN_Base().to(device).eval()
-      model.loadcheckpoints(model_path)
+        model = BEN_Base().to(device).eval()
+        model.loadcheckpoints(model_path)
+        update_cache(rem_mode, 'remove_background', (False, model))
 
       for image in images:
         input_image = tensor2pil(image)
@@ -955,7 +964,11 @@ class imageRemBg:
           install_package("transparent_background")
           from transparent_background import Remover
 
-      remover = Remover(jit=torchscript_jit)
+      if rem_mode in cache:
+        _, remover = cache[rem_mode][1]
+      else:
+        remover = Remover(jit=torchscript_jit)
+        update_cache(rem_mode, 'remove_background', (False, remover))
 
       for img in tqdm(images, "Inspyrenet Rembg"):
         mid = remover.process(tensor2pil(img), type='rgba')
