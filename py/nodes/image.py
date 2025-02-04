@@ -819,7 +819,6 @@ class imageConcat:
     return (row,)
 
 # 图片背景移除
-from ..modules.briaai.rembg import BriaRMBG, preprocess_image, postprocess_image
 from ..libs.utils import get_local_filepath, easySave, install_package
 class imageRemBg:
   @classmethod
@@ -827,7 +826,7 @@ class imageRemBg:
     return {
       "required": {
         "images": ("IMAGE",),
-        "rem_mode": (("RMBG-2.0", "RMBG-1.4","Inspyrenet"), {"default": "RMBG-1.4"}),
+        "rem_mode": (("RMBG-2.0", "RMBG-1.4", "Inspyrenet", "BEN2"), {"default": "RMBG-1.4"}),
         "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
         "save_prefix": ("STRING", {"default": "ComfyUI"}),
       },
@@ -870,10 +869,10 @@ class imageRemBg:
       ])
       for image in images:
         orig_im = tensor2pil(image)
-        input_tensor = transform_image(orig_im).unsqueeze(0).to(device)
+        input_image = transform_image(orig_im).unsqueeze(0).to(device)
 
         with torch.no_grad():
-          preds = model(input_tensor)[-1].sigmoid().cpu()
+          preds = model(input_image)[-1].sigmoid().cpu()
           pred = preds[0].squeeze()
 
           mask = transforms.ToPILImage()(pred)
@@ -893,6 +892,7 @@ class imageRemBg:
       masks = torch.cat(masks, dim=0)
 
     elif rem_mode == "RMBG-1.4":
+      from ..modules.briaai.rembg import BriaRMBG, preprocess_image, postprocess_image
       # load model
       model_url = REMBG_MODELS[rem_mode]['model_url']
       suffix = model_url.split(".")[-1]
@@ -918,6 +918,31 @@ class imageRemBg:
 
         new_images.append(pil2tensor(new_im))
         masks.append(pil2tensor(mask_im))
+
+      new_images = torch.cat(new_images, dim=0)
+      masks = torch.cat(masks, dim=0)
+    elif rem_mode == "BEN2":
+      from ..modules.ben.model import BEN_Base
+      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+      model_url = REMBG_MODELS[rem_mode]['model_url']
+      model_path = get_local_filepath(model_url, REMBG_DIR)
+
+      model = BEN_Base().to(device).eval()
+      model.loadcheckpoints(model_path)
+
+      for image in images:
+        input_image = tensor2pil(image)
+
+        if input_image.mode != 'RGBA':
+          input_image = input_image.convert("RGBA")
+
+        mask, new_im = model.inference(input_image)
+
+        new_im_tensor = pil2tensor(new_im)
+        mask_tensor = pil2tensor(mask)
+
+        new_images.append(new_im_tensor)
+        masks.append(mask_tensor)
 
       new_images = torch.cat(new_images, dim=0)
       masks = torch.cat(masks, dim=0)
