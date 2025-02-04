@@ -5,7 +5,7 @@ import requests
 import pathlib
 from aiohttp import web
 
-root_path = pathlib.Path(__file__).parent.parent.parent
+root_path = pathlib.Path(__file__).parent.parent.parent.parent
 config_path = os.path.join(root_path,'config.yaml')
 class FluxAIAPI:
     def __init__(self):

@@ -336,7 +336,7 @@ class injectNoiseToLatent:
         return (samples,)
 
 
-from ..libs.stability import stableAPI
+from ..libs.api.stability import stableAPI
 class stableDiffusion3API:
 
     @classmethod

@@ -5,11 +5,11 @@ import requests
 import pathlib
 from aiohttp import web
 from server import PromptServer
-from .image import tensor2pil, pil2tensor, image2base64, pil2byte
-from .log import log_node_error
+from ..image import tensor2pil, pil2tensor, image2base64, pil2byte
+from ..log import log_node_error
 
 
-root_path = pathlib.Path(__file__).parent.parent.parent
+root_path = pathlib.Path(__file__).parent.parent.parent.parent
 config_path = os.path.join(root_path,'config.yaml')
 default_key = [{'name':'Default', 'key':''}]
 
