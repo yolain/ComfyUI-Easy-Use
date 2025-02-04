@@ -4,7 +4,7 @@ import sys
 import json
 import shutil
 import folder_paths
-from folder_paths import get_directory_by_type
+from aiohttp import web
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .libs.model import easyModelManager
@@ -12,13 +12,6 @@ from .libs.utils import getMetadata, cleanGPUUsedForce, get_local_filepath
 from .libs.cache import remove_cache
 from .libs.translate import has_chinese, zh_to_en
 
-try:
-    import aiohttp
-    from aiohttp import web
-except ImportError:
-    print("Module 'aiohttp' not installed. Please install it via:")
-    print("pip install aiohttp")
-    sys.exit()
 
 @PromptServer.instance.routes.post("/easyuse/cleangpu")
 def cleanGPU(request):
@@ -268,7 +261,7 @@ async def save_preview(request):
 
     body = await request.json()
 
-    dir = get_directory_by_type(body.get("type", "output"))
+    dir = folder_paths.get_directory_by_type(body.get("type", "output"))
     subfolder = body.get("subfolder", "")
     full_output_folder = os.path.join(dir, os.path.normpath(subfolder))
 

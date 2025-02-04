@@ -8,7 +8,7 @@ import importlib
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
 
-importlib.import_module('.py.api', __name__)
+importlib.import_module('.py.routes', __name__)
 importlib.import_module('.py.server', __name__)
 nodes_list = ["util", "seed", "prompt", "loaders", "adapter", "inpaint", "preSampling", "samplers", "fix", "pipe", "xyplot", "image", "logic", "api", "deprecated"]
 for module_name in nodes_list:
