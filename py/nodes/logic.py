@@ -1394,21 +1394,6 @@ class showAnything:
         else:
             return {"ui": {"text": values}, "result": (values,), }
 
-class showAnythingLazy(showAnything):
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required": {}, "optional": {"anything": (any_type, {}), },
-                "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",
-                           }}
-
-    RETURN_TYPES = (any_type,)
-    RETURN_NAMES = ('output',)
-    INPUT_IS_LIST = True
-    OUTPUT_NODE = False
-    OUTPUT_IS_LIST = (False,)
-    FUNCTION = "log_input"
-    CATEGORY = "EasyUse/Logic"
-
 class showTensorShape:
     @classmethod
     def INPUT_TYPES(s):
@@ -1693,15 +1678,6 @@ class saveText:
 
         return result
 
-class saveTextLazy(saveText):
-
-    RETURN_TYPES = ("STRING", "IMAGE")
-    RETURN_NAMES = ("text", 'image',)
-
-    FUNCTION = "save_text"
-    OUTPUT_NODE = False
-    CATEGORY = "EasyUse/Logic"
-
 
 class sleep:
     @classmethod
@@ -1759,13 +1735,11 @@ NODE_CLASS_MAPPINGS = {
     "easy batchAnything": batchAnything,
     "easy convertAnything": convertAnything,
     "easy showAnything": showAnything,
-    "easy showAnythingLazy": showAnythingLazy,
     "easy showTensorShape": showTensorShape,
     "easy clearCacheKey": clearCacheKey,
     "easy clearCacheAll": clearCacheAll,
     "easy cleanGpuUsed": cleanGPUUsed,
     "easy saveText": saveText,
-    "easy saveTextLazy": saveTextLazy,
     "easy sleep": sleep
 }
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -1805,12 +1779,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy batchAnything": "Batch Any",
     "easy convertAnything": "Convert Any",
     "easy showAnything": "Show Any",
-    "easy showAnythingLazy": "Show Any (Lazy)",
     "easy showTensorShape": "Show Tensor Shape",
     "easy clearCacheKey": "Clear Cache Key",
     "easy clearCacheAll": "Clear Cache All",
     "easy cleanGpuUsed": "Clean VRAM Used",
     "easy saveText": "Save Text",
-    "easy saveTextLazy": "Save Text (Lazy)",
     "easy sleep": "Sleep",
 }

@@ -1,6 +1,9 @@
+import numpy as np
+import json
 import torch
 import comfy
 import comfy.model_management
+from PIL.PngImagePlugin import PngInfo
 from nodes import ConditioningSetMask, RepeatLatentBatch
 from comfy_extras.nodes_mask import LatentCompositeMasked
 from ..libs.log import log_node_info, log_node_warn
@@ -377,6 +380,115 @@ class stableDiffusion3API:
         output_image = stableAPI.generate_sd3_image(positive, negative, aspect_ratio, seed=seed, mode=mode, model=model, strength=denoise, image=optional_image)
         return (output_image,)
 
+
+class saveImageLazy():
+  def __init__(self):
+    self.output_dir = folder_paths.get_output_directory()
+    self.type = "output"
+    self.compress_level = 4
+
+  @classmethod
+  def INPUT_TYPES(s):
+    return {"required":
+          {"images": ("IMAGE",),
+           "filename_prefix": ("STRING", {"default": "ComfyUI"}),
+           "save_metadata": ("BOOLEAN", {"default": True}),
+           },
+        "optional":{},
+        "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+      }
+
+  RETURN_TYPES = ("IMAGE",)
+  RETURN_NAMES = ("images",)
+  OUTPUT_NODE = False
+  FUNCTION = "save"
+
+  DEPRECATED = True
+  CATEGORY = "EasyUse/🚫 Deprecated"
+
+  def save(self, images, filename_prefix, save_metadata, prompt=None, extra_pnginfo=None):
+    extension = 'png'
+
+    full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
+      filename_prefix, self.output_dir, images[0].shape[1], images[0].shape[0])
+
+    results = list()
+    for (batch_number, image) in enumerate(images):
+      i = 255. * image.cpu().numpy()
+      img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+      metadata = None
+
+      filename_with_batch_num = filename.replace(
+        "%batch_num%", str(batch_number))
+
+      counter = 1
+
+      if os.path.exists(full_output_folder) and os.listdir(full_output_folder):
+        filtered_filenames = list(filter(
+          lambda filename: filename.startswith(
+            filename_with_batch_num + "_")
+                           and filename[len(filename_with_batch_num) + 1:-4].isdigit(),
+          os.listdir(full_output_folder)
+        ))
+
+        if filtered_filenames:
+          max_counter = max(
+            int(filename[len(filename_with_batch_num) + 1:-4])
+            for filename in filtered_filenames
+          )
+          counter = max_counter + 1
+
+      file = f"{filename_with_batch_num}_{counter:05}.{extension}"
+
+      save_path = os.path.join(full_output_folder, file)
+
+      if save_metadata:
+        metadata = PngInfo()
+        if prompt is not None:
+          metadata.add_text("prompt", json.dumps(prompt))
+        if extra_pnginfo is not None:
+          for x in extra_pnginfo:
+            metadata.add_text(
+              x, json.dumps(extra_pnginfo[x]))
+
+      img.save(save_path, pnginfo=metadata)
+
+      results.append({
+        "filename": file,
+        "subfolder": subfolder,
+        "type": self.type
+      })
+
+    return {"ui": {"images": results} , "result": (images,)}
+
+from .logic import saveText, showAnything
+
+class showAnythingLazy(showAnything):
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {}, "optional": {"anything": (any_type, {}), },
+                "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",
+                           }}
+
+    RETURN_TYPES = (any_type,)
+    RETURN_NAMES = ('output',)
+    INPUT_IS_LIST = True
+    OUTPUT_NODE = False
+    OUTPUT_IS_LIST = (False,)
+    DEPRECATED = True
+    FUNCTION = "log_input"
+    CATEGORY = "EasyUse/🚫 Deprecated"
+
+class saveTextLazy(saveText):
+
+    RETURN_TYPES = ("STRING", "IMAGE")
+    RETURN_NAMES = ("text", 'image',)
+
+    FUNCTION = "save_text"
+    OUTPUT_NODE = False
+    DEPRECATED = True
+    CATEGORY = "EasyUse/🚫 Deprecated"
+
 NODE_CLASS_MAPPINGS = {
     "easy if": If,
     "easy poseEditor": poseEditor,
@@ -386,6 +498,9 @@ NODE_CLASS_MAPPINGS = {
     "easy latentCompositeMaskedWithCond": latentCompositeMaskedWithCond,
     "easy injectNoiseToLatent": injectNoiseToLatent,
     "easy stableDiffusion3API": stableDiffusion3API,
+    "easy saveImageLazy": saveImageLazy,
+    "easy saveTextLazy": saveTextLazy,
+    "easy showAnythingLazy": showAnythingLazy,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -397,4 +512,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy latentCompositeMaskedWithCond": "LatentCompositeMaskedWithCond (🚫Deprecated)",
     "easy injectNoiseToLatent": "InjectNoiseToLatent (🚫Deprecated)",
     "easy stableDiffusion3API": "StableDiffusion3API (🚫Deprecated)",
+    "easy saveImageLazy": "SaveImageLazy (🚫Deprecated)",
+    "easy saveTextLazy": "SaveTextLazy (🚫Deprecated)",
+    "easy showAnythingLazy": "ShowAnythingLazy (🚫Deprecated)",
 }

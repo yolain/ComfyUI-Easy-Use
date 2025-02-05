@@ -26,6 +26,11 @@ def transform_dict(data):
                             **new_dict[k]['inputs'],
                             _key: {"name": _value}
                         }
+                elif key == 'outputs':
+                    if not new_dict[k].get('outputs'):
+                        new_dict[k]['outputs'] = {}
+                    for idx, (out_key, out_value) in enumerate(value.items()):
+                        new_dict[k]['outputs'][idx] = {"name": out_value}
     return new_dict
 
 def main():
