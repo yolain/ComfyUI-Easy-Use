@@ -490,7 +490,7 @@ class pipeXYPlot:
                    "output_individuals": output_individuals}
 
         if pipe is not None:
-            new_pipe = pipe
+            new_pipe = pipe.copy()
             new_pipe['loader_settings'] = {
                 **pipe['loader_settings'],
                 "xyplot": xy_plot
@@ -568,7 +568,7 @@ class pipeXYPlotAdvanced:
             y_values = [""]
 
         if pipe is not None:
-            new_pipe = pipe
+            new_pipe = pipe.copy()
             positive = pipe["loader_settings"]["positive"] if "positive" in pipe["loader_settings"] else ""
             negative = pipe["loader_settings"]["negative"] if "negative" in pipe["loader_settings"] else ""
 
