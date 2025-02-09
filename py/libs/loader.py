@@ -489,7 +489,7 @@ class easyLoader:
             log_node_info("Load Kolors UNet", f"{unet_name} cached")
             return self.loaded_objects["unet"][unet_name][0]
         else:
-            from ..modules.kolors import applyKolorsUnet
+            from ..modules.kolors.loader import applyKolorsUnet
             with applyKolorsUnet():
                 unet_path = folder_paths.get_full_path("unet", unet_name)
                 sd = comfy.utils.load_torch_file(unet_path)
