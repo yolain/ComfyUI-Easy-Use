@@ -54,6 +54,9 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.7**
 
+- 优化管理节点组显示
+- 在 `easy imageRemBg` 上添加 `ben2`
+- 添加 joyCaption2 API版节点（ https://github.com/siliconflow/BizyAir ）
 - 使用一种新的方式在 loader 中显示模型缩略图（支持 diffusion_models、lors、checkpoints）
 
 **v1.2.6**

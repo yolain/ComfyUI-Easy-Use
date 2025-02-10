@@ -49,6 +49,8 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.7**
 
+- Optimize display of the node maps
+- Add `ben2` on `easy imageRemBg`
 - Using a new way to display the models thumbnails in the loaders (supported diffusion_models、lors、checkpoints)
 
 **v1.2.6**
