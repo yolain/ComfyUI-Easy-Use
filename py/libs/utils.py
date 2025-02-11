@@ -82,6 +82,7 @@ def compare_revision(num):
     if not comfy_ui_revision:
         comfy_ui_revision = get_comfyui_revision()
     return True if comfy_ui_revision == 'Unknown' or int(comfy_ui_revision) >= num else False
+
 def find_tags(string: str, sep="/") -> list[str]:
     """
     find tags from string use the sep for split
@@ -217,14 +218,15 @@ def get_local_filepath(url, dirname, local_file_name=None):
         except Exception as e:
             use_mirror = True
             url = url.replace('huggingface.co', 'hf-mirror.com')
-            print(f'无法从huggingface下载，正在尝试从 {url} 下载...')
-            PromptServer.instance.send_sync("easyuse-toast", {'content': f'无法连接huggingface，正在尝试从 {url} 下载...', 'duration': 10000})
+            print(f'Unable to download from huggingface, trying mirror: {url}')
+            PromptServer.instance.send_sync("easyuse-toast", {'content': f'Unable to connect to huggingface, trying mirror: {url}', 'duration': 10000})
             try:
                 download_url_to_file(url, destination)
             except Exception as err:
+                error_msg = str(err.args[0]) if err.args else str(err)
                 PromptServer.instance.send_sync("easyuse-toast",
-                                                {'content': f'无法从 {url} 下载模型', 'type':'error'})
-                raise Exception(f'无法从 {url} 下载，错误信息：{str(err.args[0])}')
+                                                {'content': f'Unable to download model from {url}', 'type':'error'})
+                raise Exception(f'Download failed. Original URL and mirror both failed.\nError: {error_msg}')
     return destination
 
 def to_lora_patch_dict(state_dict: dict) -> dict:
