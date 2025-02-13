@@ -28,7 +28,7 @@ class fullLoader:
         a1111_prompt_style_default = False
 
         return {"required": {
-            "ckpt_name": (folder_paths.get_filename_list("checkpoints"),),
+            "ckpt_name": (folder_paths.get_filename_list("checkpoints") + ['None'],),
             "config_name": (["Default", ] + folder_paths.get_filename_list("configs"), {"default": "Default"}),
             "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
             "clip_skip": ("INT", {"default": -2, "min": -24, "max": 0, "step": 1}),
@@ -70,6 +70,9 @@ class fullLoader:
                        batch_size, model_override=None, clip_override=None, vae_override=None, optional_lora_stack=None, optional_controlnet_stack=None, a1111_prompt_style=False, video_length=25, prompt=None,
                        my_unique_id=None
                        ):
+
+        if ckpt_name == 'None' and model_override is None:
+            raise Exception("Please select a checkpoint or provide a model override.")
 
         # Clean models from loaded_objects
         easyCache.update_loaded_objects(prompt)
@@ -923,7 +926,7 @@ class fluxLoader(fullLoader):
         loras = ["None"] + folder_paths.get_filename_list("loras")
         return {
             "required": {
-                "ckpt_name": (checkpoints,),
+                "ckpt_name": (checkpoints + ['None'],),
                 "vae_name": (["Baked VAE"] + folder_paths.get_filename_list("vae"),),
                 "lora_name": (loras,),
                 "lora_model_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
