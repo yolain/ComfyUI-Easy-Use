@@ -360,7 +360,7 @@
         "name": "VAE名称"
       },
       "clip_skip": {
-        "name": "Clip停止层"
+        "name": "CLIP停止层"
       },
       "lora_name": {
         "name": "LoRA名称"
@@ -412,11 +412,20 @@
       "1": {
         "name": "模型"
       },
+      "2": {
+        "name": "VAE"
+      },
+      "3": {
+        "name": "CLIP"
+      },
       "4": {
         "name": "正面条件"
       },
       "5": {
         "name": "负面条件"
+      },
+      "6": {
+        "name": "LATENT"
       }
     }
   },
@@ -436,7 +445,7 @@
         "name": "VAE"
       },
       "clip_skip": {
-        "name": "Clip停止层"
+        "name": "CLIP停止层"
       },
       "lora_name": {
         "name": "LoRA模型"
@@ -475,6 +484,9 @@
       },
       "1": {
         "name": "模型"
+      },
+      "2": {
+        "name": "VAE"
       }
     }
   },
@@ -494,7 +506,7 @@
         "name": "VAE"
       },
       "clip_skip": {
-        "name": "Clip停止层"
+        "name": "CLIP停止层"
       },
       "lora_name": {
         "name": "LoRA模型"
@@ -1574,7 +1586,7 @@
     }
   },
   "easy latentNoisy": {
-    "display_name": "噪波Latent（Sigma乘积）",
+    "display_name": "噪波LATENT（Sigma乘积）",
     "inputs": {
       "pipe": {
         "name": "节点束"
@@ -1583,7 +1595,7 @@
         "name": "模型（可选）"
       },
       "optional_latent": {
-        "name": "Latent（可选）"
+        "name": "LATENT（可选）"
       },
       "sample_name": {
         "name": "采样器"
@@ -1618,7 +1630,7 @@
         "name": "节点束"
       },
       "1": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "2": {
         "name": "伽马值"
@@ -1635,7 +1647,7 @@
         "name": "文字拼接"
       },
       "source_latent": {
-        "name": "Latent（源）"
+        "name": "LATENT（源）"
       },
       "source_mask": {
         "name": "遮罩（源）"
@@ -1655,7 +1667,7 @@
         "name": "节点束"
       },
       "1": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "2": {
         "name": "条件"
@@ -1672,7 +1684,7 @@
         "name": "图像转Latent"
       },
       "latent": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "noise": {
         "name": "噪波"
@@ -1695,7 +1707,7 @@
     },
     "outputs": {
       "0": {
-        "name": "Latent"
+        "name": "LATENT"
       }
     }
   },
@@ -1794,7 +1806,7 @@
         "name": "图像（可选）"
       },
       "latent": {
-        "name": "Latent（可选）"
+        "name": "LATENT（可选）"
       }
     },
     "outputs": {
@@ -1849,7 +1861,7 @@
         "name": "图像（可选）"
       },
       "latent": {
-        "name": "Latent（可选）"
+        "name": "LATENT（可选）"
       }
     },
     "outputs": {
@@ -1865,7 +1877,7 @@
         "name": "节点束"
       },
       "optional_latent": {
-        "name": "Latent（可选）"
+        "name": "LATENT（可选）"
       },
       "optional_noise_seed": {
         "name": "随机种（可选）"
@@ -1914,7 +1926,7 @@
         "name": "图像转Latent"
       },
       "latent": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "optional_sampler": {
         "name": "采样器(可选)"
@@ -1993,7 +2005,7 @@
         "name": "图像（可选）"
       },
       "latent": {
-        "name": "Latent（可选）"
+        "name": "LATENT（可选）"
       }
     },
     "outputs": {
@@ -2232,7 +2244,7 @@
         "name": "图像（可选）"
       },
       "latent": {
-        "name": "Latent（可选）"
+        "name": "LATENT（可选）"
       }
     },
     "outputs": {
@@ -2260,7 +2272,7 @@
         "name": "图像（可选）"
       },
       "latent": {
-        "name": "Latent（可选）"
+        "name": "LATENT（可选）"
       },
       "steps": {
         "name": "步数"
@@ -2313,13 +2325,16 @@
         "name": "负面条件"
       },
       "5": {
-        "name": "图像转Latent"
+        "name": "LATENT"
       },
       "6": {
-        "name": "Latent"
+        "name": "VAE"
       },
       "7": {
-        "name": "随机种"
+        "name": "CLIP"
+      },
+      "8": {
+        "name": "seed"
       }
     }
   },
@@ -2594,7 +2609,7 @@
         "name": "负面条件（可选）"
       },
       "optional_latent": {
-        "name": "Latent（可选）"
+        "name": "LATENT（可选）"
       },
       "steps": {
         "name": "步数"
@@ -2620,7 +2635,7 @@
         "name": "节点束"
       },
       "1": {
-        "name": "Latent"
+        "name": "LATENT"
       }
     }
   },
@@ -2643,7 +2658,7 @@
         "name": "图像转Latent"
       },
       "latent": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "image": {
         "name": "图像"
@@ -2679,7 +2694,7 @@
         "name": "图像转Latent"
       },
       "5": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "6": {
         "name": "图像"
@@ -2739,17 +2754,17 @@
       "neg": {
         "name": "负面条件"
       },
-      "vae": {
+      "VAE": {
         "name": "VAE"
       },
-      "clip": {
+      "CLIP": {
         "name": "CLIP"
       },
       "image_to_latent": {
         "name": "图像转Latent"
       },
       "latent": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "image": {
         "name": "图像"
@@ -2811,7 +2826,7 @@
         "name": "图像转Latent"
       },
       "9": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "10": {
         "name": "图像"
@@ -3097,34 +3112,34 @@
         "name": "模型名称10"
       },
       "clip_skip_1": {
-        "name": "Clip停止层1"
+        "name": "CLIP停止层1"
       },
       "clip_skip_2": {
-        "name": "Clip停止层2"
+        "name": "CLIP停止层2"
       },
       "clip_skip_3": {
-        "name": "Clip停止层3"
+        "name": "CLIP停止层3"
       },
       "clip_skip_4": {
-        "name": "Clip停止层4"
+        "name": "CLIP停止层4"
       },
       "clip_skip_5": {
-        "name": "Clip停止层5"
+        "name": "CLIP停止层5"
       },
       "clip_skip_6": {
-        "name": "Clip停止层6"
+        "name": "CLIP停止层6"
       },
       "clip_skip_7": {
-        "name": "Clip停止层7"
+        "name": "CLIP停止层7"
       },
       "clip_skip_8": {
-        "name": "Clip停止层8"
+        "name": "CLIP停止层8"
       },
       "clip_skip_9": {
-        "name": "Clip停止层9"
+        "name": "CLIP停止层9"
       },
       "clip_skip_10": {
-        "name": "Clip停止层10"
+        "name": "CLIP停止层10"
       },
       "vae_name_1": {
         "name": "VAE名称1"
@@ -3847,7 +3862,7 @@
         "name": "图像"
       },
       "2": {
-        "name": "Latent"
+        "name": "LATENT"
       }
     }
   },
@@ -4017,10 +4032,10 @@
       "model": {
         "name": "模型"
       },
-      "clip": {
+      "CLIP": {
         "name": "CLIP"
       },
-      "vae": {
+      "VAE": {
         "name": "VAE"
       },
       "positive": {
@@ -4922,7 +4937,7 @@
         "name": "模型"
       },
       "latent": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "mode": {
         "name": "模式"
@@ -5729,7 +5744,7 @@
         "name": "模型"
       },
       "latent": {
-        "name": "Latent"
+        "name": "LATENT"
       },
       "head": {
         "name": "head"
