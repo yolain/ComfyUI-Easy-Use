@@ -1,9 +1,13 @@
 __version__ = "1.2.8"
 
 import yaml
+import json
 import os
 import folder_paths
 import importlib
+
+cwd_path = os.path.dirname(os.path.realpath(__file__))
+comfy_path = folder_paths.base_path
 
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
@@ -11,13 +15,36 @@ NODE_DISPLAY_NAME_MAPPINGS = {}
 importlib.import_module('.py.routes', __name__)
 importlib.import_module('.py.server', __name__)
 nodes_list = ["util", "seed", "prompt", "loaders", "adapter", "inpaint", "preSampling", "samplers", "fix", "pipe", "xyplot", "image", "logic", "api", "deprecated"]
+# locale = {}
 for module_name in nodes_list:
     imported_module = importlib.import_module(".py.nodes.{}".format(module_name), __name__)
     NODE_CLASS_MAPPINGS = {**NODE_CLASS_MAPPINGS, **imported_module.NODE_CLASS_MAPPINGS}
     NODE_DISPLAY_NAME_MAPPINGS = {**NODE_DISPLAY_NAME_MAPPINGS, **imported_module.NODE_DISPLAY_NAME_MAPPINGS}
+    # transfer python nodes to locale file
+    # for i in imported_module.NODE_CLASS_MAPPINGS:
+    #     locale[i] = {
+    #         "display_name": imported_module.NODE_DISPLAY_NAME_MAPPINGS[i] if i in imported_module.NODE_DISPLAY_NAME_MAPPINGS else i,
+    #         "inputs":{},
+    #         "outputs":{},
+    #     }
+    #     node_class = imported_module.NODE_CLASS_MAPPINGS[i]
+    #     input_types = node_class.INPUT_TYPES()
+    #     if "required" in input_types:
+    #         for j in input_types["required"]:
+    #             locale[i]['inputs'][j] = {"name": j}
+    #     if "optional" in input_types:
+    #         for j in input_types["optional"]:
+    #             locale[i]['inputs'][j] = {"name": j}
+    #     count = 0
+    #     if "RETURN_NAMES" in node_class.__dict__:
+    #         for j in node_class.RETURN_NAMES:
+    #             locale[i]['outputs'][str(count)] = {"name": j}
+    #             count+=1
 
-cwd_path = os.path.dirname(os.path.realpath(__file__))
-comfy_path = folder_paths.base_path
+# en_json_path = os.path.join(cwd_path,'locales/en/nodeDefs.json')
+# with open(en_json_path, 'w', encoding='utf-8') as f:
+#     json.dump(locale, f, ensure_ascii=False, indent=2)
+
 
 #Wildcards
 from .py.libs.wildcards import read_wildcard_dict

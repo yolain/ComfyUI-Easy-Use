@@ -1,4 +1,9 @@
 {
+  "settingsCategories": {
+    "Hotkeys": "快捷键",
+    "Nodes": "节点相关",
+    "NodesMap": "管理节点组"
+  },
   "nodeCategories": {
     "Util": "工具",
     "Seed": "随机种",

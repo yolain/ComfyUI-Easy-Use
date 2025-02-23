@@ -1,8 +1,11 @@
 import numpy as np
+import os
 import json
 import torch
+import folder_paths
 import comfy
 import comfy.model_management
+from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from nodes import ConditioningSetMask, RepeatLatentBatch
 from comfy_extras.nodes_mask import LatentCompositeMasked

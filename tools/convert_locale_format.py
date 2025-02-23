@@ -1,5 +1,5 @@
 # 开发人员使用（请勿运行）
-# 将 https://github.com/AIGODLIKE/AIGODLIKE-ComfyUI-Translation 的翻译文件转换格式以适配 ComfyUI核心 locales 
+# 将 https://github.com/AIGODLIKE/AIGODLIKE-ComfyUI-Translation 的翻译文件转换格式以适配 ComfyUI locales
 
 import json
 import os
