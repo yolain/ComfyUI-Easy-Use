@@ -5199,6 +5199,9 @@
       },
       "add_background": {
         "name": "add_background"
+      },
+      "refine_foreground": {
+        "name": "refine_foreground"
       }
     },
     "outputs": {

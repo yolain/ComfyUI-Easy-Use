@@ -4183,6 +4183,12 @@
       },
       "save_prefix": {
         "name": "保存前缀"
+      },
+      "add_background": {
+        "name": "添加背景"
+      },
+      "refine_foreground": {
+        "name": "优化前景"
       }
     },
     "outputs": {
@@ -6525,6 +6531,11 @@
     "inputs": {
       "anything": {
         "name": "输入任何"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
       }
     }
   },

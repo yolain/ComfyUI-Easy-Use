@@ -195,7 +195,7 @@ REMBG_MODELS = {
         "model_url": "briaai/RMBG-2.0"
     },
     "BEN2": {
-        "model_url": "https://huggingface.co/PramaLLC/BEN/resolve/main/BEN_Base.pth"
+        "model_url": "https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.pth"
     }
 }
 

@@ -1,13 +1,36 @@
 import math
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.utils.checkpoint as checkpoint
 from einops import rearrange
-from PIL import Image, ImageFilter, ImageOps
-from timm.layers import DropPath, to_2tuple, trunc_normal_
+import torch.utils.checkpoint as checkpoint
+import numpy as np
+from timm.models.layers import DropPath, to_2tuple, trunc_normal_
+from PIL import Image, ImageOps
 from torchvision import transforms
+import numpy as np
+import random
+import cv2
+import os
+import subprocess
+import time
+import tempfile
+
+
+def set_random_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+set_random_seed(9)
+
+torch.set_float32_matmul_precision('highest')
+
 
 class Mlp(nn.Module):
     """ Multilayer perceptron."""
@@ -247,6 +270,7 @@ class PatchMerging(nn.Module):
         dim (int): Number of input channels.
         norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
     """
+
     def __init__(self, dim, norm_layer=nn.LayerNorm):
         super().__init__()
         self.dim = dim
@@ -495,7 +519,8 @@ class SwinTransformer(nn.Module):
             patch_size = to_2tuple(patch_size)
             patches_resolution = [pretrain_img_size[0] // patch_size[0], pretrain_img_size[1] // patch_size[1]]
 
-            self.absolute_pos_embed = nn.Parameter(torch.zeros(1, embed_dim, patches_resolution[0], patches_resolution[1]))
+            self.absolute_pos_embed = nn.Parameter(
+                torch.zeros(1, embed_dim, patches_resolution[0], patches_resolution[1]))
             trunc_normal_(self.absolute_pos_embed, std=.02)
 
         self.pos_drop = nn.Dropout(p=drop_rate)
@@ -550,7 +575,6 @@ class SwinTransformer(nn.Module):
                 for param in m.parameters():
                     param.requires_grad = False
 
-
     def forward(self, x):
 
         x = self.patch_embed(x)
@@ -559,17 +583,15 @@ class SwinTransformer(nn.Module):
         if self.ape:
             # interpolate the position embedding to the corresponding size
             absolute_pos_embed = F.interpolate(self.absolute_pos_embed, size=(Wh, Ww), mode='bicubic')
-            x = (x + absolute_pos_embed) # B Wh*Ww C
+            x = (x + absolute_pos_embed)  # B Wh*Ww C
 
         outs = [x.contiguous()]
         x = x.flatten(2).transpose(1, 2)
         x = self.pos_drop(x)
 
-
         for i in range(self.num_layers):
             layer = self.layers[i]
             x_out, H, W, x, Wh, Ww = layer(x, Wh, Ww)
-
 
             if i in self.out_indices:
                 norm_layer = getattr(self, f'norm{i}')
@@ -578,14 +600,7 @@ class SwinTransformer(nn.Module):
                 out = x_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
                 outs.append(out)
 
-
-
         return tuple(outs)
-
-
-
-
-
 
 
 def get_activation_fn(activation):
@@ -622,6 +637,43 @@ def patches2image(x):
     """(hg wg b) c h w -> b c (hg h) (wg w)"""
     x = rearrange(x, '(hg wg b) c h w -> b c (hg h) (wg w)', hg=2, wg=2)
     return x
+
+
+class PositionEmbeddingSine:
+    def __init__(self, num_pos_feats=64, temperature=10000, normalize=False, scale=None):
+        super().__init__()
+        self.num_pos_feats = num_pos_feats
+        self.temperature = temperature
+        self.normalize = normalize
+        if scale is not None and normalize is False:
+            raise ValueError("normalize should be True if scale is passed")
+        if scale is None:
+            scale = 2 * math.pi
+        self.scale = scale
+        self.dim_t = torch.arange(0, self.num_pos_feats, dtype=torch.float32)
+
+    def __call__(self, b, h, w):
+        device = self.dim_t.device
+        mask = torch.zeros([b, h, w], dtype=torch.bool, device=device)
+        assert mask is not None
+        not_mask = ~mask
+        y_embed = not_mask.cumsum(dim=1, dtype=torch.float32)
+        x_embed = not_mask.cumsum(dim=2, dtype=torch.float32)
+        if self.normalize:
+            eps = 1e-6
+            y_embed = (y_embed - 0.5) / (y_embed[:, -1:, :] + eps) * self.scale
+            x_embed = (x_embed - 0.5) / (x_embed[:, :, -1:] + eps) * self.scale
+
+        dim_t = self.temperature ** (2 * (self.dim_t.to(device) // 2) / self.num_pos_feats)
+        pos_x = x_embed[:, :, :, None] / dim_t
+        pos_y = y_embed[:, :, :, None] / dim_t
+
+        pos_x = torch.stack((pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()), dim=4).flatten(3)
+        pos_y = torch.stack((pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()), dim=4).flatten(3)
+
+        return torch.cat((pos_y, pos_x), dim=3).permute(0, 3, 1, 2)
+
+
 class PositionEmbeddingSine:
     def __init__(self, num_pos_feats=64, temperature=10000, normalize=False, scale=None):
         super().__init__()
@@ -688,13 +740,15 @@ class MCLM(nn.Module):
         l: 4,c,h,w
         g: 1,c,h,w
         """
+        self.p_poses = []
+        self.g_pos = None
         b, c, h, w = l.size()
         # 4,c,h,w -> 1,c,2h,2w
         concated_locs = rearrange(l, '(hg wg b) c h w -> b c (hg h) (wg w)', hg=2, wg=2)
 
         pools = []
         for pool_ratio in self.pool_ratios:
-             # b,c,h,w
+            # b,c,h,w
             tgt_hw = (round(h / pool_ratio), round(w / pool_ratio))
             pool = F.adaptive_avg_pool2d(concated_locs, tgt_hw)
             pools.append(rearrange(pool, 'b c h w -> (h w) b c'))
@@ -712,10 +766,8 @@ class MCLM(nn.Module):
         self.p_poses = self.p_poses.to(device)
         self.g_pos = self.g_pos.to(device)
 
-
         # attention between glb (q) & multisensory concated-locs (k,v)
         g_hw_b_c = rearrange(g, 'b c h w -> (h w) b c')
-
 
         g_hw_b_c = g_hw_b_c + self.dropout1(self.attention[0](g_hw_b_c + self.g_pos, pools + self.p_poses, pools)[0])
         g_hw_b_c = self.norm1(g_hw_b_c)
@@ -738,13 +790,6 @@ class MCLM(nn.Module):
 
         l = torch.cat((l_hw_b_c, g_hw_b_c), 1)  # hw,b(5),c
         return rearrange(l, "(h w) b c -> b c h w", h=h, w=w)  ## (5,c,h*w)
-
-
-
-
-
-
-
 
 
 class MCRM(nn.Module):
@@ -852,90 +897,389 @@ class BEN_Base(nn.Module):
             if isinstance(m, nn.GELU) or isinstance(m, nn.Dropout):
                 m.inplace = True
 
+    @torch.inference_mode()
+    @torch.autocast(device_type="cuda", dtype=torch.float16)
     def forward(self, x):
-        device = x.device
-        shallow = self.shallow(x)
-        glb = rescale_to(x, scale_factor=0.5, interpolation='bilinear')
-        loc = image2patches(x)
-        input = torch.cat((loc, glb), dim=0)
-        feature = self.backbone(input)
-        e5 = self.output5(feature[4])  # (5,128,16,16)
-        e4 = self.output4(feature[3])  # (5,128,32,32)
-        e3 = self.output3(feature[2])  # (5,128,64,64)
-        e2 = self.output2(feature[1])  # (5,128,128,128)
-        e1 = self.output1(feature[0])  # (5,128,128,128)
-        loc_e5, glb_e5 = e5.split([4, 1], dim=0)
-        e5 = self.multifieldcrossatt(loc_e5, glb_e5)  # (4,128,16,16)
+        real_batch = x.size(0)
 
-        e4, tokenattmap4 = self.dec_blk4(e4 + resize_as(e5, e4))
-        e4 = self.conv4(e4)
-        e3, tokenattmap3 = self.dec_blk3(e3 + resize_as(e4, e3))
-        e3 = self.conv3(e3)
-        e2, tokenattmap2 = self.dec_blk2(e2 + resize_as(e3, e2))
-        e2 = self.conv2(e2)
-        e1, tokenattmap1 = self.dec_blk1(e1 + resize_as(e2, e1))
-        e1 = self.conv1(e1)
-        loc_e1, glb_e1 = e1.split([4, 1], dim=0)
-        output1_cat = patches2image(loc_e1)  # (1,128,256,256)
-        output1_cat = output1_cat + resize_as(glb_e1, output1_cat)
-        final_output = self.insmask_head(output1_cat)  # (1,128,256,256)
-        final_output = final_output + resize_as(shallow, final_output)
-        final_output = self.upsample1(rescale_to(final_output))
-        final_output = rescale_to(final_output + resize_as(shallow, final_output))
-        final_output = self.upsample2(final_output)
-        final_output = self.output(final_output)
+        shallow_batch = self.shallow(x)
+        glb_batch = rescale_to(x, scale_factor=0.5, interpolation='bilinear')
 
-        return final_output.sigmoid()
+        final_input = None
+        for i in range(real_batch):
+            start = i * 4
+            end = (i + 1) * 4
+            loc_batch = image2patches(x[i, :, :, :].unsqueeze(dim=0))
+            input_ = torch.cat((loc_batch, glb_batch[i, :, :, :].unsqueeze(dim=0)), dim=0)
 
-    @torch.no_grad()
-    def inference(self,image):
-        image, h, w,original_image =  rgb_loader_refiner(image)
+            if final_input == None:
+                final_input = input_
+            else:
+                final_input = torch.cat((final_input, input_), dim=0)
 
-        img_tensor = img_transform(image).unsqueeze(0).to(next(self.parameters()).device)
+        features = self.backbone(final_input)
+        outputs = []
 
-        res = self.forward(img_tensor)
+        for i in range(real_batch):
+            start = i * 5
+            end = (i + 1) * 5
 
-        pred_array = postprocess_image(res, im_size=[w, h])
+            f4 = features[4][start:end, :, :, :]  # shape: [5, C, H, W]
+            f3 = features[3][start:end, :, :, :]
+            f2 = features[2][start:end, :, :, :]
+            f1 = features[1][start:end, :, :, :]
+            f0 = features[0][start:end, :, :, :]
+            e5 = self.output5(f4)
+            e4 = self.output4(f3)
+            e3 = self.output3(f2)
+            e2 = self.output2(f1)
+            e1 = self.output1(f0)
+            loc_e5, glb_e5 = e5.split([4, 1], dim=0)
+            e5 = self.multifieldcrossatt(loc_e5, glb_e5)  # (4,128,16,16)
 
-        mask_image = Image.fromarray(pred_array, mode='L')
+            e4, tokenattmap4 = self.dec_blk4(e4 + resize_as(e5, e4))
+            e4 = self.conv4(e4)
+            e3, tokenattmap3 = self.dec_blk3(e3 + resize_as(e4, e3))
+            e3 = self.conv3(e3)
+            e2, tokenattmap2 = self.dec_blk2(e2 + resize_as(e3, e2))
+            e2 = self.conv2(e2)
+            e1, tokenattmap1 = self.dec_blk1(e1 + resize_as(e2, e1))
+            e1 = self.conv1(e1)
 
-        blurred_mask = mask_image.filter(ImageFilter.GaussianBlur(radius=1))
+            loc_e1, glb_e1 = e1.split([4, 1], dim=0)
 
-        original_image_rgba = original_image.convert("RGBA")
+            output1_cat = patches2image(loc_e1)  # (1,128,256,256)
 
-        foreground = original_image_rgba.copy()
+            # add glb feat in
+            output1_cat = output1_cat + resize_as(glb_e1, output1_cat)
+            # merge
+            final_output = self.insmask_head(output1_cat)  # (1,128,256,256)
+            # shallow feature merge
+            shallow = shallow_batch[i, :, :, :].unsqueeze(dim=0)
+            final_output = final_output + resize_as(shallow, final_output)
+            final_output = self.upsample1(rescale_to(final_output))
+            final_output = rescale_to(final_output + resize_as(shallow, final_output))
+            final_output = self.upsample2(final_output)
+            final_output = self.output(final_output)
+            mask = final_output.sigmoid()
+            outputs.append(mask)
 
-        foreground.putalpha(blurred_mask)
+        return torch.cat(outputs, dim=0)
 
-        return blurred_mask, foreground
-
-    def loadcheckpoints(self,model_path):
+    def loadcheckpoints(self, model_path):
         model_dict = torch.load(model_path, map_location="cpu", weights_only=True)
         self.load_state_dict(model_dict['model_state_dict'], strict=True)
         del model_path
 
+    def inference(self, image, refine_foreground=False):
+
+        set_random_seed(9)
+        # image = ImageOps.exif_transpose(image)
+        if isinstance(image, Image.Image):
+            image, h, w, original_image = rgb_loader_refiner(image)
+            if torch.cuda.is_available():
+
+                img_tensor = img_transform(image).unsqueeze(0).to(next(self.parameters()).device)
+            else:
+                img_tensor = img_transform32(image).unsqueeze(0).to(next(self.parameters()).device)
+
+            with torch.no_grad():
+                res = self.forward(img_tensor)
+
+            # Show Results
+            if refine_foreground == True:
+
+                pred_pil = transforms.ToPILImage()(res.squeeze())
+                image_masked = refine_foreground_process(original_image, pred_pil)
+                mask = pred_pil.resize(original_image.size)
+                image_masked.putalpha(mask)
+                return mask, image_masked
+
+            else:
+                alpha = postprocess_image(res, im_size=[w, h])
+                pred_pil = transforms.ToPILImage()(alpha)
+                mask = pred_pil.resize(original_image.size)
+                original_image.putalpha(mask)
+                # mask = Image.fromarray(alpha)
+
+                return mask, original_image
+
+    def segment_video(self, video_path, output_path="./", fps=0, refine_foreground=False, batch=1,
+                      print_frames_processed=True, webm=False, rgb_value=(0, 255, 0)):
+
+        """
+        Segments the given video to extract the foreground (with alpha) from each frame
+        and saves the result as either a WebM video (with alpha channel) or MP4 (with a
+        color background).
+        Args:
+            video_path (str):
+                Path to the input video file.
+            output_path (str, optional):
+                Directory (or full path) where the output video and/or files will be saved.
+                Defaults to "./".
+            fps (int, optional):
+                The frames per second (FPS) to use for the output video. If 0 (default), the
+                original FPS of the input video is used. Otherwise, overrides it.
+            refine_foreground (bool, optional):
+                Whether to run an additional “refine foreground” process on each frame.
+                Defaults to False.
+            batch (int, optional):
+                Number of frames to process at once (inference batch size). Large batch sizes
+                may require more GPU memory. Defaults to 1.
+            print_frames_processed (bool, optional):
+                If True (default), prints progress (how many frames have been processed) to
+                the console.
+            webm (bool, optional):
+                If True (default), exports a WebM video with alpha channel (VP9 / yuva420p).
+                If False, exports an MP4 video composited over a solid color background.
+            rgb_value (tuple, optional):
+                The RGB background color (e.g., green screen) used to composite frames when
+                saving to MP4. Defaults to (0, 255, 0).
+        Returns:
+            None. Writes the output video(s) to disk in the specified format.
+        """
+
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise IOError(f"Cannot open video: {video_path}")
+
+        original_fps = cap.get(cv2.CAP_PROP_FPS)
+        original_fps = 30 if original_fps == 0 else original_fps
+        fps = original_fps if fps == 0 else fps
+
+        ret, first_frame = cap.read()
+        if not ret:
+            raise ValueError("No frames found in the video.")
+        height, width = first_frame.shape[:2]
+        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+        foregrounds = []
+        frame_idx = 0
+        processed_count = 0
+        batch_frames = []
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                if batch_frames:
+                    batch_results = self.inference(batch_frames, refine_foreground)
+                    if isinstance(batch_results, Image.Image):
+                        foregrounds.append(batch_results)
+                    else:
+                        foregrounds.extend(batch_results)
+                    if print_frames_processed:
+                        print(f"Processed frames {frame_idx - len(batch_frames) + 1} to {frame_idx} of {total_frames}")
+                break
+
+            # Process every frame instead of using intervals
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pil_frame = Image.fromarray(frame_rgb)
+            batch_frames.append(pil_frame)
+
+            if len(batch_frames) == batch:
+                batch_results = self.inference(batch_frames, refine_foreground)
+                if isinstance(batch_results, Image.Image):
+                    foregrounds.append(batch_results)
+                else:
+                    foregrounds.extend(batch_results)
+                if print_frames_processed:
+                    print(f"Processed frames {frame_idx - batch + 1} to {frame_idx} of {total_frames}")
+                batch_frames = []
+                processed_count += batch
+
+            frame_idx += 1
+
+        if webm:
+            alpha_webm_path = os.path.join(output_path, "foreground.webm")
+            pil_images_to_webm_alpha(foregrounds, alpha_webm_path, fps=original_fps)
+
+        else:
+            cap.release()
+            fg_output = os.path.join(output_path, 'foreground.mp4')
+
+            pil_images_to_mp4(foregrounds, fg_output, fps=original_fps, rgb_value=rgb_value)
+            cv2.destroyAllWindows()
+
+            try:
+                fg_audio_output = os.path.join(output_path, 'foreground_output_with_audio.mp4')
+                add_audio_to_video(fg_output, video_path, fg_audio_output)
+            except Exception as e:
+                print("No audio found in the original video")
+                print(e)
 
 
+def rgb_loader_refiner(original_image):
+    h, w = original_image.size
 
-def rgb_loader_refiner( original_image):
-        h, w = original_image.size
-        # # Apply EXIF orientation
-        image = ImageOps.exif_transpose(original_image)
-        # Convert to RGB if necessary
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+    image = original_image
+    # Convert to RGB if necessary
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
 
-        # Resize the image
-        image = image.resize((1024, 1024), resample=Image.LANCZOS)
+    # Resize the image
+    image = image.resize((1024, 1024), resample=Image.LANCZOS)
 
-        return image.convert('RGB'), h, w,original_image
+    return image.convert('RGB'), h, w, original_image
+
 
 # Define the image transformation
 img_transform = transforms.Compose([
     transforms.ToTensor(),
+    transforms.ConvertImageDtype(torch.float16),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+
+img_transform32 = transforms.Compose([
+    transforms.ToTensor(),
     transforms.ConvertImageDtype(torch.float32),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
+
+
+def pil_images_to_mp4(images, output_path, fps=24, rgb_value=(0, 255, 0)):
+    """
+    Converts an array of PIL images to an MP4 video.
+
+    Args:
+        images: List of PIL images
+        output_path: Path to save the MP4 file
+        fps: Frames per second (default: 24)
+        rgb_value: Background RGB color tuple (default: green (0, 255, 0))
+    """
+    if not images:
+        raise ValueError("No images provided to convert to MP4.")
+
+    width, height = images[0].size
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video_writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    for image in images:
+        # If image has alpha channel, composite onto the specified background color
+        if image.mode == 'RGBA':
+            # Create background image with specified RGB color
+            background = Image.new('RGB', image.size, rgb_value)
+            background = background.convert('RGBA')
+            # Composite the image onto the background
+            image = Image.alpha_composite(background, image)
+            image = image.convert('RGB')
+        else:
+            # Ensure RGB format for non-alpha images
+            image = image.convert('RGB')
+
+        # Convert to OpenCV format and write
+        open_cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        video_writer.write(open_cv_image)
+
+    video_writer.release()
+
+
+def pil_images_to_webm_alpha(images, output_path, fps=30):
+    """
+    Converts a list of PIL RGBA images to a VP9 .webm video with alpha channel.
+    NOTE: Not all players will display alpha in WebM.
+          Browsers like Chrome/Firefox typically do support VP9 alpha.
+    """
+    if not images:
+        raise ValueError("No images provided for WebM with alpha.")
+
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Save frames as PNG (with alpha)
+        for idx, img in enumerate(images):
+            if img.mode != "RGBA":
+                img = img.convert("RGBA")
+            out_path = os.path.join(tmpdir, f"{idx:06d}.png")
+            img.save(out_path, "PNG")
+
+        # Construct ffmpeg command
+        # -c:v libvpx-vp9 => VP9 encoder
+        # -pix_fmt yuva420p => alpha-enabled pixel format
+        # -auto-alt-ref 0 => helps preserve alpha frames (libvpx quirk)
+        ffmpeg_cmd = [
+            "ffmpeg", "-y",
+            "-framerate", str(fps),
+            "-i", os.path.join(tmpdir, "%06d.png"),
+            "-c:v", "libvpx-vp9",
+            "-pix_fmt", "yuva420p",
+            "-auto-alt-ref", "0",
+            output_path
+        ]
+
+        subprocess.run(ffmpeg_cmd, check=True)
+
+    print(f"WebM with alpha saved to {output_path}")
+
+
+def add_audio_to_video(video_without_audio_path, original_video_path, output_path):
+    """
+    Check if the original video has an audio stream. If yes, add it. If not, skip.
+    """
+    # 1) Probe original video for audio streams
+    probe_command = [
+        'ffprobe', '-v', 'error',
+        '-select_streams', 'a:0',
+        '-show_entries', 'stream=index',
+        '-of', 'csv=p=0',
+        original_video_path
+    ]
+    result = subprocess.run(probe_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+    # result.stdout is empty if no audio stream found
+    if not result.stdout.strip():
+        print("No audio track found in original video, skipping audio addition.")
+        return
+
+    print("Audio track detected; proceeding to mux audio.")
+    # 2) If audio found, run ffmpeg to add it
+    command = [
+        'ffmpeg', '-y',
+        '-i', video_without_audio_path,
+        '-i', original_video_path,
+        '-c', 'copy',
+        '-map', '0:v:0',
+        '-map', '1:a:0',  # we know there's an audio track now
+        output_path
+    ]
+    subprocess.run(command, check=True)
+    print(f"Audio added successfully => {output_path}")
+
+
+### Thanks to the source: https://huggingface.co/ZhengPeng7/BiRefNet/blob/main/handler.py
+def refine_foreground_process(image, mask, r=90):
+    if mask.size != image.size:
+        mask = mask.resize(image.size)
+    image = np.array(image) / 255.0
+    mask = np.array(mask) / 255.0
+    estimated_foreground = FB_blur_fusion_foreground_estimator_2(image, mask, r=r)
+    image_masked = Image.fromarray((estimated_foreground * 255.0).astype(np.uint8))
+    return image_masked
+
+
+def FB_blur_fusion_foreground_estimator_2(image, alpha, r=90):
+    # Thanks to the source: https://github.com/Photoroom/fast-foreground-estimation
+    alpha = alpha[:, :, None]
+    F, blur_B = FB_blur_fusion_foreground_estimator(image, image, image, alpha, r)
+    return FB_blur_fusion_foreground_estimator(image, F, blur_B, alpha, r=6)[0]
+
+
+def FB_blur_fusion_foreground_estimator(image, F, B, alpha, r=90):
+    if isinstance(image, Image.Image):
+        image = np.array(image) / 255.0
+    blurred_alpha = cv2.blur(alpha, (r, r))[:, :, None]
+
+    blurred_FA = cv2.blur(F * alpha, (r, r))
+    blurred_F = blurred_FA / (blurred_alpha + 1e-5)
+
+    blurred_B1A = cv2.blur(B * (1 - alpha), (r, r))
+    blurred_B = blurred_B1A / ((1 - blurred_alpha) + 1e-5)
+    F = blurred_F + alpha * \
+        (image - alpha * blurred_F - (1 - alpha) * blurred_B)
+    F = np.clip(F, 0, 1)
+    return F, blurred_B
+
 
 def postprocess_image(result: torch.Tensor, im_size: list) -> np.ndarray:
     result = torch.squeeze(F.interpolate(result, size=im_size, mode='bilinear'), 0)
@@ -945,3 +1289,22 @@ def postprocess_image(result: torch.Tensor, im_size: list) -> np.ndarray:
     im_array = (result * 255).permute(1, 2, 0).cpu().data.numpy().astype(np.uint8)
     im_array = np.squeeze(im_array)
     return im_array
+
+
+def rgb_loader_refiner(original_image):
+    h, w = original_image.size
+    # # Apply EXIF orientation
+
+    image = ImageOps.exif_transpose(original_image)
+
+    if original_image.mode != 'RGB':
+        original_image = original_image.convert('RGB')
+
+    image = original_image
+    # Convert to RGB if necessary
+
+    # Resize the image
+    image = image.resize((1024, 1024), resample=Image.LANCZOS)
+
+    return image, h, w, original_image
+
