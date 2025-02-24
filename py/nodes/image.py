@@ -828,7 +828,8 @@ class imageRemBg:
       },
       "optional":{
         "torchscript_jit": ("BOOLEAN", {"default": False}),
-        "add_background": (["none", "white", "black"], {"default": "none"})
+        "add_background": (["none", "white", "black"], {"default": "none"}),
+        "refine_foreground": ("BOOLEAN", {"default": False}),
       },
       "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
     }
@@ -841,7 +842,7 @@ class imageRemBg:
   CATEGORY = "EasyUse/Image"
 
 
-  def remove(self, rem_mode, images, image_output, save_prefix, torchscript_jit=False, add_background='none',prompt=None, extra_pnginfo=None):
+  def remove(self, rem_mode, images, image_output, save_prefix, torchscript_jit=False, add_background='none', refine_foreground=False, prompt=None, extra_pnginfo=None):
     new_images = list()
     masks = list()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -941,7 +942,7 @@ class imageRemBg:
         if input_image.mode != 'RGBA':
           input_image = input_image.convert("RGBA")
 
-        mask, new_im = model.inference(input_image)
+        mask, new_im = model.inference(input_image, refine_foreground)
 
         new_im_tensor = pil2tensor(new_im)
         mask_tensor = pil2tensor(mask)

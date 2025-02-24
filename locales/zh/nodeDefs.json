@@ -5532,6 +5532,12 @@
       },
       "image_output": {
         "name": "图像输出"
+      },
+      "add_background": {
+        "name": "添加背景"
+      },
+      "refine_foreground": {
+        "name": "优化前景"
       }
     },
     "outputs": {
