@@ -34,11 +34,11 @@ def read_wildcard_dict(wildcard_path):
                 key = os.path.splitext(rel_path)[0].replace('\\', '/').lower()
 
                 try:
-                    with open(file_path, 'r', encoding="ISO-8859-1") as f:
+                    with open(file_path, 'r', encoding="UTF-8", errors="ignore") as f:
                         lines = f.read().splitlines()
                         easy_wildcard_dict[key] = lines
                 except UnicodeDecodeError:
-                    with open(file_path, 'r', encoding="UTF-8", errors="ignore") as f:
+                    with open(file_path, 'r', encoding="ISO-8859-1") as f:
                         lines = f.read().splitlines()
                         easy_wildcard_dict[key] = lines
             elif file.endswith('.yaml'):
