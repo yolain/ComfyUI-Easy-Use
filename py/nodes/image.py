@@ -1746,7 +1746,7 @@ class imageToBase64:
       pil_image = tensor2pil(image)
 
       buffered = BytesIO()
-      pil_image.save(buffered, format="JPEG")
+      pil_image.save(buffered, format="PNG")
       image_bytes = buffered.getvalue()
 
       base64_str = base64.b64encode(image_bytes).decode("utf-8")

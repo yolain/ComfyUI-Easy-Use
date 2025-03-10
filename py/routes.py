@@ -12,6 +12,14 @@ from .libs.utils import getMetadata, cleanGPUUsedForce, get_local_filepath
 from .libs.cache import remove_cache
 from .libs.translate import has_chinese, zh_to_en
 
+@PromptServer.instance.routes.get('/easyuse/version')
+def get_version(request):
+    try:
+        from .. import __version__
+        return web.json_response({"version": __version__})
+    except Exception as e:
+        print(e)
+        return web.Response(status=500)
 
 @PromptServer.instance.routes.post("/easyuse/cleangpu")
 def cleanGPU(request):
