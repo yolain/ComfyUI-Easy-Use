@@ -165,7 +165,7 @@ class stylesPromptSelector:
                 negative_prompt += ', ' + all_styles[val]['negative_prompt'] if negative_prompt else all_styles[val]['negative_prompt']
 
         if has_prompt == False and positive:
-            positive_prompt = positive + ', '
+            positive_prompt = positive + positive_prompt + ', '
 
         return (positive_prompt, negative_prompt)
 
