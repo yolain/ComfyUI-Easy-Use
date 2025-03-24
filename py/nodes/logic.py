@@ -9,6 +9,7 @@ from ..libs.cache import cache, update_cache, remove_cache
 from ..libs.log import log_node_info, log_node_warn
 import numpy as np
 import time
+import sys
 import os
 import re
 import csv
@@ -742,10 +743,10 @@ class whileLoopEnd:
                 values.append(kwargs.get("initial_value%d" % i, None))
             return tuple(values)
 
-        # Clean RAM When Memory Usage up to 80%
+        # Clean RAM When Memory Usage up to 80% (only window)
         memory = get_memory_usage()
-        if memory['percent'] >= 80:
-            cleanRAM()
+        if sys.platform == 'win32' and memory['percent'] >= 80:
+            result = cleanRAM()
 
         # We want to loop
         this_node = dynprompt.get_node(unique_id)

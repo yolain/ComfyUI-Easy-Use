@@ -306,6 +306,7 @@ def cleanRAM(clean_file_cache=True, clean_processes=True, clean_dlls=True):
     from .log import log_node_info, log_node_error
 
     memory = get_memory_usage()
+    succeed = False
     PromptServer.instance.send_sync("easyuse-toast", {'content': f'Cleaning RAM, please wait...', 'duration': 3000, 'type':'loading'})
     log_node_info('Clean RAM Start',f'{memory["percent"]:.2f}%, used: {memory["used"]:.2f}MB, available: {memory["available"]:.2f}MB')
     # 清理文件系统缓存
@@ -313,6 +314,7 @@ def cleanRAM(clean_file_cache=True, clean_processes=True, clean_dlls=True):
         if sys.platform == 'win32':
             try:
                 ctypes.windll.kernel32.SetSystemFileCacheSize(-1, -1, 0)
+                succeed = True
             except Exception as e:
                 print(f"Failed to release shared library memory: {str(e)}")
         else:
@@ -339,6 +341,7 @@ def cleanRAM(clean_file_cache=True, clean_processes=True, clean_dlls=True):
             if sys.platform == 'win32':
                 # 保留Windows原有逻辑
                 ctypes.windll.kernel32.SetProcessWorkingSetSize(-1, -1, -1)
+                succeed = True
             else:
                 pass
                 # # Unix-like系统使用mlock控制
@@ -363,6 +366,7 @@ def cleanRAM(clean_file_cache=True, clean_processes=True, clean_dlls=True):
         if sys.platform == 'win32':
             try:
                 ctypes.windll.kernel32.SetProcessWorkingSetSize(-1, -1, -1)
+                succeed = True
             except Exception as e:
                 print(f"Failed to release shared library memory: {str(e)}")
         else:
@@ -378,7 +382,8 @@ def cleanRAM(clean_file_cache=True, clean_processes=True, clean_dlls=True):
                 #         libc.malloc_zone_pressure_relief(None, 0)
             except Exception as e:
                 log_node_error(f"Failed to release shared library memory", f"{str(e)}")
-    time.sleep(1)
+    time.sleep(2)
     memory = get_memory_usage()
     PromptServer.instance.send_sync("easyuse-toast", {'content': f'Cleaning RAM Finished', 'duration': 3000, 'type':'success'})
     log_node_info('Clean RAM Finished',f'{memory["percent"]:.2f}%, used: {memory["used"]:.2f}MB, available: {memory["available"]:.2f}MB')
+    return succeed
