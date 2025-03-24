@@ -4,7 +4,7 @@ from decimal import Decimal
 from nodes import PreviewImage, SaveImage, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 from PIL.PngImagePlugin import PngInfo
-from ..libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, compare_revision
+from ..libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanVARM, cleanRAM, get_memory_usage, compare_revision
 from ..libs.cache import cache, update_cache, remove_cache
 from ..libs.log import log_node_info, log_node_warn
 import numpy as np
@@ -742,6 +742,11 @@ class whileLoopEnd:
                 values.append(kwargs.get("initial_value%d" % i, None))
             return tuple(values)
 
+        # Clean RAM When Memory Usage up to 80%
+        memory = get_memory_usage()
+        if memory['percent'] >= 80:
+            cleanRAM()
+
         # We want to loop
         this_node = dynprompt.get_node(unique_id)
         upstream = {}
@@ -1444,8 +1449,8 @@ class outputToList:
         return (tuple,)
 
 
-# cleanGpuUsed
-class cleanGPUUsed:
+# cleanVARM
+class cleanVRAMUsed:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {"anything": (any_type, {})}, "optional": {},
@@ -1459,10 +1464,26 @@ class cleanGPUUsed:
     CATEGORY = "EasyUse/Logic"
 
     def empty_cache(self, anything, unique_id=None, extra_pnginfo=None):
-        cleanGPUUsedForce()
+        cleanVARM()
         remove_cache('*')
         return (anything,)
 
+# class cleanRAMUsed:
+#     @classmethod
+#     def INPUT_TYPES(s):
+#         return {"required": {"anything": (any_type, {})}, "optional": {},
+#                 "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO",
+#                            }}
+#
+#     RETURN_TYPES = (any_type,)
+#     RETURN_NAMES = ("output",)
+#     OUTPUT_NODE = True
+#     FUNCTION = "empty_cache"
+#     CATEGORY = "EasyUse/Logic"
+#
+#     def empty_cache(self, anything, unique_id=None, extra_pnginfo=None):
+#         cleanRAM()
+#         return (anything,)
 
 class clearCacheKey:
     @classmethod
@@ -1738,7 +1759,9 @@ NODE_CLASS_MAPPINGS = {
     "easy showTensorShape": showTensorShape,
     "easy clearCacheKey": clearCacheKey,
     "easy clearCacheAll": clearCacheAll,
-    "easy cleanGpuUsed": cleanGPUUsed,
+    "easy cleanGPUUsed": cleanVRAMUsed,
+    # "easy cleanVRAMUsed": cleanVRAMUsed,
+    # "easy cleanRAMUsed": cleanRAMUsed,
     "easy saveText": saveText,
     "easy sleep": sleep
 }
@@ -1782,7 +1805,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy showTensorShape": "Show Tensor Shape",
     "easy clearCacheKey": "Clear Cache Key",
     "easy clearCacheAll": "Clear Cache All",
-    "easy cleanGpuUsed": "Clean VRAM Used",
+    "easy cleanGPUUsed": "Clean VRAM Used",
+    # "easy cleanVRAMUsed": "Clean VRAM Used",
+    # "easy cleanRAMUsed": "Clean RAM Used",
     "easy saveText": "Save Text",
     "easy sleep": "Sleep",
 }

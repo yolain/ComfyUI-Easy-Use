@@ -1,3 +1,6 @@
+import time
+
+
 class AlwaysEqualProxy(str):
     def __eq__(self, _):
         return True
@@ -276,7 +279,106 @@ def getMetadata(filepath):
 
         return header
 
-def cleanGPUUsedForce():
-    gc.collect()
-    mm.unload_all_models()
-    mm.soft_empty_cache()
+def cleanVARM():
+    try:
+        gc.collect()
+        mm.unload_all_models()
+        mm.soft_empty_cache()
+    except Exception as e:
+        print(f"Clean VRAM Error: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+
+def get_memory_usage():
+    import psutil
+    memory = psutil.virtual_memory()
+    return {
+        "percent": memory.percent,
+        "total": memory.total / ( 1024 ** 2),
+        "available": memory.available / ( 1024 ** 2),
+        "used": memory.used / ( 1024 ** 2),
+    }
+
+def cleanRAM(clean_file_cache=True, clean_processes=True, clean_dlls=True):
+    import ctypes
+    import os
+    import psutil
+    from .log import log_node_info, log_node_error
+
+    memory = get_memory_usage()
+    PromptServer.instance.send_sync("easyuse-toast", {'content': f'Cleaning RAM, please wait...', 'duration': 3000, 'type':'loading'})
+    log_node_info('Clean RAM Start',f'{memory["percent"]:.2f}%, used: {memory["used"]:.2f}MB, available: {memory["available"]:.2f}MB')
+    # 清理文件系统缓存
+    if clean_file_cache:
+        if sys.platform == 'win32':
+            try:
+                ctypes.windll.kernel32.SetSystemFileCacheSize(-1, -1, 0)
+            except Exception as e:
+                print(f"Failed to release shared library memory: {str(e)}")
+        else:
+            pass
+            # try:
+            #     if sys.platform == 'linux':
+            #         # 需要root权限
+            #         with open('/proc/sys/vm/drop_caches', 'w') as f:
+            #             f.write('1\n')  # 1表示清理pagecache
+            #     elif sys.platform == 'darwin':
+            #         import subprocess
+            #         # macOS需要执行系统命令
+            #         # subprocess.run(['sync'], check=True)
+            #         # subprocess.run(['purge'], check=True)
+            # except Exception as e:
+            #     log_node_error(f"Clean RAM Error", f"{str(e)}")
+            #     log_node_error("sudo permission may be required to run")
+
+    # 清理进程工作集
+    if clean_processes:
+        cleaned_processes = 0
+        try:
+            # 通用方法：清理当前进程内存
+            if sys.platform == 'win32':
+                # 保留Windows原有逻辑
+                ctypes.windll.kernel32.SetProcessWorkingSetSize(-1, -1, -1)
+            else:
+                pass
+                # # Unix-like系统使用mlock控制
+                # libc = ctypes.CDLL(None)
+                # libc.malloc_trim(0)
+                #
+                # # 尝试清理所有进程的内存（需要root）
+                # for process in psutil.process_iter(['pid', 'name']):
+                #     try:
+                #         # 仅尝试清理自己的进程
+                #         if process.pid == os.getpid():
+                #             process.memory_info()
+                #             libc.malloc_trim(0)
+                #             cleaned_processes += 1
+                #     except (psutil.AccessDenied, psutil.NoSuchProcess):
+                #         continue
+        except Exception as e:
+            log_node_error(f"Clean RAM Error",f"{str(e)}")
+
+    # 清理共享库内存
+    if clean_dlls:
+        if sys.platform == 'win32':
+            try:
+                ctypes.windll.kernel32.SetProcessWorkingSetSize(-1, -1, -1)
+            except Exception as e:
+                print(f"Failed to release shared library memory: {str(e)}")
+        else:
+            try:
+                pass
+                # libc = ctypes.CDLL(None)
+                # # Linux的glibc方法
+                # if hasattr(libc, 'malloc_trim'):
+                #     libc.malloc_trim(0)
+                # # macOS的libc方法
+                # elif sys.platform == 'darwin':
+                #     if hasattr(libc, 'malloc_zone_pressure_relief'):
+                #         libc.malloc_zone_pressure_relief(None, 0)
+            except Exception as e:
+                log_node_error(f"Failed to release shared library memory", f"{str(e)}")
+    time.sleep(1)
+    memory = get_memory_usage()
+    PromptServer.instance.send_sync("easyuse-toast", {'content': f'Cleaning RAM Finished', 'duration': 3000, 'type':'success'})
+    log_node_info('Clean RAM Finished',f'{memory["percent"]:.2f}%, used: {memory["used"]:.2f}MB, available: {memory["available"]:.2f}MB')

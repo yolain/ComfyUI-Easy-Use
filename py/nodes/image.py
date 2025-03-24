@@ -1957,7 +1957,8 @@ class makeImageForICRepaint:
       mask_2 = torch.full((1, image_1.shape[1], image_1.shape[2]), 1, dtype=torch.float32, device="cpu")
 
     elif image_2 is not None and mask_2 is None:
-      raise ValueError("mask_2 is required when image_2 is provided")
+      mask_2 = torch.full((1, image_2.shape[1], image_2.shape[2]), 0, dtype=torch.float32, device="cpu")
+
     if pixels > 0:
       _, img2_h, img2_w, _ = image_2.shape
       h = pixels if direction == 'left-right' else int(img2_h * (pixels / img2_w))

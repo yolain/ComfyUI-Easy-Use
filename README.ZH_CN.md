@@ -54,6 +54,8 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.2.8**
 
+- 修复前端提示框丢失
+- 增加在循环中当RAM超出80%时自动清理 [使用方案](https://github.com/LAOGOU-666/Comfyui-Memory_Cleanup)
 - 修复了一些BUG (😹)
 - 增加了多语言目录
 

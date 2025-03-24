@@ -49,6 +49,8 @@ Double-click install.bat to install the required dependencies
 
 **v1.2.8**
 
+- Fix toast missing
+- Added automatic cleaning ram used when RAM exceeds 80% in the loop [Code based](https://github.com/LAOGOU-666/Comfyui-Memory_Cleanup)
 - Added the multi-language catalog 
 - Fix CLIP vision model download URLs for IPAdapter and DynamiCrafter
 - Improve error handling for model downloads with clearer error messages and better handling of download failures

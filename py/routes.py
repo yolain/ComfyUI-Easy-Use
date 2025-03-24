@@ -8,7 +8,7 @@ from aiohttp import web
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .libs.model import easyModelManager
-from .libs.utils import getMetadata, cleanGPUUsedForce, get_local_filepath
+from .libs.utils import getMetadata, cleanVARM, get_local_filepath
 from .libs.cache import remove_cache
 from .libs.translate import has_chinese, zh_to_en
 
@@ -24,7 +24,7 @@ def get_version(request):
 @PromptServer.instance.routes.post("/easyuse/cleangpu")
 def cleanGPU(request):
     try:
-        cleanGPUUsedForce()
+        cleanVARM()
         remove_cache('*')
         return web.Response(status=200)
     except Exception as e:
