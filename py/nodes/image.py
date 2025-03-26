@@ -485,8 +485,7 @@ class imageSaveSimple:
 
   def save(self, images, filename_prefix="ComfyUI", only_preview=False, prompt=None, extra_pnginfo=None):
     if only_preview:
-      PreviewImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
-      return ()
+      return PreviewImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
     else:
       return SaveImage().save_images(images, filename_prefix, prompt, extra_pnginfo)
 
