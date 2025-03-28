@@ -12,22 +12,22 @@ const ipadapterNodes = ["easy ipadapterApply", "easy ipadapterApplyADV" ,"easy i
 const pipeNodes = ['easy pipeIn','easy pipeOut', 'easy pipeEdit']
 const xyNodes = ['easy XYPlot', 'easy XYPlotAdvanced']
 const extraNodes = ['easy setNode']
-const modelNormalNodes = [...["Reroute"],...['RescaleCFG','LoraLoaderModelOnly','LoraLoader','FreeU','FreeU_v2'],...ipadapterNodes,...extraNodes]
+const modelNormalNodes = [...['RescaleCFG','LoraLoaderModelOnly','LoraLoader','FreeU','FreeU_v2'],...ipadapterNodes,...extraNodes]
 const suggestions = {
     // prompt
     "easy seed":{
         "from":{
-            "INT": [...["Reroute"],...preSamplingNodes,...['easy fullkSampler']]
+            "INT": [...preSamplingNodes,...['easy fullkSampler']]
         }
     },
     "easy positive":{
        "from":{
-           "STRING": [...["Reroute"],...propmts]
+           "STRING": [...propmts]
        }
     },
     "easy negative":{
        "from":{
-           "STRING": [...["Reroute"],...propmts]
+           "STRING": [...propmts]
        }
     },
     "easy wildcards":{
@@ -53,214 +53,225 @@ const suggestions = {
     // sd相关
     "easy fullLoader": {
         "from":{
-            "PIPE_LINE": [...["Reroute"],...preSamplingNodes,...['easy fullkSampler'],...pipeNodes,...extraNodes],
+            "PIPE_LINE": [...preSamplingNodes,...['easy fullkSampler'],...pipeNodes,...extraNodes],
             "MODEL":modelNormalNodes
         },
         "to":{
-            "STRING": [...["Reroute"],...propmts]
+            "STRING": [...propmts]
         }
     },
     "easy a1111Loader": {
         "from": {
-            "PIPE_LINE": [...["Reroute"], ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
+            "PIPE_LINE": [ ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
             "MODEL": modelNormalNodes
         },
         "to":{
-            "STRING": [...["Reroute"],...propmts]
+            "STRING": [...propmts]
         }
     },
     "easy comfyLoader": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
+             "PIPE_LINE": [ ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
              "MODEL": modelNormalNodes
          },
         "to":{
-            "STRING": [...["Reroute"],...propmts]
+            "STRING": [...propmts]
         }
     },
     "easy svdLoader":{
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingDynamicCFG"], ...pipeNodes, ...extraNodes],
+             "PIPE_LINE": [ ...["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingDynamicCFG"], ...pipeNodes, ...extraNodes],
              "MODEL": modelNormalNodes
          },
          "to":{
-            "STRING": [...["Reroute"],...propmts]
+            "STRING": [...propmts]
          }
     },
     "easy zero123Loader":{
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingDynamicCFG"], ...pipeNodes, ...extraNodes],
+             "PIPE_LINE": [ ...["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingDynamicCFG"], ...pipeNodes, ...extraNodes],
              "MODEL": modelNormalNodes
          },
          "to":{
-            "STRING": [...["Reroute"],...propmts]
+            "STRING": [...propmts]
          }
     },
     "easy sv3dLoader":{
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingDynamicCFG"], ...pipeNodes, ...extraNodes],
+             "PIPE_LINE": [ ...["easy preSampling", "easy preSamplingAdvanced", "easy preSamplingDynamicCFG"], ...pipeNodes, ...extraNodes],
              "MODEL": modelNormalNodes
          },
          "to":{
-            "STRING": [...["Reroute"],...propmts]
+            "STRING": [...propmts]
          }
     },
     "easy preSampling": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
+             "PIPE_LINE": [ ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
          },
     },
     "easy preSamplingAdvanced": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
+             "PIPE_LINE": [ ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
          }
     },
     "easy preSamplingDynamicCFG": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
+             "PIPE_LINE": [ ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
          }
     },
      "easy preSamplingCustom": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
+             "PIPE_LINE": [ ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
          }
     },
     "easy preSamplingLayerDiffusion": {
          "from": {
-             "PIPE_LINE": [...["Reroute", "easy kSamplerLayerDiffusion"], ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
+             "PIPE_LINE": [...["easy kSamplerLayerDiffusion"], ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
          }
     },
     "easy preSamplingNoiseIn": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
+             "PIPE_LINE": [ ...kSampler, ...pipeNodes, ...controlNetNodes, ...xyNodes, ...extraNodes]
          }
     },
     // ksampler
     "easy fullkSampler": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...pipeNodes.reverse(), ...['easy preDetailerFix', 'easy preMaskDetailerFix'], ...preSamplingNodes, ...extraNodes]
+             "PIPE_LINE": [ ...pipeNodes.reverse(), ...['easy preDetailerFix', 'easy preMaskDetailerFix'], ...preSamplingNodes, ...extraNodes]
          }
     },
     "easy kSampler": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...pipeNodes.reverse(), ...['easy preDetailerFix', 'easy preMaskDetailerFix', 'easy hiresFix'], ...preSamplingNodes, ...extraNodes],
+             "PIPE_LINE": [ ...pipeNodes.reverse(), ...['easy preDetailerFix', 'easy preMaskDetailerFix', 'easy hiresFix'], ...preSamplingNodes, ...extraNodes],
          }
     },
     // cn
     "easy controlnetLoader": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes]
+             "PIPE_LINE": [ ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes]
          }
     },
     "easy controlnetLoaderADV":{
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes]
+             "PIPE_LINE": [ ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes]
          }
     },
     // instant
     "easy instantIDApply": {
         "from": {
-            "PIPE_LINE": [...["Reroute"], ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
+            "PIPE_LINE": [ ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
              "MODEL": modelNormalNodes
         },
         "to":{
-            "COMBO": [...["Reroute", "easy promptLine"]]
+            "COMBO": [...["easy promptLine"]]
         }
     },
     "easy instantIDApplyADV":{
         "from": {
-            "PIPE_LINE": [...["Reroute"], ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
+            "PIPE_LINE": [ ...preSamplingNodes, ...controlNetNodes, ...instantIDNodes, ...pipeNodes, ...extraNodes],
             "MODEL": modelNormalNodes
         },
         "to":{
-            "COMBO": [...["Reroute", "easy promptLine"]]
+            "COMBO": [...["easy promptLine"]]
         }
     },
     "easy ipadapterApply":{
         "to":{
-            "COMBO": [...["Reroute", "easy promptLine"]]
+            "COMBO": [...["easy promptLine"]]
         }
     },
     "easy ipadapterApplyADV":{
         "to":{
-          "STRING": [...["Reroute", "easy sliderControl"], ...propmts],
-          "COMBO": [...["Reroute", "easy promptLine"]]
+          "STRING": [...["easy sliderControl"], ...propmts],
+          "COMBO": [...["easy promptLine"]]
         }
     },
     "easy ipadapterStyleComposition":{
         "to":{
-            "COMBO": [...["Reroute", "easy promptLine"]]
+            "COMBO": [...["easy promptLine"]]
         }
     },
     // fix
     "easy preDetailerFix":{
         "from": {
-            "PIPE_LINE": [...["Reroute", "easy detailerFix"], ...pipeNodes, ...extraNodes]
+            "PIPE_LINE": [...["easy detailerFix"], ...pipeNodes, ...extraNodes]
         },
         "to":{
-            "PIPE_LINE": [...["Reroute", "easy ultralyticsDetectorPipe", "easy samLoaderPipe", "easy kSampler", "easy fullkSampler"]]
+            "PIPE_LINE": [...["easy ultralyticsDetectorPipe", "easy samLoaderPipe", "easy kSampler", "easy fullkSampler"]]
         }
     },
     "easy preMaskDetailerFix":{
         "from": {
-            "PIPE_LINE": [...["Reroute", "easy detailerFix"], ...pipeNodes, ...extraNodes]
+            "PIPE_LINE": [...["easy detailerFix"], ...pipeNodes, ...extraNodes]
         }
     },
     "easy samLoaderPipe": {
         "from":{
-            "PIPE_LINE": [...["Reroute", "easy preDetailerFix"], ...pipeNodes, ...extraNodes]
+            "PIPE_LINE": [...["easy preDetailerFix"], ...pipeNodes, ...extraNodes]
         }
     },
     "easy ultralyticsDetectorPipe": {
         "from":{
-            "PIPE_LINE": [...["Reroute", "easy preDetailerFix"], ...pipeNodes, ...extraNodes]
+            "PIPE_LINE": [...["easy preDetailerFix"], ...pipeNodes, ...extraNodes]
         }
     },
     // cascade相关
     "easy cascadeLoader":{
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...["easy fullCascadeKSampler", 'easy preSamplingCascade'], ...controlNetNodes, ...pipeNodes, ...extraNodes],
+             "PIPE_LINE": [ ...["easy fullCascadeKSampler", 'easy preSamplingCascade'], ...controlNetNodes, ...pipeNodes, ...extraNodes],
              "MODEL": modelNormalNodes.filter(cate => !ipadapterNodes.includes(cate))
          }
     },
     "easy fullCascadeKSampler":{
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...["easy preSampling", "easy preSamplingAdvanced"], ...pipeNodes, ...extraNodes]
+             "PIPE_LINE": [ ...["easy preSampling", "easy preSamplingAdvanced"], ...pipeNodes, ...extraNodes]
          }
     },
     "easy preSamplingCascade":{
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...["easy cascadeKSampler",], ...pipeNodes, ...extraNodes]
+             "PIPE_LINE": [ ...["easy cascadeKSampler",], ...pipeNodes, ...extraNodes]
          }
     },
     "easy cascadeKSampler": {
          "from": {
-             "PIPE_LINE": [...["Reroute"], ...["easy preSampling", "easy preSamplingAdvanced"], ...pipeNodes, ...extraNodes]
+             "PIPE_LINE": [ ...["easy preSampling", "easy preSamplingAdvanced"], ...pipeNodes, ...extraNodes]
          }
     },
 }
 
-
+class NullGraphError extends Error {
+    constructor(message="Attempted to access LGraph reference that was null or undefined.", cause) {
+        super(message, {cause})
+        this.name = "NullGraphError"
+    }
+}
 app.registerExtension({
     name: "comfy.easyuse.suggestions",
-    async setup(app) {
+    async setup() {
+        const createDefaultNodeForSlot = LGraphCanvas.prototype.createDefaultNodeForSlot;
         LGraphCanvas.prototype.createDefaultNodeForSlot = function(optPass) { // addNodeMenu for connection
-            var optPass = optPass || {};
-            var opts = Object.assign({   nodeFrom: null // input
-                                        ,slotFrom: null // input
-                                        ,nodeTo: null   // output
-                                        ,slotTo: null   // output
-                                        ,position: []	// pass the event coords
-                                        ,nodeType: null	// choose a nodetype to add, AUTO to set at first good
-                                        ,posAdd:[0,0]	// adjust x,y
-                                        ,posSizeFix:[0,0] // alpha, adjust the position x,y based on the new node size w,h
-                                    }
-                                    ,optPass
-                                );
-            var that = this;
+            const opts = Object.assign({   nodeFrom: null // input
+                    ,slotFrom: null // input
+                    ,nodeTo: null   // output
+                    ,slotTo: null   // output
+                    ,position: []	// pass the event coords
+                    ,nodeType: null	// choose a nodetype to add, AUTO to set at first good
+                    ,posAdd:[0,0]	// adjust x,y
+                    ,posSizeFix:[0,0] // alpha, adjust the position x,y based on the new node size w,h
+                }
+                , optPass || {}
+            );
+            const { afterRerouteId } = opts
+            const that = this;
 
-            var isFrom = opts.nodeFrom && opts.slotFrom!==null;
-            var isTo = !isFrom && opts.nodeTo && opts.slotTo!==null;
+            const isFrom = opts.nodeFrom && opts.slotFrom!==null;
+            const isTo = !isFrom && opts.nodeTo && opts.slotTo!==null;
+            const node = isFrom ? opts.nodeFrom : opts.nodeTo
+            // Not an Easy Use node, skip showConnectionMenu hijack
+            if(!node || !Object.keys(suggestions).includes(node.type)){
+                return createDefaultNodeForSlot.call(this, optPass)
+            }
 
             if (!isFrom && !isTo){
                 console.warn("No data passed to createDefaultNodeForSlot "+opts.nodeFrom+" "+opts.slotFrom+" "+opts.nodeTo+" "+opts.slotTo);
@@ -271,24 +282,24 @@ app.registerExtension({
                 return false;
             }
 
-            var nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
-            var slotX = isFrom ? opts.slotFrom : opts.slotTo;
-            var nodeType = nodeX.type
+            const nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
+            const nodeType = nodeX.type
+            let slotX = isFrom ? opts.slotFrom : opts.slotTo;
 
-            var iSlotConn = false;
+            let iSlotConn = false;
             switch (typeof slotX){
                 case "string":
                     iSlotConn = isFrom ? nodeX.findOutputSlot(slotX,false) : nodeX.findInputSlot(slotX,false);
                     slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
-                break;
+                    break;
                 case "object":
                     // ok slotX
                     iSlotConn = isFrom ? nodeX.findOutputSlot(slotX.name) : nodeX.findInputSlot(slotX.name);
-                break;
+                    break;
                 case "number":
                     iSlotConn = slotX;
                     slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
-                break;
+                    break;
                 case "undefined":
                 default:
                     // bad ?
@@ -324,8 +335,7 @@ app.registerExtension({
                     for(var typeX in slotTypesDefault[fromSlotType]){
                         if (opts.nodeType == slotTypesDefault[fromSlotType][typeX] || opts.nodeType == "AUTO"){
                             nodeNewType = slotTypesDefault[fromSlotType][typeX];
-                            // console.log("opts.nodeType == slotTypesDefault[fromSlotType][typeX] :: "+opts.nodeType);
-                            break; // --------
+                            break;
                         }
                     }
                 }else{
@@ -379,20 +389,13 @@ app.registerExtension({
                         // add the node
                         that.graph.add(newNode);
                         newNode.pos = [	opts.position[0]+opts.posAdd[0]+(opts.posSizeFix[0]?opts.posSizeFix[0]*newNode.size[0]:0)
-                                        ,opts.position[1]+opts.posAdd[1]+(opts.posSizeFix[1]?opts.posSizeFix[1]*newNode.size[1]:0)]; //that.last_click_position; //[e.canvasX+30, e.canvasX+5];*/
-
-                        //that.graph.afterChange();
+                            ,opts.position[1]+opts.posAdd[1]+(opts.posSizeFix[1]?opts.posSizeFix[1]*newNode.size[1]:0)]; //that.last_click_position; //[e.canvasX+30, e.canvasX+5];*/
 
                         // connect the two!
                         if (isFrom){
                             opts.nodeFrom.connectByType( iSlotConn, newNode, fromSlotType );
                         }else{
                             opts.nodeTo.connectByTypeOutput( iSlotConn, newNode, fromSlotType );
-                        }
-
-                        // if connecting in between
-                        if (isFrom && isTo){
-                            // TODO
                         }
 
                         return true;
@@ -405,43 +408,54 @@ app.registerExtension({
             return false;
         }
 
+        let showConnectionMenu = LGraphCanvas.prototype.showConnectionMenu
         LGraphCanvas.prototype.showConnectionMenu = function(optPass) { // addNodeMenu for connection
-            var optPass = optPass || {};
-            var opts = Object.assign({   nodeFrom: null  // input
-                                        ,slotFrom: null // input
-                                        ,nodeTo: null   // output
-                                        ,slotTo: null   // output
-                                        ,e: null
-                                    }
-                                    ,optPass
-                                );
-            var that = this;
+            const opts = Object.assign({
+                    nodeFrom: null,  // input
+                    slotFrom: null, // input
+                    nodeTo: null,   // output
+                    slotTo: null,   // output
+                    e: undefined,
+                    allow_searchbox: this.allow_searchbox,
+                    showSearchBox: this.showSearchBox,
+                }
+                ,optPass || {}
+            );
+            const that = this;
+            const { graph } = this
+            const { afterRerouteId } = opts
+            const isFrom = opts.nodeFrom && opts.slotFrom;
+            const isTo = !isFrom && opts.nodeTo && opts.slotTo;
+            const node = isFrom ? opts.nodeFrom : opts.nodeTo
 
-            var isFrom = opts.nodeFrom && opts.slotFrom;
-            var isTo = !isFrom && opts.nodeTo && opts.slotTo;
+            // Not an Easy Use node, skip showConnectionMenu hijack
+            if(!node || !Object.keys(suggestions).includes(node.type)){
+                return showConnectionMenu.call(this, optPass)
+            }
 
             if (!isFrom && !isTo){
                 console.warn("No data passed to showConnectionMenu");
                 return false;
             }
 
-            var nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
-            var slotX = isFrom ? opts.slotFrom : opts.slotTo;
+            const nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
+            if (!nodeX) throw new TypeError("nodeX was null when creating default node for slot.")
+            let slotX = isFrom ? opts.slotFrom : opts.slotTo;
 
-            var iSlotConn = false;
+            let iSlotConn = false;
             switch (typeof slotX){
                 case "string":
                     iSlotConn = isFrom ? nodeX.findOutputSlot(slotX,false) : nodeX.findInputSlot(slotX,false);
                     slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
-                break;
+                    break;
                 case "object":
                     // ok slotX
                     iSlotConn = isFrom ? nodeX.findOutputSlot(slotX.name) : nodeX.findInputSlot(slotX.name);
-                break;
+                    break;
                 case "number":
                     iSlotConn = slotX;
                     slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
-                break;
+                    break;
                 default:
                     // bad ?
                     //iSlotConn = 0;
@@ -449,9 +463,8 @@ app.registerExtension({
                     return false;
             }
 
-            var options = ["Add Node",null];
-
-            if (that.allow_searchbox){
+            const options = ["Add Node", "Add Reroute", null]
+            if (opts.allow_searchbox){
                 options.push("Search");
                 options.push(null);
             }
@@ -479,8 +492,12 @@ app.registerExtension({
             // build menu
             var menu = new LiteGraph.ContextMenu(options, {
                 event: opts.e,
-                title: (slotX && slotX.name!="" ? (slotX.name + (fromSlotType?" | ":"")) : "")+(slotX && fromSlotType ? fromSlotType : ""),
-                callback: inner_clicked
+                extra: slotX,
+                title:
+                    (slotX && slotX.name != ""
+                        ? slotX.name + (fromSlotType ? " | " : "")
+                        : "") + (slotX && fromSlotType ? fromSlotType : ""),
+                callback: inner_clicked,
             });
 
             // callback
@@ -488,32 +505,45 @@ app.registerExtension({
                 //console.log("Process showConnectionMenu selection");
                 switch (v) {
                     case "Add Node":
-                        LGraphCanvas.onMenuAdd(null, null, e, menu, function(node){
-                            if (isFrom){
-                                opts.nodeFrom.connectByType( iSlotConn, node, fromSlotType );
-                            }else{
-                                opts.nodeTo.connectByTypeOutput( iSlotConn, node, fromSlotType );
+                        LGraphCanvas.onMenuAdd(null, null, e, menu, function (node) {
+                            if (!node) return
+
+                            if (isFrom) {
+                                opts.nodeFrom?.connectByType(iSlotConn, node, fromSlotType, { afterRerouteId })
+                            } else {
+                                opts.nodeTo?.connectByTypeOutput(iSlotConn, node, fromSlotType, { afterRerouteId })
                             }
-                        });
+                        })
                         break;
+                    case "Add Reroute":
+                        const node = isFrom ? opts.nodeFrom : opts.nodeTo
+                        const slot = options.extra
+                        if (!graph) throw new NullGraphError()
+                        if (!node) throw new TypeError("Cannot add reroute: node was null")
+                        if (!slot) throw new TypeError("Cannot add reroute: slot was null")
+                        if (!opts.e) throw new TypeError("Cannot add reroute: CanvasPointerEvent was null")
+
+                        const reroute = node.connectFloatingReroute([opts.e.canvasX, opts.e.canvasY], slot, afterRerouteId)
+                        if (!reroute) throw new Error("Failed to create reroute")
+
+                        that.dirty_canvas = true
+                        that.dirty_bgcanvas = true
+                        break
                     case "Search":
                         if(isFrom){
-                            that.showSearchBox(e,{node_from: opts.nodeFrom, slot_from: slotX, type_filter_in: fromSlotType});
+                            opts.showSearchBox(e,{node_from: opts.nodeFrom, slot_from: slotX, type_filter_in: fromSlotType});
                         }else{
-                            that.showSearchBox(e,{node_to: opts.nodeTo, slot_from: slotX, type_filter_out: fromSlotType});
+                            opts.showSearchBox(e,{node_to: opts.nodeTo, slot_from: slotX, type_filter_out: fromSlotType});
                         }
                         break;
                     default:
-                        // check for defaults nodes for this slottype
-                        var nodeCreated = that.createDefaultNodeForSlot(Object.assign(opts,{ position: [opts.e.canvasX, opts.e.canvasY]
-                                                                                            ,nodeType: v
-                                                                                        }));
-                        if (nodeCreated){
-                            // new node created
-                            //console.log("node "+v+" created")
-                        }else{
-                            // failed or v is not in defaults
+                        const customProps = {
+                            position: [opts.e?.canvasX ?? 0, opts.e?.canvasY ?? 0],
+                            nodeType: v,
+                            afterRerouteId,
                         }
+                        // check for defaults nodes for this slottype
+                        that.createDefaultNodeForSlot(Object.assign(opts, customProps))
                         break;
                 }
             }
