@@ -272,11 +272,11 @@ class BrushNet:
 
         # unload vae
         del vae
-        for loaded_model in comfy.model_management.current_loaded_models:
-            if type(loaded_model.model.model) in ModelsToUnload:
-                comfy.model_management.current_loaded_models.remove(loaded_model)
-                loaded_model.model_unload()
-                del loaded_model
+        # for loaded_model in comfy.model_management.current_loaded_models:
+        #     if type(loaded_model.model.model) in ModelsToUnload:
+        #         comfy.model_management.current_loaded_models.remove(loaded_model)
+        #         loaded_model.model_unload()
+        #         del loaded_model
 
         # prepare embeddings
         prompt_embeds = positive[0][0].to(dtype=torch_dtype).to(brushnet['brushnet'].device)
@@ -449,11 +449,11 @@ class BrushNet:
         # unload vae and CLIPs
         del vae
         del clip
-        for loaded_model in comfy.model_management.current_loaded_models:
-            if type(loaded_model.model.model) in ModelsToUnload:
-                comfy.model_management.current_loaded_models.remove(loaded_model)
-                loaded_model.model_unload()
-                del loaded_model
+        # for loaded_model in comfy.model_management.current_loaded_models:
+        #     if type(loaded_model.model.model) in ModelsToUnload:
+        #         comfy.model_management.current_loaded_models.remove(loaded_model)
+        #         loaded_model.model_unload()
+        #         del loaded_model
 
         # apply patch to model
 
@@ -663,8 +663,16 @@ def add_brushnet_patch(model, brushnet, torch_dtype, conditioning_latents,
 
     is_SDXL = isinstance(model.model.model_config, comfy.supported_models.SDXL)
 
+    if model.model.model_config.custom_operations is None:
+        fp8 = model.model.model_config.optimizations.get("fp8", model.model.model_config.scaled_fp8 is not None)
+        operations = comfy.ops.pick_operations(model.model.model_config.unet_config.get("dtype", None), model.model.manual_cast_dtype,
+                                               fp8_optimizations=fp8, scaled_fp8=model.model.model_config.scaled_fp8)
+    else:
+        # such as gguf
+        operations = model.model.model_config.custom_operations
+
     if is_SDXL:
-        input_blocks = [[0, comfy.ops.manual_cast.Conv2d],
+        input_blocks = [[0, operations.Conv2d],
                         [1, comfy.ldm.modules.diffusionmodules.openaimodel.ResBlock],
                         [2, comfy.ldm.modules.diffusionmodules.openaimodel.ResBlock],
                         [3, comfy.ldm.modules.diffusionmodules.openaimodel.Downsample],
@@ -686,7 +694,7 @@ def add_brushnet_patch(model, brushnet, torch_dtype, conditioning_latents,
                          [7, comfy.ldm.modules.diffusionmodules.openaimodel.ResBlock],
                          [8, comfy.ldm.modules.diffusionmodules.openaimodel.ResBlock]]
     else:
-        input_blocks = [[0, comfy.ops.manual_cast.Conv2d],
+        input_blocks = [[0, operations.Conv2d],
                         [1, comfy.ldm.modules.attention.SpatialTransformer],
                         [2, comfy.ldm.modules.attention.SpatialTransformer],
                         [3, comfy.ldm.modules.diffusionmodules.openaimodel.Downsample],
