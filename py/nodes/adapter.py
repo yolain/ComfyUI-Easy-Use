@@ -40,7 +40,7 @@ class applyLoraStack:
                 lora = {"lora_name": lora[0], "model": model, "clip": optional_clip, "model_strength": lora[1],
                         "clip_strength": lora[2]}
                 model, clip = easyCache.load_lora(lora, model, optional_clip, use_cache=False)
-        return (model, clip)
+        return (model, optional_clip if clip is None else clip)
 
 class applyControlnetStack:
     @classmethod
