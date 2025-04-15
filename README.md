@@ -47,6 +47,14 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.2.9**
+
+- Fix ImageChooser causes workflow processing to cancel
+- Fix brushnet tensor(640) error
+- Fix widgets not hidden after v1.6.0 frontend
+- Fix image chooser can not select images
+- Fix contextMenu monkey patching to affect custom scripts (pysssss) nodes
+
 **v1.2.8**
 
 - Added the multi-language catalog 

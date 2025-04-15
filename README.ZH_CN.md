@@ -52,6 +52,14 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.2.9**
+
+- 修复 Imagechooser 会导致工作流处理取消
+- 修复 brushnet tensor(640) 错误
+- 修复v1.6.0前端之后无法隐藏小部件的bug
+- 修复图像选择器无法选择图像
+- 修复ContextMenu Monkey修补以影响自定义脚本（PYSSSS）节点
+
 **v1.2.8**
 
 - 修复了一些BUG (😹)
