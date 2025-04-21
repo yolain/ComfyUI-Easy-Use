@@ -5,13 +5,21 @@ import os
 import types
 
 import torch
-from accelerate import init_empty_weights, load_checkpoint_and_dispatch
+try:
+    from accelerate import init_empty_weights, load_checkpoint_and_dispatch
+except:
+    init_empty_weights, load_checkpoint_and_dispatch = None, None
 
 import comfy
 
-from .model import BrushNetModel, PowerPaintModel
-from .model_patch import add_model_patch_option, patch_model_function_wrapper
-from .powerpaint_utils import TokenizerWrapper, add_tokens
+try:
+    from .model import BrushNetModel, PowerPaintModel
+    from .model_patch import add_model_patch_option, patch_model_function_wrapper
+    from .powerpaint_utils import TokenizerWrapper, add_tokens
+except:
+    BrushNetModel, PowerPaintModel = None, None
+    add_model_patch_option, patch_model_function_wrapper = None, None
+    TokenizerWrapper, add_tokens = None, None
 
 cwd_path = os.path.dirname(os.path.realpath(__file__))
 brushnet_config_file = os.path.join(cwd_path, 'config', 'brushnet.json')
