@@ -9,7 +9,10 @@ from enum import Enum
 from comfy.utils import load_torch_file
 from comfy.conds import CONDRegular
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
-from .model import ModelPatcher, TransparentVAEDecoder, calculate_weight_adjust_channel
+try:
+    from .model import ModelPatcher, TransparentVAEDecoder, calculate_weight_adjust_channel
+except:
+    ModelPatcher, TransparentVAEDecoder, calculate_weight_adjust_channel = None, None, None
 from .attension_sharing import AttentionSharingPatcher
 from ...config import LAYER_DIFFUSION, LAYER_DIFFUSION_DIR, LAYER_DIFFUSION_VAE
 from ...libs.utils import to_lora_patch_dict, get_local_filepath, get_sd_version
@@ -51,7 +54,7 @@ class LayerDiffuse:
 
         return (write_c_concat(cond), write_c_concat(uncond))
 
-    def apply_layer_diffusion(self, model: ModelPatcher, method, weight, samples, blend_samples, positive, negative, image=None, additional_cond=(None, None, None)):
+    def apply_layer_diffusion(self, model, method, weight, samples, blend_samples, positive, negative, image=None, additional_cond=(None, None, None)):
         control_img: Optional[torch.TensorType] = None
         sd_version = get_sd_version(model)
         model_url = LAYER_DIFFUSION[method.value][sd_version]["model_url"]
