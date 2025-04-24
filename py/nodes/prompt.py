@@ -1,12 +1,15 @@
-import os
 import json
-import folder_paths
+import os
 from urllib.request import urlopen
-from ..libs.log import log_node_info
-from ..libs.wildcards import get_wildcard_list, process
-from ..libs.utils import AlwaysEqualProxy
-from ..config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, MAX_SEED_NUM, PROMPT_TEMPLATE
+
+import folder_paths
+
 from .. import easyCache
+from ..config import FOOOCUS_STYLES_DIR, MAX_SEED_NUM, PROMPT_TEMPLATE, RESOURCES_DIR
+from ..libs.log import log_node_info
+from ..libs.utils import AlwaysEqualProxy
+from ..libs.wildcards import WildcardProcessor, get_wildcard_list, process
+
 
 # 正面提示词
 class positivePrompt:
@@ -82,6 +85,56 @@ class wildcardsPrompt:
             populated_text = [process(text, seed)]
             text = [text]
         return {"ui": {"value": [seed]}, "result": (text, populated_text)}
+
+# 通配符提示词矩阵，会按顺序返回包含通配符的提示词所生成的所有可能
+class wildcardsPromptMatrix:
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def INPUT_TYPES(s):
+        # wildcard_list = get_wildcard_list()
+        return {"required": {
+            # 包含通配符的提示词模板
+            "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support Lora Block Weight and wildcard)"}),
+            # 这个新节点无法通过下拉选单直接向 text 中添加 lora 或 wildcard，为什么？
+            # # 点击该属性从下拉列表中选择要添加的lora
+            # "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
+            # # 点击该属性从下拉列表中选择要添加的通配符文件
+            # "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
+            # 本次返回第 n 种可能
+            "offset": ("INT", {"default": 0, "min": 0, "step": 1, "control_after_generate": True}),
+            },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ("STRING", "STRING", "INT", "INT")
+    # 提示词、替换后提示词、可能性的总数、各替换项的可能性数目
+    RETURN_NAMES = ("text", "populated_text", "total", "factors")
+    OUTPUT_IS_LIST = (True, True, True, True)
+    FUNCTION = "main"
+
+    CATEGORY = "EasyUse/Prompt"
+
+    def translate(self, text):
+        return text
+
+
+    def main(self, *args, **kwargs):
+        prompt = kwargs["prompt"] if "prompt" in kwargs else None
+        offset = kwargs["offset"]
+
+        # Clean loaded_objects
+        if prompt:
+            easyCache.update_loaded_objects(prompt)
+
+        text = kwargs['text']
+        text = self.translate(text)
+        p = WildcardProcessor(text)
+        populated_text = [p.getn(offset)]
+        text = [text]
+        return {"ui": {"value": [offset]}, "result": (text, populated_text, [p.total()], list(p.placeholder_choices.values()))}
 
 # 负面提示词
 class negativePrompt:
@@ -518,6 +571,7 @@ NODE_CLASS_MAPPINGS = {
     "easy positive": positivePrompt,
     "easy negative": negativePrompt,
     "easy wildcards": wildcardsPrompt,
+    "easy wildcardsMatrix": wildcardsPromptMatrix,
     "easy prompt": prompt,
     "easy promptList": promptList,
     "easy promptLine": promptLine,
@@ -531,6 +585,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy positive": "Positive",
     "easy negative": "Negative",
     "easy wildcards": "Wildcards",
+    "easy wildcardsMatrix": "Wildcards Matrix",
     "easy prompt": "Prompt",
     "easy promptList": "PromptList",
     "easy promptLine": "PromptLine",
