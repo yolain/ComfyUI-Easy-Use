@@ -386,12 +386,8 @@ class WildcardProcessor:
         return self.getn(random.randint(0, self.total() - 1))
 
     def getn(self, n: int) -> str:
-        "从所有可能性中获取第 n 个"
-        if n >= self.total():
-            return self.getn(self.total() - 1)
-        if n < 0:
-            return self.getn(0)
-
+        "从所有可能性中获取第 n 个，以 self.total() 为周期循环"
+        n = n % self.total()
         indice = decimal_to_irregular(n, self.placeholder_choices.values())
         replacements = {
             placeholder_id: self.replacers[self.placeholder_mapping[placeholder_id]][i]
@@ -401,10 +397,8 @@ class WildcardProcessor:
 
     def getmany(self, limit: int, offset: int = 0) -> list[str]:
         """返回一组可能性组成的列表，为了避免结果太长导致内存占用超限，使用 limit 限制列表的长度，使用 offset 调整偏移。
-        若 limit 和 offset 的设置导致预期的结果长度超过剩下的实际长度，则结果会被截断为实际长度。
+        若 limit 和 offset 的设置导致预期的结果长度超过剩下的实际长度，则会回到开头。
         """
-        if offset + limit > self.total():
-            limit = self.total() - offset
         return [self.getn(n) for n in range(offset, offset + limit)]
 
     def total(self) -> int:
