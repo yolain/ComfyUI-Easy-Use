@@ -359,7 +359,7 @@ class WildcardProcessor:
 
     通配符格式：
     + option  :   {a|b}
-    + wildcard:   __dir/filename__  filename 不应添加后缀，会自动补全为 .txt
+    + wildcard:   __keyword__ 通配符内容将从 Easy-Use 插件提供的 easy_wildcard_dict 中获取
     """
 
     RE_OPTIONS = re.compile(r"{([^{}]*?)}")
@@ -409,7 +409,7 @@ class WildcardProcessor:
 
     def __make_template(self, text: str):
         """将输入的提示词转化成符合 python str.format 要求格式的模板，
-        并将 option 和 wildcard 按照顺序在模板中留下 {0}, {1} 等占位符，
+        并将 option 和 wildcard 按照顺序在模板中留下 {r0}, {r1} 等占位符，
         即使遇到相同的 option 或 wildcard，留下的占位符编号也不同，从而使每项都独立变化。
         """
         self.placeholder_mapping = {}

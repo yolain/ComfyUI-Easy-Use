@@ -43,7 +43,7 @@ class wildcardsPrompt:
     def INPUT_TYPES(s):
         wildcard_list = get_wildcard_list()
         return {"required": {
-            "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support Lora Block Weight and wildcard)"}),
+            "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support wildcard)"}),
             "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
             "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
             "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
