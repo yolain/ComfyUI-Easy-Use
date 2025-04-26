@@ -389,6 +389,12 @@ class samplerFull:
 
                 "loader_settings": {
                     **pipe["loader_settings"],
+                    "steps": steps,
+                    "cfg": cfg,
+                    "sampler_name": sampler_name,
+                    "scheduler": scheduler,
+                    "denoise": denoise,
+                    "add_noise": add_noise,
                     "spent_time": spent_time
                 }
             }
