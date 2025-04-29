@@ -75,6 +75,31 @@
       }
     }
   },
+  "easy wildcardsMatrix": {
+    "display_name": "通配符提示词矩阵",
+    "inputs": {
+      "Select to add LoRA": {
+        "name": "选择添加Lora"
+      },
+      "Select to add Wildcard": {
+        "name": "选择添加通配符"
+      },
+      "offset": {
+        "name": "偏移量"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "提示词"
+      },
+      "1": {
+        "name": "通配填充词"
+      },
+      "2": {
+        "name": "可能性总数"
+      }
+    }
+  },
   "easy prompt": {
     "display_name": "提示词",
     "inputs": {

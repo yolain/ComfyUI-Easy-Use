@@ -1,9 +1,13 @@
-import re
-import random
-import os
-import folder_paths
-import yaml
 import json
+import os
+import random
+import re
+from math import prod
+
+import yaml
+
+import folder_paths
+
 from .log import log_node_info
 
 easy_wildcard_dict = {}
@@ -302,3 +306,171 @@ def process_with_loras(wildcard_opt, model, clip, title="Positive", seed=None, c
         log_node_info("easy wildcards",f'{title}_decode: {pass1}')
 
     return model, clip, pass2, pass1, show_wildcard_prompt, pipe_lora_stack
+
+
+def expand_wildcard(keyword: str) -> tuple[str]:
+    """传入文件通配符的关键词，从 easy_wildcard_dict 中获取通配符的所有选项。"""
+    global easy_wildcard_dict
+    if keyword in easy_wildcard_dict:
+        return tuple(easy_wildcard_dict[keyword])
+    elif '*' in keyword:
+        subpattern = keyword.replace('*', '.*').replace('+', r"\+")
+        total_pattern = []
+        for k, v in easy_wildcard_dict.items():
+            if re.match(subpattern, k) is not None:
+                total_pattern.extend(v)
+        if total_pattern:
+            return tuple(total_pattern)
+    elif '/' not in keyword:
+        return expand_wildcard(f"*/{keyword}")
+
+def expand_options(options: str) -> tuple[str]:
+    """传入去掉 {} 的选项。
+    展开选项通配符，返回该选项中的每一项，这里的每一项都是一个替换项。
+    不会对选项内容进行任何处理，即便存在空格或特殊符号，也会原样返回。"""
+    return tuple(options.split("|"))
+
+
+def decimal_to_irregular(n, bases):
+    """
+    将十进制数转换为不规则进制
+
+    :param n: 十进制数
+    :param bases: 各位置的基数列表，从低位到高位
+    :return: 不规则进制表示的列表，从低位到高位
+    """
+    if n == 0:
+        return [0] * len(bases) if bases else [0]
+
+    digits = []
+    remaining = n
+
+    # 从低位到高位处理
+    for base in bases:
+        digit = remaining % base
+        digits.append(digit)
+        remaining = remaining // base
+
+    return digits
+
+
+class WildcardProcessor:
+    """通配符处理器
+
+    通配符格式：
+    + option  :   {a|b}
+    + wildcard:   __keyword__ 通配符内容将从 Easy-Use 插件提供的 easy_wildcard_dict 中获取
+    """
+
+    RE_OPTIONS = re.compile(r"{([^{}]*?)}")
+    RE_WILDCARD = re.compile(r"__([\w\s.\-+/*\\]+?)__")
+    RE_REPLACER = re.compile(r"{([^{}]*?)}|__([\w\s.\-+/*\\]+?)__")
+
+    # 将输入的提示词转化成符合 python str.format 要求格式的模板，并将 option 和 wildcard 按照顺序在模板中留下 {0}, {1} 等占位符
+    template: str
+    # option、wildcard 的替换项列表，按照在模板中出现的顺序排列，相同的替换项列表只保留第一份
+    replacers: dict[int, tuple[str]]
+    # 占位符的编号和替换项列表的索引的映射，占位符编号按照在模板中出现的顺序排列，方便减少替换项的存储占用
+    placeholder_mapping: dict[str, int]  # placeholder_id => replacer_id
+    # 各替换项列表的项数，按照在模板中出现的顺序排列，提前计算，方便后续使用
+    placeholder_choices: dict[str, int]  # placeholder_id => len(replacer)
+
+    def __init__(self, text: str):
+        self.__make_template(text)
+        self.__total = None
+
+    def random(self, seed=None) -> str:
+        "从所有可能性中随机获取一个"
+        if seed is not None:
+            random.seed(seed)
+        return self.getn(random.randint(0, self.total() - 1))
+
+    def getn(self, n: int) -> str:
+        "从所有可能性中获取第 n 个，以 self.total() 为周期循环"
+        n = n % self.total()
+        indice = decimal_to_irregular(n, self.placeholder_choices.values())
+        replacements = {
+            placeholder_id: self.replacers[self.placeholder_mapping[placeholder_id]][i]
+            for placeholder_id, i in zip(self.placeholder_mapping.keys(), indice)
+        }
+        return self.template.format(**replacements)
+
+    def getmany(self, limit: int, offset: int = 0) -> list[str]:
+        """返回一组可能性组成的列表，为了避免结果太长导致内存占用超限，使用 limit 限制列表的长度，使用 offset 调整偏移。
+        若 limit 和 offset 的设置导致预期的结果长度超过剩下的实际长度，则会回到开头。
+        """
+        return [self.getn(n) for n in range(offset, offset + limit)]
+
+    def total(self) -> int:
+        "计算可能性的数目"
+        if self.__total is None:
+            self.__total = prod(self.placeholder_choices.values())
+        return self.__total
+
+    def __make_template(self, text: str):
+        """将输入的提示词转化成符合 python str.format 要求格式的模板，
+        并将 option 和 wildcard 按照顺序在模板中留下 {r0}, {r1} 等占位符，
+        即使遇到相同的 option 或 wildcard，留下的占位符编号也不同，从而使每项都独立变化。
+        """
+        self.placeholder_mapping = {}
+        placeholder_id = 0
+        replacer_id = 0
+        replacers_rev = {}  # replacers => id
+        blocks = []
+        # 记录所处理过的通配符末尾在文本中的位置，用于拼接完整的模板
+        tail = 0
+        for match in self.RE_REPLACER.finditer(text):
+            # 提取并展开通配符内容
+            m = match.group(0)
+            if m.startswith("{"):
+                choices = expand_options(m[1:-1])
+            elif m.startswith("__"):
+                keyword = m[2:-2].lower()
+                keyword = wildcard_normalize(keyword)
+                choices = expand_wildcard(keyword)
+            else:
+                raise ValueError(f"{m!r} is not a wildcard or option")
+
+            # 记录通配符的替换项列表和ID，相同的通配符只保留第一个
+            if choices not in replacers_rev:
+                replacers_rev[choices] = replacer_id
+                replacer_id += 1
+
+            # 拼接通配符前方文本
+            start, end = match.span()
+            blocks.append(text[tail:start])
+            tail = end
+            # 将通配符替换为占位符，并记录占位符和替换项列表的索引的映射
+            blocks.append(f"{{r{placeholder_id}}}")
+            self.placeholder_mapping[f"r{placeholder_id}"] = replacers_rev[choices]
+            placeholder_id += 1
+
+        if tail < len(text):
+            blocks.append(text[tail:])
+        self.template = "".join(blocks)
+        self.replacers = {v: k for k, v in replacers_rev.items()}
+        self.placeholder_choices = {
+            placeholder_id: len(self.replacers[replacer_id])
+            for placeholder_id, replacer_id in self.placeholder_mapping.items()
+        }
+
+
+def test_option():
+    text = "{|a|b|c}"
+    answer = ["", "a", "b", "c"]
+    p = WildcardProcessor(text)
+    assert p.total() == len(answer)
+    assert p.getn(0) == answer[0]
+    assert p.getmany(4) == answer
+    assert p.getmany(4, 1) == answer[1:]
+
+
+def test_same():
+    text = "{a|b},{a|b}"
+    answer = ["a,a", "b,a", "a,b", "b,b"]
+    p = WildcardProcessor(text)
+    assert p.total() == len(answer)
+    assert p.getn(0) == answer[0]
+    assert p.getmany(4) == answer
+    assert p.getmany(4, 1) == answer[1:]
+
