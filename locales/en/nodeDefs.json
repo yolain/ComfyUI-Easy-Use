@@ -145,6 +145,31 @@
       }
     }
   },
+  "easy wildcardsMatrix": {
+    "display_name": "Wildcards Matrix",
+    "inputs": {
+      "Select to add LoRA": {
+        "name": "Select to add LoRA"
+      },
+      "Select to add Wildcard": {
+        "name": "Select to add Wildcard"
+      },
+      "offset": {
+        "name": "Offset in All Probilities"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Replaced Prompt"
+      },
+      "1": {
+        "name": "Total Count of the Probilities"
+      },
+      "2": {
+        "name": "Factors"
+      }
+    }
+  },
   "easy prompt": {
     "display_name": "Prompt",
     "inputs": {
