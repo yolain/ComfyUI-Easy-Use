@@ -59,9 +59,6 @@ class wildcardsPrompt:
 
     CATEGORY = "EasyUse/Prompt"
 
-    def translate(self, text):
-        return text
-
     def main(self, *args, **kwargs):
         prompt = kwargs["prompt"] if "prompt" in kwargs else None
         seed = kwargs["seed"]
@@ -76,12 +73,10 @@ class wildcardsPrompt:
             _text = []
             text = text.split("\n")
             for t in text:
-                t = self.translate(t)
                 _text.append(t)
                 populated_text.append(process(t, seed))
             text = _text
         else:
-            text = self.translate(text)
             populated_text = [process(text, seed)]
             text = [text]
         return {"ui": {"value": [seed]}, "result": (text, populated_text)}
@@ -94,31 +89,23 @@ class wildcardsPromptMatrix:
 
     @classmethod
     def INPUT_TYPES(s):
-        # wildcard_list = get_wildcard_list()
+        wildcard_list = get_wildcard_list()
         return {"required": {
-            # 包含通配符的提示词模板
             "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support Lora Block Weight and wildcard)"}),
-            # 这个新节点无法通过下拉选单直接向 text 中添加 lora 或 wildcard，为什么？
-            # # 点击该属性从下拉列表中选择要添加的lora
-            # "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
-            # # 点击该属性从下拉列表中选择要添加的通配符文件
-            # "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
-            # 本次返回第 n 种可能
+            "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
+            "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
             "offset": ("INT", {"default": 0, "min": 0, "step": 1, "control_after_generate": True}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
 
-    RETURN_TYPES = ("STRING", "STRING", "INT", "INT")
-    # 提示词、替换后提示词、可能性的总数、各替换项的可能性数目
-    RETURN_NAMES = ("text", "populated_text", "total", "factors")
-    OUTPUT_IS_LIST = (True, True, True, True)
+    RETURN_TYPES = ("STRING", "INT", "INT")
+    RETURN_NAMES = ("populated_text", "total", "factors")
+    OUTPUT_IS_LIST = (False, False, True)
     FUNCTION = "main"
 
     CATEGORY = "EasyUse/Prompt"
 
-    def translate(self, text):
-        return text
 
 
     def main(self, *args, **kwargs):
@@ -130,11 +117,10 @@ class wildcardsPromptMatrix:
             easyCache.update_loaded_objects(prompt)
 
         text = kwargs['text']
-        text = self.translate(text)
         p = WildcardProcessor(text)
         populated_text = [p.getn(offset)]
         text = [text]
-        return {"ui": {"value": [offset]}, "result": (text, populated_text, [p.total()], list(p.placeholder_choices.values()))}
+        return {"ui": {"value": [offset]}, "result": (populated_text, p.total(), list(p.placeholder_choices.values()))}
 
 # 负面提示词
 class negativePrompt:

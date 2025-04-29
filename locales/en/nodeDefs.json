@@ -146,7 +146,7 @@
     }
   },
   "easy wildcardsMatrix": {
-    "display_name": "Wildcard Matrix",
+    "display_name": "Wildcards Matrix",
     "inputs": {
       "Select to add LoRA": {
         "name": "Select to add LoRA"
@@ -160,13 +160,13 @@
     },
     "outputs": {
       "0": {
-        "name": "Prompt"
-      },
-      "1": {
         "name": "Replaced Prompt"
       },
-      "2": {
+      "1": {
         "name": "Total Count of the Probilities"
+      },
+      "2": {
+        "name": "Factors"
       }
     }
   },
