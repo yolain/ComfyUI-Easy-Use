@@ -156,6 +156,10 @@
       },
       "offset": {
         "name": "Offset in All Probilities"
+      },
+      "output_limit": {
+        "name": "Output Limit",
+        "tooltip": "Output n fill wildcards, -1 is output all possibilities (force offset to zero), the default value is 1"
       }
     },
     "outputs": {
