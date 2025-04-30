@@ -96,30 +96,33 @@ class wildcardsPromptMatrix:
             "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
             "offset": ("INT", {"default": 0, "min": 0, "step": 1, "control_after_generate": True}),
             },
+            "optional":{
+              "output_limit": ("INT", {"default": 1, "min": -1, "step": 1, "tooltip": "Output All Probilities"})
+            },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
 
     RETURN_TYPES = ("STRING", "INT", "INT")
     RETURN_NAMES = ("populated_text", "total", "factors")
-    OUTPUT_IS_LIST = (False, False, True)
+    OUTPUT_IS_LIST = (True, False, True)
     FUNCTION = "main"
 
     CATEGORY = "EasyUse/Prompt"
 
-
-
     def main(self, *args, **kwargs):
         prompt = kwargs["prompt"] if "prompt" in kwargs else None
         offset = kwargs["offset"]
-
+        output_limit = kwargs.get("output_limit", 1)
         # Clean loaded_objects
         if prompt:
             easyCache.update_loaded_objects(prompt)
 
         text = kwargs['text']
         p = WildcardProcessor(text)
-        populated_text = [p.getn(offset)]
-        text = [text]
+        total = p.total()
+        limit = total if output_limit > total or output_limit == -1 else output_limit
+        offset = 0 if output_limit == -1 else offset
+        populated_text = p.getmany(limit, offset) if output_limit != 1 else [p.getn(offset)]
         return {"ui": {"value": [offset]}, "result": (populated_text, p.total(), list(p.placeholder_choices.values()))}
 
 # 负面提示词
