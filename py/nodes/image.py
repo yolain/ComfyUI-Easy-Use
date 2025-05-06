@@ -14,7 +14,7 @@ from torchvision.transforms.functional import to_pil_image
 from ..libs.log import log_node_info
 from ..libs.utils import AlwaysEqualProxy, ByPassTypeTuple
 from ..libs.cache import cache, update_cache, remove_cache
-from ..libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask, empty_image
+from ..libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask, empty_image, fit_resize_image
 from ..libs.colorfix import adain_color_fix, wavelet_color_fix
 from ..libs.chooser import ChooserMessage, ChooserCancelled
 from ..config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS, MEDIAPIPE_MODELS, MEDIAPIPE_DIR
@@ -1924,6 +1924,7 @@ class makeImageForICRepaint:
         "image_1": ("IMAGE",),
         "direction": (["top-bottom", "left-right"], {"default": "left-right"}),
         "pixels": ("INT", {"default": 0, "max": MAX_RESOLUTION, "min": 0, "step": 8, "tooltip": "The pixel of the output image is not set when it is 0"}),
+        "method": (["uniform height", "uniform width", "auto"],{"default": "auto"}),
       },
       "optional": {
         "image_2": ("IMAGE",),
@@ -1950,26 +1951,52 @@ class makeImageForICRepaint:
     b = torch.full([batch_size, height, width, 1], ((color) & 0xFF) / 0xFF)
     return torch.cat((r, g, b), dim=-1)
 
-  def make(self, image_1, direction, pixels=0, image_2=None, mask_1=None, mask_2=None):
+  def resize_image_and_mask(self, image, mask, w, h ):
+      ret_images = []
+      ret_masks = []
+      _mask = Image.new('L', size=(w, h), color='black')
+      _image = Image.new('RGB', size=(w, h), color='black')
+      if image is not None and len(image) > 0:
+          for i in image:
+              _image = tensor2pil(i).convert('RGB')
+              _image = fit_resize_image(_image, w, h, 'fill', Image.LANCZOS, '#000000')
+              ret_images.append(pil2tensor(_image))
+      if mask is not None and len(mask) > 0:
+          for m in mask:
+              _mask = tensor2pil(m).convert('L')
+              _mask = fit_resize_image(_mask, w, h, 'fill', Image.LANCZOS).convert('L')
+              ret_masks.append(image2mask(_mask))
+
+      if len(ret_images) > 0 and len(ret_masks) > 0:
+          return (torch.cat(ret_images, dim=0), torch.cat(ret_masks, dim=0),)
+      elif len(ret_images) > 0 and len(ret_masks) == 0:
+          return (torch.cat(ret_images, dim=0), None,)
+      elif len(ret_images) == 0 and len(ret_masks) > 0:
+          return (None, torch.cat(ret_masks, dim=0),)
+      else:
+        return (None, None)
+
+  def make(self, image_1, direction, pixels, method, image_2=None, mask_1=None, mask_2=None):
     if image_2 is None:
       image_2 = self.emptyImage(image_1.shape[2], image_1.shape[1])
       mask_2 = torch.full((1, image_1.shape[1], image_1.shape[2]), 1, dtype=torch.float32, device="cpu")
 
     elif image_2 is not None and mask_2 is None:
-      raise ValueError("mask_2 is required when image_2 is provided")
+        mask_2 = torch.full((1, image_2.shape[1], image_2.shape[2]), 1, dtype=torch.float32, device="cpu")
+
     if pixels > 0:
       _, img2_h, img2_w, _ = image_2.shape
-      h = pixels if direction == 'left-right' else int(img2_h * (pixels / img2_w))
-      w = pixels if direction == 'top-bottom' else int(img2_w * (pixels / img2_h))
+      if method == "uniform height":
+          h = pixels
+          w = int(img2_w * (pixels / img2_h))
+      elif method == "uniform width":
+          w = pixels
+          h = int(img2_h * (pixels / img2_w))
+      else:
+          h = pixels if direction == 'left-right' else int(img2_h * (pixels / img2_w))
+          w = pixels if direction == 'top-bottom' else int(img2_w * (pixels / img2_h))
 
-      image_2 = image_2.movedim(-1, 1)
-      image_2 = comfy.utils.common_upscale(image_2, w, h, 'bicubic', 'disabled')
-      image_2 = image_2.movedim(1, -1)
-
-      orig_image_2 = tensor2pil(image_2)
-      orig_mask_2 = tensor2pil(mask_2).convert('L')
-      orig_mask_2 = orig_mask_2.resize(orig_image_2.size)
-      mask_2 = pil2tensor(orig_mask_2)
+      image_2, mask_2 = self.resize_image_and_mask(image_2, mask_2, w, h)
 
     _, img1_h, img1_w, _ = image_1.shape
     _, img2_h, img2_w, _ = image_2.shape
@@ -1986,9 +2013,7 @@ class makeImageForICRepaint:
         scale_factor = img2_w / img1_w
         height = round(img1_h * scale_factor)
 
-      image_1 = image_1.movedim(-1, 1)
-      image_1 = comfy.utils.common_upscale(image_1, width, height, 'bicubic', 'disabled')
-      image_1 = image_1.movedim(1, -1)
+      image_1, mask_1 = self.resize_image_and_mask(image_1, mask_1, width, height)
 
     if mask_1 is None:
       mask_1 = torch.full((1, image_1.shape[1], image_1.shape[2]), 0, dtype=torch.float32, device="cpu")

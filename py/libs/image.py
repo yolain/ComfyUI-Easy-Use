@@ -125,7 +125,35 @@ class ResizeMode(Enum):
       return 2
     assert False, "NOTREACHED"
 
-
+# credit by https://github.com/chflame163/ComfyUI_LayerStyle/blob/main/py/imagefunc.py#L591C1-L617C22
+def fit_resize_image(image: Image, target_width: int, target_height: int, fit: str, resize_sampler: str,
+                     background_color: str = '#000000') -> Image:
+  image = image.convert('RGB')
+  orig_width, orig_height = image.size
+  if image is not None:
+    if fit == 'letterbox':
+      if orig_width / orig_height > target_width / target_height:  # 更宽，上下留黑
+        fit_width = target_width
+        fit_height = int(target_width / orig_width * orig_height)
+      else:  # 更瘦，左右留黑
+        fit_height = target_height
+        fit_width = int(target_height / orig_height * orig_width)
+      fit_image = image.resize((fit_width, fit_height), resize_sampler)
+      ret_image = Image.new('RGB', size=(target_width, target_height), color=background_color)
+      ret_image.paste(fit_image, box=((target_width - fit_width) // 2, (target_height - fit_height) // 2))
+    elif fit == 'crop':
+      if orig_width / orig_height > target_width / target_height:  # 更宽，裁左右
+        fit_width = int(orig_height * target_width / target_height)
+        fit_image = image.crop(
+          ((orig_width - fit_width) // 2, 0, (orig_width - fit_width) // 2 + fit_width, orig_height))
+      else:  # 更瘦，裁上下
+        fit_height = int(orig_width * target_height / target_width)
+        fit_image = image.crop(
+          (0, (orig_height - fit_height) // 2, orig_width, (orig_height - fit_height) // 2 + fit_height))
+      ret_image = fit_image.resize((target_width, target_height), resize_sampler)
+    else:
+      ret_image = image.resize((target_width, target_height), resize_sampler)
+  return ret_image
 
 # CLIP反推
 import comfy.utils

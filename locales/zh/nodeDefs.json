@@ -5720,6 +5720,9 @@
       },
       "pixels": {
         "name": "限制像素"
+      },
+      "method": {
+        "name": "限制方式"
       }
     },
     "outputs": {
