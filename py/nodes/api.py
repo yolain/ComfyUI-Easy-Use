@@ -101,6 +101,9 @@ class joyCaption2API:
                         "multiline": True,
                     },
                 ),
+            },
+            "optional":{
+                "apikey_override": ("STRING", {"default": "", "forceInput": True, "tooltip":"Override the API key in the local config"}),
             }
         }
 
@@ -123,6 +126,7 @@ class joyCaption2API:
             extra_options,
             name_input,
             custom_prompt,
+            apikey_override=None
     ):
         pbar = comfy.utils.ProgressBar(100)
         pbar.update_absolute(10)
@@ -145,7 +149,7 @@ class joyCaption2API:
         }
 
         pbar.update_absolute(30)
-        caption = bizyairAPI.joyCaption2(payload, image)
+        caption = bizyairAPI.joyCaption2(payload, image, apikey_override)
 
         pbar.update_absolute(100)
         return (caption,)

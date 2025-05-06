@@ -57,8 +57,11 @@ class BizyAIRAPI:
                 )
 
     # joycaptionTwo
-    def joyCaption2(self, payload, image):
-        api_key = self.getAPIKey()
+    def joyCaption2(self, payload, image, apikey_override=None):
+        if apikey_override is not None:
+            api_key = apikey_override
+        else:
+            api_key = self.getAPIKey()
         url = f"{self.base_url}/supernode/joycaption2"
         auth = f"Bearer {api_key}"
         headers = {
