@@ -47,6 +47,12 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.3.0**
+
+- Set loop nodes maximum number of inputs and outputs to 20
+- Add `uniform width` method to `easy makeImageForICLora`
+- Add `wildcardsPromptMatrix` Node by [Rosmeowtis](https://github.com/Rosmeowtis)
+
 **v1.2.9**
 
 - Fix ImageChooser causes workflow processing to cancel

@@ -52,6 +52,12 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.3.0**
+
+- 将循环节点设置为最大输入和输出数量为20
+- 添加 `uniform width` 方式到 `easy makeImageForICLora`
+- 增加 `wildcardsPromptMatrix` 通配符提示词矩阵，由 [Rosmeowtis](https://github.com/Rosmeowtis) 贡献
+
 **v1.2.9**
 
 - 修复 Imagechooser 会导致工作流处理取消
