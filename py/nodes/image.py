@@ -802,7 +802,20 @@ class imageConcat:
     elif image2 is None:
       return (image1,)
     if match_image_size:
-      image2 = torch.nn.functional.interpolate(image2, size=(image1.shape[2], image1.shape[3]), mode="bilinear")
+      # Convert tensor to PIL for proper aspect ratio resizing
+      pil_image2 = tensor2pil(image2)
+      if direction in ['right', 'left']:
+        aspect_ratio = pil_image2.width / pil_image2.height
+        new_height = image1.shape[1]
+        new_width = int(aspect_ratio * new_height)
+        pil_image2 = fit_resize_image(pil_image2, new_width, new_height, 'fill', Image.LANCZOS, '#000000')
+      else:  # 'up' or 'down'
+        aspect_ratio = pil_image2.height / pil_image2.width
+        new_width = image1.shape[2]
+        new_height = int(aspect_ratio * new_width)
+        pil_image2 = fit_resize_image(pil_image2, new_width, new_height, 'fill', Image.LANCZOS, '#000000')
+      image2 = pil2tensor(pil_image2)
+
     if direction == 'right':
       row = torch.cat((image1, image2), dim=2)
     elif direction == 'down':
