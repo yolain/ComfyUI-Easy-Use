@@ -1756,6 +1756,35 @@
       }
     }
   },
+  "easy seedList": {
+    "display_name": "随机种列表",
+    "description": "可用于for循环的随机数种子列表，通过与easy forLoopStart节点的索引与easy indexAny节点相连接可实现在循环中使用不同种子值进行采样",
+    "inputs": {
+      "min_num": {
+        "name": "最小值"
+      },
+      "max_num": {
+        "name": "最大值"
+      },
+      "method": {
+        "name": "生成方式"
+      },
+      "total": {
+        "name": "总量"
+      },
+      "seed": {
+        "name": "列表序号"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "随机种"
+      },
+      "1": {
+        "name": "总量"
+      }
+    }
+  },
   "easy globalSeed": {
     "display_name": "全局随机种",
     "inputs": {
