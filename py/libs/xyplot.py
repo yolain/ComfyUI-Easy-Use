@@ -211,11 +211,7 @@ class easyXYPlot():
         clip = clip if clip is not None else plot_image_vars["clip"]
         steps = plot_image_vars['steps'] if "steps" in plot_image_vars else 1
 
-        sd_version = get_sd_version(plot_image_vars['model'])
-
-#        print(f"sample_plot_image x_type: {self.x_type} y_type: {self.y_type} x_value: {x_value} y_value: {y_value}") 
-          
-  
+        sd_version = get_sd_version(plot_image_vars['model'])          
         # 高级用法
         if plot_image_vars["x_node_type"] == "advanced" or plot_image_vars["y_node_type"] == "advanced":
             if self.x_type == "Seeds++ Batch" or self.y_type == "Seeds++ Batch":
@@ -369,25 +365,21 @@ class easyXYPlot():
 #                print(f"Lora: {x_value} {y_value}")
                 model = model if model is not None else plot_image_vars["model"]
                 clip = clip if clip is not None else plot_image_vars["clip"]
-
                 xy_values = x_value if self.x_type == "Lora" else y_value
                 lora_name, lora_model_strength, lora_clip_strength, _ = xy_values.split(",")
                 lora_stack = [{"lora_name": lora_name, "model": model, "clip" :clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)}]
                 
 #                print(f"new_lora_stack: {new_lora_stack}")
 
-#                optional_lora_stack = plot_image_vars['lora_stack']
-#                print(f"optional_lora_stack: {optional_lora_stack}")
-#                if optional_lora_stack is not None and optional_lora_stack != []:
-#                    for lora in optional_lora_stack:
-#                        print(f"Lora: {lora}")
                 
                 if 'lora_stack' in plot_image_vars:
                     lora_stack = lora_stack + plot_image_vars['lora_stack']
-#                print(f"new_lora_stack: {new_lora_stack}")
                 
                 if lora_stack is not None and lora_stack != []:
                     for lora in lora_stack:
+                        # Use the updated model and clip, for the next lora load.
+                        lora['model'] = model
+                        lora['clip'] = clip
                         model, clip = self.easyCache.load_lora(lora)
 
             # 提示词
@@ -494,9 +486,6 @@ class easyXYPlot():
                                                             plot_image_vars['negative_weight_interpretation'], w_max=1.0,
                                                             apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
 
-#        print(f"plotting image")
-#        if model is not None:
-#            pprint.pp(f"Model: {model}")
 
         model = model if model is not None else plot_image_vars["model"]
         vae = vae if vae is not None else plot_image_vars["vae"]
