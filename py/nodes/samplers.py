@@ -513,7 +513,7 @@ class samplerFull:
 
             samp_samples = {"samples": latents_plot}
 
-            images, image_list = sampleXYplot.plot_images_and_labels()
+            images, image_list = sampleXYplot.plot_images_and_labels(plot_image_vars)
 
             # Generate output_images
             output_images = torch.stack([tensor.squeeze() for tensor in image_list])
