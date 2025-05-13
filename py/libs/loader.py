@@ -351,7 +351,7 @@ class easyLoader:
             lora_path = None
 
         if lora_path is not None:
-            log_node_info("Load LORA",f"{lora_name}: {model_strength}, {clip_strength}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
+            log_node_info("Load LORA",f"{lora_name}: model={model_strength:.3f}, clip={clip_strength:.3f}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
             if lbw:
                 lbw = lora["lbw"]
                 lbw_a = lora["lbw_a"]
