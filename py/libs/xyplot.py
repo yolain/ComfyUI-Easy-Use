@@ -377,7 +377,7 @@ class easyXYPlot():
                 
                 if lora_stack is not None and lora_stack != []:
                     for lora in lora_stack:
-                        # Use the updated model and clip, for the next lora load.
+                        # Each generation of the model, must use the reference to previously created model / clip objects.
                         lora['model'] = model
                         lora['clip'] = clip
                         model, clip = self.easyCache.load_lora(lora)

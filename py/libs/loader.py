@@ -464,7 +464,7 @@ class easyLoader:
 
         if optional_lora_stack is not None and can_load_lora:
             for lora in optional_lora_stack:
-                # This is a subtle bit of code because it saves the model created by the last call, and passes it to the next call.
+                # This is a subtle bit of code because it uses the model created by the last call, and passes it to the next call.
                 lora = {"lora_name": lora[0], "model": model, "clip": clip, "model_strength": lora[1],
                         "clip_strength": lora[2]}
                 model, clip = self.load_lora(lora)
