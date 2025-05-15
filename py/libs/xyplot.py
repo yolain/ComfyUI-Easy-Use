@@ -64,7 +64,9 @@ class easyXYPlot():
             arr = value.split(',')
             model_name = os.path.basename(os.path.splitext(arr[0])[0])
             trigger_words = ' ' + arr[3] if value_type == 'Lora' and len(arr[3]) > 2 else ''
-            value_label = f"{model_name}{trigger_words}"
+            lora_weight = float(arr[1]) if value_type == 'Lora' and len(arr) > 1 else 0
+            lora_weight_desc = f"({lora_weight:.2f})" if lora_weight > 0 else ''
+            value_label = f"{model_name[:30]}{lora_weight_desc} {trigger_words}"
 
         if value_type in ["ModelMergeBlocks"]:
             if ":" in value:
@@ -652,6 +654,7 @@ class easyXYPlot():
             {"id": "sampler_name", "id_desc": "sampler"},
             {"id": "scheduler", "id_desc": ''},
             {"id": "steps", "id_desc": ''},
+            {"id": "Flux Guidance", "id_desc": 'guidance'},            
             {"id": "seed", "id_desc": ''}           
         ]
         
@@ -680,9 +683,11 @@ class easyXYPlot():
 
         return (self.sampler.pil2tensor(background), output_image)
 
+# TODO: Ignore items that are dimensions (xy axis, etc.)
     def add_common_label(self, tag, plot_image_vars, description = ''):
         label = ''
         if description == '': description = tag
-        if plot_image_vars[tag] is not None and plot_image_vars[tag] != 'None':
+        if tag in plot_image_vars and plot_image_vars[tag] is not None and plot_image_vars[tag] != 'None':
             label += f"{description}: {plot_image_vars[tag]} "
+#        print(f"add_common_label: {tag} description: {description} label: {label}" )
         return label
