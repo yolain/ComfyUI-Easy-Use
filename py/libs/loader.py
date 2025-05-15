@@ -351,7 +351,7 @@ class easyLoader:
             lora_path = None
 
         if lora_path is not None:
-            log_node_info("Load LORA",f"{lora_name}: {model_strength}, {clip_strength}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
+            log_node_info("Load LORA",f"{lora_name}: model={model_strength:.3f}, clip={clip_strength:.3f}, LBW={lbw}, A={lbw_a}, B={lbw_b}")
             if lbw:
                 lbw = lora["lbw"]
                 lbw_a = lora["lbw_a"]
@@ -432,10 +432,13 @@ class easyLoader:
         clip_vision = None
         lora_stack = []
 
+        # Check for model override
         can_load_lora = True
         # 判断是否存在 模型或Lora叠加xyplot, 若存在优先缓存第一个模型
+        # Determine whether there is a model or Lora overlapping xyplot, and if there is, prioritize caching the first model.
         xy_model_id = next((x for x in prompt if str(prompt[x]["class_type"]) in ["easy XYInputs: ModelMergeBlocks",
                                                                                   "easy XYInputs: Checkpoint"]), None)
+        # This will find nodes that aren't actively connected to anything, and skip loading lora's for them.
         xy_lora_id = next((x for x in prompt if str(prompt[x]["class_type"]) == "easy XYInputs: Lora"), None)
         if xy_lora_id is not None:
             can_load_lora = False
@@ -461,6 +464,7 @@ class easyLoader:
 
         if optional_lora_stack is not None and can_load_lora:
             for lora in optional_lora_stack:
+                # This is a subtle bit of code because it uses the model created by the last call, and passes it to the next call.
                 lora = {"lora_name": lora[0], "model": model, "clip": clip, "model_strength": lora[1],
                         "clip_strength": lora[2]}
                 model, clip = self.load_lora(lora)

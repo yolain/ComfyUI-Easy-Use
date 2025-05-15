@@ -8,6 +8,7 @@ from .log import log_node_warn
 from ..modules.layer_diffuse import LayerDiffuse
 from ..config import RESOURCES_DIR
 from nodes import CLIPTextEncode
+import pprint
 try:
     from comfy_extras.nodes_flux import FluxGuidance
 except:
@@ -118,24 +119,32 @@ class easyXYPlot():
 
     def calculate_background_dimensions(self):
         border_size = int((self.max_width // 8) * 1.5) if self.y_type != "None" or self.x_type != "None" else 0
+
         bg_width = self.num_cols * (self.max_width + self.grid_spacing) - self.grid_spacing + border_size * (
                     self.y_type != "None")
         bg_height = self.num_rows * (self.max_height + self.grid_spacing) - self.grid_spacing + border_size * (
                     self.x_type != "None")
+        
+        # Add space at the bottom of the image for common informaiton about the image
+        bg_height = bg_height + (border_size*2)
+#        print(f"Grid Size: width = {bg_width} height = {bg_height} border_size = {border_size}")
 
         x_offset_initial = border_size if self.y_type != "None" else 0
         y_offset = border_size if self.x_type != "None" else 0
 
         return bg_width, bg_height, x_offset_initial, y_offset
 
+
     def adjust_font_size(self, text, initial_font_size, label_width):
         font = self.get_font(initial_font_size, self.custom_font)
         text_width = font.getbbox(text)
+#        pprint.pp(f"Initial font size: {initial_font_size}, text: {text}, text_width: {text_width}")
         if text_width and text_width[2]:
             text_width = text_width[2]
 
         scaling_factor = 0.9
         if text_width > (label_width * scaling_factor):
+#            print(f"Adjusting font size from {initial_font_size} to fit text width {text_width} into label width {label_width} scaling_factor {scaling_factor}")
             return int(initial_font_size * (label_width / text_width) * scaling_factor)
         else:
             return initial_font_size
@@ -144,15 +153,22 @@ class easyXYPlot():
         _, _, width, height = d.textbbox((0, 0), text=text, font=font)
         return width, height
 
-    def create_label(self, img, text, initial_font_size, is_x_label=True, max_font_size=70, min_font_size=10):
-        label_width = img.width if is_x_label else img.height
+    def create_label(self, img, text, initial_font_size, is_x_label=True, max_font_size=70, min_font_size=10, label_width=0, label_height=0):
 
+        # if the label_width is specified, leave it along.  Otherwise do the old logic.
+        if label_width == 0:          
+            label_width = img.width if is_x_label else img.height
+
+        text_lines = text.split('\n')
+        longest_line = max(text_lines, key=len)
+                
         # Adjust font size
-        font_size = self.adjust_font_size(text, initial_font_size, label_width)
+        font_size = self.adjust_font_size(longest_line, initial_font_size, label_width)
         font_size = min(max_font_size, font_size)  # Ensure font isn't too large
         font_size = max(min_font_size, font_size)  # Ensure font isn't too small
 
-        label_height = int(font_size * 1.5) if is_x_label else font_size
+        if label_height == 0:
+            label_height = int(font_size * 1.5) if is_x_label else font_size
 
         label_bg = Image.new('RGBA', (label_width, label_height), color=(255, 255, 255, 0))
         d = ImageDraw.Draw(label_bg)
@@ -166,7 +182,7 @@ class easyXYPlot():
             text = text + '...'
 
         # Compute text width and height for multi-line text
-        text_lines = text.split('\n')
+  
         text_widths, text_heights = zip(*[self.textsize(d, line, font=font) for line in text_lines])
         max_text_width = max(text_widths)
         total_text_height = sum(text_heights)
@@ -195,8 +211,7 @@ class easyXYPlot():
         clip = clip if clip is not None else plot_image_vars["clip"]
         steps = plot_image_vars['steps'] if "steps" in plot_image_vars else 1
 
-        sd_version = get_sd_version(plot_image_vars['model'])
-
+        sd_version = get_sd_version(plot_image_vars['model'])          
         # 高级用法
         if plot_image_vars["x_node_type"] == "advanced" or plot_image_vars["y_node_type"] == "advanced":
             if self.x_type == "Seeds++ Batch" or self.y_type == "Seeds++ Batch":
@@ -347,17 +362,24 @@ class easyXYPlot():
 
             # Lora
             if self.x_type == "Lora" or self.y_type == "Lora":
+#                print(f"Lora: {x_value} {y_value}")
                 model = model if model is not None else plot_image_vars["model"]
                 clip = clip if clip is not None else plot_image_vars["clip"]
-
                 xy_values = x_value if self.x_type == "Lora" else y_value
                 lora_name, lora_model_strength, lora_clip_strength, _ = xy_values.split(",")
                 lora_stack = [{"lora_name": lora_name, "model": model, "clip" :clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)}]
+                
+#                print(f"new_lora_stack: {new_lora_stack}")
+
+                
                 if 'lora_stack' in plot_image_vars:
                     lora_stack = lora_stack + plot_image_vars['lora_stack']
-
+                
                 if lora_stack is not None and lora_stack != []:
                     for lora in lora_stack:
+                        # Each generation of the model, must use the reference to previously created model / clip objects.
+                        lora['model'] = model
+                        lora['clip'] = clip
                         model, clip = self.easyCache.load_lora(lora)
 
             # 提示词
@@ -463,6 +485,7 @@ class easyXYPlot():
                                                             plot_image_vars['negative_token_normalization'],
                                                             plot_image_vars['negative_weight_interpretation'], w_max=1.0,
                                                             apply_to_pooled="enable", a1111_prompt_style=a1111_prompt_style, steps=steps)
+
 
         model = model if model is not None else plot_image_vars["model"]
         vae = vae if vae is not None else plot_image_vars["vae"]
@@ -582,11 +605,10 @@ class easyXYPlot():
 
         return self.latents_plot
 
-    def plot_images_and_labels(self):
-        # Calculate the background dimensions
+    def plot_images_and_labels(self, plot_image_vars):
+                    
         bg_width, bg_height, x_offset_initial, y_offset = self.calculate_background_dimensions()
 
-        # Create the white background image
         background = Image.new('RGBA', (int(bg_width), int(bg_height)), color=(255, 255, 255, 255))
 
         output_image = []
@@ -618,4 +640,49 @@ class easyXYPlot():
 
             y_offset += img.height + self.grid_spacing
 
+        # lookup used models in the image
+        common_label = ""
+        # Update to add a function to do the heavy lifting. Parameters are plot_image_vars name, label to use, names of the axis, 
+
+        # pprint.pp(plot_image_vars)
+
+        labels = [
+            {"id": "ckpt_name", "id_desc": "ckpt"},
+            {"id": "vae_name", "id_desc": ''},
+            {"id": "sampler_name", "id_desc": "sampler"},
+            {"id": "scheduler", "id_desc": ''},
+            {"id": "steps", "id_desc": ''},
+            {"id": "seed", "id_desc": ''}           
+        ]
+        
+        for item in labels:
+            common_label += self.add_common_label(item['id'], plot_image_vars, item['id_desc'])
+        common_label += f"\n"
+                
+        if plot_image_vars['lora_stack'] is not None and plot_image_vars['lora_stack'] != []:
+#            print(f"lora_stack: {plot_image_vars['lora_stack']}")
+            for lora in plot_image_vars['lora_stack']:
+#                pprint.pp(lora)
+                lora_name = lora['lora_name']
+                lora_weight = lora['model_strength']
+                if lora_name is not None and len(lora_name) > 0 and lora_weight > 0:
+                    common_label += f"LORA: {lora_name} weight: {lora_weight:.2f} \n"
+                    
+        common_label = common_label.strip()
+        
+        if len(common_label) > 0:
+            label_height = background.height - y_offset
+            label_bg = self.create_label(background, common_label, int(48 * background.width / 512), label_width=background.width, label_height=label_height)
+            label_x = (background.width - label_bg.width) // 2
+            label_y = y_offset
+#            print(f"Adding common label: {common_label} x = {label_x} y = {label_y}")
+            background.alpha_composite(label_bg, (label_x, label_y))
+
         return (self.sampler.pil2tensor(background), output_image)
+
+    def add_common_label(self, tag, plot_image_vars, description = ''):
+        label = ''
+        if description == '': description = tag
+        if plot_image_vars[tag] is not None and plot_image_vars[tag] != 'None':
+            label += f"{description}: {plot_image_vars[tag]} "
+        return label
