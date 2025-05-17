@@ -654,7 +654,7 @@ class easyXYPlot():
             {"id": "sampler_name", "id_desc": "sampler"},
             {"id": "scheduler", "id_desc": ''},
             {"id": "steps", "id_desc": ''},
-            {"id": "Flux Guidance", "id_desc": 'guidance'},            
+            {"id": "Flux Guidance", "id_desc": 'guidance'},     
             {"id": "seed", "id_desc": ''}           
         ]
         
