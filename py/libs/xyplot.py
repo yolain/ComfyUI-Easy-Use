@@ -689,4 +689,5 @@ class easyXYPlot():
         if description == '': description = tag
         if tag in plot_image_vars and plot_image_vars[tag] is not None and plot_image_vars[tag] != 'None':
             label += f"{description}: {plot_image_vars[tag]} "
+#        print(f"add_common_label: {tag} description: {description} label: {label}" )
         return label
