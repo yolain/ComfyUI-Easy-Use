@@ -166,7 +166,7 @@ class Float:
     @classmethod
     def INPUT_TYPES(s):
         return {
-            "required": {"value": ("FLOAT", {"default": 0, "step": 0.01, "min": -999999, "max": 999999, })},
+            "required": {"value": ("FLOAT", {"default": 0, "step": 0.01, "min":-0xffffffffffffffff, "max":  0xffffffffffffffff, })},
         }
 
     RETURN_TYPES = ("FLOAT",)
@@ -175,7 +175,7 @@ class Float:
     CATEGORY = "EasyUse/Logic/Type"
 
     def execute(self, value):
-        return (value,)
+        return (round(value, 3),)
 
 
 # 浮点数范围
@@ -239,9 +239,9 @@ class RangeFloat:
         error_if_mismatched_list_args(locals())
         getcontext().prec = 12
 
-        start = [Decimal(s) for s in start]
-        stop = [Decimal(s) for s in stop]
-        step = [Decimal(s) for s in step]
+        start = [round(Decimal(s),2) for s in start]
+        stop = [round(Decimal(s),2) for s in stop]
+        step = [round(Decimal(s),2) for s in step]
 
         ranges = []
         range_sizes = []
@@ -573,17 +573,17 @@ class mathFloatOperation:
 
     def float_math_operation(self, a, b, operation):
         if operation == "add":
-            return (a + b,)
+            return (round(a + b,3),)
         elif operation == "subtract":
-            return (a - b,)
+            return (round(a - b,3),)
         elif operation == "multiply":
-            return (a * b,)
+            return (round(a * b,3),)
         elif operation == "divide":
-            return (a / b,)
+            return (round(a / b,3),)
         elif operation == "modulo":
-            return (a % b,)
+            return (round(a % b,3),)
         elif operation == "power":
-            return (a ** b,)
+            return (round(a ** b,3),)
 
 
 class mathStringOperation:
