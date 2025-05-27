@@ -1964,7 +1964,7 @@ class makeImageForICRepaint:
     b = torch.full([batch_size, height, width, 1], ((color) & 0xFF) / 0xFF)
     return torch.cat((r, g, b), dim=-1)
 
-  def resize_image_and_mask(self, image, mask, w, h ):
+  def resize_image_and_mask(self, image, mask, w, h ,fit='fill'):
       ret_images = []
       ret_masks = []
       _mask = Image.new('L', size=(w, h), color='black')
@@ -1972,12 +1972,12 @@ class makeImageForICRepaint:
       if image is not None and len(image) > 0:
           for i in image:
               _image = tensor2pil(i).convert('RGB')
-              _image = fit_resize_image(_image, w, h, 'fill', Image.LANCZOS, '#000000')
+              _image = fit_resize_image(_image, w, h, fit, Image.LANCZOS, '#000000')
               ret_images.append(pil2tensor(_image))
       if mask is not None and len(mask) > 0:
           for m in mask:
               _mask = tensor2pil(m).convert('L')
-              _mask = fit_resize_image(_mask, w, h, 'fill', Image.LANCZOS).convert('L')
+              _mask = fit_resize_image(_mask, w, h, fit, Image.LANCZOS).convert('L')
               ret_masks.append(image2mask(_mask))
 
       if len(ret_images) > 0 and len(ret_masks) > 0:
@@ -2017,16 +2017,18 @@ class makeImageForICRepaint:
     image, mask, context_mask = None, None, None
 
     # resize
-    if img1_h != img2_h and img1_w != img2_w:
+    if img1_h != img2_h or img1_w != img2_w:
       width, height = img2_w, img2_h
-      if direction == 'left-right' and img1_h != img2_h:
-        scale_factor = img2_h / img1_h
-        width = round(img1_w * scale_factor)
-      elif direction == 'top-bottom' and img1_w != img2_w:
-        scale_factor = img2_w / img1_w
-        height = round(img1_h * scale_factor)
-
-      image_1, mask_1 = self.resize_image_and_mask(image_1, mask_1, width, height)
+      fit = 'crop'
+      if method != 'uniform width':
+        if direction == 'left-right' and img1_h != img2_h:
+          scale_factor = img2_h / img1_h
+          width = round(img1_w * scale_factor)
+        elif direction == 'top-bottom' and img1_w != img2_w:
+          scale_factor = img2_w / img1_w
+          height = round(img1_h * scale_factor)
+        fit = 'fill'
+      image_1, mask_1 = self.resize_image_and_mask(image_1, mask_1, width, height, fit)
 
     if mask_1 is None:
       mask_1 = torch.full((1, image_1.shape[1], image_1.shape[2]), 0, dtype=torch.float32, device="cpu")
