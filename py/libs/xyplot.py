@@ -687,7 +687,6 @@ class easyXYPlot():
 
         return (self.sampler.pil2tensor(background), output_image)
 
-# TODO: Ignore items that are dimensions (xy axis, etc.)
     def add_common_label(self, tag, plot_image_vars, description = ''):
         label = ''
         if description == '': description = tag
