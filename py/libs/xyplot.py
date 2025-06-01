@@ -53,7 +53,7 @@ class easyXYPlot():
 
         plot_image_vars[value_type] = value
         if value_type in ["seed", "Seeds++ Batch"]:
-            value_label = f"{value}"
+            value_label = f"seed: {value}"
         else:
             value_label = f"{value_type}: {value}"
 
@@ -64,7 +64,9 @@ class easyXYPlot():
             arr = value.split(',')
             model_name = os.path.basename(os.path.splitext(arr[0])[0])
             trigger_words = ' ' + arr[3] if value_type == 'Lora' and len(arr[3]) > 2 else ''
-            value_label = f"{model_name}{trigger_words}"
+            lora_weight = float(arr[1]) if value_type == 'Lora' and len(arr) > 1 else 0
+            lora_weight_desc = f"({lora_weight:.2f})" if lora_weight > 0 else ''
+            value_label = f"{model_name[:30]}{lora_weight_desc} {trigger_words}"
 
         if value_type in ["ModelMergeBlocks"]:
             if ":" in value:
@@ -646,23 +648,28 @@ class easyXYPlot():
 
         # pprint.pp(plot_image_vars)
 
+        # We don't process LORAs here because there can be multiple of them.
         labels = [
-            {"id": "ckpt_name", "id_desc": "ckpt"},
-            {"id": "vae_name", "id_desc": ''},
-            {"id": "sampler_name", "id_desc": "sampler"},
-            {"id": "scheduler", "id_desc": ''},
-            {"id": "steps", "id_desc": ''},
-            {"id": "seed", "id_desc": ''}           
+            {"id": "ckpt_name", "id_desc": "ckpt", "axis_type" : "Checkpoint"},
+            {"id": "vae_name", "id_desc": '', "axis_type" : "vae_name"},
+            {"id": "sampler_name", "id_desc": "sampler", "axis_type" : "Sampler"},
+            {"id": "scheduler", "id_desc": '', "axis_type" : "Scheduler"},
+            {"id": "steps", "id_desc": '', "axis_type" : "Steps"},
+            {"id": "Flux Guidance", "id_desc": 'guidance', "axis_type" : "Flux Guidance"},     
+            {"id": "seed", "id_desc": '', "axis_type" : "Seeds++ Batch"}
         ]
         
         for item in labels:
-            common_label += self.add_common_label(item['id'], plot_image_vars, item['id_desc'])
+            # Only add the label if it's not one of the axis
+            # print(f"Checking item: {item['id']} axis_type {item['axis_type']} x_type: {self.x_type} y_type: {self.y_type}")
+            if self.x_type != item['axis_type'] and self.y_type != item['axis_type']:
+                common_label += self.add_common_label(item['id'], plot_image_vars, item['id_desc'])
         common_label += f"\n"
                 
         if plot_image_vars['lora_stack'] is not None and plot_image_vars['lora_stack'] != []:
 #            print(f"lora_stack: {plot_image_vars['lora_stack']}")
             for lora in plot_image_vars['lora_stack']:
-#                pprint.pp(lora)
+
                 lora_name = lora['lora_name']
                 lora_weight = lora['model_strength']
                 if lora_name is not None and len(lora_name) > 0 and lora_weight > 0:
@@ -683,6 +690,7 @@ class easyXYPlot():
     def add_common_label(self, tag, plot_image_vars, description = ''):
         label = ''
         if description == '': description = tag
-        if plot_image_vars[tag] is not None and plot_image_vars[tag] != 'None':
+        if tag in plot_image_vars and plot_image_vars[tag] is not None and plot_image_vars[tag] != 'None':
             label += f"{description}: {plot_image_vars[tag]} "
+#        print(f"add_common_label: {tag} description: {description} label: {label}" )
         return label
