@@ -499,7 +499,6 @@ If my custom nodes has added value to your day, consider indulging in a coffee t
 💖You can support me in any of the following ways:
 
 - [BiliBili](https://space.bilibili.com/1840885116)
-- [Afdian](https://afdian.com/a/yolain)
 - [Wechat / Alipay](https://github.com/user-attachments/assets/803469bd-ed6a-4fab-932d-50e5088a2d03)
 
 ##  🌟Stargazers
