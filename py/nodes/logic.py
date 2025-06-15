@@ -1607,8 +1607,10 @@ class saveText:
         if not os.path.exists(output_file_path):
             os.makedirs(output_file_path)
 
-        if not overwrite:
-            pass
+        if overwrite:
+            file_mode = "w"
+        else:
+            file_mode = "a"
 
         log_node_info("Save Text", f"Saving to {filepath}")
 
@@ -1617,13 +1619,13 @@ class saveText:
             for i in text.split("\n"):
                 text_list.append(i.strip())
 
-            with open(filepath, "w", newline="", encoding='utf-8') as csv_file:
+            with open(filepath, file_mode, newline="", encoding='utf-8') as csv_file:
                 csv_writer = csv.writer(csv_file)
                 # Write each line as a separate row in the CSV file
                 for line in text_list:
                     csv_writer.writerow([line])
         else:
-            with open(filepath, "w", newline="", encoding='utf-8') as text_file:
+            with open(filepath, file_mode, newline="", encoding='utf-8') as text_file:
                 for line in text:
                     text_file.write(line)
 
