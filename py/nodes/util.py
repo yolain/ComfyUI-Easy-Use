@@ -106,6 +106,23 @@ class setControlName:
 
     def set_name(self, controlnet_name):
         return (controlnet_name,)
+    
+class setLoraName:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+                "lora_name": (folder_paths.get_filename_list("loras"),),
+            }
+        }
+
+    RETURN_TYPES = (AlwaysEqualProxy('*'),)
+    RETURN_NAMES = ("lora_name",)
+    FUNCTION = "set_name"
+    CATEGORY = "EasyUse/Util"
+
+    def set_name(self, lora_name):
+        return (lora_name,)
 
 
 NODE_CLASS_MAPPINGS = {
@@ -113,6 +130,7 @@ NODE_CLASS_MAPPINGS = {
     "easy sliderControl": sliderControl,
     "easy ckptNames": setCkptName,
     "easy controlnetNames": setControlName,
+    "easy loraNames": setLoraName,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -120,4 +138,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy sliderControl": "Easy Slider Control",
     "easy ckptNames": "Ckpt Names",
     "easy controlnetNames": "ControlNet Names",
+    "easy loraNames": "Lora Names",
 }
