@@ -1057,7 +1057,12 @@ class imageChooser(PreviewImage):
     images_in = torch.cat(kwargs.pop('images'))
     self.batch = images_in.shape[0]
     for x in kwargs: kwargs[x] = kwargs[x][0]
-    result = self.save_images(images=images_in, prompt=prompt)
+
+    try:
+      pnginfo = extra_pnginfo[0]
+    except:
+      pnginfo = None
+    result = self.save_images(images=images_in, prompt=prompt, extra_pnginfo=pnginfo)
 
     images = result['ui']['images']
     PromptServer.instance.send_sync("easyuse-image-choose", {"id": id, "urls": images})
