@@ -318,9 +318,13 @@ class promptAwait:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "input": (any_type,),
+                "input_0": (any_type,),
                 "prompt": ("STRING", {"multiline": True, "default": "", "placeholder":"Input the prompt or start recording transfer to prompt"}),
+                "select": (['input_0', 'input_1'], {"default": 'input_0'}),
                 "toolbar":("EASY_PROMPT_AWAIT_BAR",),
+            },
+            "optional":{
+                "input_1": (any_type,),
             },
             "hidden": {"workflow_prompt": "PROMPT", "my_unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"},
         }
@@ -330,7 +334,7 @@ class promptAwait:
     FUNCTION = "await_select"
     CATEGORY = "EasyUse/Prompt"
 
-    def await_select(self, input, prompt, toolbar, workflow_prompt=None, my_unique_id=None, extra_pnginfo=None, **kwargs):
+    def await_select(self, input_0, prompt, select, toolbar, input_1=None, workflow_prompt=None, my_unique_id=None, extra_pnginfo=None, **kwargs):
         id = my_unique_id
         id = id.split('.')[len(id.split('.')) - 1] if "." in id else id
         pbar = comfy.utils.ProgressBar(100)
@@ -339,8 +343,10 @@ class promptAwait:
         try:
             res = Message.waitForMessage(id, asList=False)
             if res is None or res == "-1":
+                input = input_0 if select == 'input_0' or input_1 is None else input_1
                 result = (input, prompt, False)
             else:
+                input = input_0 if res['select'] == 'input_0' or input_1 is None else input_1
                 result = (input, res['prompt'], False if res['result'] == -1 else True)
             pbar.update_absolute(100)
             return result

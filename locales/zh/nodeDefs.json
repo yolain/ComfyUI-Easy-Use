@@ -168,16 +168,13 @@
   "easy promptAwait": {
     "display_name": "提示词等待",
     "inputs": {
-      "input": {
-        "name": "输入任何"
-      },
       "prompt": {
         "name": "提示词"
       }
     },
     "outputs": {
       "0": {
-        "name": "输出任何"
+        "name": "输出"
       },
       "1": {
         "name": "提示词"
