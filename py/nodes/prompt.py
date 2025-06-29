@@ -341,7 +341,7 @@ class promptAwait:
             if res is None or res == "-1":
                 result = (input, prompt, False)
             else:
-                result = (input, prompt, res)
+                result = (input, res['prompt'], False if res['result'] == -1 else True)
             pbar.update_absolute(100)
             return result
         except MessageCancelled:

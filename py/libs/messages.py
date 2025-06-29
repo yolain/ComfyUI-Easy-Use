@@ -1,6 +1,7 @@
 from server import PromptServer
 from aiohttp import web
 import time
+import json
 
 class MessageCancelled(Exception):
     pass
@@ -38,7 +39,10 @@ class Message:
             if asList:
                 return [str(x.strip()) for x in message.split(",")]
             else:
-                return message
+                try:
+                    return json.loads(message)
+                except ValueError:
+                    return message
         except ValueError:
             print( f"ERROR IN MESSAGE - failed to parse '${message}' as ${'comma separated list of strings' if asList else 'string'}")
             return [message] if asList else message
