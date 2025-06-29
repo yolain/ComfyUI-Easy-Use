@@ -165,6 +165,28 @@
       }
     }
   },
+  "easy promptAwait": {
+    "display_name": "提示词等待",
+    "inputs": {
+      "input": {
+        "name": "输入任何"
+      },
+      "prompt": {
+        "name": "提示词"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出任何"
+      },
+      "1": {
+        "name": "提示词"
+      },
+      "2": {
+        "name": "继续"
+      }
+    }
+  },
   "easy promptConcat": {
     "display_name": "提示词联结",
     "inputs": {
@@ -6113,73 +6135,13 @@
   "easy whileLoopStart": {
     "display_name": "While循环-开始",
     "inputs": {
-      "initial_value0": {
-        "name": "初始值0"
-      },
-      "initial_value1": {
-        "name": "初始值1"
-      },
-      "initial_value2": {
-        "name": "初始值2"
-      },
-      "initial_value3": {
-        "name": "初始值3"
-      },
-      "initial_value4": {
-        "name": "初始值4"
-      },
-      "initial_value5": {
-        "name": "初始值5"
-      },
-      "initial_value6": {
-        "name": "初始值6"
-      },
-      "initial_value7": {
-        "name": "初始值7"
-      },
-      "initial_value8": {
-        "name": "初始值8"
-      },
-      "initial_value9": {
-        "name": "初始值9"
-      },
       "condition": {
-        "name": "条件"
+        "name": "开始循环"
       }
     },
     "outputs": {
       "0": {
         "name": "开始"
-      },
-      "1": {
-        "name": "值0"
-      },
-      "2": {
-        "name": "值1"
-      },
-      "3": {
-        "name": "值2"
-      },
-      "4": {
-        "name": "值3"
-      },
-      "5": {
-        "name": "值4"
-      },
-      "6": {
-        "name": "值5"
-      },
-      "7": {
-        "name": "值6"
-      },
-      "8": {
-        "name": "值7"
-      },
-      "9": {
-        "name": "值8"
-      },
-      "10": {
-        "name": "值9"
       }
     }
   },
@@ -6189,71 +6151,11 @@
       "flow": {
         "name": "结束"
       },
-      "initial_value0": {
-        "name": "初始值0"
-      },
-      "initial_value1": {
-        "name": "初始值1"
-      },
-      "initial_value2": {
-        "name": "初始值2"
-      },
-      "initial_value3": {
-        "name": "初始值3"
-      },
-      "initial_value4": {
-        "name": "初始值4"
-      },
-      "initial_value5": {
-        "name": "初始值5"
-      },
-      "initial_value6": {
-        "name": "初始值6"
-      },
-      "initial_value7": {
-        "name": "初始值7"
-      },
-      "initial_value8": {
-        "name": "初始值8"
-      },
-      "initial_value9": {
-        "name": "初始值9"
-      },
       "condition": {
-        "name": "条件"
+        "name": "继续循环"
       }
     },
     "outputs": {
-      "0": {
-        "name": "值0"
-      },
-      "1": {
-        "name": "值1"
-      },
-      "2": {
-        "name": "值2"
-      },
-      "3": {
-        "name": "值3"
-      },
-      "4": {
-        "name": "值4"
-      },
-      "5": {
-        "name": "值5"
-      },
-      "6": {
-        "name": "值6"
-      },
-      "7": {
-        "name": "值7"
-      },
-      "8": {
-        "name": "值8"
-      },
-      "9": {
-        "name": "值9"
-      }
     }
   },
   "easy forLoopStart": {
