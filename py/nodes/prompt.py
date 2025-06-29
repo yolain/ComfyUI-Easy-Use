@@ -318,7 +318,7 @@ class promptAwait:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "new": (any_type,),
+                "now": (any_type,),
                 "prompt": ("STRING", {"multiline": True, "default": "", "placeholder":"Input the prompt or start recording transfer to prompt"}),
                 "toolbar":("EASY_PROMPT_AWAIT_BAR",),
             },
@@ -333,18 +333,20 @@ class promptAwait:
     FUNCTION = "await_select"
     CATEGORY = "EasyUse/Prompt"
 
-    def await_select(self, new, prompt, toolbar, prev=None, workflow_prompt=None, my_unique_id=None, extra_pnginfo=None, **kwargs):
+    def await_select(self, now, prompt, toolbar, prev=None, workflow_prompt=None, my_unique_id=None, extra_pnginfo=None, **kwargs):
         id = my_unique_id
         id = id.split('.')[len(id.split('.')) - 1] if "." in id else id
+        if ":" in id:
+            id = id.split(":")[0]
         pbar = comfy.utils.ProgressBar(100)
         pbar.update_absolute(30)
         PromptServer.instance.send_sync('easyuse_prompt_await', {"id": id})
         try:
             res = Message.waitForMessage(id, asList=False)
             if res is None or res == "-1":
-                result = (new, prompt, False)
+                result = (now, prompt, False)
             else:
-                input = new if res['select'] == 'new' or prev is None else prev
+                input = now if res['select'] == 'now' or prev is None else prev
                 result = (input, res['prompt'], False if res['result'] == -1 else True)
             pbar.update_absolute(100)
             return result

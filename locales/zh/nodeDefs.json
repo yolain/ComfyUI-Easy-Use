@@ -168,6 +168,12 @@
   "easy promptAwait": {
     "display_name": "提示词等待",
     "inputs": {
+      "now": {
+        "name": "当前"
+      },
+      "prev": {
+        "name": "上一步"
+      },
       "prompt": {
         "name": "提示词"
       }
