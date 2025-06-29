@@ -9,7 +9,6 @@ workflow/**
 autocomplete/**
 web_beta/**
 web_version/dev/**
-ComfyUI-Easy-Use-Frontend/
 docs/**
 .vscode/
 .idea/

@@ -308,11 +308,56 @@ class promptLine:
 
         return (rows, rows)
 
+import comfy.utils
+from server import PromptServer
+from ..libs.messages import MessageCancelled, Message
+any_type = AlwaysEqualProxy("*")
+class promptAwait:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "now": (any_type,),
+                "prompt": ("STRING", {"multiline": True, "default": "", "placeholder":"Enter a prompt or use voice to enter to text"}),
+                "toolbar":("EASY_PROMPT_AWAIT_BAR",),
+            },
+            "optional":{
+                "prev": (any_type,),
+            },
+            "hidden": {"workflow_prompt": "PROMPT", "my_unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"},
+        }
+
+    RETURN_TYPES = (any_type, "STRING", "BOOLEAN", "INT")
+    RETURN_NAMES = ("output", "prompt", "continue", "seed")
+    FUNCTION = "await_select"
+    CATEGORY = "EasyUse/Prompt"
+
+    def await_select(self, now, prompt, toolbar, prev=None, workflow_prompt=None, my_unique_id=None, extra_pnginfo=None, **kwargs):
+        id = my_unique_id
+        id = id.split('.')[len(id.split('.')) - 1] if "." in id else id
+        if ":" in id:
+            id = id.split(":")[0]
+        pbar = comfy.utils.ProgressBar(100)
+        pbar.update_absolute(30)
+        PromptServer.instance.send_sync('easyuse_prompt_await', {"id": id})
+        try:
+            res = Message.waitForMessage(id, asList=False)
+            if res is None or res == "-1":
+                result = (now, prompt, False, 0)
+            else:
+                input = now if res['select'] == 'now' or prev is None else prev
+                result = (input, res['prompt'], False if res['result'] == -1 else True, res['seed'] if res['unlock'] else res['last_seed'])
+            pbar.update_absolute(100)
+            return result
+        except MessageCancelled:
+            pbar.update_absolute(100)
+            raise comfy.model_management.InterruptProcessingException()
+
 class promptConcat:
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {
-        },
+        return {"required": {},
             "optional": {
                 "prompt1": ("STRING", {"multiline": False, "default": "", "forceInput": True}),
                 "prompt2": ("STRING", {"multiline": False, "default": "", "forceInput": True}),
@@ -564,6 +609,7 @@ NODE_CLASS_MAPPINGS = {
     "easy prompt": prompt,
     "easy promptList": promptList,
     "easy promptLine": promptLine,
+    "easy promptAwait": promptAwait,
     "easy promptConcat": promptConcat,
     "easy promptReplace": promptReplace,
     "easy stylesSelector": stylesPromptSelector,
@@ -578,6 +624,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy prompt": "Prompt",
     "easy promptList": "PromptList",
     "easy promptLine": "PromptLine",
+    "easy promptAwait": "PromptAwait",
     "easy promptConcat": "PromptConcat",
     "easy promptReplace": "PromptReplace",
     "easy stylesSelector": "Styles Selector",
