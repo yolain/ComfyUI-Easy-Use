@@ -3,37 +3,8 @@ from ..libs.api.fluxai import fluxaiAPI
 from ..libs.api.bizyair import bizyairAPI, encode_data
 from nodes import NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
 
-class fluxPromptGenAPI:
-
-    @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "describe": ("STRING", {"default": "", "placeholder": "Describe your image idea (you can use any language)", "multiline": True}),
-            },
-            "optional": {
-                "cookie_override": ("STRING", {"default": "", "forceInput": True}),
-            },
-            "hidden": {
-                "prompt": "PROMPT",
-                "unique_id": "UNIQUE_ID",
-                "extra_pnginfo": "EXTRA_PNGINFO",
-            },
-        }
-
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("prompt",)
-
-    FUNCTION = "generate"
-    OUTPUT_NODE = False
-
-    CATEGORY = "EasyUse/API"
-
-    def generate(self, describe, cookie_override=None, prompt=None, unique_id=None, extra_pnginfo=None):
-        prompt = fluxaiAPI.promptGenerate(describe, cookie_override)
-        return (prompt,)
-
 class joyCaption2API:
+    API_URL = f"/supernode/joycaption2"
 
     @classmethod
     def INPUT_TYPES(s):
@@ -110,12 +81,12 @@ class joyCaption2API:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("caption",)
 
-    FUNCTION = "joycaption2"
+    FUNCTION = "joycaption"
     OUTPUT_NODE = False
 
     CATEGORY = "EasyUse/API"
 
-    def joycaption2(
+    def joycaption(
             self,
             image,
             do_sample,
@@ -149,17 +120,20 @@ class joyCaption2API:
         }
 
         pbar.update_absolute(30)
-        caption = bizyairAPI.joyCaption2(payload, image, apikey_override)
+        caption = bizyairAPI.joyCaption(payload, image, apikey_override, API_URL=self.API_URL)
 
         pbar.update_absolute(100)
         return (caption,)
 
+class joyCaption3API(joyCaption2API):
+    API_URL = f"/supernode/joycaption3"
+
 NODE_CLASS_MAPPINGS = {
-    "easy fluxPromptGenAPI": fluxPromptGenAPI,
     "easy joyCaption2API": joyCaption2API,
+    "easy joyCaption3API": joyCaption3API,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "easy fluxPromptGenAPI": "Prompt Gen (FluxAI)",
     "easy joyCaption2API": "JoyCaption2 (BizyAIR)",
+    "easy joyCaption3API": "JoyCaption3 (BizyAIR)",
 }

@@ -56,13 +56,14 @@ class BizyAIRAPI:
                     f"Failed to connect to the server: {e}, if you have no key, "
                 )
 
-    # joycaptionTwo
-    def joyCaption2(self, payload, image, apikey_override=None):
+    # joycaption
+    def joyCaption(self, payload, image, apikey_override=None, API_URL='/supernode/joycaption2'):
         if apikey_override is not None:
             api_key = apikey_override
         else:
             api_key = self.getAPIKey()
-        url = f"{self.base_url}/supernode/joycaption2"
+        url = f"{self.base_url}{API_URL}"
+        print('Sending request to:', url)
         auth = f"Bearer {api_key}"
         headers = {
             "accept": "application/json",
