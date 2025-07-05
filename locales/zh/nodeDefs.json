@@ -6638,6 +6638,37 @@
       }
     }
   },
+  "easy joyCaption3API": {
+    "display_name": "JoyCaption3（硅基流动）",
+    "inputs": {
+      "image": {
+        "name": "图像"
+      },
+      "do_sample": {
+        "name": "执行采样"
+      },
+      "temperature": {
+        "name": "温度"
+      },
+      "max_tokens": {
+        "name": "最大词令牌数"
+      },
+      "caption_type": {
+        "name": "提示词类型"
+      },
+      "caption_length": {
+          "name": "提示词长度"
+      },
+      "name_input": {
+        "name": "名称输入"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "提示词"
+      }
+    }
+  },
   "easy if": {
     "display_name": "If判断",
     "inputs": {

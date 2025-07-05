@@ -2022,7 +2022,7 @@ class makeImageForICRepaint:
     image, mask, context_mask = None, None, None
 
     # resize
-    if img1_h != img2_h or img1_w != img2_w:
+    if img1_h != img2_h and img1_w != img2_w:
       width, height = img2_w, img2_h
       fit = 'crop'
       if method != 'uniform width':
