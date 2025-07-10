@@ -376,6 +376,9 @@ HUMANPARSING_MODELS = {
     },
     "segformer_b3_fashion":{
         "model_name": "sayeed99/segformer-b3-fashion",
+    },
+    "face_parsing":{
+        "model_name": "jonathandinu/face-parsing"
     }
 }
 
