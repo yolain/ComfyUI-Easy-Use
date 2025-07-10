@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import comfy.utils
 import comfy.model_management
+import shutil
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
 from nodes import MAX_RESOLUTION, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
@@ -1280,7 +1281,7 @@ class humanSegmentation:
         return {
           "required":{
             "image": ("IMAGE",),
-            "method": (["selfie_multiclass_256x256", "human_parsing_lip", "human_parts (deeplabv3p)"],),
+            "method": (["selfie_multiclass_256x256", "human_parsing_lip", "human_parts (deeplabv3p)", "segformer_b3_clothes", "segformer_b3_fashion"],),
             "confidence": ("FLOAT", {"default": 0.4, "min": 0.05, "max": 0.95, "step": 0.01},),
             "crop_multi": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.001},),
             "mask_components":(
@@ -1289,6 +1290,7 @@ class humanSegmentation:
                  "multi_select": {
                    "placeholder": "select mask components",
                    "chip": True,
+                   "max_selected_labels": 4,
                  }
                }
             )
@@ -1441,6 +1443,68 @@ class humanSegmentation:
           ret_image = RGB2RGBA(tensor2pil(img).convert('RGB'), _mask.convert('L'))
           ret_images.append(pil2tensor(ret_image))
           ret_masks.append(image2mask(_mask))
+
+        output_image = torch.cat(ret_images, dim=0)
+        mask = torch.cat(ret_masks, dim=0)
+
+      elif method in ["segformer_b3_clothes", "segformer_b3_fashion"]:
+        from transformers import SegformerImageProcessor, AutoModelForSemanticSegmentation
+
+        # 分割
+        def get_segmentation_from_model(tensor_image, model, processor):
+          cloth = tensor2pil(tensor_image)
+          inputs = processor(images=cloth, return_tensors="pt")
+          outputs = model(**inputs)
+          logits = outputs.logits.cpu()
+          upsampled_logits = F.interpolate(logits, size=cloth.size[::-1], mode="bilinear",
+                                                       align_corners=False)
+          pred_seg = upsampled_logits.argmax(dim=1)[0].numpy()
+          return pred_seg, cloth
+
+
+        if method in cache:
+          _, (processor, model) = cache[method][1]
+        else:
+          model_folder_path = os.path.join(folder_paths.models_dir, method)
+          if os.path.exists(model_folder_path):
+            print(f"Start to load existing model on {device}")
+          else:
+            from huggingface_hub import snapshot_download
+            PromptServer.instance.send_sync("easyuse-toast", {"content": f"Model not found locally. Downloading {method}...", "type": 'loading', "duration": 10000})
+            print(f"Model not found locally. Downloading {method}...")
+            model_path_cache = os.path.join(folder_paths.models_dir, "cache-"+method)
+            snapshot_download(
+              repo_id=HUMANPARSING_MODELS[method]['model_name'],
+              local_dir=model_path_cache,
+              local_dir_use_symlinks=False,
+              resume_download=True
+            )
+            shutil.move(model_path_cache, model_folder_path)
+            print(f"Model downloaded to {model_folder_path}...")
+          try:
+            model_folder_path = os.path.normpath(folder_paths.folder_names_and_paths[method][0][0])
+          except:
+            pass
+
+          processor = SegformerImageProcessor.from_pretrained(model_folder_path)
+          model = AutoModelForSemanticSegmentation.from_pretrained(model_folder_path)
+          update_cache(method, 'human_segmentation', (False, (processor, model)))
+
+        ret_images = []
+        ret_masks = []
+
+        for img in image:
+            pred_seg, cloth = get_segmentation_from_model(img, model, processor)
+            i = torch.unsqueeze(img, 0)
+            i = pil2tensor(tensor2pil(i).convert('RGB'))
+            orig_image = tensor2pil(i).convert('RGB')
+
+            mask = np.isin(pred_seg, mask_components).astype(np.uint8)
+            _mask = Image.fromarray(mask * 255)
+
+            ret_image = RGB2RGBA(tensor2pil(img).convert('RGB'), _mask.convert('L'))
+            ret_images.append(pil2tensor(ret_image))
+            ret_masks.append(image2mask(_mask))
 
         output_image = torch.cat(ret_images, dim=0)
         mask = torch.cat(ret_masks, dim=0)
