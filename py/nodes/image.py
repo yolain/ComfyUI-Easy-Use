@@ -1501,9 +1501,9 @@ class humanSegmentation:
           device = model.device
           results = []
           images = []
-          for item in image:
-            size = item.shape[:2]
-            inputs = processor(images=transform(item.permute(2, 0, 1)), return_tensors="pt")
+          for img in image:
+            size = img.shape[:2]
+            inputs = processor(images=transform(img.permute(2, 0, 1)), return_tensors="pt")
             inputs = {k: v.to(device) for k, v in inputs.items()}
             outputs = model(**inputs)
             logits = outputs.logits
@@ -1517,15 +1517,8 @@ class humanSegmentation:
             pred_seg_np = pred_seg.cpu().detach().numpy().astype(np.uint8)
             results.append(torch.tensor(pred_seg_np))
 
-            norm = matplotlib.colors.Normalize(0, 18)
-            pred_seg_np_normed = norm(pred_seg_np)
-            colored = colormap(pred_seg_np_normed)
-            colored_sliced = colored[:, :, :3]  # type: ignore
-            images.append(torch.tensor(colored_sliced))
-
           results_out = torch.stack(results, dim=0)
-          images_out = torch.stack(images, dim=0)
-          for image_item, result_item in zip(images_out, results_out):
+          for img, result_item in zip(image, results_out):
               mask = torch.zeros(result_item.shape, dtype=torch.uint8)
               for i in mask_components:
                   mask = mask | torch.where(result_item == i, 1, 0)
@@ -1535,7 +1528,7 @@ class humanSegmentation:
               _mask = Image.fromarray(mask_np)
 
               # 处理图像输出
-              ret_image = RGB2RGBA(tensor2pil(image_item).convert('RGB'), _mask.convert('L'))
+              ret_image = RGB2RGBA(tensor2pil(img).convert('RGB'), _mask.convert('L'))
               ret_images.append(pil2tensor(ret_image))
               ret_masks.append(image2mask(_mask))
 
