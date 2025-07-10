@@ -370,6 +370,15 @@ HUMANPARSING_MODELS = {
     },
     "human-parts":{
         "model_url":"https://huggingface.co/Metal3d/deeplabv3p-resnet50-human/resolve/main/deeplabv3p-resnet50-human.onnx",
+    },
+    "segformer_b3_clothes":{
+        "model_name": "sayeed99/segformer-b3-clothes",
+    },
+    "segformer_b3_fashion":{
+        "model_name": "sayeed99/segformer-b3-fashion",
+    },
+    "face_parsing":{
+        "model_name": "jonathandinu/face-parsing"
     }
 }
 

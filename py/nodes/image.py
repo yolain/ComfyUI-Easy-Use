@@ -4,12 +4,13 @@ import torch
 import numpy as np
 import comfy.utils
 import comfy.model_management
+import shutil
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from server import PromptServer
 from nodes import MAX_RESOLUTION, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 import torch.nn.functional as F
-from torchvision.transforms import Resize, CenterCrop, GaussianBlur
+from torchvision.transforms import Resize, CenterCrop, GaussianBlur, ToPILImage
 from torchvision.transforms.functional import to_pil_image
 from ..libs.log import log_node_info
 from ..libs.utils import AlwaysEqualProxy, ByPassTypeTuple
@@ -1277,13 +1278,22 @@ class humanSegmentation:
 
     @classmethod
     def INPUT_TYPES(cls):
-
         return {
           "required":{
             "image": ("IMAGE",),
-            "method": (["selfie_multiclass_256x256", "human_parsing_lip", "human_parts (deeplabv3p)"],),
+            "method": (["selfie_multiclass_256x256", "human_parsing_lip", "human_parts (deeplabv3p)", "segformer_b3_clothes", "segformer_b3_fashion", "face_parsing"],),
             "confidence": ("FLOAT", {"default": 0.4, "min": 0.05, "max": 0.95, "step": 0.01},),
             "crop_multi": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 10.0, "step": 0.001},),
+            "mask_components":(
+               "EASY_COMBO",{
+                 "options": [{'label':'Background','value':0}],
+                 "multi_select": {
+                   "placeholder": "select mask components",
+                   "chip": True,
+                   "max_selected_labels": 4,
+                 }
+               }
+            )
           },
           "hidden": {
               "prompt": "PROMPT",
@@ -1309,12 +1319,7 @@ class humanSegmentation:
         numpy_image = cv2.cvtColor(numpy_image, cv2.COLOR_BGR2RGB)
       return mp.Image(image_format=image_format, data=numpy_image)
 
-    def parsing(self, image, confidence, method, crop_multi, prompt=None, my_unique_id=None):
-      mask_components = []
-      if my_unique_id in prompt:
-        if prompt[my_unique_id]["inputs"]['mask_components']:
-          mask_components = prompt[my_unique_id]["inputs"]['mask_components'].split(',')
-      mask_components = list(map(int, mask_components))
+    def parsing(self, image, confidence, method, crop_multi, mask_components, prompt=None, my_unique_id=None):
       if method == 'selfie_multiclass_256x256':
         try:
           import mediapipe as mp
@@ -1438,6 +1443,107 @@ class humanSegmentation:
           ret_image = RGB2RGBA(tensor2pil(img).convert('RGB'), _mask.convert('L'))
           ret_images.append(pil2tensor(ret_image))
           ret_masks.append(image2mask(_mask))
+
+        output_image = torch.cat(ret_images, dim=0)
+        mask = torch.cat(ret_masks, dim=0)
+
+      elif method in ["segformer_b3_clothes", "segformer_b3_fashion", "face_parsing"]:
+        from transformers import SegformerImageProcessor, AutoModelForSemanticSegmentation
+
+        # 分割
+        def get_segmentation_from_model(tensor_image, model, processor):
+          cloth = tensor2pil(tensor_image)
+          inputs = processor(images=cloth, return_tensors="pt")
+          outputs = model(**inputs)
+          logits = outputs.logits.cpu()
+          upsampled_logits = F.interpolate(logits, size=cloth.size[::-1], mode="bilinear",
+                                                       align_corners=False)
+          pred_seg = upsampled_logits.argmax(dim=1)[0].numpy()
+          return pred_seg, cloth
+
+
+        if method in cache:
+          _, (processor, model) = cache[method][1]
+        else:
+          model_folder_path = os.path.join(folder_paths.models_dir, method)
+          if os.path.exists(model_folder_path):
+            print(f"Start to load existing model...")
+          else:
+            from huggingface_hub import snapshot_download
+            PromptServer.instance.send_sync("easyuse-toast", {"content": f"Model not found locally. Downloading {method}...", "type": 'loading', "duration": 10000})
+            print(f"Model not found locally. Downloading {method}...")
+            model_path_cache = os.path.join(folder_paths.models_dir, "cache-"+method)
+            snapshot_download(
+              repo_id=HUMANPARSING_MODELS[method]['model_name'],
+              local_dir=model_path_cache,
+              local_dir_use_symlinks=False,
+              resume_download=True
+            )
+            shutil.move(model_path_cache, model_folder_path)
+            print(f"Model downloaded to {model_folder_path}...")
+          try:
+            model_folder_path = os.path.normpath(folder_paths.folder_names_and_paths[method][0][0])
+          except:
+            pass
+
+          processor = SegformerImageProcessor.from_pretrained(model_folder_path)
+          model = AutoModelForSemanticSegmentation.from_pretrained(model_folder_path)
+          update_cache(method, 'human_segmentation', (False, (processor, model)))
+
+        ret_images = []
+        ret_masks = []
+
+        if method == "face_parsing":
+          import matplotlib
+          import torchvision.transforms as T
+          transform = ToPILImage()
+          colormap = matplotlib.colormaps['viridis']
+          device = model.device
+          results = []
+          images = []
+          for img in image:
+            size = img.shape[:2]
+            inputs = processor(images=transform(img.permute(2, 0, 1)), return_tensors="pt")
+            inputs = {k: v.to(device) for k, v in inputs.items()}
+            outputs = model(**inputs)
+            logits = outputs.logits
+            upsampled_logits = F.interpolate(
+              logits,
+              size=size,
+              mode="bilinear",
+              align_corners=False)
+
+            pred_seg = upsampled_logits.argmax(dim=1)[0]
+            pred_seg_np = pred_seg.cpu().detach().numpy().astype(np.uint8)
+            results.append(torch.tensor(pred_seg_np))
+
+          results_out = torch.stack(results, dim=0)
+          for img, result_item in zip(image, results_out):
+              mask = torch.zeros(result_item.shape, dtype=torch.uint8)
+              for i in mask_components:
+                  mask = mask | torch.where(result_item == i, 1, 0)
+
+              # 将mask转换为numpy数组，并确保数据类型正确
+              mask_np = (mask * 255).numpy().astype(np.uint8)
+              _mask = Image.fromarray(mask_np)
+
+              # 处理图像输出
+              ret_image = RGB2RGBA(tensor2pil(img).convert('RGB'), _mask.convert('L'))
+              ret_images.append(pil2tensor(ret_image))
+              ret_masks.append(image2mask(_mask))
+
+        else:
+          for img in image:
+              pred_seg, cloth = get_segmentation_from_model(img, model, processor)
+              i = torch.unsqueeze(img, 0)
+              i = pil2tensor(tensor2pil(i).convert('RGB'))
+
+              mask = np.isin(pred_seg, mask_components).astype(np.uint8)
+              _mask = Image.fromarray(mask * 255)
+
+              ret_image = RGB2RGBA(tensor2pil(img).convert('RGB'), _mask.convert('L'))
+              ret_images.append(pil2tensor(ret_image))
+              ret_masks.append(image2mask(_mask))
 
         output_image = torch.cat(ret_images, dim=0)
         mask = torch.cat(ret_masks, dim=0)
@@ -1892,47 +1998,6 @@ class loadImagesForLoop:
       "result": tuple(["stub", index, image, mask, name] + outputs),
       "expand": graph.finalize(),
     }
-# 姿势编辑器
-# class poseEditor:
-#   @classmethod
-#   def INPUT_TYPES(self):
-#     temp_dir = folder_paths.get_temp_directory()
-#
-#     if not os.path.isdir(temp_dir):
-#       os.makedirs(temp_dir)
-#
-#     temp_dir = folder_paths.get_temp_directory()
-#
-#     return {"required":
-#               {"image": (sorted(os.listdir(temp_dir)),)},
-#             }
-#
-#   RETURN_TYPES = ("IMAGE",)
-#   FUNCTION = "output_pose"
-#
-#   CATEGORY = "EasyUse/🚫 Deprecated"
-#
-#   def output_pose(self, image):
-#     image_path = os.path.join(folder_paths.get_temp_directory(), image)
-#     # print(f"Create: {image_path}")
-#
-#     i = Image.open(image_path)
-#     image = i.convert("RGB")
-#     image = np.array(image).astype(np.float32) / 255.0
-#     image = torch.from_numpy(image)[None,]
-#
-#     return (image,)
-#
-#   @classmethod
-#   def IS_CHANGED(self, image):
-#     image_path = os.path.join(
-#       folder_paths.get_temp_directory(), image)
-#     # print(f'Change: {image_path}')
-#
-#     m = hashlib.sha256()
-#     with open(image_path, 'rb') as f:
-#       m.update(f.read())
-#     return m.digest().hex()
 
 class makeImageForICRepaint:
   @classmethod

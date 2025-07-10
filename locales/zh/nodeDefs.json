@@ -6620,7 +6620,7 @@
         "name": "温度"
       },
       "max_tokens": {
-        "name": "最大词令牌数"
+        "name": "最大词元数"
       },
       "caption_type": {
         "name": "提示词类型"
@@ -6651,7 +6651,7 @@
         "name": "温度"
       },
       "max_tokens": {
-        "name": "最大词令牌数"
+        "name": "最大词元数"
       },
       "caption_type": {
         "name": "提示词类型"
