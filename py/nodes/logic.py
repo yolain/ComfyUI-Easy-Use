@@ -1381,9 +1381,9 @@ class showAnything:
                     pass
 
         if not extra_pnginfo:
-            print("Error: extra_pnginfo is empty")
+            pass
         elif (not isinstance(extra_pnginfo[0], dict) or "workflow" not in extra_pnginfo[0]):
-            print("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
+            pass
         else:
             workflow = extra_pnginfo[0]["workflow"]
             node = next((x for x in workflow["nodes"] if str(x["id"]) == unique_id[0]), None)
