@@ -78,13 +78,13 @@ async def parse_csv(request):
 @PromptServer.instance.routes.get("/easyuse/prompt/styles")
 async def getStylesList(request):
     if "name" in request.rel_url.query:
-        name = request.rel_url.query["name"]
-        if name == 'fooocus_styles':
-            file = os.path.join(RESOURCES_DIR, name+'.json')
-            cn_file = os.path.join(RESOURCES_DIR, name + '_cn.json')
+        style_name = request.rel_url.query["name"]
+        if style_name == 'fooocus_styles':
+            file = os.path.join(RESOURCES_DIR, style_name+'.json')
+            cn_file = os.path.join(RESOURCES_DIR, style_name + '_cn.json')
         else:
-            file = os.path.join(FOOOCUS_STYLES_DIR, name+'.json')
-            cn_file = os.path.join(FOOOCUS_STYLES_DIR, name + '_cn.json')
+            file = os.path.join(FOOOCUS_STYLES_DIR, style_name+'.json')
+            cn_file = os.path.join(FOOOCUS_STYLES_DIR, style_name + '_cn.json')
         cn_data = None
         if os.path.isfile(cn_file):
             f = open(cn_file, 'r', encoding='utf-8')
@@ -98,8 +98,8 @@ async def getStylesList(request):
                 ndata = []
                 for d in data:
                     nd = {}
-                    style_name = d['name'].replace('-', ' ')
-                    words = style_name.split(' ')
+                    name = d['name'].replace('-', ' ')
+                    words = name.split(' ')
                     key = ' '.join(
                         word.upper() if word.lower() in ['mre', 'sai', '3d'] else word.capitalize() for word in
                         words)

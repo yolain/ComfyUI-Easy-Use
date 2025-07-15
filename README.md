@@ -47,6 +47,14 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.3.2**
+
+- Revamp `easy stylesSelector` node, and you can download [other styles files](https://github.com/yolain/EasyUse-Styles-Templates) to the `styles` folder
+- Revamp `easy humanSegmentation` node
+- Fix `easy makeImageForICLora` node issue, that occurred when the heights of two images were the same during image stitching on.
+- Add `easy joycaption3API` node
+- Add `easy promptAwait` node
+
 **v1.3.1**
 
 - Rewrite drawNodeWidget and fix the GroupNode preview issue.
