@@ -158,6 +158,7 @@ class stylesPromptSelector:
             file = os.path.join(styles_dir, file_name)
             if os.path.isfile(file) and file_name.endswith(".json"):
                 styles.append(file_name.split(".")[0])
+
         return {
             "required": {
                "styles": (styles, {"default": "fooocus_styles"}),
@@ -165,6 +166,7 @@ class stylesPromptSelector:
             "optional": {
                 "positive": ("STRING", {"forceInput": True}),
                 "negative": ("STRING", {"forceInput": True}),
+                "select_styles": ("EASY_PROMPT_STYLES", {}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
         }
@@ -175,7 +177,7 @@ class stylesPromptSelector:
     CATEGORY = 'EasyUse/Prompt'
     FUNCTION = 'run'
 
-    def run(self, styles, positive='', negative='', prompt=None, extra_pnginfo=None, my_unique_id=None):
+    def run(self, styles, positive='', negative='', select_styles=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
         values = []
         all_styles = {}
         positive_prompt, negative_prompt = '', negative
@@ -188,9 +190,14 @@ class stylesPromptSelector:
         f.close()
         for d in data:
             all_styles[d['name']] = d
-        if my_unique_id in prompt:
-            if prompt[my_unique_id]["inputs"]['select_styles']:
-                values = prompt[my_unique_id]["inputs"]['select_styles'].split(',')
+        # if my_unique_id in prompt:
+        #     if prompt[my_unique_id]["inputs"]['select_styles']:
+        #         values = prompt[my_unique_id]["inputs"]['select_styles'].split(',')
+
+        if isinstance(select_styles, str):
+            values = select_styles.split(',')
+        else:
+            values = select_styles if select_styles else []
 
         has_prompt = False
         if len(values) == 0:
@@ -201,8 +208,10 @@ class stylesPromptSelector:
                 if "{prompt}" in all_styles[val]['prompt'] and has_prompt == False:
                     positive_prompt = all_styles[val]['prompt'].replace('{prompt}', positive)
                     has_prompt = True
-                else:
+                elif "{prompt}" in all_styles[val]['prompt']:
                     positive_prompt += ', ' + all_styles[val]['prompt'].replace(', {prompt}', '').replace('{prompt}', '')
+                else:
+                    positive_prompt = all_styles[val]['prompt'] if positive_prompt == '' else positive_prompt + ', ' + all_styles[val]['prompt']
             if 'negative_prompt' in all_styles[val]:
                 negative_prompt += ', ' + all_styles[val]['negative_prompt'] if negative_prompt else all_styles[val]['negative_prompt']
 

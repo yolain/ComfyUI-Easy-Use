@@ -98,18 +98,30 @@ async def getStylesList(request):
                 ndata = []
                 for d in data:
                     nd = {}
-                    name = d['name'].replace('-', ' ')
-                    words = name.split(' ')
+                    style_name = d['name'].replace('-', ' ')
+                    words = style_name.split(' ')
                     key = ' '.join(
                         word.upper() if word.lower() in ['mre', 'sai', '3d'] else word.capitalize() for word in
                         words)
-                    img_name = '_'.join(words).lower()
                     if "name_cn" in d:
                         nd['name_cn'] = d['name_cn']
                     elif cn_data:
                         nd['name_cn'] = cn_data[key] if key in cn_data else key
                     nd["name"] = d['name']
-                    nd['imgName'] = img_name
+                    if "thumbnail" in d:
+                        thumbnail = d['thumbnail']
+                        if isinstance(d['thumbnail'], str):
+                            nd['thumbnail'] = thumbnail if "http" in thumbnail else f'/easyuse/prompt/styles/image?path={thumbnail}'
+                        elif isinstance(d['thumbnail'], list):
+                            nd['thumbnail'] = thumbnail
+                    else:
+                        nd['thumbnail'] = f'/easyuse/prompt/styles/image?name={name}&styles_name={style_name}'
+                    if "thumbnail_variant" in d:
+                        nd['thumbnailVariant'] = d['thumbnail_variant']
+                    if "media_type" in d:
+                        nd['mediaType'] = d['media_type']
+                    if "media_subtype" in d:
+                        nd['mediaSubtype'] = d['media_subtype']
                     if "prompt" in d:
                         nd['prompt'] = d['prompt']
                     if "negative_prompt" in d:
@@ -122,7 +134,12 @@ async def getStylesList(request):
 @PromptServer.instance.routes.get("/easyuse/prompt/styles/image")
 async def getStylesImage(request):
     styles_name = request.rel_url.query["styles_name"] if "styles_name" in request.rel_url.query else None
-    if "name" in request.rel_url.query:
+    if "path" in request.rel_url.query:
+        path = request.rel_url.query["path"]
+        file = os.path.join(FOOOCUS_STYLES_DIR, path)
+        if os.path.isfile(file):
+            return web.FileResponse(file)
+    elif "name" in request.rel_url.query:
         name = request.rel_url.query["name"]
         if os.path.exists(os.path.join(FOOOCUS_STYLES_DIR, 'samples')):
             file = os.path.join(FOOOCUS_STYLES_DIR, 'samples', name + '.jpg')

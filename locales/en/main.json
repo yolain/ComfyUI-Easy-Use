@@ -2,7 +2,8 @@
   "settingsCategories": {
     "Hotkeys": "Hotkeys",
     "Nodes": "Nodes",
-    "NodesMap": "NodesMap"
+    "NodesMap": "NodesMap",
+    "StylesSelector": "StylesSelector"
   },
   "nodeCategories": {
     "Util": "Util",

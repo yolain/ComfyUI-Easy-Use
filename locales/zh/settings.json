@@ -63,5 +63,13 @@
   "EasyUse_NodesMap_Enable": {
     "name": "启用管理节点组",
     "tooltip": "您需要刷新页面以成功更新"
+  },
+  "EasyUse_StylesSelector_DisplayType": {
+    "name": "样式选择器显示类型",
+    "tooltip": "样式选择器显示类型，如果设置为“网格”，则显示为网格，如果设置为“列表”，则显示为列表",
+    "options": {
+      "Gird": "网格",
+      "List": "列表"
+    }
   }
 }

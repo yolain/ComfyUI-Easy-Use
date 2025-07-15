@@ -2,7 +2,8 @@
   "settingsCategories": {
     "Hotkeys": "快捷键",
     "Nodes": "节点相关",
-    "NodesMap": "管理节点组"
+    "NodesMap": "管理节点组",
+    "StylesSelector": "样式选择器"
   },
   "nodeCategories": {
     "Util": "工具",
