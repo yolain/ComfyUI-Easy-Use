@@ -1154,6 +1154,31 @@
       }
     }
   },
+  "easy loraSwitcher": {
+    "display_name": "简易Lora切换器",
+    "inputs": {
+      "optional_lora_stack": {
+        "name": "LoRA堆（可选）"
+      },
+      "toggle": {
+        "name": "开关"
+      },
+      "select": {
+        "name": "选择项"
+      },
+      "num_loras": {
+        "name": "LoRA数量"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "LoRA堆"
+      },
+      "1": {
+        "name": "LoRA名称"
+      }
+    }
+  },
   "easy controlnetStack": {
     "display_name": "简易 ControlNet 堆",
     "inputs": {

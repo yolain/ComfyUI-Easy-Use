@@ -8,7 +8,7 @@ from nodes import MAX_RESOLUTION, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS
 
 from ..libs.log import log_node_info, log_node_error, log_node_warn
 from ..libs.wildcards import process_with_loras
-from ..libs.utils import find_wildcards_seed, is_linked_styles_selector, get_sd_version
+from ..libs.utils import find_wildcards_seed, is_linked_styles_selector, get_sd_version, AlwaysEqualProxy
 from ..libs.sampler import easySampler
 from ..libs.controlnet import easyControlnet, union_controlnet_types
 from ..libs.conditioning import prompt_to_cond
@@ -19,6 +19,7 @@ from ..config import *
 
 from .. import easyCache, sampler
 
+any_type = AlwaysEqualProxy("*")
 # 简易加载器完整
 resolution_strings = [f"{width} x {height} (custom)" if width == 'width' and height == 'height' else f"{width} x {height}" for width, height in BASE_RESOLUTIONS]
 class fullLoader:
@@ -1146,6 +1147,56 @@ class mochiLoader(fullLoader):
              my_unique_id=my_unique_id
         )
 # lora
+class loraSwitcher:
+    @classmethod
+    def INPUT_TYPES(s):
+        max_lora_num = 50
+        inputs = {
+            "required": {
+                "toggle": ("BOOLEAN", {"label_on": "on", "label_off": "off"}),
+                "select": ("INT", {"default": 1, "min": 1, "max": max_lora_num}),
+                "num_loras": ("INT", {"default": 1, "min": 1, "max": max_lora_num}),
+                "lora_strength": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
+            },
+            "optional": {
+                "optional_lora_stack": ("LORA_STACK",),
+            },
+        }
+
+        for i in range(1, max_lora_num + 1):
+            inputs["optional"][f"lora_{i}_name"] = (
+                ["None"] + folder_paths.get_filename_list("loras"), {"default": "None"})
+
+        return inputs
+
+    RETURN_TYPES = ("LORA_STACK", any_type)
+    RETURN_NAMES = ("lora_stack", "lora_name")
+    FUNCTION = "stack"
+
+    CATEGORY = "EasyUse/Loaders"
+
+    def stack(self, toggle, select,num_loras, lora_strength, optional_lora_stack=None, **kwargs):
+        if (toggle in [False, None, "False"]) or not kwargs:
+            return (None,'')
+
+        loras = []
+
+        # Import Stack values
+        if optional_lora_stack is not None:
+            loras.extend([l for l in optional_lora_stack if l[0] != "None"])
+
+        # Import Lora values
+        lora_name = kwargs.get(f"lora_{select}_name")
+
+        if not lora_name or lora_name == "None":
+            return (None,'')
+
+        loras.append((lora_name, lora_strength, lora_strength))
+
+        name = os.path.splitext(os.path.basename(str(lora_name)))[0]
+        return (loras, name)
+
+
 class loraStack:
     def __init__(self):
         pass
@@ -1155,7 +1206,7 @@ class loraStack:
         max_lora_num = 10
         inputs = {
             "required": {
-                "toggle": ("BOOLEAN", {"label_on": "enabled", "label_off": "disabled"}),
+                "toggle": ("BOOLEAN", {"label_on": "on", "label_off": "off"}),
                 "mode": (["simple", "advanced"],),
                 "num_loras": ("INT", {"default": 1, "min": 1, "max": max_lora_num}),
             },
@@ -1482,6 +1533,7 @@ NODE_CLASS_MAPPINGS = {
     "easy hunyuanDiTLoader": hunyuanDiTLoader,
     "easy pixArtLoader": pixArtLoader,
     "easy mochiLoader": mochiLoader,
+    "easy loraSwitcher": loraSwitcher,
     "easy loraStack": loraStack,
     "easy controlnetStack": controlnetStack,
     "easy controlnetLoader": controlnetSimple,
@@ -1503,6 +1555,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy hunyuanDiTLoader": "EasyLoader (HunyuanDiT)",
     "easy pixArtLoader": "EasyLoader (PixArt)",
     "easy mochiLoader": "EasyLoader (Mochi)",
+    "easy loraSwitcher": "EasyLoraSwitcher",
     "easy loraStack": "EasyLoraStack",
     "easy controlnetStack": "EasyControlnetStack",
     "easy controlnetLoader": "EasyControlnet",

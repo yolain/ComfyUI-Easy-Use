@@ -113,7 +113,7 @@ async def getStylesList(request):
                         if isinstance(d['thumbnail'], str):
                             nd['thumbnail'] = thumbnail if "http" in thumbnail else f'/easyuse/prompt/styles/image?path={thumbnail}'
                         elif isinstance(d['thumbnail'], list):
-                            nd['thumbnail'] = thumbnail
+                            nd['thumbnail'] = [thumb if "http" in thumb else f'/easyuse/prompt/styles/image?path={thumb}' for thumb in thumbnail]
                     else:
                         nd['thumbnail'] = f'/easyuse/prompt/styles/image?name={name}&styles_name={style_name}'
                     if "thumbnail_variant" in d:
@@ -136,9 +136,12 @@ async def getStylesImage(request):
     styles_name = request.rel_url.query["styles_name"] if "styles_name" in request.rel_url.query else None
     if "path" in request.rel_url.query:
         path = request.rel_url.query["path"]
-        file = os.path.join(FOOOCUS_STYLES_DIR, path)
+        file = os.path.join(FOOOCUS_STYLES_DIR, 'samples', path)
+        parent_file = os.path.join(FOOOCUS_STYLES_DIR, path)
         if os.path.isfile(file):
             return web.FileResponse(file)
+        elif os.path.isfile(parent_file):
+            return web.FileResponse(parent_file)
     elif "name" in request.rel_url.query:
         name = request.rel_url.query["name"]
         if os.path.exists(os.path.join(FOOOCUS_STYLES_DIR, 'samples')):

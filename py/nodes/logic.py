@@ -1369,10 +1369,12 @@ class showAnything:
         if "anything" in kwargs:
             for val in kwargs['anything']:
                 try:
-                    if type(val) is str:
+                    if isinstance(val, str):
                         values.append(val)
-                    elif type(val) is list:
+                    elif isinstance(val, list):
                         values = val
+                    elif isinstance(val, (int, float, bool)):
+                        values.append(str(val))
                     else:
                         val = json.dumps(val)
                         values.append(str(val))
