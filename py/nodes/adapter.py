@@ -9,12 +9,39 @@ from ..config import *
 
 from ..libs.log import log_node_info, log_node_warn
 from ..libs.utils import get_local_filepath, get_sd_version
+from ..libs.wildcards import process_with_loras
 from ..libs.controlnet import easyControlnet
 from ..libs.conditioning import prompt_to_cond
 from ..libs import cache as backend_cache
 
 from .. import easyCache
 
+class applyLoraPrompt:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "clip": ("CLIP",),
+                "positive": ("STRING", {"default": "", "forceInput": True}),
+            },
+            "optional": {
+                "negative": ("STRING", {"default": "", "forceInput": True}),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL", "CLIP", "STRING", "STRING")
+    RETURN_NAMES = ("model", "clip", "positive", "negative")
+    CATEGORY = "EasyUse/Adapter"
+    FUNCTION = "apply"
+
+    def apply(self, model, clip, positive, negative=None):
+        model, clip, positive, _, _, _  = process_with_loras(positive, model, clip, 'Positive', easyCache=easyCache)
+        if negative is not None:
+            model, clip, negative, _, _, _  = process_with_loras(negative, model, clip, 'Negative', easyCache=easyCache)
+        
+        return (model, clip, positive, negative if negative is not None else "")
+    
 class applyLoraStack:
     @classmethod
     def INPUT_TYPES(s):
@@ -1284,6 +1311,7 @@ class applyPulIDADV(applyPulID):
 
 
 NODE_CLASS_MAPPINGS = {
+    "easy loraPromptApply": applyLoraPrompt,
     "easy loraStackApply": applyLoraStack,
     "easy controlnetStackApply": applyControlnetStack,
     "easy ipadapterApply": ipadapterApply,
@@ -1303,6 +1331,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "easy loraPromptApply": "Easy Apply LoraPrompt",
     "easy loraStackApply": "Easy Apply LoraStack",
     "easy controlnetStackApply": "Easy Apply CnetStack",
     "easy ipadapterApply": "Easy Apply IPAdapter",

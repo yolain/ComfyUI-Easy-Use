@@ -4328,6 +4328,37 @@
       }
     }
   },
+  "easy loraPromptApply":{
+    "display_name": "应用提示词LoRA",
+    "inputs": {
+      "model": {
+        "name": "模型"
+      },
+      "clip": {
+        "name": "CLIP"
+      },
+      "positive":{
+        "name": "正面提示词"
+      },
+      "negative":{
+        "name": "负面提示词"
+      }
+    },
+    "outputs":{
+      "0": {
+        "name": "模型"
+      },
+      "1": {
+        "name": "CLIP"
+      },
+      "2": {
+        "name": "正面提示词"
+      },
+      "3": {
+        "name": "负面提示词"
+      }
+    }
+  },
   "easy loraStackApply": {
     "display_name": "应用LoRA堆",
     "inputs": {
