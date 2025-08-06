@@ -79,7 +79,8 @@ async def parse_csv(request):
 async def getStylesList(request):
     if "name" in request.rel_url.query:
         style_name = request.rel_url.query["name"]
-        if style_name == 'fooocus_styles':
+        fooocus_custom_dir = os.path.join(FOOOCUS_STYLES_DIR, 'fooocus_styles.json')
+        if style_name == 'fooocus_styles' and not os.path.exists(fooocus_custom_dir):
             file = os.path.join(RESOURCES_DIR, style_name+'.json')
             cn_file = os.path.join(RESOURCES_DIR, style_name + '_cn.json')
         else:

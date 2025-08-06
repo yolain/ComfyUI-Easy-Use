@@ -52,6 +52,20 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.3.2**
+
+- 改造 `easy stylesSelector` 节点, 你可在 [other styles files](https://github.com/yolain/EasyUse-Styles-Templates) 下载到 `styles` 文件夹下
+- 改造 `easy humanSegmentation` 节点
+- 修复 `easy makeImageForICLora` 节点.
+- 添加 `easy joycaption3API` 节点
+- 添加 `easy promptAwait` 节点
+
+**v1.3.1**
+
+- 重写 drawNodeWidget 修复组节点预览的问题.
+- 更新了一些 XYPlot 的功能 by [mekinney](https://github.com/mekinney)
+- 添加 `easy seedList` 节点 (它对循环节点有用)
+
 **v1.3.0**
 
 - 将循环节点设置为最大输入和输出数量为20

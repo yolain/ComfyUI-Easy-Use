@@ -157,7 +157,8 @@ class stylesPromptSelector:
         for file_name in os.listdir(styles_dir):
             file = os.path.join(styles_dir, file_name)
             if os.path.isfile(file) and file_name.endswith(".json"):
-                styles.append(file_name.split(".")[0])
+                if file_name != "fooocus_styles.json":
+                    styles.append(file_name.split(".")[0])
 
         return {
             "required": {
@@ -181,7 +182,8 @@ class stylesPromptSelector:
         values = []
         all_styles = {}
         positive_prompt, negative_prompt = '', negative
-        if styles == "fooocus_styles":
+        fooocus_custom_dir = os.path.join(FOOOCUS_STYLES_DIR, 'fooocus_styles.json')
+        if styles == "fooocus_styles" and not os.path.exists(fooocus_custom_dir):
             file = os.path.join(RESOURCES_DIR,  styles + '.json')
         else:
             file = os.path.join(FOOOCUS_STYLES_DIR, styles + '.json')
