@@ -54,6 +54,7 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 **v1.3.2**
 
+- 改造 `easy imageChooser` 节点以兼容 frontend>=v1.24.2, 解决方案参考自 [Comfyui_LG_Tools](https://github.com/LAOGOU-666/Comfyui_LG_Tools)
 - 改造 `easy stylesSelector` 节点, 你可在 [other styles files](https://github.com/yolain/EasyUse-Styles-Templates) 下载到 `styles` 文件夹下
 - 改造 `easy humanSegmentation` 节点
 - 修复 `easy makeImageForICLora` 节点.

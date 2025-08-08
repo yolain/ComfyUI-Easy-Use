@@ -49,6 +49,7 @@ Double-click install.bat to install the required dependencies
 
 **v1.3.2**
 
+- Revamp `easy imageChooser` node to adapt frontend>=v1.24.2, solution referenced from [Comfyui_LG_Tools](https://github.com/LAOGOU-666/Comfyui_LG_Tools)
 - Revamp `easy stylesSelector` node, and you can download [other styles files](https://github.com/yolain/EasyUse-Styles-Templates) to the `styles` folder
 - Revamp `easy humanSegmentation` node
 - Fix `easy makeImageForICLora` node issue, that occurred when the heights of two images were the same during image stitching on.

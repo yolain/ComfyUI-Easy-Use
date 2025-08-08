@@ -15,7 +15,6 @@ from ..libs.log import log_node_warn
 from ..libs.utils import  easySave, get_local_filepath, get_sd_version
 from ..libs.sampler import alignYourStepsScheduler, gitsScheduler
 from ..libs.xyplot import easyXYPlot
-from ..libs.chooser import ChooserMessage, ChooserCancelled
 
 from .. import easyCache, sampler
 
@@ -30,7 +29,7 @@ class samplerFull:
                  "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                  "scheduler": (comfy.samplers.KSampler.SCHEDULERS+NEW_SCHEDULERS,),
                  "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -401,34 +400,6 @@ class samplerFull:
 
             del pipe
 
-            if image_output == 'Preview&Choose':
-                if my_unique_id not in ChooserMessage.stash:
-                    ChooserMessage.stash[my_unique_id] = {}
-                my_stash = ChooserMessage.stash[my_unique_id]
-
-                PromptServer.instance.send_sync("easyuse-image-choose", {"id": my_unique_id, "urls": results})
-                # wait for selection
-                try:
-                    selections = ChooserMessage.waitForMessage(my_unique_id, asList=True)
-                    samples = samp_samples['samples']
-                    samples = [samples[x] for x in selections if x >= 0] if len(selections) > 1 else [samples[0]]
-                    new_images = [new_images[x] for x in selections if x >= 0] if len(selections) > 1 else [new_images[0]]
-                    samp_images = [samp_images[x] for x in selections if x >= 0] if len(selections) > 1 else [samp_images[0]]
-                    new_images = torch.stack(new_images, dim=0)
-                    samp_images = torch.stack(samp_images, dim=0)
-                    samples = torch.stack(samples, dim=0)
-                    samp_samples = {"samples": samples}
-                    new_pipe['samples'] = samp_samples
-                    new_pipe['loader_settings']['batch_size'] = len(new_images)
-                except ChooserCancelled:
-                    raise comfy.model_management.InterruptProcessingException()
-
-                new_pipe['images'] = new_images
-                new_pipe['samp_images'] = samp_images
-
-                return {"ui": {"images": results},
-                        "result": sampler.get_output(new_pipe,)}
-
             if image_output in ("Hide", "Hide&Save", "None"):
                 return {"ui":{}, "result":sampler.get_output(new_pipe,)}
 
@@ -594,7 +565,7 @@ class samplerSimple(samplerFull):
     def INPUT_TYPES(cls):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
-                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],{"default": "Preview"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],{"default": "Preview"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },
@@ -626,7 +597,7 @@ class samplerSimpleCustom(samplerFull):
     def INPUT_TYPES(cls):
         return {"required":
                 {"pipe": ("PIPE_LINE",),
-                 "image_output": (["Hide", "Preview", "Preview&Choose", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],{"default": "None"}),
+                 "image_output": (["Hide", "Preview", "Save", "Hide&Save", "Sender", "Sender&Save", "None"],{"default": "None"}),
                  "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
                  "save_prefix": ("STRING", {"default": "ComfyUI"}),
                  },

@@ -17,7 +17,6 @@ from ..libs.utils import AlwaysEqualProxy, ByPassTypeTuple
 from ..libs.cache import cache, update_cache, remove_cache
 from ..libs.image import pil2tensor, tensor2pil, ResizeMode, get_new_bounds, RGB2RGBA, image2mask, empty_image, fit_resize_image
 from ..libs.colorfix import adain_color_fix, wavelet_color_fix
-from ..libs.chooser import ChooserMessage, ChooserCancelled
 from ..config import REMBG_DIR, REMBG_MODELS, HUMANPARSING_MODELS, MEDIAPIPE_MODELS, MEDIAPIPE_DIR
 
 any_type = AlwaysEqualProxy("*")
@@ -1006,6 +1005,7 @@ class imageRemBg:
             "result": (new_images, masks)}
 
 # 图像选择器
+from ..libs.chooser import wait_for_chooser
 class imageChooser(PreviewImage):
   @classmethod
   def INPUT_TYPES(self):
@@ -1042,21 +1042,11 @@ class imageChooser(PreviewImage):
   def chooser(self, prompt=None, my_unique_id=None, extra_pnginfo=None, **kwargs):
     id = my_unique_id[0]
     id = id.split('.')[len(id.split('.')) - 1] if "." in id else id
-    if id not in ChooserMessage.stash:
-      ChooserMessage.stash[id] = {}
-    my_stash = ChooserMessage.stash[id]
-
-    # enable stashing. If images is None, we are operating in read-from-stash mode
-    if 'images' in kwargs:
-      my_stash['images'] = kwargs['images']
-    else:
-      kwargs['images'] = my_stash.get('images', None)
 
     if (kwargs['images'] is None):
-      return (None, None, None, "")
+      return (None,)
 
     images_in = torch.cat(kwargs.pop('images'))
-    self.batch = images_in.shape[0]
     for x in kwargs: kwargs[x] = kwargs[x][0]
 
     try:
@@ -1064,33 +1054,18 @@ class imageChooser(PreviewImage):
     except:
       pnginfo = None
     result = self.save_images(images=images_in, prompt=prompt, extra_pnginfo=pnginfo)
-
-    images = result['ui']['images']
-    PromptServer.instance.send_sync("easyuse-image-choose", {"id": id, "urls": images})
+    if "ui" in result and "images" in result['ui']:
+      images = result["ui"]["images"]
+    else:
+      images = []
+    try:
+      PromptServer.instance.send_sync("easyuse-image-choose", {"id": id, "urls": images})
+    except Exception as e:
+      pass
 
     # 获取上次选择
     mode = kwargs.pop('mode', 'Always Pause')
-    last_choosen = None
-    if mode == 'Keep Last Selection':
-      if not extra_pnginfo:
-        print("Error: extra_pnginfo is empty")
-      elif (not isinstance(extra_pnginfo[0], dict) or "workflow" not in extra_pnginfo[0]):
-        print("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
-      else:
-        workflow = extra_pnginfo[0]["workflow"]
-        node = next((x for x in workflow["nodes"] if str(x["id"]) == id), None)
-        if node:
-          last_choosen = node['properties']['values']
-
-    # wait for selection
-    try:
-      selections = ChooserMessage.waitForMessage(id, asList=True) if last_choosen is None or len(last_choosen)<1 else last_choosen
-      choosen = [x for x in selections if x >= 0] if len(selections)>1 else [0]
-    except ChooserCancelled:
-      raise comfy.model_management.InterruptProcessingException()
-
-    return {"ui": {"images": images},
-              "result": (self.tensor_bundle(images_in, choosen),)}
+    return wait_for_chooser(id, images_in, mode)
 
 class imageColorMatch(PreviewImage):
   @classmethod
