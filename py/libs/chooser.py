@@ -1,7 +1,11 @@
 from threading import Event
+
+import torch
+
 from server import PromptServer
 from aiohttp import web
 from comfy import model_management as mm
+from comfy_execution.graph import ExecutionBlocker
 import time
 
 class ChooserCancelled(Exception):
@@ -25,7 +29,7 @@ def cleanup_session_data(node_id):
 def wait_for_chooser(id, images, mode, period=0.1):
     try:
         node_data = get_chooser_cache()
-
+        images = [images[i:i + 1, ...] for i in range(images.shape[0])]
         if mode == "Keep Last Selection":
             if id in node_data and "last_selection" in node_data[id]:
                 last_selection = node_data[id]["last_selection"]
@@ -41,7 +45,9 @@ def wait_for_chooser(id, images, mode, period=0.1):
                             pass
                         cleanup_session_data(id)
                         indices_str = ','.join(str(i) for i in valid_indices)
-                        return {"result": ([images[idx] for idx in valid_indices],)}
+                        images = [images[idx] for idx in valid_indices]
+                        images = torch.cat(images, dim=0)
+                        return {"result": (images,)}
 
         if id in node_data:
             del node_data[id]
@@ -78,19 +84,18 @@ def wait_for_chooser(id, images, mode, period=0.1):
                     if id not in node_data:
                         node_data[id] = {}
                     node_data[id]["last_selection"] = valid_indices
-
                     cleanup_session_data(id)
-                    indices_str = ','.join(str(i) for i in valid_indices)
-                    return {"result": (selected_images, indices_str)}
+                    selected_images = torch.cat(selected_images, dim=0)
+                    return {"result": (selected_images,)}
                 else:
                     cleanup_session_data(id)
-                    return {"result": ([images[0]] if len(images) > 0 else [], "0" if len(images) > 0 else "")}
+                    return {"result": (images[0] if len(images) > 0 else ExecutionBlocker(None),)}
             else:
                 cleanup_session_data(id)
                 return {
-                    "result": ([images[0]] if len(images) > 0 else [],)}
+                    "result": (images[0] if len(images) > 0 else ExecutionBlocker(None),)}
         else:
-            return {"result": ([images[0]] if len(images) > 0 else [],)}
+            return {"result": (images[0] if len(images) > 0 else ExecutionBlocker(None),)}
 
     except ChooserCancelled:
         raise mm.InterruptProcessingException()
@@ -99,9 +104,9 @@ def wait_for_chooser(id, images, mode, period=0.1):
         if id in node_data:
             cleanup_session_data(id)
         if 'image_list' in locals() and len(images) > 0:
-            return {"result": ([images[0]])}
+            return {"result": (images[0])}
         else:
-            return {"result": ([])}
+            return {"result": (ExecutionBlocker(None),)}
 
 
 @PromptServer.instance.routes.post('/easyuse/image_chooser_message')
