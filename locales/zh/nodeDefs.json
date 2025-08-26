@@ -5292,6 +5292,38 @@
       }
     }
   },
+    "easy imageScaleDownByWidth": {
+    "display_name": "图像缩小 宽度",
+    "inputs": {
+      "images": {
+        "name": "图像"
+      },
+      "width": {
+        "name": "宽度"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像"
+      }
+    }
+  },
+    "easy imageScaleDownByHeight": {
+    "display_name": "图像缩小 高度",
+    "inputs": {
+      "images": {
+        "name": "图像"
+      },
+      "height": {
+        "name": "高度"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像"
+      }
+    }
+  },
   "easy imageScaleDownToSize": {
     "display_name": "图像缩小（按边）",
     "inputs": {

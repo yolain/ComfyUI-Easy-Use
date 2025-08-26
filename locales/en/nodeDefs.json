@@ -4911,6 +4911,30 @@
     },
     "outputs": {}
   },
+    "easy imageScaleDownByWidth": {
+    "display_name": "Image Scale to Width (Aspect same)",
+    "inputs": {
+      "images": {
+        "name": "images"
+      },
+      "width": {
+        "name": "width"
+      }
+    },
+    "outputs": {}
+  },
+  "easy imageScaleDownByHeight": {
+    "display_name": "Image Scale to Height (Aspect same)",
+    "inputs": {
+      "images": {
+        "name": "images"
+      },
+      "height": {
+        "name": "height"
+      }
+    },
+    "outputs": {}
+  },
   "easy imageScaleDownToSize": {
     "display_name": "Image Scale Down To Size",
     "inputs": {
