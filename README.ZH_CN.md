@@ -52,6 +52,13 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.3.3**
+
+- 删除CSS类名称`gird-cols-1` #859
+- 修复锁定种子在 `easy promptAwait` 中不起作用
+- 重命名节点图
+- 修复`easy ImageChooser`输出错误类型 #845
+
 **v1.3.2**
 
 - 改造 `easy imageChooser` 节点以兼容 frontend>=v1.24.2, 解决方案参考自 [Comfyui_LG_Tools](https://github.com/LAOGOU-666/Comfyui_LG_Tools)

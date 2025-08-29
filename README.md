@@ -47,6 +47,13 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.3.3**
+
+- Removed the definition of the CSS class name gird-cols-1 #859
+- Fix lock seed not working in `easy promptAwait`
+- Rename the nodes map
+- Fix `easy imageChooser` output error type #845
+
 **v1.3.2**
 
 - Revamp `easy imageChooser` node to adapt frontend>=v1.24.2, solution referenced from [Comfyui_LG_Tools](https://github.com/LAOGOU-666/Comfyui_LG_Tools)
