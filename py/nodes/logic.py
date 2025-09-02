@@ -1235,24 +1235,24 @@ class indexAnything:
         node_class = ALL_NODE_CLASS_MAPPINGS[class_type]
         output_is_list = node_class.OUTPUT_IS_LIST[slot] if hasattr(node_class, 'OUTPUT_IS_LIST') else False
 
-        if index < 0:
-            index = len(any) + index
-            # 添加边界检查，确保转换后的索引不为负数
+        def normalize_index(index, length):
+            """标准化索引，处理负索引并确保在有效范围内"""
             if index < 0:
-                index = 0
+                index = length + index
+                if index < 0:
+                    index = 0
+            return min(max(0, index), length - 1)
+
         if output_is_list or len(any) > 1:
-            # 确保索引在有效范围内
-            index = min(max(0, index), len(any) - 1)
+            index = normalize_index(index, len(any))
             return (any[index],)
         elif isinstance(any[0], torch.Tensor):
-            # 对于tensor，确保索引在有效范围内
-            index = min(max(0, index), any[0].shape[0] - 1)
+            index = normalize_index(index, any[0].shape[0])
             s = any[0][index:index + 1].clone()
             return (s,)
         else:
-            # 对于其他类型，也需要边界检查
             if hasattr(any[0], '__len__') and len(any[0]) > 0:
-                index = min(max(0, index), len(any[0]) - 1)
+                index = normalize_index(index, len(any[0]))
                 return (any[0][index],)
             return (any[0],)
 

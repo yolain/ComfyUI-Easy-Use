@@ -1043,8 +1043,8 @@ class imageChooser(PreviewImage):
     id = my_unique_id[0]
     id = id.split('.')[len(id.split('.')) - 1] if "." in id else id
 
-    if (kwargs['images'] is None):
-      return (None,)
+    if (kwargs.get('images') is None):
+      return (torch.zeros(1, 1, 1, 3),)
 
     images_in = torch.cat(kwargs.pop('images'))
     for x in kwargs: kwargs[x] = kwargs[x][0]
