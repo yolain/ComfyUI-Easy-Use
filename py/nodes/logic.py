@@ -1209,7 +1209,7 @@ class indexAnything:
         return {
             "required": {
                 "any": (any_type, {}),
-                "index": ("INT", {"default": 0, "min": 0, "max": 1000000, "step": 1}),
+                "index": ("INT", {"default": 0, "min": -1000000, "max": 1000000, "step": 1}),
             },
             "hidden":{
                 "prompt": "PROMPT",
@@ -1235,14 +1235,26 @@ class indexAnything:
         node_class = ALL_NODE_CLASS_MAPPINGS[class_type]
         output_is_list = node_class.OUTPUT_IS_LIST[slot] if hasattr(node_class, 'OUTPUT_IS_LIST') else False
 
+        if index < 0:
+            index = len(any) + index
+            # 添加边界检查，确保转换后的索引不为负数
+            if index < 0:
+                index = 0
         if output_is_list or len(any) > 1:
+            # 确保索引在有效范围内
+            index = min(max(0, index), len(any) - 1)
             return (any[index],)
         elif isinstance(any[0], torch.Tensor):
-            batch_index = min(any[0].shape[0] - 1, index)
+            # 对于tensor，确保索引在有效范围内
+            index = min(max(0, index), any[0].shape[0] - 1)
             s = any[0][index:index + 1].clone()
             return (s,)
         else:
-            return (any[0][index],)
+            # 对于其他类型，也需要边界检查
+            if hasattr(any[0], '__len__') and len(any[0]) > 0:
+                index = min(max(0, index), len(any[0]) - 1)
+                return (any[0][index],)
+            return (any[0],)
 
 
 class batchAnything:
@@ -1790,3 +1802,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy saveText": "Save Text",
     "easy sleep": "Sleep",
 }
+
