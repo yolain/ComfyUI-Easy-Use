@@ -430,7 +430,8 @@ class easyXYPlot():
                         strength = item[2]
                         start_percent = item[3]
                         end_percent = item[4]
-                        positive, negative = easyControlnet().apply(control_net_name, image, positive, negative, strength, start_percent, end_percent, None, 1)
+                        provided_control_net = item[5] if len(item) > 5 else None
+                        positive, negative = easyControlnet().apply(control_net_name, image, positive, negative, strength, start_percent, end_percent, provided_control_net, 1)
             # Flux guidance
             if self.x_type == "Flux Guidance" or self.y_type == "Flux Guidance":
                 positive = plot_image_vars["positive_cond"] if "positive" in plot_image_vars else None
