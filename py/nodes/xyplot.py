@@ -413,6 +413,9 @@ class XYplot_Control_Net:
                 "start_percent": ("FLOAT", {"default": 0.0, "min": 0.00, "max": 1.0, "step": 0.01}),
                 "end_percent": ("FLOAT", {"default": 1.0, "min": 0.00, "max": 1.0, "step": 0.01}),
             },
+            "optional": {
+                "control_net": ("CONTROL_NET",),
+            },
         }
 
     RETURN_TYPES = ("X_Y",)
@@ -421,7 +424,7 @@ class XYplot_Control_Net:
     CATEGORY = "EasyUse/XY Inputs"
 
     def xy_value(self, control_net_name, image, target_parameter, batch_count, first_strength, last_strength, first_start_percent,
-                 last_start_percent, first_end_percent, last_end_percent, strength, start_percent, end_percent):
+                 last_start_percent, first_end_percent, last_end_percent, strength, start_percent, end_percent, control_net=None):
 
         axis, = None,
 
@@ -430,38 +433,38 @@ class XYplot_Control_Net:
         if target_parameter == "strength":
             axis = "advanced: ControlNetStrength"
 
-            values.append([(control_net_name, image, first_strength, start_percent, end_percent)])
+            values.append([(control_net_name, image, first_strength, start_percent, end_percent, control_net)])
             strength_increment = (last_strength - first_strength) / (batch_count - 1) if batch_count > 1 else 0
             for i in range(1, batch_count - 1):
                 values.append([(control_net_name, image, first_strength + i * strength_increment, start_percent,
-                                end_percent)])
+                                end_percent, control_net)])
             if batch_count > 1:
-                values.append([(control_net_name, image, last_strength, start_percent, end_percent)])
+                values.append([(control_net_name, image, last_strength, start_percent, end_percent, control_net)])
 
         elif target_parameter == "start_percent":
             axis = "advanced: ControlNetStart%"
 
             percent_increment = (last_start_percent - first_start_percent) / (batch_count - 1) if batch_count > 1 else 0
-            values.append([(control_net_name, image, strength, first_start_percent, end_percent)])
+            values.append([(control_net_name, image, strength, first_start_percent, end_percent, control_net)])
             for i in range(1, batch_count - 1):
                 values.append([(control_net_name, image, strength, first_start_percent + i * percent_increment,
-                                  end_percent)])
+                                  end_percent, control_net)])
 
             # Always add the last start_percent if batch_count is more than 1.
             if batch_count > 1:
-                values.append((control_net_name, image, strength, last_start_percent, end_percent))
+                values.append([(control_net_name, image, strength, last_start_percent, end_percent, control_net)])
 
         elif target_parameter == "end_percent":
             axis = "advanced: ControlNetEnd%"
 
             percent_increment = (last_end_percent - first_end_percent) / (batch_count - 1) if batch_count > 1 else 0
-            values.append([(control_net_name, image, image, strength, start_percent, first_end_percent)])
+            values.append([(control_net_name, image, strength, start_percent, first_end_percent, control_net)])
             for i in range(1, batch_count - 1):
                 values.append([(control_net_name, image, strength, start_percent,
-                                  first_end_percent + i * percent_increment)])
+                                  first_end_percent + i * percent_increment, control_net)])
 
             if batch_count > 1:
-                values.append([(control_net_name, image, strength, start_percent, last_end_percent)])
+                values.append([(control_net_name, image, strength, start_percent, last_end_percent, control_net)])
 
 
         return ({"axis": axis, "values": values},)
