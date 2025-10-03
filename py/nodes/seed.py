@@ -27,7 +27,7 @@ class seedList:
         return {
             "required": {
                 "min_num": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
-                "max_num": ("INT", {"default": MAX_SEED_NUM, "min": 0 }),
+                "max_num": ("INT", {"default": MAX_SEED_NUM, "max": MAX_SEED_NUM,  "min": 0 }),
                 "method": (["random", "increment", "decrement"], {"default": "random"}),
                 "total": ("INT", {"default": 1, "min": 1, "max": 100000}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM,}),
