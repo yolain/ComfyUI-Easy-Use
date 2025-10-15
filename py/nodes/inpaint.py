@@ -331,7 +331,10 @@ class applyInpaint:
                 new_pipe = self.inpaint_model_conditioning(new_pipe, image, vae, mask, grow_mask_by, noise_mask=noise_mask)
             cls = ALL_NODE_CLASS_MAPPINGS['DifferentialDiffusion']
             if cls is not None:
-                model, = cls().apply(new_pipe['model'])
+                try:
+                    model, = cls().execute(new_pipe['model'])
+                except Exception:
+                    model, = cls().apply(new_pipe['model'])
                 new_pipe['model'] = model
             else:
                 raise Exception("Differential Diffusion not found,please update comfyui")

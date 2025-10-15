@@ -1,5 +1,6 @@
 import re
 import torch
+import folder_paths
 import comfy.utils, comfy.sample, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management, comfy.sampler_helpers, comfy.supported_models
 from comfy_extras.nodes_compositing import JoinImageWithAlpha
 from comfy.clip_vision import load as load_clip_vision
@@ -180,7 +181,10 @@ class icLightApply:
                     image = self.removebg(image)
                 else:
                     mask = torch.full((1, height, width), 1.0, dtype=torch.float32, device="cpu")
-                    image, = JoinImageWithAlpha().join_image_with_alpha(image, mask)
+                    try:
+                        image, = JoinImageWithAlpha().execute(image, mask)
+                    except:
+                        image, = JoinImageWithAlpha().join_image_with_alpha(image, mask)
 
         iclight = ICLight()
         if mode == 'Foreground':
@@ -190,7 +194,10 @@ class icLightApply:
           if source not in ['Use Background Image', 'Use Flipped Background Image']:
               _, height, width, _ = lighting_image.shape
               mask = torch.full((1, height, width), 1.0, dtype=torch.float32, device="cpu")
-              lighting_image, = JoinImageWithAlpha().join_image_with_alpha(lighting_image, mask)
+              try:
+                lighting_image, = JoinImageWithAlpha().execute(lighting_image, mask)
+              except:
+                  lighting_image, = JoinImageWithAlpha().join_image_with_alpha(lighting_image, mask)
               if batch_size < 2:
                 image = self.batch(image, lighting_image)
               else:

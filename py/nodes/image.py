@@ -1396,7 +1396,11 @@ class humanSegmentation:
 
         alpha = 1.0 - mask
 
-        output_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
+        try:
+          output_image, = JoinImageWithAlpha().execute(image, alpha)
+        except:
+          output_image, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
+
 
       elif method == "human_parts (deeplabv3p)":
         if method in cache:

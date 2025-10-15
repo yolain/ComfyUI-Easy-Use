@@ -1,6 +1,7 @@
 import sys, re, time
 import torch
 import comfy.utils, comfy.sample, comfy.samplers, comfy.controlnet, comfy.model_base, comfy.model_management, comfy.sampler_helpers, comfy.supported_models
+import folder_paths
 from comfy.model_patcher import ModelPatcher
 from comfy_extras.nodes_mask import GrowMask
 import comfy_extras.nodes_custom_sampler as custom_samplers
@@ -118,7 +119,14 @@ class samplerFull:
     def get_custom_cls(self, sampler_name):
         try:
             cls = custom_samplers.__dict__[sampler_name]
-            return cls()
+            cls = cls()
+            if hasattr(cls, "get_sigmas"):
+                cls.execute = cls.get_sigmas
+            elif hasattr(cls, "get_guider"):
+                cls.execute = cls.get_guider
+            elif hasattr(cls, "get_sampler"):
+                cls.execute = cls.get_sampler
+            return cls
         except:
             raise Exception(f"Custom sampler {sampler_name} not found, Please updated your ComfyUI")
 
@@ -156,15 +164,15 @@ class samplerFull:
             sigmas = optional_sigmas
         else:
             if scheduler == 'vp':
-                sigmas, = self.get_custom_cls('VPScheduler').get_sigmas(steps, beta_d, beta_min, eps_s)
+                sigmas, = self.get_custom_cls('VPScheduler').execute(steps, beta_d, beta_min, eps_s)
             elif scheduler == 'karrasADV':
-                sigmas, = self.get_custom_cls('KarrasScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
+                sigmas, = self.get_custom_cls('KarrasScheduler').execute(steps, sigma_max, sigma_min, rho)
             elif scheduler == 'exponentialADV':
-                sigmas, = self.get_custom_cls('ExponentialScheduler').get_sigmas(steps, sigma_max, sigma_min)
+                sigmas, = self.get_custom_cls('ExponentialScheduler').execute(steps, sigma_max, sigma_min)
             elif scheduler == 'polyExponential':
-                sigmas, = self.get_custom_cls('PolyexponentialScheduler').get_sigmas(steps, sigma_max, sigma_min, rho)
+                sigmas, = self.get_custom_cls('PolyexponentialScheduler').execute(steps, sigma_max, sigma_min, rho)
             elif scheduler == 'sdturbo':
-                sigmas, = self.get_custom_cls('SDTurboScheduler').get_sigmas(model, steps, denoise)
+                sigmas, = self.get_custom_cls('SDTurboScheduler').execute(model, steps, denoise)
             elif scheduler == 'alignYourSteps':
                 model_type = get_sd_version(model)
                 if model_type == 'unknown':
@@ -173,11 +181,11 @@ class samplerFull:
             elif scheduler == 'gits':
                 sigmas, = gitsScheduler().get_sigmas(coeff, steps, denoise)
             else:
-                sigmas, = self.get_custom_cls('BasicScheduler').get_sigmas(model, scheduler, steps, denoise)
+                sigmas, = self.get_custom_cls('BasicScheduler').execute(model, scheduler, steps, denoise)
 
         # filp_sigmas
         if flip_sigmas:
-            sigmas, = self.get_custom_cls('FlipSigmas').get_sigmas(sigmas)
+            sigmas, = self.get_custom_cls('FlipSigmas').execute(sigmas)
 
         #######################################################################################
         # brushnet
@@ -209,12 +217,12 @@ class samplerFull:
             positive = c
 
         if guider in ['CFG', 'IP2P+CFG']:
-            _guider, = self.get_custom_cls('CFGGuider').get_guider(model, positive, negative, cfg)
+            _guider, = self.get_custom_cls('CFGGuider').execute(model, positive, negative, cfg)
         elif guider in ['DualCFG', 'IP2P+DualCFG']:
-            _guider, = self.get_custom_cls('DualCFGGuider').get_guider(model, positive, middle,
+            _guider, = self.get_custom_cls('DualCFGGuider').execute(model, positive, middle,
                                                                        negative, cfg, cfg_negative)
         else:
-            _guider, = self.get_custom_cls('BasicGuider').get_guider(model, positive)
+            _guider, = self.get_custom_cls('BasicGuider').execute(model, positive)
 
         # sampler
         if optional_sampler:
@@ -223,7 +231,7 @@ class samplerFull:
             if sampler_name == 'inversed_euler':
                 _sampler, = self.get_inversed_euler_sampler()
             else:
-                _sampler, = self.get_custom_cls('KSamplerSelect').get_sampler(sampler_name)
+                _sampler, = self.get_custom_cls('KSamplerSelect').execute(sampler_name)
 
 
         return (_guider, _sampler, sigmas)
@@ -277,18 +285,18 @@ class samplerFull:
                             if width_downscale_factor > 1.75:
                                 log_node_warn("Patch model unet add downscale...")
                                 log_node_warn("Downscale factor:" + str(width_downscale_factor))
-                                (samp_model,) = cls().patch(samp_model, downscale_options['block_number'], width_downscale_factor, 0, 0.35, True, "bicubic",
+                                (samp_model,) = cls().execute(samp_model, downscale_options['block_number'], width_downscale_factor, 0, 0.35, True, "bicubic",
                                                             "bicubic")
                             elif height_downscale_factor > 1.25:
                                 log_node_warn("Patch model unet add downscale....")
                                 log_node_warn("Downscale factor:" + str(height_downscale_factor))
-                                (samp_model,) = cls().patch(samp_model, downscale_options['block_number'], height_downscale_factor, 0, 0.35, True, "bicubic",
+                                (samp_model,) = cls().execute(samp_model, downscale_options['block_number'], height_downscale_factor, 0, 0.35, True, "bicubic",
                                                             "bicubic")
                 else:
                     cls = ALL_NODE_CLASS_MAPPINGS['PatchModelAddDownscale']
                     log_node_warn("Patch model unet add downscale....")
                     log_node_warn("Downscale factor:" + str(downscale_options['downscale_factor']))
-                    (samp_model,) = cls().patch(samp_model, downscale_options['block_number'], downscale_options['downscale_factor'], downscale_options['start_percent'], downscale_options['end_percent'], downscale_options['downscale_after_skip'], downscale_options['downscale_method'], downscale_options['upscale_method'])
+                    (samp_model,) = cls().execute(samp_model, downscale_options['block_number'], downscale_options['downscale_factor'], downscale_options['start_percent'], downscale_options['end_percent'], downscale_options['downscale_after_skip'], downscale_options['downscale_method'], downscale_options['upscale_method'])
             return samp_model
 
         def process_sample_state(pipe, samp_model, samp_clip, samp_samples, samp_vae, samp_seed, samp_positive,
