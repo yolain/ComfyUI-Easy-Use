@@ -908,6 +908,10 @@ COMPARE_FUNCTIONS = {
     "a > b": lambda a, b: a > b,
     "a <= b": lambda a, b: a <= b,
     "a >= b": lambda a, b: a >= b,
+    "a > 0": lambda a, b: a > 0,
+    "a <= 0": lambda a, b: a <= 0,
+    "b > 0": lambda a, b: b > 0,
+    "b <= 0": lambda a, b: b <= 0,
 }
 
 
@@ -917,7 +921,7 @@ class Compare:
     def INPUT_TYPES(s):
         compare_functions = list(COMPARE_FUNCTIONS.keys())
         return {
-            "required": {
+            "optional": {
                 "a": (any_type, {"default": 0}),
                 "b": (any_type, {"default": 0}),
                 "comparison": (compare_functions, {"default": "a == b"}),
@@ -929,7 +933,7 @@ class Compare:
     FUNCTION = "compare"
     CATEGORY = "EasyUse/Logic/Math"
 
-    def compare(self, a, b, comparison):
+    def compare(self, a=0, b=0, comparison="a == b"):
         return (COMPARE_FUNCTIONS[comparison](a, b),)
 
 
