@@ -52,6 +52,12 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.3.4**
+
+- 修复 `easy seedList` 最大值 #879
+- 为xyplot添加controlnet input #877
+- 为 `easy indexAnything` 支持 `反向索引` 
+
 **v1.3.3**
 
 - 删除CSS类名称`gird-cols-1` #859

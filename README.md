@@ -47,6 +47,12 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.3.4**
+
+- Fix `easy seedList` max_num #879
+- Add controlnet input to xyplot #877
+- Support `nagative indexing` for `easy indexAnything`
+
 **v1.3.3**
 
 - Removed the definition of the CSS class name gird-cols-1 #859
