@@ -154,6 +154,9 @@
       },
       "max_rows": {
         "name": "最大行数"
+      },
+      "remove_empty_lines":{
+        "name": "去除空行"
       }
     },
     "outputs": {

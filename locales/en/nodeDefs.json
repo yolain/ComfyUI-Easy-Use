@@ -250,6 +250,9 @@
       },
       "max_rows": {
         "name": "max_rows"
+      },
+      "remove_empty_lines":{
+        "name": "remove_empty_lines"
       }
     },
     "outputs": {
