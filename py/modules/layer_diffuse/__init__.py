@@ -150,7 +150,10 @@ class LayerDiffuse:
         alpha = pixel_with_alpha[..., 0]
 
         alpha = 1.0 - alpha
-        new_images, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
+        try:
+            new_images, = JoinImageWithAlpha().execute(image, alpha)
+        except:
+            new_images, = JoinImageWithAlpha().join_image_with_alpha(image, alpha)
         return new_images, alpha
 
     def make_3d_mask(self, mask):
