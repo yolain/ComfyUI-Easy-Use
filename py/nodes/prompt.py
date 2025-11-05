@@ -295,6 +295,7 @@ class promptLine:
                     "prompt": ("STRING", {"multiline": True, "default": "text"}),
                     "start_index": ("INT", {"default": 0, "min": 0, "max": 9999}),
                      "max_rows": ("INT", {"default": 1000, "min": 1, "max": 9999}),
+                     "remove_empty_lines": ("BOOLEAN", {"default": True}),
                     },
             "hidden":{
                 "workflow_prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"
@@ -307,9 +308,11 @@ class promptLine:
     FUNCTION = "generate_strings"
     CATEGORY = "EasyUse/Prompt"
 
-    def generate_strings(self, prompt, start_index, max_rows, workflow_prompt=None, my_unique_id=None):
+    def generate_strings(self, prompt, start_index, max_rows, remove_empty_lines=True, workflow_prompt=None, my_unique_id=None):
         lines = prompt.split('\n')
-        # lines = [zh_to_en([v])[0] if has_chinese(v) else v for v in lines if v]
+        
+        if remove_empty_lines:
+            lines = [line for line in lines if line.strip()]
 
         start_index = max(0, min(start_index, len(lines) - 1))
 
