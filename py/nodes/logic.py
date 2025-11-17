@@ -1389,12 +1389,12 @@ class showAnything:
                 try:
                     if isinstance(val, str):
                         values.append(val)
-                    elif isinstance(val, list):
-                        values = val
+                    # elif isinstance(val, list):
+                    #     values = val
                     elif isinstance(val, (int, float, bool)):
                         values.append(str(val))
                     else:
-                        val = json.dumps(val)
+                        val = json.dumps(val, indent=4)
                         values.append(str(val))
                 except Exception:
                     values.append(str(val))

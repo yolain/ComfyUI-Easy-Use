@@ -94,7 +94,7 @@ class wildcardsPromptMatrix:
             "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support Lora Block Weight and wildcard)"}),
             "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
             "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
-            "offset": ("INT", {"default": 0, "min": 0, "step": 1, "control_after_generate": True}),
+            "offset": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM, "step": 1, "control_after_generate": True}),
             },
             "optional":{
               "output_limit": ("INT", {"default": 1, "min": -1, "step": 1, "tooltip": "Output All Probilities"})
@@ -206,6 +206,8 @@ class stylesPromptSelector:
             return (positive, negative)
 
         for index, val in enumerate(values):
+            if val not in all_styles:
+                continue
             if 'prompt' in all_styles[val]:
                 if "{prompt}" in all_styles[val]['prompt'] and has_prompt == False:
                     positive_prompt = all_styles[val]['prompt'].replace('{prompt}', positive)
