@@ -1012,6 +1012,7 @@ class imageChooser(PreviewImage):
     return {
       "required":{
         "mode": (['Always Pause', 'Keep Last Selection'], {"default": "Always Pause"}),
+        "preview_rescale": ("FLOAT", {"default": 1.0, "min": 0.05, "max": 1.0, "step": 0.05}),
       },
       "optional": {
         "images": ("IMAGE",),
@@ -1053,7 +1054,13 @@ class imageChooser(PreviewImage):
       pnginfo = extra_pnginfo[0]
     except:
       pnginfo = None
-    result = self.save_images(images=images_in, prompt=prompt, extra_pnginfo=pnginfo)
+
+    preview_rescale = kwargs.pop('preview_rescale', 1.0)
+    if preview_rescale < 1.0:
+      images_preview, = imageScaleDownBy().image_scale_down_by(images_in, preview_rescale)
+    else:
+      images_preview = images_in
+    result = self.save_images(images=images_preview, prompt=prompt, extra_pnginfo=pnginfo)
     if "ui" in result and "images" in result['ui']:
       images = result["ui"]["images"]
     else:
