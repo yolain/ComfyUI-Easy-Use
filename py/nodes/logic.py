@@ -956,7 +956,7 @@ class IfElse:
     FUNCTION = "execute"
     CATEGORY = "EasyUse/Logic"
 
-    def check_lazy_status(self, boolean, on_true=None, on_false=None):
+    def check_lazy_status(self, boolean=True, on_true=None, on_false=None):
         if boolean and on_true is None:
             return ["on_true"]
         if not boolean and on_false is None:
