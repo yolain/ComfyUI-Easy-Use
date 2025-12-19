@@ -52,6 +52,15 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.3.5**
+
+- 修复`isNone`
+- 将`preview_rescale`添加到`easy imageChooser`
+- 修复小部件隐藏#910
+- 将 max 参数添加到 `wildcardsPromptMatrix` 偏移量 #909
+- 修复子图节点上的标题框样式
+- 在 `easypromptLine` 上添加 `remove_empty_lines`
+
 **v1.3.4**
 
 - 修复 `easy seedList` 最大值 #879

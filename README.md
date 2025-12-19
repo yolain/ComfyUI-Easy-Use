@@ -47,6 +47,15 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.3.5**
+
+- Fix `isNone`
+- Add `preview_rescale` to `easy imageChooser`
+- Fix widget hidden #910
+- Add max parameter to `wildcardsPromptMatrix` offset #909
+- Fix title box style on subgraph node
+- Add `remove_empty_lines` on `easy promptLine`
+
 **v1.3.4**
 
 - Fix `easy seedList` max_num #879
