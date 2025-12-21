@@ -1030,7 +1030,7 @@ class isNone:
     CATEGORY = "EasyUse/Logic"
 
     def execute(self, any):
-        return (True if any is None else False,)
+        return (True if (isinstance(any, str) and any == '') or (isinstance(any, (int, float)) and any == 0) or any is None else False,)
 
 
 class isSDXL:
