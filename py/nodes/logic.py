@@ -1606,6 +1606,29 @@ class stringToFloatList:
         return (float_list,)
 
 
+class stringJoinLines:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+            {
+             "string" :("STRING", {"default": "", "multiline": True}),
+             "delimiter": ("STRING", {"default": " | "}),
+             }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ('STRING',)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic"
+
+    def execute(self, string, delimiter):
+        # 将多行字符串按换行符分割成列表，去除空行和每行的首尾空格
+        lines = [line.strip() for line in string.split('\n') if line.strip()]
+        # 用指定的分隔符连接各行
+        result = delimiter.join(lines)
+        return (result,)
+
+
 class outputToList:
     @classmethod
     def INPUT_TYPES(s):
@@ -1914,6 +1937,7 @@ NODE_CLASS_MAPPINGS = {
     "easy isFileExist": isFileExist,
     "easy stringToIntList": stringToIntList,
     "easy stringToFloatList": stringToFloatList,
+    "easy stringJoinLines": stringJoinLines,
     "easy outputToList": outputToList,
     "easy pixels": pixels,
     "easy xyAny": xyAny,
@@ -1962,6 +1986,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy isFileExist": "Is File Exist",
     "easy stringToIntList": "String to Int List",
     "easy stringToFloatList":"String to Float List",
+    "easy stringJoinLines": "String Join Lines",
     "easy outputToList": "Output to List",
     "easy pixels": "Pixels W/H Norm",
     "easy xyAny": "XY Any",
