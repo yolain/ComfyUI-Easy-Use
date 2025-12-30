@@ -19,7 +19,7 @@ import folder_paths
 
 DEFAULT_FLOW_NUM = 2
 MAX_FLOW_NUM = 20
-lazy_options = {"lazy": True} if compare_revision(2543) else {}
+lazy_options = {"lazy": True}
 
 any_type = AlwaysEqualProxy("*")
 
