@@ -7,6 +7,7 @@ from PIL.PngImagePlugin import PngInfo
 from ..libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, compare_revision
 from ..libs.cache import cache, update_cache, remove_cache
 from ..libs.log import log_node_info, log_node_warn
+from ..libs.math import evaluate_formula
 import numpy as np
 import time
 import os
@@ -626,6 +627,131 @@ class mathStringOperation:
             return (a.startswith(b),)
         elif operation == "a ENDSWITH b":
             return (a.endswith(b),)
+
+
+class simpleMath:
+    """简单计算器节点，支持字符串数学公式计算"""
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "value": ("STRING", {
+                    "default": "",
+                    "placeholder": "输入数学公式，如: a + b, pow(a, 2), ceil(a / b), floor(a * b), round(a / b, 2)"
+                }),
+            },
+            "optional": {
+                "a": (any_type,),
+                "b": (any_type,),
+                "c": (any_type,),
+            },
+        }
+    
+    RETURN_TYPES = ("INT","FLOAT", "BOOLEAN")
+    RETURN_NAMES = ("int", "float", "boolean")
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic/Math"
+    
+    def execute(self, value, a=0, b=0, c=0):
+        """
+        执行公式计算
+        
+        支持的运算：
+        - 基本运算：+、-、*、/、**（幂）、%（取模）
+        - 比较运算：>, <, >=, <=, ==, !=
+        - 函数：abs, pow, round, ceil, floor, sqrt, exp, log, log10
+        - 三角函数：sin, cos, tan, asin, acos, atan
+        - 常量：pi, e
+        - 变量：a, b, c
+        
+        示例公式：
+        - a + b + c
+        - (a>b)*b+(a<=b)*a
+        - pow(a, 2) + pow(b, 2)
+        - ceil(a / b)
+        - floor(a * b)
+        - round(a / b, 2)
+        - sqrt(a)
+        """
+        try:
+            result = evaluate_formula(value, a, b, c)
+            result_int = int(result)
+            result_bool = result_int != 0
+            return (result_int, result, result_bool)
+        except Exception as e:
+            error_msg = f"计算错误: {str(e)}"
+            log_node_warn(error_msg)
+            # 返回默认值
+            return (0, 0.0, False)
+
+
+class simpleMathDual:
+    """双公式计算器节点，支持两个独立的数学公式计算"""
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "value1": ("STRING", {
+                    "default": "",
+                    "placeholder": "输入数学公式1，如: a + b, pow(a, 2), ceil(a / b)"
+                }),
+                "value2": ("STRING", {
+                    "default": "",
+                    "placeholder": "输入数学公式2，如: c * d, sqrt(c), floor(d / 2)"
+                }),
+            },
+            "optional": {
+                "a": (any_type,),
+                "b": (any_type,),
+                "c": (any_type,),
+                "d": (any_type,),
+            },
+        }
+    
+    RETURN_TYPES = ("INT", "FLOAT", "INT", "FLOAT")
+    RETURN_NAMES = ("int1", "float1", "int2", "float2")
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic/Math"
+    
+    def execute(self, value1, value2, a=0, b=0, c=0, d=0):
+        """
+        执行双公式计算
+        
+        支持的运算：
+        - 基本运算：+、-、*、/、**（幂）、%（取模）
+        - 比较运算：>, <, >=, <=, ==, !=
+        - 函数：abs, pow, round, ceil, floor, sqrt, exp, log, log10
+        - 三角函数：sin, cos, tan, asin, acos, atan
+        - 常量：pi, e
+        - 变量：a, b, c, d
+        
+        示例公式：
+        - value1: a + b, value2: c + d
+        - value1: (a>b)*b+(a<=b)*a, value2: pow(c, 2) + pow(d, 2)
+        - value1: ceil(a / b), value2: floor(c * d)
+        - value1: sqrt(a), value2: round(c / d, 2)
+        """
+        try:
+            result1 = evaluate_formula(value1, a, b, c, d)
+            result1_int = int(result1)
+        except Exception as e:
+            error_msg = f"公式1计算错误: {str(e)}"
+            log_node_warn(error_msg)
+            result1 = 0.0
+            result1_int = 0
+        
+        try:
+            result2 = evaluate_formula(value2, a, b, c, d)
+            result2_int = int(result2)
+        except Exception as e:
+            error_msg = f"公式2计算错误: {str(e)}"
+            log_node_warn(error_msg)
+            result2 = 0.0
+            result2_int = 0
+        
+        return (result1_int, result1, result2_int, result2)
 
 
 # ---------------------------------------------------------------Flow----------------------------------------------------------------------#
@@ -1444,6 +1570,41 @@ class showTensorShape:
 
         return {"ui": {"text": shapes}}
 
+class stringToIntList:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+            {
+             "string" :("STRING", {"default": "1, 2, 3", "multiline": True}),
+             }
+        }
+    RETURN_TYPES = ("INT",)
+    RETURN_NAMES = ('INT',)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic"
+
+    def execute(self, string):
+        int_list = [int(x.strip()) for x in string.split(',')]
+        return (int_list,)
+
+class stringToFloatList:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+            {
+             "string" :("STRING", {"default": "1, 2, 3", "multiline": True}),
+             }
+        }
+
+    RETURN_TYPES = ("FLOAT",)
+    RETURN_NAMES = ('FLOAT',)
+    FUNCTION = "execute"
+    CATEGORY = "EasyUse/Logic"
+
+    def execute(self, string):
+        float_list = [float(x.strip()) for x in string.split(',')]
+        return (float_list,)
+
 
 class outputToList:
     @classmethod
@@ -1730,6 +1891,8 @@ NODE_CLASS_MAPPINGS = {
     "easy mathString": mathStringOperation,
     "easy mathInt": mathIntOperation,
     "easy mathFloat": mathFloatOperation,
+    "easy simpleMath": simpleMath,
+    "easy simpleMathDual": simpleMathDual,
     "easy compare": Compare,
     "easy imageSwitch": imageSwitch,
     "easy textSwitch": textSwitch,
@@ -1749,6 +1912,8 @@ NODE_CLASS_MAPPINGS = {
     "easy isNone": isNone,
     "easy isSDXL": isSDXL,
     "easy isFileExist": isFileExist,
+    "easy stringToIntList": stringToIntList,
+    "easy stringToFloatList": stringToFloatList,
     "easy outputToList": outputToList,
     "easy pixels": pixels,
     "easy xyAny": xyAny,
@@ -1775,6 +1940,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy mathString": "Math String",
     "easy mathInt": "Math Int",
     "easy mathFloat": "Math Float",
+    "easy simpleMath": "Simple Math",
+    "easy simpleMathDual": "Simple Math Dual",
     "easy imageSwitch": "Image Switch",
     "easy textSwitch": "Text Switch",
     "easy imageIndexSwitch": "Image Index Switch",
@@ -1793,6 +1960,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy isNone": "Is None",
     "easy isSDXL": "Is SDXL",
     "easy isFileExist": "Is File Exist",
+    "easy stringToIntList": "String to Int List",
+    "easy stringToFloatList":"String to Float List",
     "easy outputToList": "Output to List",
     "easy pixels": "Pixels W/H Norm",
     "easy xyAny": "XY Any",
