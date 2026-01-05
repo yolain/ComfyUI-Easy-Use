@@ -2769,14 +2769,20 @@
       "negative": {
         "name": "负面条件"
       },
-      "image_to_latent": {
-        "name": "图像转Latent"
-      },
       "latent": {
-        "name": "LATENT"
+        "name": "Latent"
+      },
+      "vae": {
+        "name": "vae"
+      },
+      "clip": {
+        "name": "clip"
       },
       "image": {
         "name": "图像"
+      },
+      "xyPlot": {
+        "name": "xyPlot"
       }
     },
     "outputs": {
@@ -2806,13 +2812,19 @@
         "name": "负面条件"
       },
       "4": {
-        "name": "图像转Latent"
+        "name": "latent"
       },
       "5": {
-        "name": "LATENT"
+        "name": "vae"
       },
       "6": {
+        "name": "clip"
+      },
+      "7": {
         "name": "图像"
+      },
+      "8": {
+        "name": "seed"
       }
     }
   },
