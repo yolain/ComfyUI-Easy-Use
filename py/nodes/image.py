@@ -1361,7 +1361,14 @@ class humanSegmentation:
                     mask_arrays.append(mask_background_array)
                 else:
                     for i, mask in enumerate(masks):
-                        condition = np.stack((mask.numpy_view(),) * image_shape[-1], axis=-1) > confidence
+                        mask_2d = mask.numpy_view()
+                        if mask_2d.ndim == 3 and mask_2d.shape[2] == 1:
+                            mask_2d = mask_2d.squeeze(axis=2)
+                        elif mask_2d.ndim != 2:
+                            raise ValueError(f"Unexpected mask shape: {mask_2d.shape}")
+                        condition = np.stack((mask_2d,) * image_shape[-1], axis=-1) > confidence
+                        if condition.ndim == 4 and condition.shape[2] == 1:
+                            condition = condition.squeeze(2)
                         mask_array = np.where(condition, mask_foreground_array, mask_background_array)
                         mask_arrays.append(mask_array)
                 # Merge our masks taking the maximum from each
