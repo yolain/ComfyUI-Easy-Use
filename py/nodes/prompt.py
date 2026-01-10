@@ -10,148 +10,144 @@ from ..libs.log import log_node_info
 from ..libs.utils import AlwaysEqualProxy
 from ..libs.wildcards import WildcardProcessor, get_wildcard_list, process
 
+from comfy_api.latest import io
+
 
 # 正面提示词
-class positivePrompt:
-
-    def __init__(self):
-        pass
+class positivePrompt(io.ComfyNode):
 
     @classmethod
-    def INPUT_TYPES(s):
-        return {"required": {
-            "positive": ("STRING", {"default": "", "multiline": True, "placeholder": "Positive"}),}
-        }
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy positive",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.String.Input("positive", default="", multiline=True, placeholder="Positive"),
+            ],
+            outputs=[
+                io.String.Output("positive"),
+            ],
+        )
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("positive",)
-    FUNCTION = "main"
-
-    CATEGORY = "EasyUse/Prompt"
-
-    @staticmethod
-    def main(positive):
-        return positive,
+    @classmethod
+    def execute(cls, positive):
+        return io.NodeOutput(positive)
 
 # 通配符提示词
-class wildcardsPrompt:
-
-    def __init__(self):
-        pass
+class wildcardsPrompt(io.ComfyNode):
 
     @classmethod
-    def INPUT_TYPES(s):
+    def define_schema(cls):
         wildcard_list = get_wildcard_list()
-        return {"required": {
-            "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support wildcard)"}),
-            "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
-            "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
-            "seed": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM}),
-            "multiline_mode": ("BOOLEAN", {"default": False}),
-            },
-            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
-        }
+        return io.Schema(
+            node_id="easy wildcards",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.String.Input("text", default="", multiline=True, dynamic_prompts=False, placeholder="(Support wildcard)"),
+                io.Combo.Input("Select to add LoRA", options=["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras")),
+                io.Combo.Input("Select to add Wildcard", options=["Select the Wildcard to add to the text"] + wildcard_list),
+                io.Int.Input("seed", default=0, min=0, max=MAX_SEED_NUM),
+                io.Boolean.Input("multiline_mode", default=False),
+            ],
+            outputs=[
+                io.String.Output("text", is_output_list=True),
+                io.String.Output("populated_text", is_output_list=True),
+            ],
+            hidden=[
+                io.Hidden.prompt,
+                io.Hidden.extra_pnginfo,
+                io.Hidden.unique_id,
+            ],
+        )
 
-    RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("text", "populated_text")
-    OUTPUT_IS_LIST = (True, True)
-    FUNCTION = "main"
-
-    CATEGORY = "EasyUse/Prompt"
-
-    def main(self, *args, **kwargs):
-        prompt = kwargs["prompt"] if "prompt" in kwargs else None
-        seed = kwargs["seed"]
+    @classmethod
+    def execute(cls, text, seed, multiline_mode, **kwargs):
+        prompt = cls.hidden.prompt
 
         # Clean loaded_objects
         if prompt:
             easyCache.update_loaded_objects(prompt)
 
-        text = kwargs['text']
-        if "multiline_mode" in kwargs and kwargs["multiline_mode"]:
+        if multiline_mode:
             populated_text = []
             _text = []
-            text = text.split("\n")
-            for t in text:
+            text_lines = text.split("\n")
+            for t in text_lines:
                 _text.append(t)
                 populated_text.append(process(t, seed))
             text = _text
         else:
             populated_text = [process(text, seed)]
             text = [text]
-        return {"ui": {"value": [seed]}, "result": (text, populated_text)}
+        return io.NodeOutput(text, populated_text, ui={"value": [seed]})
 
 # 通配符提示词矩阵，会按顺序返回包含通配符的提示词所生成的所有可能
-class wildcardsPromptMatrix:
-
-    def __init__(self):
-        pass
+class wildcardsPromptMatrix(io.ComfyNode):
 
     @classmethod
-    def INPUT_TYPES(s):
+    def define_schema(cls):
         wildcard_list = get_wildcard_list()
-        return {"required": {
-            "text": ("STRING", {"default": "", "multiline": True, "dynamicPrompts": False, "placeholder": "(Support Lora Block Weight and wildcard)"}),
-            "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
-            "Select to add Wildcard": (["Select the Wildcard to add to the text"] + wildcard_list,),
-            "offset": ("INT", {"default": 0, "min": 0, "max": MAX_SEED_NUM, "step": 1, "control_after_generate": True}),
-            },
-            "optional":{
-              "output_limit": ("INT", {"default": 1, "min": -1, "step": 1, "tooltip": "Output All Probilities"})
-            },
-            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
-        }
+        return io.Schema(
+            node_id="easy wildcardsMatrix",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.String.Input("text", default="", multiline=True, dynamic_prompts=False, placeholder="(Support Lora Block Weight and wildcard)"),
+                io.Combo.Input("Select to add LoRA", options=["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras")),
+                io.Combo.Input("Select to add Wildcard", options=["Select the Wildcard to add to the text"] + wildcard_list),
+                io.Int.Input("offset", default=0, min=0, max=MAX_SEED_NUM, step=1, control_after_generate=True),
+                io.Int.Input("output_limit", default=1, min=-1, step=1, tooltip="Output All Probilities", optional=True),
+            ],
+            outputs=[
+                io.String.Output("populated_text", is_output_list=True),
+                io.Int.Output("total"),
+                io.Int.Output("factors", is_output_list=True),
+            ],
+            hidden=[
+                io.Hidden.prompt,
+                io.Hidden.extra_pnginfo,
+                io.Hidden.unique_id,
+            ],
+        )
 
-    RETURN_TYPES = ("STRING", "INT", "INT")
-    RETURN_NAMES = ("populated_text", "total", "factors")
-    OUTPUT_IS_LIST = (True, False, True)
-    FUNCTION = "main"
-
-    CATEGORY = "EasyUse/Prompt"
-
-    def main(self, *args, **kwargs):
-        prompt = kwargs["prompt"] if "prompt" in kwargs else None
-        offset = kwargs["offset"]
-        output_limit = kwargs.get("output_limit", 1)
+    @classmethod
+    def execute(cls, text, offset, output_limit=1, **kwargs):
+        prompt = cls.hidden.prompt
         # Clean loaded_objects
         if prompt:
             easyCache.update_loaded_objects(prompt)
 
-        text = kwargs['text']
         p = WildcardProcessor(text)
         total = p.total()
         limit = total if output_limit > total or output_limit == -1 else output_limit
         offset = 0 if output_limit == -1 else offset
         populated_text = p.getmany(limit, offset) if output_limit != 1 else [p.getn(offset)]
-        return {"ui": {"value": [offset]}, "result": (populated_text, p.total(), list(p.placeholder_choices.values()))}
+        return io.NodeOutput(populated_text, p.total(), list(p.placeholder_choices.values()), ui={"value": [offset]})
 
 # 负面提示词
-class negativePrompt:
-
-    def __init__(self):
-        pass
+class negativePrompt(io.ComfyNode):
 
     @classmethod
-    def INPUT_TYPES(s):
-        return {"required": {
-            "negative": ("STRING", {"default": "", "multiline": True, "placeholder": "Negative"}),}
-        }
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy negative",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.String.Input("negative", default="", multiline=True, placeholder="Negative"),
+            ],
+            outputs=[
+                io.String.Output("negative"),
+            ],
+        )
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("negative",)
-    FUNCTION = "main"
-
-    CATEGORY = "EasyUse/Prompt"
-
-    @staticmethod
-    def main(negative):
-        return negative,
+    @classmethod
+    def execute(cls, negative):
+        return io.NodeOutput(negative)
 
 # 风格提示词选择器
-class stylesPromptSelector:
+class stylesPromptSelector(io.ComfyNode):
 
     @classmethod
-    def INPUT_TYPES(s):
+    def define_schema(cls):
         styles = ["fooocus_styles"]
         styles_dir = FOOOCUS_STYLES_DIR
         for file_name in os.listdir(styles_dir):
@@ -160,25 +156,28 @@ class stylesPromptSelector:
                 if file_name != "fooocus_styles.json":
                     styles.append(file_name.split(".")[0])
 
-        return {
-            "required": {
-               "styles": (styles, {"default": "fooocus_styles"}),
-            },
-            "optional": {
-                "positive": ("STRING", {"forceInput": True}),
-                "negative": ("STRING", {"forceInput": True}),
-                "select_styles": ("EASY_PROMPT_STYLES", {}),
-            },
-            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},
-        }
+        return io.Schema(
+            node_id="easy stylesSelector",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.Combo.Input("styles", options=styles, default="fooocus_styles"),
+                io.String.Input("positive", default="", force_input=True, optional=True),
+                io.String.Input("negative", default="", force_input=True, optional=True),
+                io.Custom(io_type="EASY_PROMPT_STYLES").Input("select_styles", optional=True),
+            ],
+            outputs=[
+                io.String.Output("positive"),
+                io.String.Output("negative"),
+            ],
+            hidden=[
+                io.Hidden.prompt,
+                io.Hidden.extra_pnginfo,
+                io.Hidden.unique_id,
+            ],
+        )
 
-    RETURN_TYPES = ("STRING", "STRING",)
-    RETURN_NAMES = ("positive", "negative",)
-
-    CATEGORY = 'EasyUse/Prompt'
-    FUNCTION = 'run'
-
-    def run(self, styles, positive='', negative='', select_styles=None, prompt=None, extra_pnginfo=None, my_unique_id=None):
+    @classmethod
+    def execute(cls, styles, positive='', negative='', select_styles=None, **kwargs):
         values = []
         all_styles = {}
         positive_prompt, negative_prompt = '', negative
@@ -203,7 +202,7 @@ class stylesPromptSelector:
 
         has_prompt = False
         if len(values) == 0:
-            return (positive, negative)
+            return io.NodeOutput(positive, negative)
 
         for index, val in enumerate(values):
             if val not in all_styles:
@@ -222,95 +221,101 @@ class stylesPromptSelector:
         if has_prompt == False and positive:
             positive_prompt = positive + positive_prompt + ', '
 
-        return (positive_prompt, negative_prompt)
+        return io.NodeOutput(positive_prompt, negative_prompt)
 
 #prompt
-class prompt:
+class prompt(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(s):
-        return {"required": {
-            "text": ("STRING", {"default": "", "multiline": True, "placeholder": "Prompt"}),
-            "prefix": (["Select the prefix add to the text"] + PROMPT_TEMPLATE["prefix"], {"default": "Select the prefix add to the text"}),
-            "subject": (["👤Select the subject add to the text"] + PROMPT_TEMPLATE["subject"], {"default": "👤Select the subject add to the text"}),
-            "action": (["🎬Select the action add to the text"] + PROMPT_TEMPLATE["action"], {"default": "🎬Select the action add to the text"}),
-            "clothes": (["👚Select the clothes add to the text"] + PROMPT_TEMPLATE["clothes"], {"default": "👚Select the clothes add to the text"}),
-            "environment": (["☀️Select the illumination environment add to the text"] + PROMPT_TEMPLATE["environment"], {"default": "☀️Select the illumination environment add to the text"}),
-            "background": (["🎞️Select the background add to the text"] + PROMPT_TEMPLATE["background"], {"default": "🎞️Select the background add to the text"}),
-            "nsfw": (["🔞Select the nsfw add to the text"] + PROMPT_TEMPLATE["nsfw"], {"default": "🔞️Select the nsfw add to the text"}),
-        },"hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO", "my_unique_id": "UNIQUE_ID"},}
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy prompt",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.String.Input("text", default="", multiline=True, placeholder="Prompt"),
+                io.Combo.Input("prefix", options=["Select the prefix add to the text"] + PROMPT_TEMPLATE["prefix"], default="Select the prefix add to the text"),
+                io.Combo.Input("subject", options=["👤Select the subject add to the text"] + PROMPT_TEMPLATE["subject"], default="👤Select the subject add to the text"),
+                io.Combo.Input("action", options=["🎬Select the action add to the text"] + PROMPT_TEMPLATE["action"], default="🎬Select the action add to the text"),
+                io.Combo.Input("clothes", options=["👚Select the clothes add to the text"] + PROMPT_TEMPLATE["clothes"], default="👚Select the clothes add to the text"),
+                io.Combo.Input("environment", options=["☀️Select the illumination environment add to the text"] + PROMPT_TEMPLATE["environment"], default="☀️Select the illumination environment add to the text"),
+                io.Combo.Input("background", options=["🎞️Select the background add to the text"] + PROMPT_TEMPLATE["background"], default="🎞️Select the background add to the text"),
+                io.Combo.Input("nsfw", options=["🔞Select the nsfw add to the text"] + PROMPT_TEMPLATE["nsfw"], default="🔞️Select the nsfw add to the text"),
+            ],
+            outputs=[
+                io.String.Output("prompt"),
+            ],
+            hidden=[
+                io.Hidden.prompt,
+                io.Hidden.extra_pnginfo,
+                io.Hidden.unique_id,
+            ],
+        )
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("prompt",)
-    FUNCTION = "doit"
-
-    CATEGORY = "EasyUse/Prompt"
-
-    def doit(self, *args, **kwargs):
-        text = kwargs['text']
-        return (text,)
+    @classmethod
+    def execute(cls, text, **kwargs):
+        return io.NodeOutput(text)
 
 #promptList
-class promptList:
+class promptList(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {
-            "prompt_1": ("STRING", {"multiline": True, "default": ""}),
-            "prompt_2": ("STRING", {"multiline": True, "default": ""}),
-            "prompt_3": ("STRING", {"multiline": True, "default": ""}),
-            "prompt_4": ("STRING", {"multiline": True, "default": ""}),
-            "prompt_5": ("STRING", {"multiline": True, "default": ""}),
-        },
-            "optional": {
-                "optional_prompt_list": ("LIST",)
-            }
-        }
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy promptList",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.String.Input("prompt_1", multiline=True, default=""),
+                io.String.Input("prompt_2", multiline=True, default=""),
+                io.String.Input("prompt_3", multiline=True, default=""),
+                io.String.Input("prompt_4", multiline=True, default=""),
+                io.String.Input("prompt_5", multiline=True, default=""),
+                io.Custom(io_type="LIST").Input("optional_prompt_list", optional=True),
+            ],
+            outputs=[
+                io.Custom(io_type="LIST").Output("prompt_list"),
+                io.String.Output("prompt_strings", is_output_list=True),
+            ],
+        )
 
-    RETURN_TYPES = ("LIST", "STRING")
-    RETURN_NAMES = ("prompt_list", "prompt_strings")
-    OUTPUT_IS_LIST = (False, True)
-    FUNCTION = "run"
-    CATEGORY = "EasyUse/Prompt"
-
-    def run(self, **kwargs):
+    @classmethod
+    def execute(cls, prompt_1="", prompt_2="", prompt_3="", prompt_4="", prompt_5="", optional_prompt_list=None, **kwargs):
         prompts = []
 
-        if "optional_prompt_list" in kwargs:
-            for l in kwargs["optional_prompt_list"]:
+        if optional_prompt_list:
+            for l in optional_prompt_list:
                 prompts.append(l)
 
-        # Iterate over the received inputs in sorted order.
-        for k in sorted(kwargs.keys()):
-            v = kwargs[k]
+        # Add individual prompts
+        for p in [prompt_1, prompt_2, prompt_3, prompt_4, prompt_5]:
+            if isinstance(p, str) and p != '':
+                prompts.append(p)
 
-            # Only process string input ports.
-            if isinstance(v, str) and v != '':
-                prompts.append(v)
-
-        return (prompts, prompts)
+        return io.NodeOutput(prompts, prompts)
 
 #promptLine
-class promptLine:
+class promptLine(io.ComfyNode):
 
     @classmethod
-    def INPUT_TYPES(s):
-        return {"required": {
-                    "prompt": ("STRING", {"multiline": True, "default": "text"}),
-                    "start_index": ("INT", {"default": 0, "min": 0, "max": 9999}),
-                     "max_rows": ("INT", {"default": 1000, "min": 1, "max": 9999}),
-                     "remove_empty_lines": ("BOOLEAN", {"default": True}),
-                    },
-            "hidden":{
-                "workflow_prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"
-            }
-        }
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy promptLine",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.String.Input("prompt", multiline=True, default="text"),
+                io.Int.Input("start_index", default=0, min=0, max=9999),
+                io.Int.Input("max_rows", default=1000, min=1, max=9999),
+                io.Boolean.Input("remove_empty_lines", default=True),
+            ],
+            outputs=[
+                io.String.Output("STRING", is_output_list=True),
+                io.Combo.Output("COMBO", is_output_list=True),
+            ],
+            hidden=[
+                io.Hidden.prompt,
+                io.Hidden.unique_id,
+            ],
+        )
 
-    RETURN_TYPES = ("STRING", AlwaysEqualProxy('*'))
-    RETURN_NAMES = ("STRING", "COMBO")
-    OUTPUT_IS_LIST = (True, True)
-    FUNCTION = "generate_strings"
-    CATEGORY = "EasyUse/Prompt"
-
-    def generate_strings(self, prompt, start_index, max_rows, remove_empty_lines=True, workflow_prompt=None, my_unique_id=None):
+    @classmethod
+    def execute(cls, prompt, start_index, max_rows, remove_empty_lines=True, **kwargs):
         lines = prompt.split('\n')
         
         if remove_empty_lines:
@@ -322,35 +327,40 @@ class promptLine:
 
         rows = lines[start_index:end_index]
 
-        return (rows, rows)
+        return io.NodeOutput(rows, rows)
 
 import comfy.utils
 from server import PromptServer
 from ..libs.messages import MessageCancelled, Message
-any_type = AlwaysEqualProxy("*")
-class promptAwait:
+class promptAwait(io.ComfyNode):
 
     @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "now": (any_type,),
-                "prompt": ("STRING", {"multiline": True, "default": "", "placeholder":"Enter a prompt or use voice to enter to text"}),
-                "toolbar":("EASY_PROMPT_AWAIT_BAR",),
-            },
-            "optional":{
-                "prev": (any_type,),
-            },
-            "hidden": {"workflow_prompt": "PROMPT", "my_unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO"},
-        }
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy promptAwait",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.AnyType.Input("now"),
+                io.String.Input("prompt", multiline=True, default="", placeholder="Enter a prompt or use voice to enter to text"),
+                io.Custom(io_type="EASY_PROMPT_AWAIT_BAR").Input("toolbar"),
+                io.AnyType.Input("prev", optional=True),
+            ],
+            outputs=[
+                io.AnyType.Output("output"),
+                io.String.Output("prompt"),
+                io.Boolean.Output("continue"),
+                io.Int.Output("seed"),
+            ],
+            hidden=[
+                io.Hidden.prompt,
+                io.Hidden.unique_id,
+                io.Hidden.extra_pnginfo,
+            ],
+        )
 
-    RETURN_TYPES = (any_type, "STRING", "BOOLEAN", "INT")
-    RETURN_NAMES = ("output", "prompt", "continue", "seed")
-    FUNCTION = "await_select"
-    CATEGORY = "EasyUse/Prompt"
-
-    def await_select(self, now, prompt, toolbar, prev=None, workflow_prompt=None, my_unique_id=None, extra_pnginfo=None, **kwargs):
-        id = my_unique_id
+    @classmethod
+    def execute(cls, now, prompt, toolbar, prev=None, **kwargs):
+        id = cls.hidden.unique_id
         id = id.split('.')[len(id.split('.')) - 1] if "." in id else id
         if ":" in id:
             id = id.split(":")[0]
@@ -365,60 +375,59 @@ class promptAwait:
                 input = now if res['select'] == 'now' or prev is None else prev
                 result = (input, res['prompt'], False if res['result'] == -1 else True, res['seed'] if res['unlock'] else res['last_seed'])
             pbar.update_absolute(100)
-            return result
+            return io.NodeOutput(*result)
         except MessageCancelled:
             pbar.update_absolute(100)
             raise comfy.model_management.InterruptProcessingException()
 
-class promptConcat:
+class promptConcat(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {},
-            "optional": {
-                "prompt1": ("STRING", {"multiline": False, "default": "", "forceInput": True}),
-                "prompt2": ("STRING", {"multiline": False, "default": "", "forceInput": True}),
-                "separator": ("STRING", {"multiline": False, "default": ""}),
-            },
-        }
-    RETURN_TYPES = ("STRING", )
-    RETURN_NAMES = ("prompt", )
-    FUNCTION = "concat_text"
-    CATEGORY = "EasyUse/Prompt"
-
-    def concat_text(self, prompt1="", prompt2="", separator=""):
-
-        return (prompt1 + separator + prompt2,)
-
-class promptReplace:
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy promptConcat",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.String.Input("prompt1", multiline=False, default="", force_input=True, optional=True),
+                io.String.Input("prompt2", multiline=False, default="", force_input=True, optional=True),
+                io.String.Input("separator", multiline=False, default="", optional=True),
+            ],
+            outputs=[
+                io.String.Output("prompt"),
+            ],
+        )
 
     @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "prompt": ("STRING", {"multiline": True, "default": "", "forceInput": True}),
-            },
-            "optional": {
-                "find1": ("STRING", {"multiline": False, "default": ""}),
-                "replace1": ("STRING", {"multiline": False, "default": ""}),
-                "find2": ("STRING", {"multiline": False, "default": ""}),
-                "replace2": ("STRING", {"multiline": False, "default": ""}),
-                "find3": ("STRING", {"multiline": False, "default": ""}),
-                "replace3": ("STRING", {"multiline": False, "default": ""}),
-            },
-        }
+    def execute(cls, prompt1="", prompt2="", separator=""):
+        return io.NodeOutput(prompt1 + separator + prompt2)
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("prompt",)
-    FUNCTION = "replace_text"
-    CATEGORY = "EasyUse/Prompt"
+class promptReplace(io.ComfyNode):
 
-    def replace_text(self, prompt, find1="", replace1="", find2="", replace2="", find3="", replace3=""):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy promptReplace",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.String.Input("prompt", multiline=True, default="", force_input=True),
+                io.String.Input("find1", multiline=False, default="", optional=True),
+                io.String.Input("replace1", multiline=False, default="", optional=True),
+                io.String.Input("find2", multiline=False, default="", optional=True),
+                io.String.Input("replace2", multiline=False, default="", optional=True),
+                io.String.Input("find3", multiline=False, default="", optional=True),
+                io.String.Input("replace3", multiline=False, default="", optional=True),
+            ],
+            outputs=[
+                io.String.Output("prompt"),
+            ],
+        )
 
+    @classmethod
+    def execute(cls, prompt, find1="", replace1="", find2="", replace2="", find3="", replace3=""):
         prompt = prompt.replace(find1, replace1)
         prompt = prompt.replace(find2, replace2)
         prompt = prompt.replace(find3, replace3)
 
-        return (prompt,)
+        return io.NodeOutput(prompt)
 
 
 # 肖像大师
@@ -426,10 +435,10 @@ class promptReplace:
 # Version: 2.2
 # https://stefanoflore.it
 # https://ai-wiz.art
-class portraitMaster:
+class portraitMaster(io.ComfyNode):
 
     @classmethod
-    def INPUT_TYPES(s):
+    def define_schema(cls):
         max_float_value = 1.95
         prompt_path = os.path.join(RESOURCES_DIR, 'portrait_prompt.json')
         if not os.path.exists(prompt_path):
@@ -441,50 +450,72 @@ class portraitMaster:
             del response, temp_prompt
         # Load local
         with open(prompt_path, 'r') as f:
-            list = json.load(f)
-        keys = [
-            ['shot', 'COMBO', {"key": "shot_list"}], ['shot_weight', 'FLOAT'],
-            ['gender', 'COMBO', {"default": "Woman", "key": "gender_list"}], ['age', 'INT', {"default": 30, "min": 18, "max": 90, "step": 1, "display": "slider"}],
-            ['nationality_1', 'COMBO', {"default": "Chinese", "key": "nationality_list"}], ['nationality_2', 'COMBO', {"key": "nationality_list"}], ['nationality_mix', 'FLOAT'],
-            ['body_type', 'COMBO', {"key": "body_type_list"}], ['body_type_weight', 'FLOAT'], ['model_pose', 'COMBO', {"key": "model_pose_list"}], ['eyes_color', 'COMBO', {"key": "eyes_color_list"}],
-            ['facial_expression', 'COMBO', {"key": "face_expression_list"}], ['facial_expression_weight', 'FLOAT'], ['face_shape', 'COMBO', {"key": "face_shape_list"}], ['face_shape_weight', 'FLOAT'], ['facial_asymmetry', 'FLOAT'],
-            ['hair_style', 'COMBO', {"key": "hair_style_list"}], ['hair_color', 'COMBO', {"key": "hair_color_list"}], ['disheveled', 'FLOAT'], ['beard', 'COMBO', {"key": "beard_list"}],
-            ['skin_details', 'FLOAT'], ['skin_pores', 'FLOAT'], ['dimples', 'FLOAT'], ['freckles', 'FLOAT'],
-            ['moles', 'FLOAT'], ['skin_imperfections', 'FLOAT'], ['skin_acne', 'FLOAT'], ['tanned_skin', 'FLOAT'],
-            ['eyes_details', 'FLOAT'], ['iris_details', 'FLOAT'], ['circular_iris', 'FLOAT'], ['circular_pupil', 'FLOAT'],
-            ['light_type', 'COMBO', {"key": "light_type_list"}], ['light_direction', 'COMBO', {"key": "light_direction_list"}], ['light_weight', 'FLOAT']
-        ]
-        widgets = {}
-        for i, obj in enumerate(keys):
-            if obj[1] == 'COMBO':
-                key = obj[2]['key'] if obj[2] and 'key' in obj[2] else obj[0]
-                _list = list[key].copy()
-                _list.insert(0, '-')
-                widgets[obj[0]] = (_list, {**obj[2]})
-            elif obj[1] == 'FLOAT':
-                widgets[obj[0]] = ("FLOAT", {"default": 0, "step": 0.05, "min": 0, "max": max_float_value, "display": "slider",})
-            elif obj[1] == 'INT':
-                widgets[obj[0]] = (obj[1], obj[2])
-        del list
-        return {
-            "required": {
-                **widgets,
-                "photorealism_improvement": (["enable", "disable"],),
-                "prompt_start": ("STRING", {"multiline": True, "default": "raw photo, (realistic:1.5)"}),
-                "prompt_additional": ("STRING", {"multiline": True, "default": ""}),
-                "prompt_end": ("STRING", {"multiline": True, "default": ""}),
-                "negative_prompt": ("STRING", {"multiline": True, "default": ""}),
-            }
-        }
+            data = json.load(f)
+        
+        inputs = []
+        # Shot
+        inputs.append(io.Combo.Input("shot", options=['-'] + data['shot_list']))
+        inputs.append(io.Float.Input("shot_weight", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        # Gender and age
+        inputs.append(io.Combo.Input("gender", options=['-'] + data['gender_list'], default="Woman"))
+        inputs.append(io.Int.Input("age", default=30, min=18, max=90, step=1, display_mode=io.NumberDisplay.slider))
+        # Nationality
+        inputs.append(io.Combo.Input("nationality_1", options=['-'] + data['nationality_list'], default="Chinese"))
+        inputs.append(io.Combo.Input("nationality_2", options=['-'] + data['nationality_list']))
+        inputs.append(io.Float.Input("nationality_mix", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        # Body
+        inputs.append(io.Combo.Input("body_type", options=['-'] + data['body_type_list']))
+        inputs.append(io.Float.Input("body_type_weight", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Combo.Input("model_pose", options=['-'] + data['model_pose_list']))
+        inputs.append(io.Combo.Input("eyes_color", options=['-'] + data['eyes_color_list']))
+        # Face
+        inputs.append(io.Combo.Input("facial_expression", options=['-'] + data['face_expression_list']))
+        inputs.append(io.Float.Input("facial_expression_weight", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Combo.Input("face_shape", options=['-'] + data['face_shape_list']))
+        inputs.append(io.Float.Input("face_shape_weight", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("facial_asymmetry", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        # Hair
+        inputs.append(io.Combo.Input("hair_style", options=['-'] + data['hair_style_list']))
+        inputs.append(io.Combo.Input("hair_color", options=['-'] + data['hair_color_list']))
+        inputs.append(io.Float.Input("disheveled", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Combo.Input("beard", options=['-'] + data['beard_list']))
+        # Skin details
+        inputs.append(io.Float.Input("skin_details", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("skin_pores", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("dimples", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("freckles", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("moles", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("skin_imperfections", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("skin_acne", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("tanned_skin", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        # Eyes
+        inputs.append(io.Float.Input("eyes_details", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("iris_details", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("circular_iris", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        inputs.append(io.Float.Input("circular_pupil", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        # Light
+        inputs.append(io.Combo.Input("light_type", options=['-'] + data['light_type_list']))
+        inputs.append(io.Combo.Input("light_direction", options=['-'] + data['light_direction_list']))
+        inputs.append(io.Float.Input("light_weight", default=0, step=0.05, min=0, max=max_float_value, display_mode=io.NumberDisplay.slider))
+        # Additional
+        inputs.append(io.Combo.Input("photorealism_improvement", options=["enable", "disable"]))
+        inputs.append(io.String.Input("prompt_start", multiline=True, default="raw photo, (realistic:1.5)"))
+        inputs.append(io.String.Input("prompt_additional", multiline=True, default=""))
+        inputs.append(io.String.Input("prompt_end", multiline=True, default=""))
+        inputs.append(io.String.Input("negative_prompt", multiline=True, default=""))
+        
+        return io.Schema(
+            node_id="easy portraitMaster",
+            category="EasyUse/Prompt",
+            inputs=inputs,
+            outputs=[
+                io.String.Output("positive"),
+                io.String.Output("negative"),
+            ],
+        )
 
-    RETURN_TYPES = ("STRING", "STRING",)
-    RETURN_NAMES = ("positive", "negative",)
-
-    FUNCTION = "pm"
-
-    CATEGORY = "EasyUse/Prompt"
-
-    def pm(self, shot="-", shot_weight=1, gender="-", body_type="-", body_type_weight=0, eyes_color="-",
+    @classmethod
+    def execute(cls, shot="-", shot_weight=1, gender="-", body_type="-", body_type_weight=0, eyes_color="-",
            facial_expression="-", facial_expression_weight=0, face_shape="-", face_shape_weight=0,
            nationality_1="-", nationality_2="-", nationality_mix=0.5, age=30, hair_style="-", hair_color="-",
            disheveled=0, dimples=0, freckles=0, skin_pores=0, skin_details=0, moles=0, skin_imperfections=0,
@@ -614,7 +645,7 @@ class portraitMaster:
 
         log_node_info("Portrait Master as generate the prompt:", prompt)
 
-        return (prompt, negative_prompt,)
+        return io.NodeOutput(prompt, negative_prompt)
 
 
 NODE_CLASS_MAPPINGS = {
