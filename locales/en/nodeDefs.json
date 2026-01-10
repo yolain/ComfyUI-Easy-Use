@@ -469,6 +469,19 @@
       }
     }
   },
+  "easy multiAngle":{
+    "display_name": "Multi Angle Prompt",
+    "inputs": {
+    },
+    "outputs": {
+      "0": {
+        "name": "prompt"
+      },
+      "1":{
+        "name": "params"
+      }
+    }
+  },
   "easy fullLoader": {
     "display_name": "EasyLoader (Full)",
     "inputs": {

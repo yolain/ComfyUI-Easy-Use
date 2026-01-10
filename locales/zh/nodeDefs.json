@@ -393,6 +393,19 @@
       }
     }
   },
+  "easy multiAngle":{
+    "display_name": "多视角提示词",
+    "inputs": {
+    },
+    "outputs": {
+      "0": {
+        "name": "提示词"
+      },
+      "1":{
+        "name": "参数"
+      }
+    }
+  },
   "easy fullLoader": {
     "display_name": "简易加载器 (完整版)",
     "inputs": {

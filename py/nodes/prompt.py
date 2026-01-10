@@ -647,6 +647,119 @@ class portraitMaster(io.ComfyNode):
 
         return io.NodeOutput(prompt, negative_prompt)
 
+# 多角度
+class multiAngle(io.ComfyNode):
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy multiAngle",
+            category="EasyUse/Prompt",
+            inputs=[
+                io.Custom(io_type="EASY_MULTI_ANGLE").Input("multi_angle", optional=True),
+            ],
+            outputs=[
+                io.String.Output("prompt", is_output_list=True),
+                io.Custom(io_type="EASY_MULTI_ANGLE").Output("params"),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, multi_angle=None, **kwargs):
+        if multi_angle is None or not isinstance(multi_angle, list):
+            return io.NodeOutput([""])
+
+        if isinstance(multi_angle, str):
+            try:
+                multi_angle = json.loads(multi_angle)
+            except:
+                raise Exception(f"Invalid multi angle: {multi_angle}")
+
+        prompts = []
+        for angle_data in multi_angle:
+            rotate = angle_data.get("rotate", 0)
+            vertical = angle_data.get("vertical", 0)
+            zoom = angle_data.get("zoom", 5)
+            add_angle_prompt = angle_data.get("add_angle_prompt", True)
+            
+            # Validate input ranges
+            rotate = max(0, min(360, int(rotate)))
+            vertical = max(-30, min(90, int(vertical)))
+            zoom = max(0.0, min(10.0, float(zoom)))
+
+            h_angle = rotate % 360
+            
+            # Horizontal direction mapping
+            h_suffix = "" if add_angle_prompt else " quarter"
+            if h_angle < 22.5 or h_angle >= 337.5:
+                h_direction = "front view"
+            elif h_angle < 67.5:
+                h_direction = f"front-right{h_suffix} view"
+            elif h_angle < 112.5:
+                h_direction = "right side view"
+            elif h_angle < 157.5:
+                h_direction = f"back-right{h_suffix} view"
+            elif h_angle < 202.5:
+                h_direction = "back view"
+            elif h_angle < 247.5:
+                h_direction = f"back-left{h_suffix} view"
+            elif h_angle < 292.5:
+                h_direction = "left side view"
+            else:
+                h_direction = f"front-left{h_suffix} view"
+            
+            # Vertical direction mapping
+            if add_angle_prompt:
+                if vertical < -15:
+                    v_direction = "low angle"
+                elif vertical < 15:
+                    v_direction = "eye level"
+                elif vertical < 45:
+                    v_direction = "high angle"
+                elif vertical < 75:
+                    v_direction = "bird's eye view"
+                else:
+                    v_direction = "top-down view"
+            else:
+                if vertical < -15:
+                    v_direction = "low-angle shot"
+                elif vertical < 15:
+                    v_direction = "eye-level shot"
+                elif vertical < 75:
+                    v_direction = "elevated shot"
+                else:
+                    v_direction = "high-angle shot"
+            
+            # Distance/zoom mapping
+            if add_angle_prompt:
+                if zoom < 2:
+                    distance = "wide shot"
+                elif zoom < 4:
+                    distance = "medium-wide shot"
+                elif zoom < 6:
+                    distance = "medium shot"
+                elif zoom < 8:
+                    distance = "medium close-up"
+                else:
+                    distance = "close-up"
+            else:
+                if zoom < 2:
+                    distance = "wide shot"
+                elif zoom < 6:
+                    distance = "medium shot"
+                else:
+                    distance = "close-up"
+            
+            # Build prompt
+            if add_angle_prompt:
+                prompt = f"{h_direction}, {v_direction}, {distance} (horizontal: {rotate}, vertical: {vertical}, zoom: {zoom:.1f})"
+            else:
+                prompt = f"{h_direction} {v_direction} {distance}"
+            
+            prompts.append(prompt)
+        
+        return io.NodeOutput(prompts, multi_angle)
+
 
 NODE_CLASS_MAPPINGS = {
     "easy positive": positivePrompt,
@@ -661,6 +774,7 @@ NODE_CLASS_MAPPINGS = {
     "easy promptReplace": promptReplace,
     "easy stylesSelector": stylesPromptSelector,
     "easy portraitMaster": portraitMaster,
+    "easy multiAngle": multiAngle,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -676,4 +790,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy promptReplace": "PromptReplace",
     "easy stylesSelector": "Styles Selector",
     "easy portraitMaster": "Portrait Master",
+    "easy multiAngle": "Multi Angle",
 }
