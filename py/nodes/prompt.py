@@ -1,15 +1,13 @@
 import json
 import os
-from urllib.request import urlopen
-
 import folder_paths
 
 from .. import easyCache
 from ..config import FOOOCUS_STYLES_DIR, MAX_SEED_NUM, PROMPT_TEMPLATE, RESOURCES_DIR
 from ..libs.log import log_node_info
-from ..libs.utils import AlwaysEqualProxy
 from ..libs.wildcards import WildcardProcessor, get_wildcard_list, process
 
+from urllib.request import urlopen
 from comfy_api.latest import io
 
 
@@ -666,7 +664,7 @@ class multiAngle(io.ComfyNode):
 
     @classmethod
     def execute(cls, multi_angle=None, **kwargs):
-        if multi_angle is None or not isinstance(multi_angle, list):
+        if multi_angle is None:
             return io.NodeOutput([""])
 
         if isinstance(multi_angle, str):

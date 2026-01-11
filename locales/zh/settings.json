@@ -71,5 +71,12 @@
       "Grid": "网格",
       "List": "列表"
     }
+  },
+  "EasyUse_MultiAngle_HollowMode": {
+    "name": "启用多角度镂空展示模式",
+    "tooltip": "在多角度节点中启用镂空展示模式，可以更直观地查看相机角度"
+  },
+  "EasyUse_MultiAngle_AddAnglePrompt": {
+    "name": "启用添加多角度提示词"
   }
 }
