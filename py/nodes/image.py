@@ -1079,8 +1079,8 @@ class imageColorMatch(PreviewImage):
   def INPUT_TYPES(cls):
     return {
       "required": {
-        "image_ref": ("IMAGE",),
         "image_target": ("IMAGE",),
+        "image_ref": ("IMAGE",),
         "method": (['wavelet', 'adain', 'mkl', 'hm', 'reinhard', 'mvgd', 'hm-mvgd-hm', 'hm-mkl-hm'],),
         "image_output": (["Hide", "Preview", "Save", "Hide/Save"], {"default": "Preview"}),
         "save_prefix": ("STRING", {"default": "ComfyUI"}),
