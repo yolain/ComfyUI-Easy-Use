@@ -682,7 +682,7 @@ class multiAngle(io.ComfyNode):
             
             # Validate input ranges
             rotate = max(0, min(360, int(rotate)))
-            vertical = max(-30, min(90, int(vertical)))
+            vertical = max(-90, min(90, int(vertical)))
             zoom = max(0.0, min(10.0, float(zoom)))
 
             h_angle = rotate % 360
@@ -708,7 +708,11 @@ class multiAngle(io.ComfyNode):
             
             # Vertical direction mapping
             if add_angle_prompt:
-                if vertical < -15:
+                if vertical < -75:
+                    v_direction = "bottom-looking-up perspective, extreme worm's eye view, "
+                elif vertical < -45:
+                    v_direction = "worm's eye view"
+                elif vertical < -15:
                     v_direction = "low angle"
                 elif vertical < 15:
                     v_direction = "eye level"
@@ -717,9 +721,11 @@ class multiAngle(io.ComfyNode):
                 elif vertical < 75:
                     v_direction = "bird's eye view"
                 else:
-                    v_direction = "top-down view"
+                    v_direction = "top-down perspective, looking straight down at the top of the head, face not visible, focus on hair and shoulders"
             else:
-                if vertical < -15:
+                if vertical < -45:
+                    v_direction = "ultra-low-angle shot"
+                elif vertical < -15:
                     v_direction = "low-angle shot"
                 elif vertical < 15:
                     v_direction = "eye-level shot"
@@ -731,9 +737,9 @@ class multiAngle(io.ComfyNode):
             # Distance/zoom mapping
             if add_angle_prompt:
                 if zoom < 2:
-                    distance = "wide shot"
+                    distance = "extreme wide shot"
                 elif zoom < 4:
-                    distance = "medium-wide shot"
+                    distance = "wide shot"
                 elif zoom < 6:
                     distance = "medium shot"
                 elif zoom < 8:
