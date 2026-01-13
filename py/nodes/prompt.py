@@ -1,5 +1,6 @@
 import json
 import os
+from urllib.request import urlopen
 import folder_paths
 
 from .. import easyCache
@@ -7,7 +8,6 @@ from ..config import FOOOCUS_STYLES_DIR, MAX_SEED_NUM, PROMPT_TEMPLATE, RESOURCE
 from ..libs.log import log_node_info
 from ..libs.wildcards import WildcardProcessor, get_wildcard_list, process
 
-from urllib.request import urlopen
 from comfy_api.latest import io
 
 
@@ -23,7 +23,7 @@ class positivePrompt(io.ComfyNode):
                 io.String.Input("positive", default="", multiline=True, placeholder="Positive"),
             ],
             outputs=[
-                io.String.Output("positive"),
+                io.String.Output(id="output_positive", display_name="positive"),
             ],
         )
 
@@ -48,8 +48,8 @@ class wildcardsPrompt(io.ComfyNode):
                 io.Boolean.Input("multiline_mode", default=False),
             ],
             outputs=[
-                io.String.Output("text", is_output_list=True),
-                io.String.Output("populated_text", is_output_list=True),
+                io.String.Output(id="output_text", display_name="text", is_output_list=True),
+                io.String.Output(id="populated_text", display_name="populated_text", is_output_list=True),
             ],
             hidden=[
                 io.Hidden.prompt,
@@ -133,7 +133,7 @@ class negativePrompt(io.ComfyNode):
                 io.String.Input("negative", default="", multiline=True, placeholder="Negative"),
             ],
             outputs=[
-                io.String.Output("negative"),
+                io.String.Output(id="output_negative", display_name="negative"),
             ],
         )
 
@@ -164,8 +164,8 @@ class stylesPromptSelector(io.ComfyNode):
                 io.Custom(io_type="EASY_PROMPT_STYLES").Input("select_styles", optional=True),
             ],
             outputs=[
-                io.String.Output("positive"),
-                io.String.Output("negative"),
+                io.String.Output(id="output_positive", display_name="positive"),
+                io.String.Output(id="output_negative", display_name="negative"),
             ],
             hidden=[
                 io.Hidden.prompt,
@@ -415,7 +415,7 @@ class promptReplace(io.ComfyNode):
                 io.String.Input("replace3", multiline=False, default="", optional=True),
             ],
             outputs=[
-                io.String.Output("prompt"),
+                io.String.Output(id="output_prompt",display_name="prompt"),
             ],
         )
 
