@@ -344,8 +344,8 @@ class promptAwait(io.ComfyNode):
                 io.AnyType.Input("prev", optional=True),
             ],
             outputs=[
-                io.AnyType.Output("output"),
-                io.String.Output("prompt"),
+                io.AnyType.Output(id="output", display_name="output"),
+                io.String.Output(id="output_prompt", display_name="prompt"),
                 io.Boolean.Output("continue"),
                 io.Int.Output("seed"),
             ],
