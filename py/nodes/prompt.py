@@ -689,27 +689,19 @@ class multiAngle(io.ComfyNode):
             
             # Horizontal direction mapping
             h_suffix = "" if add_angle_prompt else " quarter"
-            if h_angle < 22.5 or h_angle >= 337.5:
-                h_direction = "front view"
-            elif h_angle < 67.5:
-                h_direction = f"front-right{h_suffix} view"
-            elif h_angle < 112.5:
-                h_direction = "right side view"
-            elif h_angle < 157.5:
-                h_direction = f"back-right{h_suffix} view"
-            elif h_angle < 202.5:
-                h_direction = "back view"
-            elif h_angle < 247.5:
-                h_direction = f"back-left{h_suffix} view"
-            elif h_angle < 292.5:
-                h_direction = "left side view"
-            else:
-                h_direction = f"front-left{h_suffix} view"
+            if h_angle < 22.5 or h_angle >= 337.5: h_direction = "front view"
+            elif h_angle < 67.5: h_direction = f"front-right{h_suffix} view"
+            elif h_angle < 112.5: h_direction = "right side view"
+            elif h_angle < 157.5: h_direction = f"back-right{h_suffix} view"
+            elif h_angle < 202.5: h_direction = "back view"
+            elif h_angle < 247.5: h_direction = f"back-left{h_suffix} view"
+            elif h_angle < 292.5: h_direction = "left side view"
+            else: h_direction = f"front-left{h_suffix} view"
             
             # Vertical direction mapping
             if add_angle_prompt:
                 if vertical == -90:
-                    v_direction = "bottom-looking-up perspective, extreme worm's eye view, face not visible, focus shoes"
+                    v_direction = "bottom-looking-up perspective, extreme worm's eye view, focus subject bottom"
                 elif vertical < -75:
                     v_direction = "bottom-looking-up perspective, extreme worm's eye view"
                 elif vertical < -45:
@@ -723,17 +715,11 @@ class multiAngle(io.ComfyNode):
                 elif vertical < 75:
                     v_direction = "bird's eye view"
                 elif vertical < 90:
-                    v_direction = "top-down perspective, looking straight down at the top of the head"
+                    v_direction = "top-down perspective, looking straight down at the top of the subject"
                 else:
-                    v_direction = "top-down perspective, looking straight down at the top of the head, face not visible, focus on hair and shoulders"
+                    v_direction = "top-down perspective, looking straight down at the top of the subject, face not visible, focus on subject head"
             else:
-                if vertical == -90:
-                    v_direction = "bottom-looking-up perspective, extreme worm's eye view, face not visible, focus shoes"
-                elif vertical < -75:
-                    v_direction = "bottom-looking-up perspective, extreme worm's eye view"
-                elif vertical < -45:
-                    v_direction = "ultra-low-angle shot"
-                elif vertical < -15:
+                if vertical < -15:
                     v_direction = "low-angle shot"
                 elif vertical < 15:
                     v_direction = "eye-level shot"
@@ -742,39 +728,29 @@ class multiAngle(io.ComfyNode):
                 elif vertical < 75:
                     v_direction = "high-angle shot"
                 elif vertical < 90:
-                    v_direction = "top-down perspective, looking straight down at the top of the head"
+                    v_direction = "top-down perspective, looking straight down at the top of the subject"
                 else:
-                    v_direction = "top-down perspective, looking straight down at the top of the head, face not visible, focus on hair and shoulders"
+                    v_direction = "top-down perspective, looking straight down at the top of the subject, face not visible, focus on subject head"
             
             # Distance/zoom mapping
             if add_angle_prompt:
-                if zoom < 2:
-                    distance = "extreme wide shot"
-                elif zoom < 4:
-                    distance = "wide shot"
-                elif zoom < 6:
-                    distance = "medium shot"
-                elif zoom < 8:
-                    distance = "close-up"
-                else:
-                    distance = "extreme close-up"
+                if zoom < 2: distance = "extreme wide shot"
+                elif zoom < 4: distance = "wide shot"
+                elif zoom < 6: distance = "medium shot"
+                elif zoom < 8: distance = "close-up"
+                else: distance = "extreme close-up"
             else:
-                if zoom < 2:
-                    distance = "extreme wide shot"
-                elif zoom < 4:
-                    distance = "wide shot"
-                elif zoom < 6:
-                    distance = "medium shot"
-                elif zoom < 8:
-                    distance = "close-up"
-                else:
-                    distance = "extreme close-up"
+                if zoom < 2: distance = "extreme wide shot"
+                elif zoom < 4: distance = "wide shot"
+                elif zoom < 6: distance = "medium shot"
+                elif zoom < 8: distance = "close-up"
+                else: distance = "extreme close-up"
             
             # Build prompt
             if add_angle_prompt:
                 prompt = f"{h_direction}, {v_direction}, {distance} (horizontal: {rotate}, vertical: {vertical}, zoom: {zoom:.1f})"
             else:
-                prompt = f"{h_direction}, {v_direction}, {distance}"
+                prompt = f"{h_direction} {v_direction} {distance}"
             
             prompts.append(prompt)
         
