@@ -1302,6 +1302,11 @@ class humanSegmentation:
       return mp.Image(image_format=image_format, data=numpy_image)
 
     def parsing(self, image, confidence, method, crop_multi, mask_components, prompt=None, my_unique_id=None):
+      if isinstance(mask_components, str):
+        mask_components = [int(x) for x in mask_components.split(',') if x]
+      else:
+        mask_components = mask_components if mask_components else []
+
       if method == 'selfie_multiclass_256x256':
         try:
           import mediapipe as mp
@@ -1327,6 +1332,9 @@ class humanSegmentation:
         # Create the image segmenter
         ret_images = []
         ret_masks = []
+
+        if len(mask_components) == 0:
+          return (image, torch.zeros_like(image[:, :, :, 0:1]), torch.tensor([0,0,0,0]))
 
         with mp.tasks.vision.ImageSegmenter.create_from_options(options) as segmenter:
             for img in image:
