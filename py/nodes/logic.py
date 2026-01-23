@@ -1512,19 +1512,17 @@ class showAnything:
         values = []
         if "anything" in kwargs:
             for val in kwargs['anything']:
-                try:
-                    if isinstance(val, str):
-                        values.append(val)
-                    # elif isinstance(val, list):
-                    #     values = val
-                    elif isinstance(val, (int, float, bool)):
-                        values.append(str(val))
-                    else:
-                        val = json.dumps(val, indent=4)
-                        values.append(str(val))
-                except Exception:
+                if isinstance(val, str):
+                    values.append(val)
+                elif isinstance(val, list) and len(val) <= 30:
+                    try:
+                        values = val
+                    except Exception:
+                        values.append(json.dumps(val, indent=4, ensure_ascii=False))
+                elif isinstance(val, (int, float, bool)):
                     values.append(str(val))
-                    pass
+                else:
+                    values.append(json.dumps(val, indent=4, ensure_ascii=False))
 
         if not extra_pnginfo:
             pass
