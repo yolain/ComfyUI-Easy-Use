@@ -218,15 +218,23 @@ class RangeFloat:
                 yield float(ret_val)
                 ret_val += step
         elif range_mode == 'num_steps':
-            step = (stop - start) / (num_steps - 1)
-            direction = 1 if step > 0 else -1
+            if num_steps is None or num_steps <= 0:
+                return
+            if num_steps == 1:
+                yield float(start)
+                return
+            # inclusive: include both endpoints, guaranteed length = num_steps
+            if inclusive:
+                step = (stop - start) / Decimal(num_steps - 1)
+                for i in range(num_steps):
+                    # pin the last value exactly to stop to avoid drift
+                    yield float(stop if i == num_steps - 1 else (start + step * Decimal(i)))
+            else:
+                # Exclusive: num_steps values starting at start, not including stop
+                step = (stop - start) / Decimal(num_steps)
+                for i in range(num_steps):
+                    yield float(start + step * Decimal(i))
 
-            ret_val = start
-            for _ in range(num_steps):
-                if (ret_val - stop) * direction > 0:  # Ensure we don't exceed the 'stop' value
-                    break
-                yield float(ret_val)
-                ret_val += step
 
     def build_range(
             self,
