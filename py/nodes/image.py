@@ -319,6 +319,52 @@ class imageScaleDownBy(imageScaleDown):
     new_height = int(height * scale_by)
     return self.image_scale_down(images, new_width, new_height, "center")
 
+class imageScaleDownByWidth(imageScaleDown):
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+        "width": (
+          "INT",
+          {"default": 512, "min": 1, "max": MAX_RESOLUTION, "step": 1},
+        ),
+      }
+    }
+
+  RETURN_TYPES = ("IMAGE",)
+  CATEGORY = "EasyUse/Image"
+  FUNCTION = "image_scale_down_by_width"
+
+  def image_scale_down_by(self, images, new_width):
+    width = images.shape[2]
+    height = images.shape[1]
+    new_height = int((height * new_width)//width)
+    return self.image_scale_down(images, new_width, new_height, "center")
+  
+class imageScaleDownByHeight(imageScaleDown):
+  @classmethod
+  def INPUT_TYPES(s):
+    return {
+      "required": {
+        "images": ("IMAGE",),
+        "height": (
+          "INT",
+          {"default": 512, "min": 1, "max": MAX_RESOLUTION, "step": 1},
+        ),
+      }
+    }
+
+  RETURN_TYPES = ("IMAGE",)
+  CATEGORY = "EasyUse/Image"
+  FUNCTION = "image_scale_down_by_height"
+
+  def image_scale_down_by(self, images, new_height):
+    width = images.shape[2]
+    height = images.shape[1]
+    new_width = int((width * new_height)//height)
+    return self.image_scale_down(images, new_width, new_height, "center")
+
 # 图像缩放尺寸
 class imageScaleDownToSize(imageScaleDownBy):
   @classmethod
@@ -2137,6 +2183,8 @@ NODE_CLASS_MAPPINGS = {
   "easy imagePixelPerfect": imagePixelPerfect,
   "easy imageScaleDown": imageScaleDown,
   "easy imageScaleDownBy": imageScaleDownBy,
+  "easy imageScaleDownByWidth": imageScaleDownByWidth,
+  "easy imageScaleDownByHeight": imageScaleDownByHeight,
   "easy imageScaleDownToSize": imageScaleDownToSize,
   "easy imageScaleToNormPixels": imageScaleToNormPixels,
   "easy imageRatio": imageRatio,
@@ -2175,6 +2223,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
   "easy imagePixelPerfect": "ImagePixelPerfect",
   "easy imageScaleDown": "Image Scale Down",
   "easy imageScaleDownBy": "Image Scale Down By",
+  "easy imageScaleDownByWidth": "Image Scale to Width (Aspect same)",
+  "easy imageScaleDownByHeight": "Image Scale to Height (Aspect same)",
   "easy imageScaleDownToSize": "Image Scale Down To Size",
   "easy imageScaleToNormPixels": "ImageScaleToNormPixels",
   "easy imageRatio": "ImageRatio",
