@@ -1149,7 +1149,7 @@ app.registerExtension({
 
 				for (const list of text) {
 					const w = ComfyWidgets["STRING"](this, "text", ["STRING", { multiline: true }], app).widget;
-					w.inputEl.readOnly = true;
+					// w.inputEl.readOnly = true;
 					w.inputEl.style.opacity = 0.6;
 					w.value = list;
 				}
