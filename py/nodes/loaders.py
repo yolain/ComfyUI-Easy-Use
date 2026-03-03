@@ -1175,9 +1175,12 @@ class loraSwitcher:
 
     CATEGORY = "EasyUse/Loaders"
 
-    def stack(self, toggle, select,num_loras, lora_strength, optional_lora_stack=None, **kwargs):
-        if (toggle in [False, None, "False"]) or not kwargs:
-            return (None,'')
+    def stack(self, toggle, select,num_loras, lora_strength, optional_lora_stack=None, **kwargs):     
+        if toggle in [False, None, "False"]:
+            return (optional_lora_stack, '')
+
+        if not kwargs and optional_lora_stack is None:
+            return (None, '')
 
         loras = []
 
@@ -1234,7 +1237,10 @@ class loraStack:
     CATEGORY = "EasyUse/Loaders"
 
     def stack(self, toggle, mode, num_loras, optional_lora_stack=None, **kwargs):
-        if (toggle in [False, None, "False"]) or not kwargs:
+        if toggle in [False, None, "False"]:
+            return (optional_lora_stack,)
+
+        if not kwargs and optional_lora_stack is None:
             return (None,)
 
         loras = []
@@ -1291,7 +1297,10 @@ class controlnetStack:
     CATEGORY = "EasyUse/Loaders"
 
     def stack(self, toggle, mode, num_controlnet, optional_controlnet_stack=None, **kwargs):
-        if (toggle in [False, None, "False"]) or not kwargs:
+        if toggle in [False, None, "False"]:
+            return (optional_controlnet_stack,)
+
+        if not kwargs and optional_controlnet_stack is None:
             return (None,)
 
         controlnets = []
