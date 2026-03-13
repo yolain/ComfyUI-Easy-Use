@@ -28,7 +28,7 @@ class DoubleStreamBlockIPA(nn.Module):
 
         self.txt_norm2 = original_block.txt_norm2
         self.txt_mlp = original_block.txt_mlp
-        self.flipped_img_txt = original_block.flipped_img_txt
+        self.flipped_img_txt = getattr(original_block, 'flipped_img_txt', False)
 
         self.ip_adapter = ip_adapter
         self.image_emb = image_emb
