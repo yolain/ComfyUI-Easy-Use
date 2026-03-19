@@ -439,10 +439,10 @@ class mathIntOperation(io.ComfyNode):
     @classmethod
     def execute(cls, a, b, operation):
         ops = {
-            "add": a + b, "subtract": a - b, "multiply": a * b,
-            "divide": a // b, "modulo": a % b, "power": a ** b,
+            "add": lambda: a + b, "subtract": lambda: a - b, "multiply": lambda: a * b,
+            "divide": lambda: a // b, "modulo": lambda: a % b, "power": lambda: a ** b,
         }
-        return io.NodeOutput(ops[operation])
+        return io.NodeOutput(ops[operation]())
 
 
 class mathFloatOperation(io.ComfyNode):
@@ -462,10 +462,10 @@ class mathFloatOperation(io.ComfyNode):
     @classmethod
     def execute(cls, a, b, operation):
         ops = {
-            "add": round(a + b, 3), "subtract": round(a - b, 3), "multiply": round(a * b, 3),
-            "divide": round(a / b, 3), "modulo": round(a % b, 3), "power": round(a ** b, 3),
+            "add": lambda: round(a + b, 3), "subtract": lambda: round(a - b, 3), "multiply": lambda: round(a * b, 3),
+            "divide": lambda: round(a / b, 3), "modulo": lambda: round(a % b, 3), "power": lambda: round(a ** b, 3),
         }
-        return io.NodeOutput(ops[operation])
+        return io.NodeOutput(ops[operation]())
 
 
 class mathStringOperation(io.ComfyNode):
@@ -589,100 +589,121 @@ except Exception:
     ExecutionBlocker = None
 
 
-class whileLoopStart(io.ComfyNode):
+class whileLoopStart:
+    def __init__(self):
+        pass
+
     @classmethod
-    def define_schema(cls):
-        inputs = [io.Boolean.Input("condition", default=True)]
+    def INPUT_TYPES(cls):
+        inputs = {
+            "required": {
+                "condition": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+            },
+        }
         for i in range(MAX_FLOW_NUM):
-            inputs.append(io.AnyType.Input("initial_value%d" % i, optional=True))
-        outputs = [io.Custom(io_type="FLOW_CONTROL").Output("flow")] + \
-                  [io.AnyType.Output("value%d" % i) for i in range(MAX_FLOW_NUM)]
-        return io.Schema(
-            node_id="easy whileLoopStart",
-            category="EasyUse/Logic/While Loop",
-            inputs=inputs,
-            outputs=outputs,
-        )
+            inputs["optional"]["initial_value%d" % i] = (any_type,)
+        return inputs
 
-    @classmethod
-    def execute(cls, condition, **kwargs):
-        values = [kwargs.get("initial_value%d" % i, None) if condition else ExecutionBlocker(None) for i in range(MAX_FLOW_NUM)]
-        return io.NodeOutput("stub", *values)
+    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL"] + [any_type] * MAX_FLOW_NUM))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["flow"] + ["value%d" % i for i in range(MAX_FLOW_NUM)]))
+    FUNCTION = "while_loop_open"
 
+    CATEGORY = "EasyUse/Logic/While Loop"
 
-class whileLoopEnd(io.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        inputs = [
-            io.Custom(io_type="FLOW_CONTROL").Input("flow", raw_link=True),
-            io.Boolean.Input("condition"),
-        ]
+    def while_loop_open(self, condition, **kwargs):
+        values = []
         for i in range(MAX_FLOW_NUM):
-            inputs.append(io.AnyType.Input("initial_value%d" % i, optional=True))
-        outputs = [io.AnyType.Output("value%d" % i) for i in range(MAX_FLOW_NUM)]
-        return io.Schema(
-            node_id="easy whileLoopEnd",
-            category="EasyUse/Logic/While Loop",
-            inputs=inputs,
-            outputs=outputs,
-            hidden=[io.Hidden.dynprompt, io.Hidden.unique_id, io.Hidden.extra_pnginfo],
-        )
+            values.append(kwargs.get("initial_value%d" % i, None) if condition else ExecutionBlocker(None))
+        return tuple(["stub"] + values)
+
+
+class whileLoopEnd:
+    def __init__(self):
+        pass
 
     @classmethod
-    def explore_dependencies(cls, node_id, dynprompt, upstream, parent_ids):
+    def INPUT_TYPES(cls):
+        inputs = {
+            "required": {
+                "flow": ("FLOW_CONTROL", {"rawLink": True}),
+                "condition": ("BOOLEAN", {}),
+            },
+            "optional": {
+            },
+            "hidden": {
+                "dynprompt": "DYNPROMPT",
+                "unique_id": "UNIQUE_ID",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            }
+        }
+        for i in range(MAX_FLOW_NUM):
+            inputs["optional"]["initial_value%d" % i] = (any_type,)
+        return inputs
+
+    RETURN_TYPES = ByPassTypeTuple(tuple([any_type] * MAX_FLOW_NUM))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(MAX_FLOW_NUM)]))
+    FUNCTION = "while_loop_close"
+
+    CATEGORY = "EasyUse/Logic/While Loop"
+
+    def explore_dependencies(self, node_id, dynprompt, upstream, parent_ids):
         node_info = dynprompt.get_node(node_id)
         if "inputs" not in node_info:
             return
+
         for k, v in node_info["inputs"].items():
             if is_link(v):
                 parent_id = v[0]
                 display_id = dynprompt.get_display_node_id(parent_id)
                 display_node = dynprompt.get_node(display_id)
                 class_type = display_node["class_type"]
-                if class_type not in ["easy forLoopEnd", "easy whileLoopEnd"]:
+                if class_type not in ['easy forLoopEnd', 'easy whileLoopEnd']:
                     parent_ids.append(display_id)
                 if parent_id not in upstream:
                     upstream[parent_id] = []
-                    cls.explore_dependencies(parent_id, dynprompt, upstream, parent_ids)
+                    self.explore_dependencies(parent_id, dynprompt, upstream, parent_ids)
+
                 upstream[parent_id].append(node_id)
 
-    @classmethod
-    def explore_output_nodes(cls, dynprompt, upstream, output_nodes, parent_ids):
+    def explore_output_nodes(self, dynprompt, upstream, output_nodes, parent_ids):
         for parent_id in upstream:
             display_id = dynprompt.get_display_node_id(parent_id)
             for output_id in output_nodes:
                 id = output_nodes[output_id][0]
                 if id in parent_ids and display_id == id and output_id not in upstream[parent_id]:
-                    if "." in parent_id:
-                        arr = parent_id.split(".")
+                    if '.' in parent_id:
+                        arr = parent_id.split('.')
                         arr[len(arr)-1] = output_id
-                        upstream[parent_id].append(".".join(arr))
+                        upstream[parent_id].append('.'.join(arr))
                     else:
                         upstream[parent_id].append(output_id)
 
-    @classmethod
-    def collect_contained(cls, node_id, upstream, contained):
+    def collect_contained(self, node_id, upstream, contained):
         if node_id not in upstream:
             return
         for child_id in upstream[node_id]:
             if child_id not in contained:
                 contained[child_id] = True
-                cls.collect_contained(child_id, upstream, contained)
+                self.collect_contained(child_id, upstream, contained)
 
-    @classmethod
-    def execute(cls, flow, condition, **kwargs):
-        dynprompt = cls.hidden.dynprompt
-        unique_id = cls.hidden.unique_id
-
+    def while_loop_close(self, flow, condition, dynprompt=None, unique_id=None,**kwargs):
         if not condition:
-            values = [kwargs.get("initial_value%d" % i, None) for i in range(MAX_FLOW_NUM)]
-            return io.NodeOutput(*values)
+            # We're done with the loop
+            values = []
+            for i in range(MAX_FLOW_NUM):
+                values.append(kwargs.get("initial_value%d" % i, None))
+            return tuple(values)
 
+        # We want to loop
+        this_node = dynprompt.get_node(unique_id)
         upstream = {}
+        # Get the list of all nodes between the open and close nodes
         parent_ids = []
-        cls.explore_dependencies(unique_id, dynprompt, upstream, parent_ids)
+        self.explore_dependencies(unique_id, dynprompt, upstream, parent_ids)
         parent_ids = list(set(parent_ids))
-
+        # Get the list of all output nodes between the open and close nodes
         prompts = dynprompt.get_original_prompt()
         output_nodes = {}
         for id in prompts:
@@ -691,16 +712,16 @@ class whileLoopEnd(io.ComfyNode):
                 continue
             class_type = node["class_type"]
             class_def = ALL_NODE_CLASS_MAPPINGS[class_type]
-            if hasattr(class_def, "OUTPUT_NODE") and class_def.OUTPUT_NODE:
-                for k, v in node["inputs"].items():
+            if hasattr(class_def, 'OUTPUT_NODE') and class_def.OUTPUT_NODE == True:
+                for k, v in node['inputs'].items():
                     if is_link(v):
                         output_nodes[id] = v
 
         graph = GraphBuilder()
-        cls.explore_output_nodes(dynprompt, upstream, output_nodes, parent_ids)
+        self.explore_output_nodes(dynprompt, upstream, output_nodes, parent_ids)
         contained = {}
         open_node = flow[0]
-        cls.collect_contained(open_node, upstream, contained)
+        self.collect_contained(open_node, upstream, contained)
         contained[unique_id] = True
         contained[open_node] = True
 
@@ -723,78 +744,115 @@ class whileLoopEnd(io.ComfyNode):
             key = "initial_value%d" % i
             new_open.set_input(key, kwargs.get(key, None))
         my_clone = graph.lookup_node("Recurse")
-        result = tuple(map(lambda x: my_clone.out(x), range(MAX_FLOW_NUM)))
-        return {"result": result, "expand": graph.finalize()}
+        result = map(lambda x: my_clone.out(x), range(MAX_FLOW_NUM))
+        return {
+            "result": tuple(result),
+            "expand": graph.finalize(),
+        }
 
 
-class forLoopStart(io.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        inputs = [io.Int.Input("total", default=1, min=1, max=100000, step=1)]
-        for i in range(1, MAX_FLOW_NUM):
-            inputs.append(io.AnyType.Input("initial_value%d" % i, optional=True))
-        outputs = [
-            io.Custom(io_type="FLOW_CONTROL").Output("flow"),
-            io.Int.Output("index"),
-        ] + [io.AnyType.Output("value%d" % i) for i in range(1, MAX_FLOW_NUM)]
-        return io.Schema(
-            node_id="easy forLoopStart",
-            category="EasyUse/Logic/For Loop",
-            inputs=inputs,
-            outputs=outputs,
-            hidden=[io.Hidden.prompt, io.Hidden.extra_pnginfo, io.Hidden.unique_id],
-        )
+class forLoopStart:
+    def __init__(self):
+        pass
 
     @classmethod
-    def execute(cls, total, **kwargs):
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "total": ("INT", {"default": 1, "min": 1, "max": 100000, "step": 1}),
+            },
+            "optional": {
+                "initial_value%d" % i: (any_type,) for i in range(1, MAX_FLOW_NUM)
+            },
+            "hidden": {
+                "initial_value0": (any_type,),
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+                "unique_id": "UNIQUE_ID"
+            }
+        }
+
+    RETURN_TYPES = ByPassTypeTuple(tuple(["FLOW_CONTROL", "INT"] + [any_type] * (MAX_FLOW_NUM - 1)))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["flow", "index"] + ["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
+    FUNCTION = "for_loop_start"
+
+    CATEGORY = "EasyUse/Logic/For Loop"
+
+    def for_loop_start(self, total, prompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
         graph = GraphBuilder()
-        i = kwargs.get("initial_value0", 0)
-        initial_values = {("initial_value%d" % num): kwargs.get("initial_value%d" % num, None) for num in range(1, MAX_FLOW_NUM)}
-        graph.node("easy whileLoopStart", condition=total, initial_value0=i, **initial_values)
+        i = 0
+        if "initial_value0" in kwargs:
+            i = kwargs["initial_value0"]
+
+        initial_values = {("initial_value%d" % num): kwargs.get("initial_value%d" % num, None) for num in
+                          range(1, MAX_FLOW_NUM)}
+        while_open = graph.node("easy whileLoopStart", condition=total, initial_value0=i, **initial_values)
         outputs = [kwargs.get("initial_value%d" % num, None) for num in range(1, MAX_FLOW_NUM)]
-        return {"result": tuple(["stub", i] + outputs), "expand": graph.finalize()}
+        return {
+            "result": tuple(["stub", i] + outputs),
+            "expand": graph.finalize(),
+        }
 
 
-class forLoopEnd(io.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        inputs = [io.Custom(io_type="FLOW_CONTROL").Input("flow", raw_link=True)]
-        for i in range(1, MAX_FLOW_NUM):
-            inputs.append(io.AnyType.Input("initial_value%d" % i, optional=True, raw_link=True))
-        outputs = [io.AnyType.Output("value%d" % i) for i in range(1, MAX_FLOW_NUM)]
-        return io.Schema(
-            node_id="easy forLoopEnd",
-            category="EasyUse/Logic/For Loop",
-            inputs=inputs,
-            outputs=outputs,
-            hidden=[io.Hidden.dynprompt, io.Hidden.extra_pnginfo, io.Hidden.unique_id],
-        )
+class forLoopEnd:
+    def __init__(self):
+        pass
 
     @classmethod
-    def execute(cls, flow, **kwargs):
-        dynprompt = cls.hidden.dynprompt
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "flow": ("FLOW_CONTROL", {"rawLink": True}),
+            },
+            "optional": {
+                "initial_value%d" % i: (any_type, {"rawLink": True}) for i in range(1, MAX_FLOW_NUM)
+            },
+            "hidden": {
+                "dynprompt": "DYNPROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+                "unique_id": "UNIQUE_ID"
+            },
+        }
+
+    RETURN_TYPES = ByPassTypeTuple(tuple([any_type] * (MAX_FLOW_NUM - 1)))
+    RETURN_NAMES = ByPassTypeTuple(tuple(["value%d" % i for i in range(1, MAX_FLOW_NUM)]))
+    FUNCTION = "for_loop_end"
+
+    CATEGORY = "EasyUse/Logic/For Loop"
+
+
+
+    def for_loop_end(self, flow, dynprompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
         graph = GraphBuilder()
         while_open = flow[0]
+        total = None
 
+        # Using dynprompt to get the original node
         forstart_node = dynprompt.get_node(while_open)
-        if forstart_node["class_type"] == "easy forLoopStart":
-            total = forstart_node["inputs"]["total"]
-        elif forstart_node["class_type"] == "easy loadImagesForLoop":
-            inputs = forstart_node["inputs"]
-            total = graph.node("easy imagesCountInDirectory",
-                               directory=inputs["directory"],
-                               limit=inputs["limit"],
-                               start_index=inputs["start_index"],
-                               extension="*").out(0)
-        else:
-            total = None
+        if forstart_node['class_type'] == 'easy forLoopStart':
+            inputs = forstart_node['inputs']
+            total = inputs['total']
+        elif forstart_node['class_type'] == 'easy loadImagesForLoop':
+            inputs = forstart_node['inputs']
+            limit = inputs['limit']
+            start_index = inputs['start_index']
+            # Filter files by extension
+            directory = inputs['directory']
+            total = graph.node('easy imagesCountInDirectory', directory=directory, limit=limit, start_index=start_index, extension='*').out(0)
 
         sub = graph.node("easy mathInt", operation="add", a=[while_open, 1], b=1)
-        cond = graph.node("easy compare", a=sub.out(0), b=total, comparison="a < b")
-        input_values = {("initial_value%d" % i): kwargs.get("initial_value%d" % i, None) for i in range(1, MAX_FLOW_NUM)}
-        while_close = graph.node("easy whileLoopEnd", flow=flow, condition=cond.out(0), initial_value0=sub.out(0), **input_values)
-        return {"result": tuple([while_close.out(i) for i in range(1, MAX_FLOW_NUM)]), "expand": graph.finalize()}
-
+        cond = graph.node("easy compare", a=sub.out(0), b=total, comparison='a < b')
+        input_values = {("initial_value%d" % i): kwargs.get("initial_value%d" % i, None) for i in
+                        range(1, MAX_FLOW_NUM)}
+        while_close = graph.node("easy whileLoopEnd",
+                                 flow=flow,
+                                 condition=cond.out(0),
+                                 initial_value0=sub.out(0),
+                                 **input_values)
+        return {
+            "result": tuple([while_close.out(i) for i in range(1, MAX_FLOW_NUM)]),
+            "expand": graph.finalize(),
+        }
 
 COMPARE_FUNCTIONS = {
     "a == b": lambda a, b: a == b,
@@ -808,7 +866,6 @@ COMPARE_FUNCTIONS = {
     "b > 0": lambda a, b: b > 0,
     "b <= 0": lambda a, b: b <= 0,
 }
-
 
 class Compare(io.ComfyNode):
     @classmethod
@@ -826,6 +883,7 @@ class Compare(io.ComfyNode):
 
     @classmethod
     def execute(cls, a=0, b=0, comparison="a == b"):
+        print('a:', a, 'b:', b, 'comparison:', comparison)
         return io.NodeOutput(COMPARE_FUNCTIONS[comparison](a, b))
 
 
