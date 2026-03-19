@@ -12,6 +12,7 @@ web_version/dev/**
 docs/**
 .vscode/
 .idea/
+.claude/**
 mmb-preset.custom.txt
 config.yaml
 node.tar.gz
