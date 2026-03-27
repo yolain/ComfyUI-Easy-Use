@@ -63,10 +63,10 @@ class easyXYPlot():
         if value_type in ['Lora', 'Checkpoint']:
             arr = value.split(',')
             model_name = os.path.basename(os.path.splitext(arr[0])[0])
-            trigger_words = ' ' + arr[3] if value_type == 'Lora' and len(arr[3]) > 2 else ''
+            trigger_words = ' ' + arr[3] if value_type == 'Lora' and len(arr) > 3 and len(arr[3]) > 2 else ''
             lora_weight = float(arr[1]) if value_type == 'Lora' and len(arr) > 1 else 0
-            lora_weight_desc = f"({lora_weight:.2f})" if lora_weight > 0 else ''
-            value_label = f"{model_name[:30]}{lora_weight_desc} {trigger_words}"
+            lora_weight_desc = f" w:{lora_weight:.2f}" if value_type == 'Lora' and lora_weight != 1.0 else ''
+            value_label = f"{model_name[:25]}{lora_weight_desc}{trigger_words}"
 
         if value_type in ["ModelMergeBlocks"]:
             if ":" in value:
