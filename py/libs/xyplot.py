@@ -367,9 +367,19 @@ class easyXYPlot():
 #                print(f"Lora: {x_value} {y_value}")
                 model = model if model is not None else plot_image_vars["model"]
                 clip = clip if clip is not None else plot_image_vars["clip"]
-                xy_values = x_value if self.x_type == "Lora" else y_value
-                lora_name, lora_model_strength, lora_clip_strength, _ = xy_values.split(",")
-                lora_stack = [{"lora_name": lora_name, "model": model, "clip" :clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)}]
+                
+                # Build lora_stack from both X and Y axes if both are LoRA types
+                lora_stack = []
+                
+                # Add X axis LoRA if present
+                if self.x_type == "Lora":
+                    lora_name, lora_model_strength, lora_clip_strength, _ = x_value.split(",")
+                    lora_stack.append({"lora_name": lora_name, "model": model, "clip": clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)})
+                
+                # Add Y axis LoRA if present
+                if self.y_type == "Lora":
+                    lora_name, lora_model_strength, lora_clip_strength, _ = y_value.split(",")
+                    lora_stack.append({"lora_name": lora_name, "model": model, "clip": clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)})
                 
 #                print(f"new_lora_stack: {new_lora_stack}")
 
