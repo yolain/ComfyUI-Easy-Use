@@ -587,28 +587,40 @@ class easyXYPlot():
 
     def get_labels_and_sample(self, plot_image_vars, latent_image, preview_latent, start_step, last_step,
                               force_full_denoise, disable_noise):
-        for x_index, x_value in enumerate(self.x_values):
-            plot_image_vars, x_value_label = self.define_variable(plot_image_vars, self.x_type, x_value,
-                                                                  x_index)
-            self.x_label = self.update_label(self.x_label, x_value_label, len(self.x_values))
-            if self.y_type != 'None':
+        # Handle X-only variation (Y is "None")
+        if self.y_type == 'None':
+            for x_index, x_value in enumerate(self.x_values):
+                plot_image_vars, x_value_label = self.define_variable(plot_image_vars, self.x_type, x_value, x_index)
+                self.x_label = self.update_label(self.x_label, x_value_label, len(self.x_values))
+                
+                self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
+                    plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list,
+                    disable_noise, start_step, last_step, force_full_denoise, x_value)
+                self.num += 1
+        # Handle Y-only variation (X is "None")
+        elif self.x_type == 'None':
+            for y_index, y_value in enumerate(self.y_values):
+                plot_image_vars, y_value_label = self.define_variable(plot_image_vars, self.y_type, y_value, y_index)
+                self.y_label = self.update_label(self.y_label, y_value_label, len(self.y_values))
+                
+                self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
+                    plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list,
+                    disable_noise, start_step, last_step, force_full_denoise, y_value=y_value)
+                self.num += 1
+        # Handle both X and Y variation
+        else:
+            for x_index, x_value in enumerate(self.x_values):
+                plot_image_vars, x_value_label = self.define_variable(plot_image_vars, self.x_type, x_value, x_index)
+                self.x_label = self.update_label(self.x_label, x_value_label, len(self.x_values))
+                
                 for y_index, y_value in enumerate(self.y_values):
-                    plot_image_vars, y_value_label = self.define_variable(plot_image_vars, self.y_type, y_value,
-                                                                          y_index)
+                    plot_image_vars, y_value_label = self.define_variable(plot_image_vars, self.y_type, y_value, y_index)
                     self.y_label = self.update_label(self.y_label, y_value_label, len(self.y_values))
-                    # ttNl(f'{CC.GREY}X: {x_value_label}, Y: {y_value_label}').t(
-                    #     f'Plot Values {self.num}/{self.total} ->').p()
-
+                    
                     self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
                         plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list,
                         disable_noise, start_step, last_step, force_full_denoise, x_value, y_value)
                     self.num += 1
-            else:
-                # ttNl(f'{CC.GREY}X: {x_value_label}').t(f'Plot Values {self.num}/{self.total} ->').p()
-                self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
-                    plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list, disable_noise,
-                    start_step, last_step, force_full_denoise, x_value)
-                self.num += 1
 
         # Rearrange latent array to match preview image grid
         self.latents_plot = self.rearrange_tensors(self.latents_plot, self.num_cols, self.num_rows)
