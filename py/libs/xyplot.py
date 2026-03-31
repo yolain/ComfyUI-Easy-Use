@@ -63,10 +63,10 @@ class easyXYPlot():
         if value_type in ['Lora', 'Checkpoint']:
             arr = value.split(',')
             model_name = os.path.basename(os.path.splitext(arr[0])[0])
-            trigger_words = ' ' + arr[3] if value_type == 'Lora' and len(arr[3]) > 2 else ''
+            trigger_words = ' ' + arr[3] if value_type == 'Lora' and len(arr) > 3 and len(arr[3]) > 2 else ''
             lora_weight = float(arr[1]) if value_type == 'Lora' and len(arr) > 1 else 0
-            lora_weight_desc = f"({lora_weight:.2f})" if lora_weight > 0 else ''
-            value_label = f"{model_name[:30]}{lora_weight_desc} {trigger_words}"
+            lora_weight_desc = f" w:{lora_weight:.2f}" if value_type == 'Lora' and lora_weight != 1.0 else ''
+            value_label = f"{model_name[:25]}{lora_weight_desc}{trigger_words}"
 
         if value_type in ["ModelMergeBlocks"]:
             if ":" in value:
@@ -367,9 +367,19 @@ class easyXYPlot():
 #                print(f"Lora: {x_value} {y_value}")
                 model = model if model is not None else plot_image_vars["model"]
                 clip = clip if clip is not None else plot_image_vars["clip"]
-                xy_values = x_value if self.x_type == "Lora" else y_value
-                lora_name, lora_model_strength, lora_clip_strength, _ = xy_values.split(",")
-                lora_stack = [{"lora_name": lora_name, "model": model, "clip" :clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)}]
+                
+                # Build lora_stack from both X and Y axes if both are LoRA types
+                lora_stack = []
+                
+                # Add X axis LoRA if present
+                if self.x_type == "Lora":
+                    lora_name, lora_model_strength, lora_clip_strength, _ = x_value.split(",")
+                    lora_stack.append({"lora_name": lora_name, "model": model, "clip": clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)})
+                
+                # Add Y axis LoRA if present
+                if self.y_type == "Lora":
+                    lora_name, lora_model_strength, lora_clip_strength, _ = y_value.split(",")
+                    lora_stack.append({"lora_name": lora_name, "model": model, "clip": clip, "model_strength": float(lora_model_strength), "clip_strength": float(lora_clip_strength)})
                 
 #                print(f"new_lora_stack: {new_lora_stack}")
 
@@ -577,28 +587,40 @@ class easyXYPlot():
 
     def get_labels_and_sample(self, plot_image_vars, latent_image, preview_latent, start_step, last_step,
                               force_full_denoise, disable_noise):
-        for x_index, x_value in enumerate(self.x_values):
-            plot_image_vars, x_value_label = self.define_variable(plot_image_vars, self.x_type, x_value,
-                                                                  x_index)
-            self.x_label = self.update_label(self.x_label, x_value_label, len(self.x_values))
-            if self.y_type != 'None':
+        # Handle X-only variation (Y is "None")
+        if self.y_type == 'None':
+            for x_index, x_value in enumerate(self.x_values):
+                plot_image_vars, x_value_label = self.define_variable(plot_image_vars, self.x_type, x_value, x_index)
+                self.x_label = self.update_label(self.x_label, x_value_label, len(self.x_values))
+                
+                self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
+                    plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list,
+                    disable_noise, start_step, last_step, force_full_denoise, x_value)
+                self.num += 1
+        # Handle Y-only variation (X is "None")
+        elif self.x_type == 'None':
+            for y_index, y_value in enumerate(self.y_values):
+                plot_image_vars, y_value_label = self.define_variable(plot_image_vars, self.y_type, y_value, y_index)
+                self.y_label = self.update_label(self.y_label, y_value_label, len(self.y_values))
+                
+                self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
+                    plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list,
+                    disable_noise, start_step, last_step, force_full_denoise, y_value=y_value)
+                self.num += 1
+        # Handle both X and Y variation
+        else:
+            for x_index, x_value in enumerate(self.x_values):
+                plot_image_vars, x_value_label = self.define_variable(plot_image_vars, self.x_type, x_value, x_index)
+                self.x_label = self.update_label(self.x_label, x_value_label, len(self.x_values))
+                
                 for y_index, y_value in enumerate(self.y_values):
-                    plot_image_vars, y_value_label = self.define_variable(plot_image_vars, self.y_type, y_value,
-                                                                          y_index)
+                    plot_image_vars, y_value_label = self.define_variable(plot_image_vars, self.y_type, y_value, y_index)
                     self.y_label = self.update_label(self.y_label, y_value_label, len(self.y_values))
-                    # ttNl(f'{CC.GREY}X: {x_value_label}, Y: {y_value_label}').t(
-                    #     f'Plot Values {self.num}/{self.total} ->').p()
-
+                    
                     self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
                         plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list,
                         disable_noise, start_step, last_step, force_full_denoise, x_value, y_value)
                     self.num += 1
-            else:
-                # ttNl(f'{CC.GREY}X: {x_value_label}').t(f'Plot Values {self.num}/{self.total} ->').p()
-                self.image_list, self.max_width, self.max_height, self.latents_plot = self.sample_plot_image(
-                    plot_image_vars, latent_image, preview_latent, self.latents_plot, self.image_list, disable_noise,
-                    start_step, last_step, force_full_denoise, x_value)
-                self.num += 1
 
         # Rearrange latent array to match preview image grid
         self.latents_plot = self.rearrange_tensors(self.latents_plot, self.num_cols, self.num_rows)
