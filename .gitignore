@@ -11,6 +11,7 @@ web_beta/**
 web_version/dev/**
 docs/**
 .vscode/
+.vs/
 .idea/
 .claude/**
 mmb-preset.custom.txt

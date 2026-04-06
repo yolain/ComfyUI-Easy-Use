@@ -25,7 +25,6 @@ def get_version(request):
 def cleanGPU(request):
     try:
         cleanGPUUsedForce()
-        remove_cache('*')
         return web.Response(status=200)
     except Exception as e:
         return web.Response(status=500)
