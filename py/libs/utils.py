@@ -35,9 +35,13 @@ import sys
 import importlib.util
 import importlib.metadata
 import comfy.model_management as mm
+import logging
 import gc
 from packaging import version
 from server import PromptServer
+
+LOG = logging.getLogger(__name__)
+
 def is_package_installed(package):
     try:
         module = importlib.util.find_spec(package)
@@ -283,11 +287,14 @@ def cleanGPUUsedForce():
     gc.collect()
     try:
         import torch
-
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
-    except Exception:
-        pass
+    except (ImportError, OSError, RuntimeError) as exc:
+        LOG.debug("Skipping CUDA synchronize during cleanGPUUsedForce: torch import failed: %s", exc)
+    else:
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+        except (AttributeError, OSError, RuntimeError) as exc:
+            LOG.debug("Skipping CUDA synchronize during cleanGPUUsedForce: %s", exc)
 
     mm.unload_all_models()
     mm.soft_empty_cache()
