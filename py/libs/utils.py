@@ -277,6 +277,17 @@ def getMetadata(filepath):
         return header
 
 def cleanGPUUsedForce():
+    from .cache import remove_cache
+
+    remove_cache("*")
     gc.collect()
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+    except Exception:
+        pass
+
     mm.unload_all_models()
     mm.soft_empty_cache()
