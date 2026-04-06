@@ -1274,7 +1274,7 @@ class showAnything(io.ComfyNode):
             is_input_list=True,
             is_output_node=True,
             inputs=[io.AnyType.Input("anything", optional=True)],
-            outputs=[io.AnyType.Output("output")],
+            outputs=[io.AnyType.Output("output", is_output_list=True)],
             hidden=[io.Hidden.unique_id, io.Hidden.extra_pnginfo],
         )
 
@@ -1307,8 +1307,7 @@ class showAnything(io.ComfyNode):
             if node:
                 node["widgets_values"] = [values]
 
-        result_val = values[0] if (isinstance(values, list) and len(values) == 1) else values
-        return io.NodeOutput(result_val, ui={"text": values})
+        return io.NodeOutput(values, ui={"text": values})
 
 
 class showTensorShape(io.ComfyNode):
