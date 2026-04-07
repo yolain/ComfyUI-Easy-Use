@@ -554,13 +554,17 @@ class pipeXYPlotAdvanced:
         if font_path and not os.path.exists(font_path):
             font_path = os.path.join(self.user_font_dir, font)
 
-        if X != None:
+        if X is not None:
+            if isinstance(X, tuple):
+                X = X[0]
             x_axis = X.get('axis')
             x_values = X.get('values')
         else:
             x_axis = "Nothing"
             x_values = [""]
-        if Y != None:
+        if Y is not None:
+            if isinstance(Y, tuple):
+                Y = Y[0]
             y_axis = Y.get('axis')
             y_values = Y.get('values')
         else:
@@ -626,19 +630,19 @@ class pipeXYPlotAdvanced:
                 }
 
             if x_axis == 'advanced: Seeds++ Batch':
-                if new_pipe['seed']:
-                    value = x_values
-                    x_values = []
-                    for index in range(value):
-                        x_values.append(str(new_pipe['seed'] + index))
-                    x_values = "; ".join(x_values)
+                seed = new_pipe.get('seed') or 0
+                value = x_values
+                x_values = []
+                for index in range(value):
+                    x_values.append(str(seed + index))
+                x_values = "; ".join(x_values)
             if y_axis == 'advanced: Seeds++ Batch':
-                if new_pipe['seed']:
-                    value = y_values
-                    y_values = []
-                    for index in range(value):
-                        y_values.append(str(new_pipe['seed'] + index))
-                    y_values = "; ".join(y_values)
+                seed = new_pipe.get('seed') or 0
+                value = y_values
+                y_values = []
+                for index in range(value):
+                    y_values.append(str(seed + index))
+                y_values = "; ".join(y_values)
 
             if x_axis == 'advanced: Positive Prompt S/R':
                 if positive:
