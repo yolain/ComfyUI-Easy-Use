@@ -17,6 +17,7 @@ docs/**
 mmb-preset.custom.txt
 config.yaml
 node.tar.gz
+.codex
 
 .cursorrules
 tools/ComfyUI-Easy-Use.json
