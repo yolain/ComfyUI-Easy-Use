@@ -77,10 +77,11 @@ def update_cache(k, tag, v):
     else:
         cache_count[k] += 1
 def remove_cache(key):
-    global cache
     if key == '*':
-        cache = TaggedCache(cache_settings)
+        cache.clear()
+        cache_count.clear()
     elif key in cache:
         del cache[key]
+        cache_count.pop(key, None)
     else:
         print(f"invalid {key}")

@@ -1420,7 +1420,6 @@ class cleanGPUUsed(io.ComfyNode):
     @classmethod
     def execute(cls, anything, **kwargs):
         cleanGPUUsedForce()
-        remove_cache("*")
         return io.NodeOutput(anything)
 
 
