@@ -438,7 +438,11 @@ class detailerFix:
         # Clean loaded_objects
         easyCache.update_loaded_objects(prompt)
 
-        my_unique_id = int(my_unique_id)
+        # my_unique_id can be a composite ID (e.g. `101:134`) when put inside a sub-graph; this fixes it so that it can support sub-graphs
+        try:
+            my_unique_id = int(my_unique_id)
+        except (ValueError, TypeError):
+            my_unique_id = int(str(my_unique_id).split(':')[-1])
 
         model = model or (pipe["model"] if "model" in pipe else None)
         if model is None:
