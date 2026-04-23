@@ -883,7 +883,6 @@ class Compare(io.ComfyNode):
 
     @classmethod
     def execute(cls, a=0, b=0, comparison="a == b"):
-        print('a:', a, 'b:', b, 'comparison:', comparison)
         return io.NodeOutput(COMPARE_FUNCTIONS[comparison](a, b))
 
 
