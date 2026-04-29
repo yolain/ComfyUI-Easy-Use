@@ -4,7 +4,7 @@ Math utility functions for formula evaluation
 import math
 import re
 
-def evaluate_formula(formula: str, a=0, b=0, c=0, d=0) -> float:
+def evaluate_formula(formula: str, a=0, b=0, c=0, d=0):
     """
     计算字符串数学公式
     
@@ -23,7 +23,7 @@ def evaluate_formula(formula: str, a=0, b=0, c=0, d=0) -> float:
         d: 变量d的值
     
     Returns:
-        计算结果
+        如果任意输入为list则返回list[float]，否则返回float
     
     Examples:
         >>> evaluate_formula("a + b", 1, 2)
@@ -60,19 +60,34 @@ def evaluate_formula(formula: str, a=0, b=0, c=0, d=0) -> float:
         # 常量
         'pi': math.pi,
         'e': math.e,
-        # 变量
-        'a': float(a),
-        'b': float(b),
-        'c': float(c),
-        'd': float(d),
     }
-    
-    try:
-        # 使用eval计算公式，限制可用的函数和变量
-        result = eval(formula, {"__builtins__": {}}, safe_dict)
-        return float(result)
-    except Exception as e:
-        raise ValueError(f"公式计算错误: {str(e)}")
+
+    # 判断是否有 list 输入
+    list_inputs = {k: v for k, v in {'a': a, 'b': b, 'c': c, 'd': d}.items() if isinstance(v, (list, tuple))}
+    scalar_inputs = {k: v for k, v in {'a': a, 'b': b, 'c': c, 'd': d}.items() if not isinstance(v, (list, tuple))}
+
+    def _eval_single(vals: dict) -> float:
+        env = dict(safe_dict)
+        env.update({k: float(v) for k, v in vals.items()})
+        try:
+            result = eval(formula, {"__builtins__": {}}, env)
+            return float(result)
+        except Exception as e:
+            raise ValueError(f"公式计算错误: {str(e)}")
+
+    if not list_inputs:
+        # 全是标量
+        return _eval_single({k: v for k, v in {'a': a, 'b': b, 'c': c, 'd': d}.items()})
+
+    # 有 list 输入，逐元素计算
+    max_len = max(len(v) for v in list_inputs.values())
+    results = []
+    for i in range(max_len):
+        vals = {k: float(v) for k, v in scalar_inputs.items()}
+        for k, v in list_inputs.items():
+            vals[k] = float(v[i] if i < len(v) else v[-1])
+        results.append(_eval_single(vals))
+    return results
 
 
 def ceil_value(value: float) -> int:

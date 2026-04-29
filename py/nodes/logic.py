@@ -530,6 +530,9 @@ class simpleMath(io.ComfyNode):
     def execute(cls, value, a=0, b=0, c=0):
         try:
             result = evaluate_formula(value, a, b, c)
+            if isinstance(result, list):
+                result_int = [int(r) for r in result]
+                return io.NodeOutput(result_int, result, [r != 0 for r in result])
             result_int = int(result)
             return io.NodeOutput(result_int, result, result_int != 0)
         except Exception as e:
@@ -565,14 +568,14 @@ class simpleMathDual(io.ComfyNode):
     def execute(cls, value1, value2, a=0, b=0, c=0, d=0):
         try:
             result1 = evaluate_formula(value1, a, b, c, d)
-            result1_int = int(result1)
+            result1_int = [int(r) for r in result1] if isinstance(result1, list) else int(result1)
         except Exception as e:
             log_node_warn(f"公式1计算错误: {str(e)}")
             result1 = 0.0
             result1_int = 0
         try:
             result2 = evaluate_formula(value2, a, b, c, d)
-            result2_int = int(result2)
+            result2_int = [int(r) for r in result2] if isinstance(result2, list) else int(result2)
         except Exception as e:
             log_node_warn(f"公式2计算错误: {str(e)}")
             result2 = 0.0
