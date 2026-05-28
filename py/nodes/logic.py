@@ -102,8 +102,8 @@ class RangeInt(io.ComfyNode):
             inputs=[
                 io.Combo.Input("range_mode", options=["step", "num_steps"], default="step"),
                 io.Int.Input("start", default=0, min=-4096, max=4096, step=1),
-                io.Int.Input("stop", default=0, min=-4096, max=4096, step=1),
-                io.Int.Input("step", default=0, min=-4096, max=4096, step=1),
+                io.Int.Input("stop", default=1, min=-4096, max=4096, step=1),
+                io.Int.Input("step", default=1, min=-4096, max=4096, step=1),
                 io.Int.Input("num_steps", default=0, min=-4096, max=4096, step=1),
                 io.Combo.Input("end_mode", options=["Inclusive", "Exclusive"], default="Inclusive"),
             ],
@@ -115,16 +115,20 @@ class RangeInt(io.ComfyNode):
 
     @classmethod
     def execute(cls, range_mode, start, stop, step, num_steps, end_mode):
-        error_if_mismatched_list_args(locals())
+        input_args = {k: v for k, v in locals().items() if k not in ("self", "cls")}
+        error_if_mismatched_list_args(input_args)
         ranges = []
         range_sizes = []
         for rm, e_start, e_stop, e_num_steps, e_step, e_end_mode in zip_with_fill(
                 range_mode, start, stop, num_steps, step, end_mode
         ):
             if rm == "step":
-                if e_end_mode == "Inclusive":
-                    e_stop += 1
-                vals = list(range(e_start, e_stop, e_step))
+                if e_step == 0:
+                    vals = [e_start]
+                else:
+                    if e_end_mode == "Inclusive":
+                        e_stop += 1
+                    vals = list(range(e_start, e_stop, e_step))
                 ranges.extend(vals)
                 range_sizes.append(len(vals))
             elif rm == "num_steps":
@@ -162,9 +166,9 @@ class RangeFloat(io.ComfyNode):
             inputs=[
                 io.Combo.Input("range_mode", options=["step", "num_steps"], default="step"),
                 io.Float.Input("start", default=0, min=-4096, max=4096, step=0.1),
-                io.Float.Input("stop", default=0, min=-4096, max=4096, step=0.1),
-                io.Float.Input("step", default=0, min=-4096, max=4096, step=0.1),
-                io.Int.Input("num_steps", default=0, min=-4096, max=4096, step=1),
+                io.Float.Input("stop", default=1.0, min=-4096, max=4096, step=0.1),
+                io.Float.Input("step", default=1.0, min=-4096, max=4096, step=0.1),
+                io.Int.Input("num_steps", default=1, min=-4096, max=4096, step=1),
                 io.Combo.Input("end_mode", options=["Inclusive", "Exclusive"], default="Inclusive"),
             ],
             outputs=[
@@ -200,7 +204,8 @@ class RangeFloat(io.ComfyNode):
 
     @classmethod
     def execute(cls, range_mode, start, stop, step, num_steps, end_mode):
-        error_if_mismatched_list_args(locals())
+        input_args = {k: v for k, v in locals().items() if k not in ("self", "cls")}
+        error_if_mismatched_list_args(input_args)
         getcontext().prec = 12
         start = [round(Decimal(s), 2) for s in start]
         stop = [round(Decimal(s), 2) for s in stop]
