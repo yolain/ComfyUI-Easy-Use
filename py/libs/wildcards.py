@@ -47,7 +47,7 @@ def read_wildcard_dict(wildcard_path):
                         easy_wildcard_dict[key] = lines
             elif file.endswith('.yaml'):
                 file_path = os.path.join(root, file)
-                with open(file_path, 'r') as f:
+                with open(file_path, 'r', encoding="utf-8") as f:
                     yaml_data = yaml.load(f, Loader=yaml.FullLoader)
 
                     for k, v in yaml_data.items():
@@ -55,7 +55,7 @@ def read_wildcard_dict(wildcard_path):
             elif file.endswith('.json'):
                 file_path = os.path.join(root, file)
                 try:
-                    with open(file_path, 'r') as f:
+                    with open(file_path, 'r', encoding="utf-8") as f:
                         json_data = json.load(f)
                         for key, value in json_data.items():
                             key = wildcard_normalize(key)
