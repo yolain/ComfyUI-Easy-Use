@@ -193,6 +193,8 @@ class stylesPromptSelector(io.ComfyNode):
         #     if prompt[my_unique_id]["inputs"]['select_styles']:
         #         values = prompt[my_unique_id]["inputs"]['select_styles'].split(',')
 
+        if isinstance(select_styles, dict) and '__value__' in select_styles:
+            select_styles = select_styles['__value__']
         if isinstance(select_styles, str):
             values = select_styles.split(',')
         else:
