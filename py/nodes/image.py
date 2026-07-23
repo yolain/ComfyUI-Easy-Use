@@ -1218,6 +1218,8 @@ class imageDetailTransfer:
     new_image = torch.lerp(target_tensor, new_image, blend_factor)
     if mask is not None:
       mask = mask.to(device)
+      if mask.dim() == 3:  # (B,H,W) batch/video mask -> (B,1,H,W) so it broadcasts over channels
+        mask = mask.unsqueeze(1)
       new_image = torch.lerp(target_tensor, new_image, mask)
     new_image = torch.clamp(new_image, 0, 1)
     new_image = new_image.permute(0, 2, 3, 1).cpu().float()
