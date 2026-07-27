@@ -2,6 +2,10 @@ import random
 import server
 from enum import Enum
 
+# Dedicated RNG for seed generation. Many custom nodes call random.seed() while they run,
+# which resets the global RNG and makes the generated seeds repeat.
+_seed_rng = random.Random()
+
 class SGmode(Enum):
     FIX = 1
     INCR = 2
@@ -34,7 +38,7 @@ class SeedGenerator:
             if self.base_value < 0:
                 self.base_value = 1125899906842624
         elif self.action == SGmode.RAND:
-            self.base_value = random.randint(0, 1125899906842624)
+            self.base_value = _seed_rng.randint(0, 1125899906842624)
 
         return seed
 
@@ -52,7 +56,7 @@ def control_seed(v, action, seed_is_global):
         if value < 0:
             value = 1125899906842624
     elif action == 'randomize' or action == 'randomize for each node':
-        value = random.randint(0, 1125899906842624)
+        value = _seed_rng.randint(0, 1125899906842624)
     if seed_is_global:
         v['inputs']['value'] = value
 
