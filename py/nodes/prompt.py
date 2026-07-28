@@ -396,7 +396,12 @@ class promptConcat(io.ComfyNode):
 
     @classmethod
     def execute(cls, prompt1="", prompt2="", separator=""):
-        return io.NodeOutput(prompt1 + separator + prompt2)
+        def to_string(value):
+            if isinstance(value, (list, tuple)):
+                return ", ".join(to_string(v) for v in value)
+            return str(value)
+
+        return io.NodeOutput(to_string(prompt1) + to_string(separator) + to_string(prompt2))
 
 class promptReplace(io.ComfyNode):
 
