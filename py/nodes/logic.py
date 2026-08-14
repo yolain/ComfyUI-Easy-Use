@@ -767,7 +767,7 @@ class forLoopStart:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "total": ("INT", {"default": 1, "min": 1, "max": 100000, "step": 1}),
+                "total": ("INT", {"default": 1, "min": 0, "max": 100000, "step": 1}),
             },
             "optional": {
                 "initial_value%d" % i: (any_type,) for i in range(1, MAX_FLOW_NUM)
@@ -787,11 +787,17 @@ class forLoopStart:
     CATEGORY = "EasyUse/Logic/For Loop"
 
     def for_loop_start(self, total, prompt=None, extra_pnginfo=None, unique_id=None, **kwargs):
-        graph = GraphBuilder()
         i = 0
         if "initial_value0" in kwargs:
             i = kwargs["initial_value0"]
 
+        if total <= 0:
+            # Zero iterations: block every value output so nothing in the loop body runs
+            # (including output nodes placed inside it). forLoopEnd detects the same case
+            # and hands the initial values straight through to its own outputs.
+            return tuple(["stub"] + [ExecutionBlocker(None)] * MAX_FLOW_NUM)
+
+        graph = GraphBuilder()
         initial_values = {("initial_value%d" % num): kwargs.get("initial_value%d" % num, None) for num in
                           range(1, MAX_FLOW_NUM)}
         while_open = graph.node("easy whileLoopStart", condition=total, initial_value0=i, **initial_values)
@@ -837,16 +843,33 @@ class forLoopEnd:
 
         # Using dynprompt to get the original node
         forstart_node = dynprompt.get_node(while_open)
+        inputs = forstart_node['inputs']
+        # The values fed into For Loop Start, used as the result when the loop runs 0 times
+        skipped_values = {}
         if forstart_node['class_type'] == 'easy forLoopStart':
-            inputs = forstart_node['inputs']
             total = inputs['total']
+            skipped_values = {("initial_value%d" % i): inputs.get("initial_value%d" % i, None) for i in
+                              range(1, MAX_FLOW_NUM)}
         elif forstart_node['class_type'] == 'easy loadImagesForLoop':
-            inputs = forstart_node['inputs']
             limit = inputs['limit']
             start_index = inputs['start_index']
             # Filter files by extension
             directory = inputs['directory']
             total = graph.node('easy imagesCountInDirectory', directory=directory, limit=limit, start_index=start_index, extension='*').out(0)
+
+        # total == 0 bypasses the loop entirely: the outputs are just the initial values
+        # from For Loop Start. When total is a widget we know that here; when it is wired
+        # from another node we have to decide at execution time (below).
+        if skipped_values and not is_link(total) and total <= 0:
+            skip_close = graph.node("easy whileLoopEnd",
+                                    flow=flow,
+                                    condition=False,
+                                    initial_value0=0,
+                                    **skipped_values)
+            return {
+                "result": tuple([skip_close.out(i) for i in range(1, MAX_FLOW_NUM)]),
+                "expand": graph.finalize(),
+            }
 
         sub = graph.node("easy mathInt", operation="add", a=[while_open, 1], b=1)
         cond = graph.node("easy compare", a=sub.out(0), b=total, comparison='a < b')
@@ -857,8 +880,25 @@ class forLoopEnd:
                                  condition=cond.out(0),
                                  initial_value0=sub.out(0),
                                  **input_values)
+        outputs = [while_close.out(i) for i in range(1, MAX_FLOW_NUM)]
+
+        if skipped_values and is_link(total):
+            # total is wired in, so pick between the loop result and the initial values at
+            # execution time. easy ifElse inputs are lazy, so the branch that isn't taken is
+            # never evaluated -- which is what keeps the (blocked) loop body from erroring.
+            runs = graph.node("easy compare", a=total, b=0, comparison='a > b')
+            for i in range(1, MAX_FLOW_NUM):
+                skipped = skipped_values["initial_value%d" % i]
+                if skipped is None:
+                    # Nothing to fall back to for this slot, leave it as-is
+                    continue
+                outputs[i - 1] = graph.node("easy ifElse",
+                                            boolean=runs.out(0),
+                                            on_true=while_close.out(i),
+                                            on_false=skipped).out(0)
+
         return {
-            "result": tuple([while_close.out(i) for i in range(1, MAX_FLOW_NUM)]),
+            "result": tuple(outputs),
             "expand": graph.finalize(),
         }
 
