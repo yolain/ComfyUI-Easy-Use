@@ -8,7 +8,7 @@ import comfy_extras.nodes_custom_sampler as custom_samplers
 from tqdm import trange
 
 from server import PromptServer
-from nodes import RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, VAEEncodeForInpaint, InpaintModelConditioning
+from nodes import RepeatLatentBatch, NODE_CLASS_MAPPINGS as ALL_NODE_CLASS_MAPPINGS, VAEEncodeForInpaint, InpaintModelConditioning, VAEDecodeTiled
 from ..modules.layer_diffuse import LayerDiffuse
 from ..config import *
 
@@ -362,7 +362,7 @@ class samplerFull:
                 spent_time = 'Diffusion:' + str((end_time - start_time) / 1000) + '″'
             else:
                 if tile_size is not None:
-                    samp_images = samp_vae.decode_tiled(latent, tile_x=tile_size // 8, tile_y=tile_size // 8, )
+                    samp_images, = VAEDecodeTiled().decode(samp_vae, {"samples": latent}, tile_size)
                 else:
                     samp_images = samp_vae.decode(latent).cpu()
                 if len(samp_images.shape) == 5:  # Combine batches
@@ -980,7 +980,7 @@ class samplerSDTurbo:
 
         # 解码图片
         if tile_size is not None:
-            samp_images = samp_vae.decode_tiled(latent, tile_x=tile_size // 8, tile_y=tile_size // 8, )
+            samp_images, = VAEDecodeTiled().decode(samp_vae, {"samples": latent}, tile_size)
         else:
             samp_images = samp_vae.decode(latent).cpu()
 
