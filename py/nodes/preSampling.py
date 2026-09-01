@@ -367,7 +367,7 @@ class samplerCustomSettings:
     FUNCTION = "settings"
     CATEGORY = "EasyUse/PreSampling"
 
-    def ip2p(self, positive, negative, vae, pixels, latent=None):
+    def ip2p(self, positive, negative, vae=None, pixels=None, latent=None):
         if latent is not None:
             concat_latent = latent
         else:
