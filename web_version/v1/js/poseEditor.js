@@ -68,6 +68,32 @@ const default_keypoints = [
   [260, 72],
 ];
 
+const POSE_EDITOR_BACKGROUND_HOOK = "__easyUsePoseEditorOnDrawBackgroundHook";
+
+function movePoseEditorWidgetsOffscreen() {
+  for (const node of app.graph?._nodes || []) {
+    for (const widget of node.widgets || []) {
+      if (Object.hasOwn(widget, "openpose")) {
+        widget.openpose.style.left = "-8000px";
+        widget.openpose.style.position = "absolute";
+      }
+    }
+  }
+}
+
+function ensurePoseEditorBackgroundHook() {
+  if (app.canvas[POSE_EDITOR_BACKGROUND_HOOK]) {
+    return;
+  }
+
+  const onDrawBackground = app.canvas.onDrawBackground;
+  app.canvas.onDrawBackground = function (...args) {
+    onDrawBackground?.apply(this, args);
+    movePoseEditorWidgetsOffscreen();
+  };
+  app.canvas[POSE_EDITOR_BACKGROUND_HOOK] = true;
+}
+
 class OpenPose {
   constructor(node, canvasElement) {
     this.lockMode = false;
@@ -556,21 +582,7 @@ function createOpenPose(node, inputName, inputData, app) {
     widget.openpose?.remove();
   };
 
-  app.canvas.onDrawBackground = function () {
-    // Draw node isnt fired once the node is off the screen
-    // if it goes off screen quickly, the input may not be removed
-    // this shifts it off screen so it can be moved back if the node is visible.
-    for (let n in app.graph._nodes) {
-      n = graph._nodes[n];
-      for (let w in n.widgets) {
-        let wid = n.widgets[w];
-        if (Object.hasOwn(wid, "openpose")) {
-          wid.openpose.style.left = -8000 + "px";
-          wid.openpose.style.position = "absolute";
-        }
-      }
-    }
-  };
+  ensurePoseEditorBackgroundHook();
   return { widget: widget };
 }
 
