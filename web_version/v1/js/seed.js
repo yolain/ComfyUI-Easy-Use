@@ -1,4 +1,5 @@
 import { api } from "../../../scripts/api.js";
+import { app } from "../../../scripts/app.js";
 
 // 全局Seed
 function globalSeedHandler(event) {
@@ -27,21 +28,31 @@ function globalSeedHandler(event) {
 
 api.addEventListener("easyuse-global-seed", globalSeedHandler);
 
-const original_queuePrompt = api.queuePrompt;
-async function queuePrompt_with_seed(number, { output, workflow }) {
+function addSeedWidgetsToWorkflow(prompt, graph) {
+	const workflow = prompt?.workflow;
+	if (!workflow || typeof workflow !== 'object') return prompt;
+
 	workflow.seed_widgets = {};
 
-	for(let i in app.graph._nodes_by_id) {
-		let widgets = app.graph._nodes_by_id[i].widgets;
+	const nodes = graph?._nodes_by_id || {};
+	for(let i in nodes) {
+		let widgets = nodes[i].widgets;
 		if(widgets) {
 		    for(let j in widgets) {
 		        if((widgets[j].name == 'seed_num' || widgets[j].name == 'seed' || widgets[j].name == 'noise_seed') && widgets[j].type != 'converted-widget')
 		            workflow.seed_widgets[i] = parseInt(j);
 		    }
-        }
+		}
 	}
 
-	return await original_queuePrompt.call(api, number, { output, workflow });
+	return prompt;
 }
 
-api.queuePrompt = queuePrompt_with_seed;
+// Keep ComfyUI's queuePrompt untouched so its validation errors and evolving
+// execution options remain owned by the core frontend.
+const original_graphToPrompt = app.graphToPrompt;
+app.graphToPrompt = function graphToPrompt_with_seed(...args) {
+	const graph = args[0] || app.rootGraph || app.graph;
+	return Promise.resolve(original_graphToPrompt.apply(this, args))
+		.then(prompt => addSeedWidgetsToWorkflow(prompt, graph));
+};
