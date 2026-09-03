@@ -9,6 +9,7 @@ on:
 
 permissions:
   issues: write
+  contents: write
 
 jobs:
   publish-node:
