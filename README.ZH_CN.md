@@ -52,6 +52,31 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.4.0**
+
+- 添加 `easy tableEditor` 节点 - 用于编辑和显示表格数据的节点
+- 修复 `easy showAnything` 在最新版 ComfyUI 前端无法工作的问题
+- 修复 `easy multiAnglePrompt` 设置保存失败的问题
+- 修复 `easy detailer` 在子图中无法工作的问题
+- 修复新版 ComfyUI 前端中"刷新节点"功能连接线丢失的问题
+- 使用原生 `VAEDecodeTiled` 进行分块解码（支持 Qwen Image VAE）
+- 修复 `easy forLoopStart` - 允许 `total=0` 以防止不必要的循环执行
+- 修复 `easy preSampling` - `samplerCustomSettings.ip2p` 中 `vae`/`pixels` 现在是可选的
+- 修复 `easy pixart` ControlNet 包装器 - 使用 `pe_interpolation` 替代已移除的 `lewei_scale`
+- 修复 `easy promptConcat` - 当输入为列表时的 TypeError 问题
+- 使用专用 RNG 进行全局种子生成
+- 修复 `easy imageDetailTransfer` - 多帧蒙版在通道广播时崩溃
+- 修复 Windows 环境下 PrimeVue 对话框遮罩未清除的问题
+- 修复 `LockedMeta` 对象 TypeError（`object of type 'LockedMeta' has no len()`）
+- 增强 `easy simpleMath` `evaluate_formula` 以处理列表输入
+- 修复 `loraStack`/`controlnetStack` - 禁用时不再清除上游堆栈
+- 修复 XYPlot 在 `Seeds++ Batch` 和元组 X/Y 输入时崩溃的问题
+- 回滚循环节点到 v1 版本
+- 修复 `easy NodesMap` - 避免递归组引用
+- 修复 `easy CleanVRAM` 清理顺序并正确清除 Easy-Use 缓存
+- 指定文件读取的 UTF-8 编码
+- 移除不必要的 print 语句
+
 **v1.3.6**
 
 - 恢复 `easy showAnything` 对于列表类型的支持（但一些情况下展示庞大数据时仍会导致ComfyUI崩溃） 

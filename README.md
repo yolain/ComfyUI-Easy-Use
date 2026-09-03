@@ -47,6 +47,31 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.4.0**
+
+- Add `easy tableEditor` node - A node for editing and displaying table data
+- Fix `easy showAnything` not working on latest ComfyUI frontend
+- Fix `easy multiAnglePrompt` settings failed to save
+- Fix `easy detailer` not working in subgraphs
+- Fix connection lines missing from "Refresh Nodes" feature in new ComfyUI frontend
+- Use native `VAEDecodeTiled` for tiled decode (Qwen Image VAE support)
+- Fix `easy forLoopStart` - allow `total=0` to prevent unnecessary loop execution
+- Fix `easy preSampling` - `vae`/`pixels` now optional on `samplerCustomSettings.ip2p`
+- Fix `easy pixart` ControlNet wrappers - use `pe_interpolation` instead of removed `lewei_scale`
+- Fix `easy promptConcat` - TypeError when an input is a list
+- Use a dedicated RNG for global seed generation
+- Fix `easy imageDetailTransfer` - multi-frame masks crash on channel broadcast
+- Fix PrimeVue dialog overlay not being cleared in Windows environment
+- Fix `LockedMeta` object TypeError (`object of type 'LockedMeta' has no len()`)
+- Enhance `easy simpleMath` `evaluate_formula` to handle list inputs
+- Fix `loraStack`/`controlnetStack` - disable no longer erases upstream stack
+- Fix XYPlot crashes in `Seeds++ Batch` and tuple X/Y inputs
+- Rollback cycle node to version v1
+- Fix `easy NodesMap` - avoid recursive group refs
+- Fix `easy CleanVRAM` teardown ordering and clear Easy-Use cache properly
+- Specify UTF-8 encoding for file reads
+- Remove unnecessary print statements
+
 **v1.3.6**
 
 - Restored `easy showAnything` support for list types (but displaying large data in some cases may still cause ComfyUI to crash)
