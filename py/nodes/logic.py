@@ -8,6 +8,7 @@ from ..libs.utils import AlwaysEqualProxy, ByPassTypeTuple, cleanGPUUsedForce, c
 from ..libs.cache import cache, update_cache, remove_cache
 from ..libs.log import log_node_info, log_node_warn
 from ..libs.math import evaluate_formula
+from ..libs.path_utils import resolve_output_file_path
 import numpy as np
 import time
 import os
@@ -1585,9 +1586,14 @@ class saveText(io.ComfyNode):
             log_node_warn("Save Text", "No file details found. No file output.")
             return io.NodeOutput(text, None)
 
-        filepath = os.path.join(output_file_path, file_name) + "." + file_extension
-        if not os.path.exists(output_file_path):
-            os.makedirs(output_file_path)
+        if file_extension not in ("txt", "csv"):
+            raise ValueError("Unsupported text file extension")
+
+        output_dir = folder_paths.get_output_directory()
+        filepath = resolve_output_file_path(
+            output_dir, output_file_path, file_name, file_extension
+        )
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         file_mode = "w" if overwrite else "a"
         log_node_info("Save Text", f"Saving to {filepath}")
@@ -1604,27 +1610,24 @@ class saveText(io.ComfyNode):
 
         result_image = None
         if image is not None:
-            imagepath = os.path.join(output_file_path, file_name)
-            index = 1
+            imagepath = resolve_output_file_path(
+                output_dir, output_file_path, file_name, "png"
+            )
             if not overwrite:
-                while os.path.exists(filepath):
-                    imagepath = os.path.join(output_file_path, file_name) + "_" + str(index)
+                index = 1
+                while os.path.exists(imagepath):
+                    imagepath = resolve_output_file_path(
+                        output_dir, output_file_path, f"{file_name}_{index}", "png"
+                    )
                     index += 1
 
-            output_dir = folder_paths.output_directory
-            output_path_val = "" if output_file_path in [None, "", "none", "."] else output_file_path
-            if not os.path.isabs(output_file_path):
-                output_path_val = os.path.join(output_dir, output_path_val)
-            if output_path_val.strip():
-                if not os.path.isabs(output_path_val):
-                    output_path_val = os.path.join(folder_paths.output_directory, output_path_val)
-                if not os.path.exists(output_path_val.strip()):
-                    print(f"The path `{output_path_val.strip()}` does not exist! Creating directory.")
-                    os.makedirs(output_path_val, exist_ok=True)
+            image_output_path = os.path.dirname(imagepath)
+            os.makedirs(image_output_path, exist_ok=True)
 
             images_tensor = torch.cat([image], dim=0)
-            cls.save_image(images_tensor, imagepath, "png", 100, None, None,
-                           filename_number_start="true", output_path=output_path_val,
+            image_name = os.path.splitext(os.path.basename(imagepath))[0]
+            cls.save_image(images_tensor, image_name, "png", 100, None, None,
+                           filename_number_start="true", output_path=image_output_path,
                            delimiter="_", number_padding=4, lossless_webp=False)
             log_node_info("Save Text", f"Saving Image to {imagepath}")
             result_image = image
