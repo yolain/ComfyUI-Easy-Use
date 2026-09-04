@@ -47,6 +47,10 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.4.1**
+
+- Fix `easy saveText` to confine text outputs to output directory #1032
+
 **v1.4.0**
 
 - Add `easy tableEditor` node - A node for editing and displaying table data

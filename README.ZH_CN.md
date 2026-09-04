@@ -52,6 +52,10 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.4.1**
+
+- 修复 `easy saveText` 将文本输出限制在输出目录 #1032
+
 **v1.4.0**
 
 - 添加 `easy tableEditor` 节点 - 用于编辑和显示表格数据的节点
