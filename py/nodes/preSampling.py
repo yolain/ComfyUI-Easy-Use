@@ -262,15 +262,16 @@ class samplerSettingsNoiseIn:
         model = pipe["model"]
 
         # generate base noise
-        batch_size, _, height, width = latent["samples"].shape
+        sample_shape = latent["samples"].shape
+        batch_size = sample_shape[0]
         generator = torch.manual_seed(seed)
-        base_noise = torch.randn((1, 4, height, width), dtype=torch.float32, device="cpu", generator=generator).repeat(batch_size, 1, 1, 1).cpu()
+        base_noise = torch.randn((1, *sample_shape[1:]), dtype=torch.float32, device="cpu", generator=generator).repeat(batch_size, *([1] * (len(sample_shape) - 1))).cpu()
 
         # generate variation noise
         if optional_noise_seed is None or optional_noise_seed == seed:
             optional_noise_seed = seed+1
         generator = torch.manual_seed(optional_noise_seed)
-        variation_noise = torch.randn((batch_size, 4, height, width), dtype=torch.float32, device="cpu",
+        variation_noise = torch.randn(sample_shape, dtype=torch.float32, device="cpu",
                                       generator=generator).cpu()
 
         slerp_noise = self.slerp(factor, base_noise, variation_noise)

@@ -1146,6 +1146,90 @@ class mochiLoader(fullLoader):
              batch_size, model_override, clip_override,  vae_override, a1111_prompt_style=False, video_length=length, prompt=prompt,
              my_unique_id=my_unique_id
         )
+# Diffusion model loader
+class diffusionModelLoader:
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model_name": (folder_paths.get_filename_list("diffusion_models"),),
+                "vae_name": (["None"] + folder_paths.get_filename_list("vae"), {"default": "None"}),
+                "clip_name": (["None"] + folder_paths.get_filename_list("text_encoders"), {"default": "None"}),
+                "resolution": (resolution_strings, {"default": "1024 x 1024"}),
+                "empty_latent_width": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "empty_latent_height": ("INT", {"default": 1024, "min": 64, "max": MAX_RESOLUTION, "step": 8}),
+                "positive": ("STRING", {"default": "", "multiline": True}),
+                "negative": ("STRING", {"default": "", "multiline": True}),
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
+            },
+            "optional": {
+                "model_override": ("MODEL",),
+                "clip_override": ("CLIP",),
+                "vae_override": ("VAE",),
+            },
+            "hidden": {"prompt": "PROMPT", "my_unique_id": "UNIQUE_ID"},
+        }
+
+    RETURN_TYPES = ("PIPE_LINE", "MODEL", "VAE", "CLIP", "CONDITIONING", "CONDITIONING", "LATENT")
+    RETURN_NAMES = ("pipe", "model", "vae", "clip", "positive", "negative", "latent")
+    FUNCTION = "adv_pipeloader"
+    CATEGORY = "EasyUse/Loaders"
+
+    def adv_pipeloader(self, model_name, vae_name, clip_name, resolution,
+                       empty_latent_width, empty_latent_height, positive, negative,
+                       batch_size, model_override=None, clip_override=None,
+                       vae_override=None, prompt=None, my_unique_id=None):
+        easyCache.update_loaded_objects(prompt)
+        model, clip, vae, family = easyCache.load_diffusion_model_required(
+            model_name, clip_name, vae_name
+        )
+
+        if model_override is not None:
+            model = model_override
+        if clip_override is not None:
+            clip = clip_override
+        if vae_override is not None:
+            vae = vae_override
+
+        samples = sampler.emptyLatent(resolution, empty_latent_width,
+                                      empty_latent_height, batch_size,
+                                      model_type=family)
+
+        positive_cond, positive_wildcard, model, clip = prompt_to_cond(
+            "positive", model, clip, 0, [], positive, "none", "comfy",
+            False, my_unique_id, prompt, easyCache, model_type=family)
+        negative_cond, negative_wildcard, model, clip = prompt_to_cond(
+            "negative", model, clip, 0, [], negative, "none", "comfy",
+            False, my_unique_id, prompt, easyCache, model_type=family)
+
+        if negative_cond is None:
+            negative_cond, = ConditioningZeroOut().zero_out(positive_cond)
+
+        pipe = {
+            "model": model,
+            "positive": positive_cond,
+            "negative": negative_cond,
+            "vae": vae,
+            "clip": clip,
+            "samples": samples,
+            "images": None,
+            "loader_settings": {
+                "model_name": model_name,
+                "clip_name": clip_name,
+                "vae_name": vae_name,
+                "model_type": family,
+                "positive": positive,
+                "negative": negative,
+                "resolution": resolution,
+                "empty_latent_width": empty_latent_width,
+                "empty_latent_height": empty_latent_height,
+                "batch_size": batch_size,
+            },
+        }
+
+        return pipe, model, vae, clip, positive_cond, negative_cond, samples
+
 # lora
 class loraSwitcher:
     @classmethod
@@ -1542,6 +1626,7 @@ NODE_CLASS_MAPPINGS = {
     "easy hunyuanDiTLoader": hunyuanDiTLoader,
     "easy pixArtLoader": pixArtLoader,
     "easy mochiLoader": mochiLoader,
+    "easy diffusionModelLoader": diffusionModelLoader,
     "easy loraSwitcher": loraSwitcher,
     "easy loraStack": loraStack,
     "easy controlnetStack": controlnetStack,
@@ -1564,6 +1649,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy hunyuanDiTLoader": "EasyLoader (HunyuanDiT)",
     "easy pixArtLoader": "EasyLoader (PixArt)",
     "easy mochiLoader": "EasyLoader (Mochi)",
+    "easy diffusionModelLoader": "EasyDiffusionModelLoader",
     "easy loraSwitcher": "EasyLoraSwitcher",
     "easy loraStack": "EasyLoraStack",
     "easy controlnetStack": "EasyControlnetStack",

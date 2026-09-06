@@ -68,6 +68,10 @@ class easyXYPlot():
             lora_weight_desc = f" w:{lora_weight:.2f}" if value_type == 'Lora' and lora_weight != 1.0 else ''
             value_label = f"{model_name[:25]}{lora_weight_desc}{trigger_words}"
 
+        if value_type == "DiffusionModel":
+            model_name = os.path.basename(os.path.splitext(value.split(",")[0])[0])
+            value_label = model_name[:25]
+
         if value_type in ["ModelMergeBlocks"]:
             if ":" in value:
                 line = value.split(':')
@@ -97,6 +101,32 @@ class easyXYPlot():
             value_label = f"neg prompt {index + 1}"
 
         return plot_image_vars, value_label
+
+    @staticmethod
+    def _ensure_latent_for_model(model, vae, samples, plot_image_vars):
+        fmt = model.model.latent_format
+        x = samples["samples"]
+        expected_ndim = 2 + fmt.latent_dimensions
+
+        if x.ndim == expected_ndim and x.shape[1] == fmt.latent_channels:
+            return samples
+
+        if fmt.latent_dimensions == 3 and x.ndim == 4:
+            if x.count_nonzero() == 0:
+                x = torch.zeros(
+                    [x.shape[0], fmt.latent_channels, 1, x.shape[2], x.shape[3]],
+                    dtype=x.dtype, device=x.device)
+            elif plot_image_vars.get("images") is not None:
+                x = vae.encode(plot_image_vars["images"][..., :3])
+            else:
+                raise RuntimeError(
+                    "Switching to a 3D-latent model requires an input image "
+                    "or an empty latent"
+                )
+
+            return {**samples, "samples": x}
+
+        return samples
 
     @staticmethod
     def get_font(font_size, font_path=None):
@@ -362,6 +392,28 @@ class easyXYPlot():
                     if "negative_cond" in plot_image_vars:
                         negative = negative + plot_image_vars["negative_cond"]
 
+            # DiffusionModel
+            if self.x_type == "DiffusionModel" or self.y_type == "DiffusionModel":
+                xy_values = x_value if self.x_type == "DiffusionModel" else y_value
+                model_name, clip_name, vae_name = xy_values.split(",")
+                model, clip, vae, family = self.easyCache.load_diffusion_xy_model(
+                    model_name.replace("*", ","),
+                    clip_name.replace("*", ","),
+                    vae_name.replace("*", ","),
+                )
+                sd_version = family
+
+                positive = plot_image_vars["positive"]
+                negative = plot_image_vars["negative"]
+                if positive is not None:
+                    positive, = CLIPTextEncode().encode(clip, positive)
+                if negative is not None:
+                    negative, = CLIPTextEncode().encode(clip, negative)
+
+                samples = self._ensure_latent_for_model(
+                    model, vae, samples, plot_image_vars
+                )
+
             # Lora
             if self.x_type == "Lora" or self.y_type == "Lora":
 #                print(f"Lora: {x_value} {y_value}")
@@ -399,7 +451,7 @@ class easyXYPlot():
                 if self.x_type == 'Positive Prompt S/R' or self.y_type == 'Positive Prompt S/R':
                     positive = x_value if self.x_type == "Positive Prompt S/R" else y_value
 
-                if sd_version == 'flux':
+                if sd_version in ("flux", "anima", "krea2"):
                     positive, = CLIPTextEncode().encode(clip, positive)
                 else:
                     positive = advanced_encode(clip, positive,
@@ -415,7 +467,7 @@ class easyXYPlot():
                 if self.x_type == 'Negative Prompt S/R' or self.y_type == 'Negative Prompt S/R':
                     negative = x_value if self.x_type == "Negative Prompt S/R" else y_value
 
-                if sd_version == 'flux':
+                if sd_version in ("flux", "anima", "krea2"):
                     negative, = CLIPTextEncode().encode(clip, negative)
                 else:
                     negative = advanced_encode(clip, negative,
@@ -483,7 +535,7 @@ class easyXYPlot():
             clip = clip.clone()
             clip.clip_layer(plot_image_vars['clip_skip'])
 
-            if sd_version == 'flux':
+            if sd_version in ("flux", "anima", "krea2"):
                 positive, = CLIPTextEncode().encode(clip, positive)
             else:
                 positive = advanced_encode(clip, plot_image_vars['positive'],
@@ -491,7 +543,7 @@ class easyXYPlot():
                                                             plot_image_vars['positive_weight_interpretation'], w_max=1.0,
                                                             apply_to_pooled="enable",a1111_prompt_style=a1111_prompt_style, steps=steps)
 
-            if sd_version == 'flux':
+            if sd_version in ("flux", "anima", "krea2"):
                 negative, = CLIPTextEncode().encode(clip, negative)
             else:
                 negative = advanced_encode(clip, plot_image_vars['negative'],

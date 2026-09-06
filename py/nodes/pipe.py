@@ -629,6 +629,12 @@ class pipeXYPlotAdvanced:
                     "lora_stack": lora_stack,
                 }
 
+            if x_axis == "advanced: DiffusionModel":
+                x_values = "; ".join(x_values)
+
+            if y_axis == "advanced: DiffusionModel":
+                y_values = "; ".join(y_values)
+
             if x_axis == 'advanced: Seeds++ Batch':
                 seed = new_pipe.get('seed') or 0
                 value = x_values

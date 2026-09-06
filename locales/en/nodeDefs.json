@@ -1202,6 +1202,173 @@
       }
     }
   },
+  "easy diffusionModelLoader": {
+    "display_name": "EasyDiffusionModelLoader",
+    "inputs": {
+      "model_name": {
+        "name": "model_name"
+      },
+      "vae_name": {
+        "name": "vae_name"
+      },
+      "clip_name": {
+        "name": "clip_name"
+      },
+      "resolution": {
+        "name": "resolution"
+      },
+      "empty_latent_width": {
+        "name": "empty_latent_width"
+      },
+      "empty_latent_height": {
+        "name": "empty_latent_height"
+      },
+      "positive": {
+        "name": "positive"
+      },
+      "negative": {
+        "name": "negative"
+      },
+      "batch_size": {
+        "name": "batch_size"
+      },
+      "model_override": {
+        "name": "model_override"
+      },
+      "clip_override": {
+        "name": "clip_override"
+      },
+      "vae_override": {
+        "name": "vae_override"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "pipe"
+      },
+      "1": {
+        "name": "model"
+      },
+      "2": {
+        "name": "vae"
+      },
+      "3": {
+        "name": "clip"
+      },
+      "4": {
+        "name": "positive"
+      },
+      "5": {
+        "name": "negative"
+      },
+      "6": {
+        "name": "latent"
+      }
+    }
+  },
+  "easy XYInputs: DiffusionModel": {
+    "display_name": "XY Inputs: Diffusion Model //EasyUse",
+    "inputs": {
+      "model_count": {
+        "name": "model_count"
+      },
+      "model_name_1": {
+        "name": "model_name_1"
+      },
+      "clip_name_1": {
+        "name": "clip_name_1"
+      },
+      "vae_name_1": {
+        "name": "vae_name_1"
+      },
+      "model_name_2": {
+        "name": "model_name_2"
+      },
+      "clip_name_2": {
+        "name": "clip_name_2"
+      },
+      "vae_name_2": {
+        "name": "vae_name_2"
+      },
+      "model_name_3": {
+        "name": "model_name_3"
+      },
+      "clip_name_3": {
+        "name": "clip_name_3"
+      },
+      "vae_name_3": {
+        "name": "vae_name_3"
+      },
+      "model_name_4": {
+        "name": "model_name_4"
+      },
+      "clip_name_4": {
+        "name": "clip_name_4"
+      },
+      "vae_name_4": {
+        "name": "vae_name_4"
+      },
+      "model_name_5": {
+        "name": "model_name_5"
+      },
+      "clip_name_5": {
+        "name": "clip_name_5"
+      },
+      "vae_name_5": {
+        "name": "vae_name_5"
+      },
+      "model_name_6": {
+        "name": "model_name_6"
+      },
+      "clip_name_6": {
+        "name": "clip_name_6"
+      },
+      "vae_name_6": {
+        "name": "vae_name_6"
+      },
+      "model_name_7": {
+        "name": "model_name_7"
+      },
+      "clip_name_7": {
+        "name": "clip_name_7"
+      },
+      "vae_name_7": {
+        "name": "vae_name_7"
+      },
+      "model_name_8": {
+        "name": "model_name_8"
+      },
+      "clip_name_8": {
+        "name": "clip_name_8"
+      },
+      "vae_name_8": {
+        "name": "vae_name_8"
+      },
+      "model_name_9": {
+        "name": "model_name_9"
+      },
+      "clip_name_9": {
+        "name": "clip_name_9"
+      },
+      "vae_name_9": {
+        "name": "vae_name_9"
+      },
+      "model_name_10": {
+        "name": "model_name_10"
+      },
+      "clip_name_10": {
+        "name": "clip_name_10"
+      },
+      "vae_name_10": {
+        "name": "vae_name_10"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X or Y"
+      }
+    }
+  },
   "easy loraStack": {
     "display_name": "EasyLoraStack",
     "inputs": {

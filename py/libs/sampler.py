@@ -65,6 +65,9 @@ class easySampler:
         elif model_type == 'mochi':
             latent = torch.zeros([batch_size, 12, ((video_length - 1) // 6) + 1, empty_latent_height // 8, empty_latent_width // 8], device=self.device)
             samples = {"samples": latent}
+        elif model_type in ("anima", "krea2"):
+            latent = torch.zeros([batch_size, 16, 1, empty_latent_height // 8, empty_latent_width // 8], device=self.device)
+            samples = {"samples": latent}
         elif compression == 0:
             latent = torch.zeros([batch_size, 4, empty_latent_height // 8, empty_latent_width // 8], device=self.device)
             samples = {"samples": latent}
@@ -84,7 +87,7 @@ class easySampler:
         """
 
         latent_size = latent_image.size()
-        latent_size_1batch = [1, latent_size[1], latent_size[2], latent_size[3]]
+        latent_size_1batch = [1] + list(latent_size[1:])
 
         if variation_strength is not None and variation_strength > 0 or incremental_seed_mode.startswith(
                 "variation str inc"):
@@ -108,7 +111,7 @@ class easySampler:
                 if strength_up is not None:
                     strength += strength_up
 
-                variation_noise = variation_latent.expand(input_latent.size()[0], -1, -1, -1)
+                variation_noise = variation_latent.expand(input_latent.size()[0], *([-1] * (variation_latent.dim() - 1)))
                 result = (1 - strength) * input_latent + strength * variation_noise
                 return result
 

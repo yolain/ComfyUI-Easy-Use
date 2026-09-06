@@ -138,6 +138,14 @@ class samplerFull:
             to["model_patch"] = {}
         return to
 
+    def get_align_your_steps_sigmas(self, model, steps, denoise):
+        model_type = get_sd_version(model)
+        # Anima/Krea2 have no dedicated AYS table; keep the SDXL table they used before these families were recognized.
+        if model_type in ("anima", "krea2", "unknown"):
+            model_type = "sdxl"
+        sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
+        return sigmas
+
     def get_sampler_custom(self, model, positive, negative, loader_settings):
         _guider = None
         middle = loader_settings['middle'] if "middle" in loader_settings else negative
@@ -174,10 +182,7 @@ class samplerFull:
             elif scheduler == 'sdturbo':
                 sigmas, = self.get_custom_cls('SDTurboScheduler').execute(model, steps, denoise)
             elif scheduler == 'alignYourSteps':
-                model_type = get_sd_version(model)
-                if model_type == 'unknown':
-                    model_type = 'sdxl'
-                sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
+                sigmas = self.get_align_your_steps_sigmas(model, steps, denoise)
             elif scheduler == 'gits':
                 sigmas, = gitsScheduler().get_sigmas(coeff, steps, denoise)
             else:
@@ -340,10 +345,7 @@ class samplerFull:
                 _guider, _sampler, sigmas = self.get_sampler_custom(samp_model, samp_positive, samp_negative, samp_custom)
                 samp_samples, samp_blend_samples = sampler.custom_advanced_ksampler(_guider, _sampler, sigmas, samp_samples, add_noise, samp_seed, preview_latent=preview_latent)
             elif scheduler == 'align_your_steps':
-                model_type = get_sd_version(samp_model)
-                if model_type == 'unknown':
-                    model_type = 'sdxl'
-                sigmas, = alignYourStepsScheduler().get_sigmas(model_type.upper(), steps, denoise)
+                sigmas = self.get_align_your_steps_sigmas(samp_model, steps, denoise)
                 _sampler = comfy.samplers.sampler_object(sampler_name)
                 samp_samples = sampler.custom_ksampler(samp_model, samp_seed, steps, cfg, _sampler, sigmas, samp_positive, samp_negative, samp_samples, disable_noise=disable_noise, preview_latent=preview_latent, noise_device=noise_device)
             elif scheduler == 'gits':

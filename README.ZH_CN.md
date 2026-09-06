@@ -39,6 +39,7 @@
 - 支持 kolors 模型
 - 支持 flux 模型
 - 支持 惰性条件判断（ifElse）和 for循环
+- 支持 Anima 与 Krea2 diffusion 模型，可通过 `easy diffusionModelLoader` 加载（需显式选择文本编码器与 VAE），并使用 `easy XYInputs: DiffusionModel` 进行 XY 对比
 
 ## 👨🏻‍🔧 安装
 
