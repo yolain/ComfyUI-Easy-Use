@@ -6271,6 +6271,22 @@
       }
     }
   },
+  "easy PassOrNone": {
+    "display_name": "Pass or None",
+    "inputs": {
+      "any": {
+        "name": "anything"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "output"
+      },
+      "1": {
+        "name": "is_none"
+      }
+    }
+  },
   "easy isNone": {
     "display_name": "Is None",
     "inputs": {
