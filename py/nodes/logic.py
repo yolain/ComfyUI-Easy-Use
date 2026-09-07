@@ -1000,6 +1000,36 @@ class isMaskEmpty(io.ComfyNode):
         return io.NodeOutput(False)
 
 
+class PassOrNone(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="PassOrNone",
+            description="Passes the input through, or outputs None when input is None/not provided.",
+            category="EasyUse/Logic",
+            search_aliases=[
+                "null",
+                "nothing",
+                "empty",
+                "blank",
+            ],
+            inputs=[
+                io.AnyType.Input("anything", tooltip="Passes the input through, or outputs None when no input is provided.", optional=True),
+            ],
+            outputs=[
+                io.AnyType.Output("output"),
+                io.Boolean.Output("is_none"),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, anything=None):
+        return io.NodeOutput(
+            anything,
+            anything is None,
+        )
+
+
 class isNone(io.ComfyNode):
     @classmethod
     def define_schema(cls):
