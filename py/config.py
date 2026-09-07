@@ -405,3 +405,21 @@ PROMPT_TEMPLATE = {
 }
 
 NEW_SCHEDULERS = ['align_your_steps', 'gits']
+
+DIFFUSION_MODEL_XY_DEFAULTS = {
+    "anima": {
+        "clip_name": "qwen_3_06b_base.safetensors",
+        "clip_type": "anima",
+        "vae_name": "qwen_image_vae.safetensors",
+    },
+    "krea2": {
+        "clip_name": "Huihui-Qwen3-VL-4B-Instruct-abliterated-fp8_scaled.safetensors",
+        "clip_type": "krea2",
+        "vae_name": "qwen_image_vae.safetensors",
+    },
+}
+
+DIFFUSION_MODEL_CLIP_TYPES = {
+    "anima": "anima",
+    "krea2": "krea2",
+}

@@ -8,6 +8,8 @@ from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
 from collections import defaultdict
 from .log import log_node_info, log_node_error
+from .utils import get_sd_version
+from ..config import DIFFUSION_MODEL_XY_DEFAULTS, DIFFUSION_MODEL_CLIP_TYPES
 from ..modules.dit.pixArt.loader import load_pixart
 
 diffusion_loaders = ["easy fullLoader", "easy a1111Loader", "easy fluxLoader", "easy comfyLoader", "easy hunyuanDiTLoader", "easy zero123Loader", "easy svdLoader"]
@@ -144,6 +146,28 @@ class easyLoader:
                 control_net_name = self.get_input_value(entry, "control_net_name", prompt)
                 scale_soft_weights = self.get_input_value(entry, "cn_soft_weights")
                 desired_controlnet_names.add(f'{control_net_name};{scale_soft_weights}')
+
+            elif class_type == "easy diffusionModelLoader":
+                desired_unet_names.add(self.get_input_value(entry, "model_name", prompt))
+                clip_name = self.get_input_value(entry, "clip_name", prompt)
+                vae_name = self.get_input_value(entry, "vae_name", prompt)
+                if clip_name not in ("None", "Auto"):
+                    desired_clip_names.add(clip_name)
+                if vae_name not in ("None", "Auto"):
+                    desired_vae_names.add(vae_name)
+
+            elif class_type == "easy XYInputs: DiffusionModel":
+                model_count = int(self.get_input_value(entry, "model_count", prompt) or 0)
+                for i in range(1, model_count + 1):
+                    model_name = self.get_input_value(entry, f"model_name_{i}", prompt)
+                    if model_name and model_name != "None":
+                        desired_unet_names.add(model_name)
+                    clip_name = self.get_input_value(entry, f"clip_name_{i}", prompt)
+                    if clip_name not in ("None", "Auto"):
+                        desired_clip_names.add(clip_name)
+                    vae_name = self.get_input_value(entry, f"vae_name_{i}", prompt)
+                    if vae_name not in ("None", "Auto"):
+                        desired_vae_names.add(vae_name)
 
             elif class_type in model_merge_node:
                 desired_ckpt_names.add(self.get_input_value(entry, "ckpt_name_1"))
@@ -282,6 +306,57 @@ class easyLoader:
 
         return model
 
+    def load_diffusion_model(self, model_name):
+        if model_name in self.loaded_objects["unet"]:
+            log_node_info("Load Diffusion Model", f"{model_name} cached")
+            return self.loaded_objects["unet"][model_name][0]
+
+        model_path = folder_paths.get_full_path("diffusion_models", model_name)
+        if not model_path:
+            raise FileNotFoundError(f"[EasyUse] diffusion model not found: {model_name}")
+
+        model = comfy.sd.load_diffusion_model(model_path)
+        self.add_to_cache("unet", model_name, model)
+        self.eviction_based_on_memory()
+
+        return model
+
+    def load_diffusion_xy_model(self, model_name, clip_name, vae_name):
+        model = self.load_diffusion_model(model_name)
+        family = get_sd_version(model)
+
+        defaults = DIFFUSION_MODEL_XY_DEFAULTS.get(family)
+        if defaults is None:
+            raise RuntimeError(f"[EasyUse] unsupported diffusion model family: {family}")
+
+        if clip_name in ("Auto", None):
+            clip_name = defaults["clip_name"]
+        if vae_name in ("Auto", None):
+            vae_name = defaults["vae_name"]
+
+        clip = self.load_clip(clip_name, type=defaults["clip_type"])
+        vae = self.load_vae(vae_name)
+
+        return model, clip, vae, family
+
+    def load_diffusion_model_required(self, model_name, clip_name, vae_name):
+        if clip_name in ("None", None):
+            raise RuntimeError("[EasyUse] clip_name is required: please select a text encoder")
+        if vae_name in ("None", None):
+            raise RuntimeError("[EasyUse] vae_name is required: please select a VAE")
+
+        model = self.load_diffusion_model(model_name)
+        family = get_sd_version(model)
+
+        clip_type = DIFFUSION_MODEL_CLIP_TYPES.get(family)
+        if clip_type is None:
+            raise RuntimeError(f"[EasyUse] unsupported diffusion model family: {family}")
+
+        clip = self.load_clip(clip_name, type=clip_type)
+        vae = self.load_vae(vae_name)
+
+        return model, clip, vae, family
+
     def load_controlnet(self, control_net_name, scale_soft_weights=1, use_cache=True):
         unique_id = f'{control_net_name};{str(scale_soft_weights)}'
         if use_cache and unique_id in self.loaded_objects["controlnet"]:
@@ -303,8 +378,9 @@ class easyLoader:
 
         return control_net
     def load_clip(self, clip_name, type='stable_diffusion', load_clip=None):
-        if clip_name in self.loaded_objects["clip"]:
-            return self.loaded_objects["clip"][clip_name][0]
+        cache_key = f"{clip_name}::{type}"
+        if cache_key in self.loaded_objects["clip"]:
+            return self.loaded_objects["clip"][cache_key][0]
 
         if type == 'stable_diffusion':
             clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION
@@ -316,9 +392,13 @@ class easyLoader:
             clip_type = comfy.sd.CLIPType.FLUX
         elif type == 'stable_audio':
             clip_type = comfy.sd.CLIPType.STABLE_AUDIO
+        elif type == 'krea2':
+            clip_type = comfy.sd.CLIPType.KREA2
+        elif type == 'anima':
+            clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION
         clip_path = folder_paths.get_full_path("clip", clip_name)
         load_clip = comfy.sd.load_clip(ckpt_paths=[clip_path], embedding_directory=folder_paths.get_folder_paths("embeddings"), clip_type=clip_type)
-        self.add_to_cache("clip", clip_name, load_clip)
+        self.add_to_cache("clip", cache_key, load_clip)
         self.eviction_based_on_memory()
 
         return load_clip

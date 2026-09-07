@@ -128,6 +128,10 @@ def get_sd_version(model):
         return 'flux'
     elif isinstance(model_config, comfy.supported_models.GenmoMochi):
         return 'mochi'
+    elif isinstance(model_config, comfy.supported_models.Anima):
+        return 'anima'
+    elif isinstance(model_config, comfy.supported_models.Krea2):
+        return 'krea2'
     else:
         return 'unknown'
 

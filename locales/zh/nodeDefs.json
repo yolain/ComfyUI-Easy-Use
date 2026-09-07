@@ -904,6 +904,173 @@
       }
     }
   },
+  "easy diffusionModelLoader": {
+    "display_name": "简易加载器（扩散模型）",
+    "inputs": {
+      "model_name": {
+        "name": "扩散模型"
+      },
+      "vae_name": {
+        "name": "VAE"
+      },
+      "clip_name": {
+        "name": "文本编码器"
+      },
+      "resolution": {
+        "name": "分辨率"
+      },
+      "empty_latent_width": {
+        "name": "宽度"
+      },
+      "empty_latent_height": {
+        "name": "高度"
+      },
+      "positive": {
+        "name": "正面提示词"
+      },
+      "negative": {
+        "name": "负面提示词"
+      },
+      "batch_size": {
+        "name": "批次大小"
+      },
+      "model_override": {
+        "name": "模型(可选)"
+      },
+      "clip_override": {
+        "name": "CLIP(可选)"
+      },
+      "vae_override": {
+        "name": "VAE(可选)"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "节点束"
+      },
+      "1": {
+        "name": "模型"
+      },
+      "2": {
+        "name": "VAE"
+      },
+      "3": {
+        "name": "CLIP"
+      },
+      "4": {
+        "name": "正面提示词"
+      },
+      "5": {
+        "name": "负面提示词"
+      },
+      "6": {
+        "name": "潜空间"
+      }
+    }
+  },
+  "easy XYInputs: DiffusionModel": {
+    "display_name": "XY输入: Diffusion Model",
+    "inputs": {
+      "model_count": {
+        "name": "模型数量"
+      },
+      "model_name_1": {
+        "name": "扩散模型1"
+      },
+      "clip_name_1": {
+        "name": "文本编码器1"
+      },
+      "vae_name_1": {
+        "name": "VAE1"
+      },
+      "model_name_2": {
+        "name": "扩散模型2"
+      },
+      "clip_name_2": {
+        "name": "文本编码器2"
+      },
+      "vae_name_2": {
+        "name": "VAE2"
+      },
+      "model_name_3": {
+        "name": "扩散模型3"
+      },
+      "clip_name_3": {
+        "name": "文本编码器3"
+      },
+      "vae_name_3": {
+        "name": "VAE3"
+      },
+      "model_name_4": {
+        "name": "扩散模型4"
+      },
+      "clip_name_4": {
+        "name": "文本编码器4"
+      },
+      "vae_name_4": {
+        "name": "VAE4"
+      },
+      "model_name_5": {
+        "name": "扩散模型5"
+      },
+      "clip_name_5": {
+        "name": "文本编码器5"
+      },
+      "vae_name_5": {
+        "name": "VAE5"
+      },
+      "model_name_6": {
+        "name": "扩散模型6"
+      },
+      "clip_name_6": {
+        "name": "文本编码器6"
+      },
+      "vae_name_6": {
+        "name": "VAE6"
+      },
+      "model_name_7": {
+        "name": "扩散模型7"
+      },
+      "clip_name_7": {
+        "name": "文本编码器7"
+      },
+      "vae_name_7": {
+        "name": "VAE7"
+      },
+      "model_name_8": {
+        "name": "扩散模型8"
+      },
+      "clip_name_8": {
+        "name": "文本编码器8"
+      },
+      "vae_name_8": {
+        "name": "VAE8"
+      },
+      "model_name_9": {
+        "name": "扩散模型9"
+      },
+      "clip_name_9": {
+        "name": "文本编码器9"
+      },
+      "vae_name_9": {
+        "name": "VAE9"
+      },
+      "model_name_10": {
+        "name": "扩散模型10"
+      },
+      "clip_name_10": {
+        "name": "文本编码器10"
+      },
+      "vae_name_10": {
+        "name": "VAE10"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
+      }
+    }
+  },
   "easy zero123Loader": {
     "display_name": "简易加载器（Zero123）",
     "inputs": {

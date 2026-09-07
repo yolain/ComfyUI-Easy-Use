@@ -35,6 +35,7 @@
 - Support Kolors‘s model.
 - Support Flux's model.
 - Support lazy if else and for loops.
+- Support Anima and Krea2 diffusion models with `easy diffusionModelLoader` and `easy XYInputs: DiffusionModel`. The loader requires an explicit text encoder and VAE selection.
 
 ## 👨🏻‍🔧 Installation
 Clone the repo into the **custom_nodes** directory and install the requirements:

@@ -14,7 +14,7 @@ def prompt_to_cond(type, model, clip, clip_skip, lora_stack, text, prompt_token_
     if model_type not in ['hydit'] and text is not None and has_chinese(text):
         text = zh_to_en([text])[0]
 
-    if model_type in ['hydit', 'flux', 'mochi']:
+    if model_type in ['hydit', 'flux', 'mochi', 'anima', 'krea2']:
         log_node_warn(title + "...")
         embeddings_final, = CLIPTextEncode().encode(clip, text) if text is not None else (None,)
 

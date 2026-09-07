@@ -528,6 +528,45 @@ class XYplot_Checkpoint:
         xy_values = {"axis": axis, "values": values, "lora_stack": optional_lora_stack}
         return (xy_values,)
 
+# Diffusion Models
+class XYplot_DiffusionModel:
+    @classmethod
+    def INPUT_TYPES(cls):
+        models = ["None"] + folder_paths.get_filename_list("diffusion_models")
+        clips = ["Auto"] + folder_paths.get_filename_list("text_encoders")
+        vaes = ["Auto"] + folder_paths.get_filename_list("vae")
+
+        inputs = {
+            "required": {
+                "model_count": ("INT", {"default": 3, "min": 0, "max": 10, "step": 1}),
+            }
+        }
+        for i in range(1, 11):
+            inputs["required"][f"model_name_{i}"] = (models,)
+            inputs["required"][f"clip_name_{i}"] = (clips, {"default": "Auto"})
+            inputs["required"][f"vae_name_{i}"] = (vaes, {"default": "Auto"})
+        return inputs
+
+    RETURN_TYPES = ("X_Y",)
+    RETURN_NAMES = ("X or Y",)
+    FUNCTION = "xy_value"
+    CATEGORY = "EasyUse/XY Inputs"
+
+    def xy_value(self, model_count, **kwargs):
+        values = []
+        for i in range(1, model_count + 1):
+            model_name = kwargs.get(f"model_name_{i}")
+            if not model_name or model_name == "None":
+                continue
+            clip_name = kwargs.get(f"clip_name_{i}", "Auto")
+            vae_name = kwargs.get(f"vae_name_{i}", "Auto")
+            values.append(
+                model_name.replace(",", "*") + ","
+                + clip_name.replace(",", "*") + ","
+                + vae_name.replace(",", "*")
+            )
+        return ({"axis": "advanced: DiffusionModel", "values": values},)
+
 #Loras
 class XYplot_Lora:
 
@@ -670,6 +709,7 @@ NODE_CLASS_MAPPINGS = {
     "easy XYInputs: Sampler/Scheduler": XYplot_Sampler_Scheduler,
     "easy XYInputs: Denoise": XYplot_Denoise,
     "easy XYInputs: Checkpoint": XYplot_Checkpoint,
+    "easy XYInputs: DiffusionModel": XYplot_DiffusionModel,
     "easy XYInputs: Lora": XYplot_Lora,
     "easy XYInputs: ModelMergeBlocks": XYplot_ModelMergeBlocks,
     "easy XYInputs: PromptSR": XYplot_PromptSR,
@@ -688,6 +728,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy XYInputs: Sampler/Scheduler": "XY Inputs: Sampler/Scheduler //EasyUse",
     "easy XYInputs: Denoise": "XY Inputs: Denoise //EasyUse",
     "easy XYInputs: Checkpoint": "XY Inputs: Checkpoint //EasyUse",
+    "easy XYInputs: DiffusionModel": "XY Inputs: Diffusion Model //EasyUse",
     "easy XYInputs: Lora": "XY Inputs: Lora //EasyUse",
     "easy XYInputs: ModelMergeBlocks": "XY Inputs: ModelMergeBlocks //EasyUse",
     "easy XYInputs: PromptSR": "XY Inputs: PromptSR //EasyUse",
