@@ -1000,13 +1000,44 @@ class isMaskEmpty(io.ComfyNode):
         return io.NodeOutput(False)
 
 
+class PassOrNone(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy PassOrNone",
+            description="Passes the input through, or outputs None when input is None/not provided.",
+            category="EasyUse/Logic",
+            search_aliases=[
+                "null",
+                "nothing",
+                "empty",
+                "blank",
+            ],
+            inputs=[
+                io.AnyType.Input("anything", tooltip="Passes the input through, or outputs None when no input is provided.", optional=True),
+            ],
+            outputs=[
+                io.AnyType.Output("output"),
+                io.Boolean.Output("is_none"),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, anything=None):
+        return io.NodeOutput(
+            anything,
+            anything is None,
+        )
+
+
 class isNone(io.ComfyNode):
     @classmethod
     def define_schema(cls):
         return io.Schema(
             node_id="easy isNone",
+            description="Returns true if the input is None, an empty string, or zero.",
             category="EasyUse/Logic",
-            inputs=[io.AnyType.Input("any")],
+            inputs=[io.AnyType.Input("any", tooltip="Returns true if the input is None, an empty string, or zero.")],
             outputs=[io.Boolean.Output("boolean")],
         )
 
@@ -1682,6 +1713,7 @@ NODE_CLASS_MAPPINGS = {
     "easy blocker": Blocker,
     "easy ifElse": IfElse,
     "easy isMaskEmpty": isMaskEmpty,
+    "easy PassOrNone": PassOrNone,
     "easy isNone": isNone,
     "easy isSDXL": isSDXL,
     "easy isFileExist": isFileExist,
@@ -1731,6 +1763,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy ifElse": "If else",
     "easy blocker": "Blocker",
     "easy isMaskEmpty": "Is Mask Empty",
+    "easy PassOrNone": "Pass or None",
     "easy isNone": "Is None",
     "easy isSDXL": "Is SDXL",
     "easy isFileExist": "Is File Exist",

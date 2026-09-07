@@ -6321,6 +6321,22 @@
       }
     }
   },
+  "easy PassOrNone": {
+    "display_name": "传递或为空",
+    "inputs": {
+      "any": {
+        "name": "任何"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
+      },
+      "1": {
+        "name": "是否为空"
+      }
+    }
+  },
   "easy isNone": {
     "display_name": "是否为空",
     "inputs": {
