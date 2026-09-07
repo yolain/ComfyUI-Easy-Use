@@ -1035,8 +1035,9 @@ class isNone(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="easy isNone",
+            description="Returns true if the input is None, an empty string, or zero.",
             category="EasyUse/Logic",
-            inputs=[io.AnyType.Input("any")],
+            inputs=[io.AnyType.Input("any", tooltip="Returns true if the input is None, an empty string, or zero.")],
             outputs=[io.Boolean.Output("boolean")],
         )
 
