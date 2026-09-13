@@ -597,7 +597,7 @@ class pipeXYPlotAdvanced:
                     "vae_use": vae_use
                 }
 
-            if x_axis in ['advanced: Lora', 'advanced: Checkpoint']:
+            if x_axis in ['advanced: Lora', 'advanced: Checkpoint', 'advanced: DiffusionModel']:
                 lora_stack = X.get('lora_stack')
                 _lora_stack = []
                 if lora_stack is not None:
@@ -613,7 +613,7 @@ class pipeXYPlotAdvanced:
                     "lora_stack": lora_stack,
                 }
 
-            if y_axis in ['advanced: Lora', 'advanced: Checkpoint']:
+            if y_axis in ['advanced: Lora', 'advanced: Checkpoint', 'advanced: DiffusionModel']:
                 lora_stack = Y.get('lora_stack')
                 _lora_stack = []
                 if lora_stack is not None:
@@ -628,12 +628,6 @@ class pipeXYPlotAdvanced:
                     **pipe['loader_settings'],
                     "lora_stack": lora_stack,
                 }
-
-            if x_axis == "advanced: DiffusionModel":
-                x_values = "; ".join(x_values)
-
-            if y_axis == "advanced: DiffusionModel":
-                y_values = "; ".join(y_values)
 
             if x_axis == 'advanced: Seeds++ Batch':
                 seed = new_pipe.get('seed') or 0

@@ -247,6 +247,40 @@ class DiffusionXYHelperTests(unittest.TestCase):
         self.assertEqual(clip_name, "Auto")
         self.assertEqual(vae_name, "Auto")
 
+    def test_diffusion_model_xy_row_count_follows_model_count(self):
+        with installed_modules(xyplot_node_stubs()):
+            node_module = load_module("fake_py.nodes.xyplot", XYPLOT_NODE_PATH, "fake_py.nodes")
+            node = node_module.XYplot_DiffusionModel()
+
+            rows = {f"model_name_{i}": f"m{i}.safetensors" for i in range(1, 11)}
+            for i in range(1, 11):
+                rows[f"clip_name_{i}"] = "Auto"
+                rows[f"vae_name_{i}"] = "Auto"
+
+            for count in (0, 1, 3, 10):
+                values = node.xy_value(count, **rows)[0]["values"]
+                self.assertEqual(len(values), count)
+                self.assertEqual(values, [f"m{i}.safetensors,Auto,Auto" for i in range(1, count + 1)])
+
+            # 超出 model_count 的已填行必须被忽略
+            self.assertEqual(len(node.xy_value(2, **rows)[0]["values"]), 2)
+
+            # 行内 "None" 会被跳过，因此值个数可以少于 model_count
+            rows["model_name_2"] = "None"
+            self.assertEqual(node.xy_value(3, **rows)[0]["values"], ["m1.safetensors,Auto,Auto", "m3.safetensors,Auto,Auto"])
+
+    def test_diffusion_model_xy_accepts_lora_stack(self):
+        with installed_modules(xyplot_node_stubs()):
+            node_module = load_module("fake_py.nodes.xyplot", XYPLOT_NODE_PATH, "fake_py.nodes")
+            node = node_module.XYplot_DiffusionModel()
+
+            self.assertIn("optional_lora_stack", node_module.XYplot_DiffusionModel.INPUT_TYPES()["optional"])
+
+            rows = {"model_name_1": "m1.safetensors", "clip_name_1": "Auto", "vae_name_1": "Auto"}
+            stack = [("lora_a.safetensors", 0.8, 1.0)]
+            self.assertEqual(node.xy_value(1, optional_lora_stack=stack, **rows)[0]["lora_stack"], stack)
+            self.assertEqual(node.xy_value(1, **rows)[0]["lora_stack"], [])
+
     def test_ensure_latent_raises_for_nonempty_4d_latent_without_image(self):
         with installed_modules(xyplot_lib_stubs()):
             xyplot_module = load_module("fake_py.libs.xyplot", XYPLOT_LIB_PATH, "fake_py.libs")
