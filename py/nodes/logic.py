@@ -1005,7 +1005,7 @@ class PassOrNone(io.ComfyNode):
     def define_schema(cls):
         return io.Schema(
             node_id="easy PassOrNone",
-            description="Passes the input through, or outputs None when input is None/not provided.",
+            description="Passes the input through, or a default value when input is None/not provided, or outputs None when both inputs are None/not provided.",
             category="EasyUse/Logic",
             search_aliases=[
                 "null",
@@ -1014,7 +1014,16 @@ class PassOrNone(io.ComfyNode):
                 "blank",
             ],
             inputs=[
-                io.AnyType.Input("anything", tooltip="Passes the input through, or outputs None when no input is provided.", optional=True),
+                io.AnyType.Input(
+                    "anything",
+                    tooltip="Passes the input through, or a default value when input is None/not provided, or outputs None when both inputs are None/not provided.",
+                    optional=True,
+                ),
+                io.AnyType.Input(
+                    "default",
+                    tooltip="Fallback value to use when the input is None/provided.",
+                    optional=True,
+                ),
             ],
             outputs=[
                 io.AnyType.Output("output"),
@@ -1023,10 +1032,16 @@ class PassOrNone(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, anything=None):
+    def execute(cls, anything=None, default=None):
+        if anything is None:
+            return io.NodeOutput(
+                default,
+                default is None,
+            )
+
         return io.NodeOutput(
             anything,
-            anything is None,
+            False,
         )
 
 

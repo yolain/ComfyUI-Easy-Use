@@ -6443,6 +6443,9 @@
     "inputs": {
       "any": {
         "name": "anything"
+      },
+      "default": {
+        "name": "default"
       }
     },
     "outputs": {

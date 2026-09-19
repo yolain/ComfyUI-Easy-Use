@@ -6493,6 +6493,9 @@
     "inputs": {
       "any": {
         "name": "任何"
+      },
+      "default": {
+        "name": "默认值"
       }
     },
     "outputs": {
