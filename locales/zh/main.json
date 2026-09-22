@@ -16,7 +16,7 @@
     "PreSampling": "预采样参数",
     "Sampler": "采样器",
     "Fix": "修复相关",
-    "Pipe": "节点束",
+    "Pipe": "管线",
     "XY Inputs": "XY图表输入项",
     "Image": "图像",
     "Segmentation": "分割",
