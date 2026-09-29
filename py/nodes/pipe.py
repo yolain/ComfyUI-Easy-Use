@@ -42,6 +42,9 @@ class pipeIn:
 
     def flush(self, pipe=None, model=None, pos=None, neg=None, latent=None, vae=None, clip=None, image=None, xyplot=None, my_unique_id=None):
 
+        if pipe is None:
+            pipe = {"loader_settings": {"positive": "", "negative": "", "xyplot": None}}
+
         model = model if model is not None else pipe.get("model")
         if model is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "Model missing from pipeLine")
@@ -54,26 +57,20 @@ class pipeIn:
         vae = vae if vae is not None else pipe.get("vae")
         if vae is None:
             log_node_warn(f'pipeIn[{my_unique_id}]', "VAE missing from pipeLine")
-        clip = clip if clip is not None else pipe.get("clip") if pipe is not None and "clip" in pipe else None
+        clip = clip if clip is not None else pipe.get("clip")
         # if clip is None:
         #     log_node_warn(f'pipeIn[{my_unique_id}]', "Clip missing from pipeLine")
         if latent is not None:
             samples = latent
         elif image is None:
-            samples = pipe.get("samples") if pipe is not None else None
-            image = pipe.get("images") if pipe is not None else None
+            samples = pipe.get("samples")
+            image = pipe.get("images")
         elif image is not None:
-            if pipe is None:
-                batch_size = 1
-            else:
-                batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
+            batch_size = pipe["loader_settings"]["batch_size"] if "batch_size" in pipe["loader_settings"] else 1
             samples = {"samples": vae.encode(image[:, :, :, :3])}
             samples = RepeatLatentBatch().repeat(samples, batch_size)[0]
 
-        if pipe is None:
-            pipe = {"loader_settings": {"positive": "", "negative": "", "xyplot": None}}
-
-        xyplot = xyplot if xyplot is not None else pipe['loader_settings']['xyplot'] if xyplot in pipe['loader_settings'] else None
+        xyplot = xyplot if xyplot is not None else pipe['loader_settings'].get('xyplot')
 
         new_pipe = {
             **pipe,
@@ -85,7 +82,7 @@ class pipeIn:
 
             "samples": samples,
             "images": image,
-            "seed": pipe.get('seed') if pipe is not None and "seed" in pipe else None,
+            "seed": pipe.get('seed'),
 
             "loader_settings": {
                 **pipe["loader_settings"],
