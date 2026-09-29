@@ -6442,10 +6442,7 @@
     "display_name": "Pass or None",
     "inputs": {
       "any": {
-        "name": "anything"
-      },
-      "default": {
-        "name": "default"
+        "name": "values"
       }
     },
     "outputs": {

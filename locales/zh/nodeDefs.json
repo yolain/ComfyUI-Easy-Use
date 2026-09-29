@@ -6492,10 +6492,7 @@
     "display_name": "传递或为空",
     "inputs": {
       "any": {
-        "name": "任何"
-      },
-      "default": {
-        "name": "默认值"
+        "name": "值"
       }
     },
     "outputs": {

@@ -1003,46 +1003,48 @@ class isMaskEmpty(io.ComfyNode):
 class PassOrNone(io.ComfyNode):
     @classmethod
     def define_schema(cls):
+        matchtype_template = io.MatchType.Template("value")
+        input_template = io.MatchType.Input(
+            "anything",
+            template=matchtype_template,
+            optional=True,
+        )
+        autogrow_template = io.Autogrow.TemplateNames(
+            input=input_template,
+            names=["anything"] + [f"default{i}" for i in range(99)],
+            min=0,
+        )
         return io.Schema(
             node_id="easy PassOrNone",
-            description="Passes the input through, or a default value when input is None/not provided, or outputs None when both inputs are None/not provided.",
+            description="Passes the first non-None value through, or outputs None when all inputs are None/not provided.",
             category="EasyUse/Logic",
-            search_aliases=[
-                "null",
-                "nothing",
-                "empty",
-                "blank",
-            ],
+            search_aliases=["fallback", "null", "nothing", "empty", "blank"],
             inputs=[
-                io.AnyType.Input(
-                    "anything",
-                    tooltip="Passes the input through, or a default value when input is None/not provided, or outputs None when both inputs are None/not provided.",
+                io.Autogrow.Input(
+                    "values",
                     optional=True,
-                ),
-                io.AnyType.Input(
-                    "default",
-                    tooltip="Fallback value to use when the input is None/not provided.",
-                    optional=True,
+                    template=autogrow_template,
                 ),
             ],
             outputs=[
-                io.AnyType.Output("output"),
+                io.MatchType.Output(
+                    template=matchtype_template,
+                    id="output",
+                ),
                 io.Boolean.Output("is_none"),
             ],
         )
 
     @classmethod
-    def execute(cls, anything=None, default=None):
-        if anything is None:
-            return io.NodeOutput(
-                default,
-                default is None,
-            )
+    def execute(
+        cls,
+        values: io.Autogrow.Type,
+    ) -> io.NodeOutput:
+        for value in values.values():
+            if value is not None:
+                return io.NodeOutput(value, False)
 
-        return io.NodeOutput(
-            anything,
-            False,
-        )
+        return io.NodeOutput(None, True)
 
 
 class isNone(io.ComfyNode):
