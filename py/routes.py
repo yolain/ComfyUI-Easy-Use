@@ -68,14 +68,14 @@ def _same_origin_request(request):
 
 
 @PromptServer.instance.routes.get("/easyuse/reboot-token")
-def get_reboot_token(request):
+async def get_reboot_token(request):
     if not _same_origin_request(request):
         return web.Response(status=403)
     return web.json_response({"token": _reboot_token}, headers={"Cache-Control": "no-store"})
 
 
 @PromptServer.instance.routes.post("/easyuse/reboot")
-def reboot(request):
+async def reboot(request):
     token = request.headers.get("X-EasyUse-Reboot-Token", "")
     if not _same_origin_request(request) or not hmac.compare_digest(token, _reboot_token):
         return web.Response(status=403)
