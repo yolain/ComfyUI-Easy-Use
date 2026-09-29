@@ -1484,6 +1484,31 @@ class stringJoinLines(io.ComfyNode):
         return io.NodeOutput(delimiter.join(lines))
 
 
+class stringToCombo(io.ComfyNode):
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="easy stringToCombo",
+            category="EasyUse/Logic",
+            description="Converts a string into a COMBO value.",
+            inputs=[
+                io.String.Input(
+                    "text",
+                    default="",
+                ),
+            ],
+            outputs=[
+                io.Combo.Output(
+                    display_name="COMBO",
+                ),
+            ],
+        )
+
+    @classmethod
+    def execute(cls, text) -> io.NodeOutput:
+        return io.NodeOutput(text)
+
+
 class outputToList(io.ComfyNode):
     @classmethod
     def define_schema(cls):
@@ -1734,6 +1759,7 @@ NODE_CLASS_MAPPINGS = {
     "easy isFileExist": isFileExist,
     "easy stringToIntList": stringToIntList,
     "easy stringToFloatList": stringToFloatList,
+    "easy stringToCombo": stringToCombo,
     "easy stringJoinLines": stringJoinLines,
     "easy outputToList": outputToList,
     "easy pixels": pixels,
@@ -1784,6 +1810,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy isFileExist": "Is File Exist",
     "easy stringToIntList": "String to Int List",
     "easy stringToFloatList": "String to Float List",
+    "easy stringToCombo": "String to Combo",
     "easy stringJoinLines": "String Join Lines",
     "easy outputToList": "Output to List",
     "easy pixels": "Pixels W/H Norm",
