@@ -3,6 +3,7 @@ import folder_paths
 import comfy.utils
 import comfy.sd
 import comfy.controlnet
+import comfy.lora, comfy.lora_convert
 
 from comfy.model_patcher import ModelPatcher
 from nodes import NODE_CLASS_MAPPINGS
@@ -483,6 +484,21 @@ class easyLoader:
             log_node_error(f"LORA NOT FOUND", orig_lora_name)
 
         return model, clip
+
+    def lora_matches(self, model, clip, lora_name):
+        """Number of weight keys the LoRA maps onto this model/CLIP; 0 means it does not match."""
+        path = folder_paths.get_full_path("loras", self.resolve_lora_name(lora_name) or lora_name)
+        if path is None:
+            raise RuntimeError(f"[EasyUse] LoRA not found: {lora_name}")
+
+        lora = comfy.lora_convert.convert_lora(comfy.utils.load_torch_file(path, safe_load=True))
+        key_map = {}
+        if model is not None:
+            key_map = comfy.lora.model_lora_keys_unet(model.model, key_map)
+        if clip is not None:
+            key_map = comfy.lora.model_lora_keys_clip(clip.cond_stage_model, key_map)
+
+        return len(comfy.lora.load_lora(lora, key_map, log_missing=False))
 
     def resolve_lora_name(self, name):
         if os.path.exists(name):

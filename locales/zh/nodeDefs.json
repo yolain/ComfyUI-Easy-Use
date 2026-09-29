@@ -971,6 +971,9 @@
   "easy XYInputs: DiffusionModel": {
     "display_name": "XY输入: Diffusion Model",
     "inputs": {
+      "optional_lora_stack": {
+        "name": "LoRA堆(可选)"
+      },
       "model_count": {
         "name": "模型数量"
       },
