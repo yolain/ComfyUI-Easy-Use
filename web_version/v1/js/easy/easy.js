@@ -486,10 +486,16 @@ app.registerExtension({
                 // Only show the reboot option if the server is running on a local network 仅在本地或局域网环境可重启服务
                 isLocalNetwork(window.location.host) ? {
                     content: rebootIcon.replace('currentColor','var(--error-color)') + ' '+ $t('Reboot ComfyUI') + ' (EasyUse)',
-                    callback: _ =>{
+                    callback: async _ =>{
                         if (confirm($t("Are you sure you'd like to reboot the server?"))){
                             try {
-                                api.fetchApi("/easyuse/reboot");
+                                const tokenResponse = await api.fetchApi("/easyuse/reboot-token");
+                                if (!tokenResponse.ok) throw new Error("Could not get reboot token");
+                                const {token} = await tokenResponse.json();
+                                await api.fetchApi("/easyuse/reboot", {
+                                    method: "POST",
+                                    headers: {"X-EasyUse-Reboot-Token": token},
+                                });
                             } catch (exception) {}
                         }
                     }

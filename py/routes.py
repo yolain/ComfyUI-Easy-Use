@@ -1,10 +1,16 @@
 import os
 import hashlib
+import hmac
 import sys
 import json
 import shutil
+import secrets
+import tempfile
+from functools import lru_cache
+from urllib.parse import urlsplit
 import folder_paths
 from aiohttp import web
+from PIL import Image, UnidentifiedImageError
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .libs.model import easyModelManager
@@ -50,8 +56,30 @@ async def translate(request):
     else:
         return web.json_response({"text": text})
 
-@PromptServer.instance.routes.get("/easyuse/reboot")
+_reboot_token = secrets.token_urlsafe(32)
+
+
+def _same_origin_request(request):
+    fetch_site = request.headers.get("Sec-Fetch-Site")
+    if fetch_site and fetch_site not in ("same-origin", "none"):
+        return False
+    origin = request.headers.get("Origin")
+    return not origin or urlsplit(origin).netloc == request.host
+
+
+@PromptServer.instance.routes.get("/easyuse/reboot-token")
+def get_reboot_token(request):
+    if not _same_origin_request(request):
+        return web.Response(status=403)
+    return web.json_response({"token": _reboot_token}, headers={"Cache-Control": "no-store"})
+
+
+@PromptServer.instance.routes.post("/easyuse/reboot")
 def reboot(request):
+    token = request.headers.get("X-EasyUse-Reboot-Token", "")
+    if not _same_origin_request(request) or not hmac.compare_digest(token, _reboot_token):
+        return web.Response(status=403)
+
     try:
         sys.stdout.close_log()
     except Exception as e:
@@ -169,9 +197,9 @@ async def getModelsList(request):
 @PromptServer.instance.routes.post("/easyuse/metadata/notes/{name}")
 async def save_notes(request):
     name = request.match_info["name"]
-    pos = name.index("/")
-    type = name[0:pos]
-    name = name[pos+1:]
+    type, separator, name = name.partition("/")
+    if not separator or type not in ("checkpoints", "loras", "embeddings"):
+        return web.Response(status=400)
 
     file_path = None
     if type == "embeddings" or type == "loras":
@@ -189,24 +217,34 @@ async def save_notes(request):
             if file_path is not None:
                 break
     else:
-        file_path = folder_paths.get_full_path(
-            type, name)
+        if name in folder_paths.get_filename_list(type):
+            file_path = folder_paths.get_full_path(type, name)
     if not file_path:
         return web.Response(status=404)
 
     file_no_ext = os.path.splitext(file_path)[0]
     info_file = file_no_ext + ".txt"
-    with open(info_file, "w") as f:
-        f.write(await request.text())
+    staged_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=os.path.dirname(info_file),
+                prefix=".easyuse-notes-", delete=False
+        ) as staged:
+            staged_path = staged.name
+            staged.write(await request.text())
+        os.replace(staged_path, info_file)
+    finally:
+        if staged_path and os.path.exists(staged_path):
+            os.unlink(staged_path)
 
     return web.Response(status=200)
 
 @PromptServer.instance.routes.get("/easyuse/metadata/{name}")
 async def load_metadata(request):
     name = request.match_info["name"]
-    pos = name.index("/")
-    type = name[0:pos]
-    name = name[pos+1:]
+    type, separator, name = name.partition("/")
+    if not separator or type not in ("checkpoints", "loras", "embeddings"):
+        return web.Response(status=400)
 
     file_path = None
     if type == "embeddings":
@@ -224,7 +262,8 @@ async def load_metadata(request):
             if file_path is not None:
                 break
     else:
-        file_path = folder_paths.get_full_path(type, name)
+        if name in folder_paths.get_filename_list(type):
+            file_path = folder_paths.get_full_path(type, name)
     if not file_path:
         return web.Response(status=404)
 
@@ -241,47 +280,93 @@ async def load_metadata(request):
     file_no_ext = os.path.splitext(file_path)[0]
 
     info_file = file_no_ext + ".txt"
-    if os.path.isfile(info_file):
+    if os.path.isfile(info_file) and not os.path.islink(info_file):
         with open(info_file, "r") as f:
             meta["easyuse.notes"] = f.read()
 
-    hash_file = file_no_ext + ".sha256"
-    if os.path.isfile(hash_file):
-        with open(hash_file, "rt") as f:
-            meta["easyuse.sha256"] = f.read()
-    else:
-        with open(file_path, "rb") as f:
-            meta["easyuse.sha256"] = hashlib.sha256(f.read()).hexdigest()
-        with open(hash_file, "wt") as f:
-            f.write(meta["easyuse.sha256"])
+    # Sidecar hashes are user-controlled; never use them as proof of the model's hash.
+    stat = os.stat(file_path)
+    meta["easyuse.sha256"] = _model_sha256(
+        file_path, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+    )
 
     return web.json_response(meta)
+
+
+@lru_cache(maxsize=128)
+def _model_sha256(path, size, mtime_ns, ctime_ns):
+    digest = hashlib.sha256()
+    with open(path, "rb") as model:
+        for chunk in iter(lambda: model.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+_PREVIEW_FORMATS = {
+    ".png": "PNG",
+    ".jpg": "JPEG",
+    ".jpeg": "JPEG",
+    ".webp": "WEBP",
+    ".gif": "GIF",
+}
 
 @PromptServer.instance.routes.post("/easyuse/save/{name}")
 async def save_preview(request):
     name = request.match_info["name"]
-    pos = name.index("/")
-    type = name[0:pos]
-    name = name[pos+1:]
+    model_type, separator, model_name = name.partition("/")
+    if not separator or model_type not in ("checkpoints", "loras"):
+        return web.Response(status=400)
+    if model_name not in folder_paths.get_filename_list(model_type):
+        return web.Response(status=404)
+
+    model_path = folder_paths.get_full_path(model_type, model_name)
+    if not model_path:
+        return web.Response(status=404)
 
     body = await request.json()
-
-    dir = folder_paths.get_directory_by_type(body.get("type", "output"))
-    subfolder = body.get("subfolder", "")
-    full_output_folder = os.path.join(dir, os.path.normpath(subfolder))
-
-    if os.path.commonpath((dir, os.path.abspath(full_output_folder))) != dir:
+    filename = body.get("filename")
+    if (body.get("type") != "temp" or body.get("subfolder", "") != ""
+            or not isinstance(filename, str) or not filename
+            or os.path.basename(filename) != filename or filename in (".", "..")):
         return web.Response(status=400)
 
-    filepath = os.path.join(full_output_folder, body.get("filename", ""))
-    image_path = folder_paths.get_full_path(type, name)
-    image_path = os.path.splitext(
-        image_path)[0] + os.path.splitext(filepath)[1]
+    extension = os.path.splitext(filename)[1].lower()
+    if extension not in _PREVIEW_FORMATS:
+        return web.Response(status=400)
 
-    shutil.copyfile(filepath, image_path)
+    temp_dir = folder_paths.get_directory_by_type("temp")
+    filepath = os.path.join(temp_dir, filename)
+    if (os.path.commonpath((os.path.realpath(temp_dir), os.path.realpath(filepath)))
+            != os.path.realpath(temp_dir) or not os.path.isfile(filepath)):
+        return web.Response(status=400)
+
+    image_path = os.path.splitext(model_path)[0] + extension
+    if (os.path.islink(image_path)
+            or os.path.realpath(os.path.dirname(image_path))
+            != os.path.realpath(os.path.dirname(model_path))):
+        return web.Response(status=400)
+
+    staged_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                dir=os.path.dirname(image_path), prefix=".easyuse-preview-", delete=False
+        ) as staged:
+            staged_path = staged.name
+            with open(filepath, "rb") as source:
+                shutil.copyfileobj(source, staged)
+        with Image.open(staged_path) as image:
+            if image.format != _PREVIEW_FORMATS[extension]:
+                return web.Response(status=400)
+            image.verify()
+        os.replace(staged_path, image_path)
+    except (OSError, ValueError, UnidentifiedImageError):
+        return web.Response(status=400)
+    finally:
+        if staged_path and os.path.exists(staged_path):
+            os.unlink(staged_path)
 
     return web.json_response({
-        "image":  type + "/" + os.path.basename(image_path)
+        "image":  model_type + "/" + os.path.basename(image_path)
     })
 
 @PromptServer.instance.routes.post("/easyuse/model/download")
