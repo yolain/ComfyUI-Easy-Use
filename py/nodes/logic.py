@@ -1003,46 +1003,37 @@ class isMaskEmpty(io.ComfyNode):
 class PassOrNone(io.ComfyNode):
     @classmethod
     def define_schema(cls):
+        matchtype_template = io.MatchType.Template("value")
         return io.Schema(
             node_id="easy PassOrNone",
             description="Passes the input through, or a default value when input is None/not provided, or outputs None when both inputs are None/not provided.",
             category="EasyUse/Logic",
-            search_aliases=[
-                "null",
-                "nothing",
-                "empty",
-                "blank",
-            ],
+            search_aliases=["fallback", "null", "nothing", "empty", "blank"],
             inputs=[
-                io.AnyType.Input(
+                io.MatchType.Input(
                     "anything",
+                    template=matchtype_template,
                     tooltip="Passes the input through, or a default value when input is None/not provided, or outputs None when both inputs are None/not provided.",
                     optional=True,
                 ),
-                io.AnyType.Input(
+                io.MatchType.Input(
                     "default",
-                    tooltip="Fallback value to use when the input is None/not provided.",
+                    template=matchtype_template,
+                    tooltip="Optional fallback value to use when the input is None/not provided.",
                     optional=True,
                 ),
             ],
             outputs=[
-                io.AnyType.Output("output"),
+                io.MatchType.Output(template=matchtype_template, id="output"),
                 io.Boolean.Output("is_none"),
             ],
         )
 
     @classmethod
-    def execute(cls, anything=None, default=None):
+    def execute(cls, anything=None, default=None) -> io.NodeOutput:
         if anything is None:
-            return io.NodeOutput(
-                default,
-                default is None,
-            )
-
-        return io.NodeOutput(
-            anything,
-            False,
-        )
+            return io.NodeOutput(default, default is None)
+        return io.NodeOutput(anything, False)
 
 
 class isNone(io.ComfyNode):
