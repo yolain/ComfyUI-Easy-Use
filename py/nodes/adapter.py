@@ -62,13 +62,13 @@ class applyLoraStack:
     FUNCTION = "apply"
 
     def apply(self, lora_stack, model, optional_clip=None):
-        clip = None
+        clip = optional_clip
         if lora_stack is not None and len(lora_stack) > 0:
             for lora in lora_stack:
-                lora = {"lora_name": lora[0], "model": model, "clip": optional_clip, "model_strength": lora[1],
+                lora = {"lora_name": lora[0], "model": model, "clip": clip, "model_strength": lora[1],
                         "clip_strength": lora[2]}
-                model, clip = easyCache.load_lora(lora, model, optional_clip, use_cache=False)
-        return (model, optional_clip if clip is None else clip)
+                model, clip = easyCache.load_lora(lora, model, clip, use_cache=False)
+        return (model, clip)
 
 class applyControlnetStack:
     @classmethod
