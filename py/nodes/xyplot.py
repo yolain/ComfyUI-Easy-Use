@@ -539,7 +539,10 @@ class XYplot_DiffusionModel:
         inputs = {
             "required": {
                 "model_count": ("INT", {"default": 3, "min": 0, "max": 10, "step": 1}),
-            }
+            },
+            "optional": {
+                "optional_lora_stack": ("LORA_STACK",),
+            },
         }
         for i in range(1, 11):
             inputs["required"][f"model_name_{i}"] = (models,)
@@ -565,7 +568,8 @@ class XYplot_DiffusionModel:
                 + clip_name.replace(",", "*") + ","
                 + vae_name.replace(",", "*")
             )
-        return ({"axis": "advanced: DiffusionModel", "values": values},)
+        optional_lora_stack = kwargs.get("optional_lora_stack") if "optional_lora_stack" in kwargs else []
+        return ({"axis": "advanced: DiffusionModel", "values": values, "lora_stack": optional_lora_stack},)
 
 #Loras
 class XYplot_Lora:
