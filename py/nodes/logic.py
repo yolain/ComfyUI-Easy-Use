@@ -333,14 +333,22 @@ class anythingInversedSwitch(io.ComfyNode):
 class anythingIndexSwitch(io.ComfyNode):
     @classmethod
     def define_schema(cls):
+        matchtype_template = io.MatchType.Template("value")
         inputs = [io.Int.Input("index", default=0, min=0, max=9, step=1)]
         for i in range(MAX_FLOW_NUM):
-            inputs.append(io.AnyType.Input("value%d" % i, optional=True, lazy=True))
+            inputs.append(
+                io.MatchType.Input(
+                    "value%d" % i,
+                    template=matchtype_template,
+                    optional=True,
+                    lazy=True,
+                )
+            )
         return io.Schema(
             node_id="easy anythingIndexSwitch",
             category="EasyUse/Logic/Index Switch",
             inputs=inputs,
-            outputs=[io.AnyType.Output("value")],
+            outputs=[io.MatchType.Output(template=matchtype_template, id="value")],
         )
 
     @classmethod
