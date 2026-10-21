@@ -1361,6 +1361,9 @@
       },
       "vae_name_10": {
         "name": "vae_name_10"
+      },
+      "optional_lora_stack": {
+        "name": "optional_lora_stack"
       }
     },
     "outputs": {
