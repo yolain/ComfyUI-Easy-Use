@@ -79,27 +79,34 @@ export function formatTime(time, format) {
 }
 
 
-let origProps = {};
+const origProps = new WeakMap();
 export const findWidgetByName = (node, name) => node.widgets.find((w) => w.name === name);
 
 export const doesInputWithNameExist = (node, name) => node.inputs ? node.inputs.some((input) => input.name === name) : false;
 
 export function updateNodeHeight(node) {node.setSize([node.size[0], node.computeSize()[1]]);}
 
+export const doesInputWithNameLink = (node, name, show) => node.inputs ? node.inputs.some((input) => (input.name === name || input.widget?.name === name) && input.link != null && !show) : false;
+
 export function toggleWidget(node, widget, show = false, suffix = "") {
-	if (!widget || doesInputWithNameExist(node, widget.name)) return;
-	if (!origProps[widget.name]) {
-		origProps[widget.name] = { origType: widget.type, origComputeSize: widget.computeSize };
+	if (!widget || doesInputWithNameLink(node, widget.name, show)) return;
+	if (!origProps.has(widget)) {
+		origProps.set(widget, { origType: widget.type, origComputeSize: widget.computeSize });
 	}
-	const origSize = node.size;
-
-	widget.type = show ? origProps[widget.name].origType : "easyHidden" + suffix;
-	widget.computeSize = show ? origProps[widget.name].origComputeSize : () => [0, -4];
-
-	widget.linkedWidgets?.forEach(w => toggleWidget(node, w, ":" + widget.name, show));
-
-	const height = show ? Math.max(node.computeSize()[1], origSize[1]) : node.size[1];
+	const original = origProps.get(widget);
+	const input = node.inputs?.find(input => input.name === widget.name || input.widget?.name === widget.name);
+	if (input?.widget) input.widget.hidden = !show;
+	const origHeight = node.size[1];
+	widget.type = show ? original.origType : "easyHidden" + suffix;
+	widget.computeSize = show ? original.origComputeSize : () => [0, -4];
+	// Canvas and Vue nodes read different visibility fields.
+	widget.options ??= {};
+	widget.options.hidden = !show;
+	widget.hidden = !show;
+	widget.linkedWidgets?.forEach(w => toggleWidget(node, w, show, ":" + widget.name));
+	const height = show ? Math.max(node.computeSize()[1], origHeight) : node.size[1];
 	node.setSize([node.size[0], height]);
+	node.setDirtyCanvas?.(true, true);
 }
 
 export function isLocalNetwork(ip) {
