@@ -53,6 +53,20 @@ git clone https://github.com/yolain/ComfyUI-Easy-Use
 
 ## 📜 更新日志
 
+**v1.4.2**
+
+- 新增 Anima 和 Krea2 支持，提供 `easy diffusionModelLoader` 和 `easy XYInputs: DiffusionModel` 节点 #1033
+- 新增 `easy PassOrNone`，支持可选的 `default` 输入和输入输出类型匹配；完善 `easy isNone` 的说明和提示 #1035 #1038 #1050
+- 修复禁用 Alt+1–9 模板快捷键后仍拦截浏览器快捷键的问题 #1039
+- 修复影响 ComfyUI-Easy-Media 的前端冲突，以及应用模式下的渲染竞态问题
+- 修复 ComfyUI 前端更新后 `easy imageChooser` 无法激活的问题 #1049
+- 修复新版 ComfyUI 前端中控件显示与隐藏切换失效的问题
+- 加固模型备注、元数据和预览接口，重启请求增加同源校验和令牌验证 #1045
+- 修复风格预览的路径穿越问题 #1057，并增加风格列表 JSON 路径校验
+- 模型下载仅允许访问公网 HTTP(S) 地址，校验 DNS 解析和重定向目标，增加超时、大小和并发限制，并保留 Hugging Face 镜像回退
+- 修复 v1 前端下载通知中的 HTML 注入问题
+- 将模型元数据读取和哈希计算移出事件循环，限制并发并校验元数据头部大小
+
 **v1.4.1**
 
 - 修复 `easy saveText` 将文本输出限制在输出目录 #1032

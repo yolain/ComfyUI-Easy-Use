@@ -48,6 +48,20 @@ Double-click install.bat to install the required dependencies
 
 ## 📜 Changelog
 
+**v1.4.2**
+
+- Add Anima and Krea2 support with `easy diffusionModelLoader` and `easy XYInputs: DiffusionModel` #1033
+- Add `easy PassOrNone` with an optional `default` input and matching input/output types; improve `easy isNone` descriptions and tooltips #1035 #1038 #1050
+- Fix disabled Alt+1–9 template shortcuts still blocking browser shortcuts #1039
+- Fix frontend conflicts affecting ComfyUI-Easy-Media and a rendering race condition in app mode
+- Fix `easy imageChooser` becoming inactive after ComfyUI frontend updates #1049
+- Fix widget visibility toggling with the new ComfyUI frontend
+- Harden model notes, metadata and preview routes, and require a same-origin token for restart requests #1045
+- Fix style preview path traversal #1057 and validate style-list JSON paths
+- Restrict model downloads to public HTTP(S) addresses, validate DNS answers and redirects, and add timeout, size and concurrency limits while retaining Hugging Face mirror fallback
+- Fix HTML injection in v1 frontend download notifications
+- Move model metadata reads and hash calculation off the event loop, limit concurrency, and validate metadata header sizes
+
 **v1.4.1**
 
 - Fix `easy saveText` to confine text outputs to output directory #1032
