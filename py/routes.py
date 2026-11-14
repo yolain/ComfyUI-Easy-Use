@@ -158,22 +158,37 @@ async def getStylesList(request):
                 return web.json_response(ndata)
     return web.Response(status=400)
 
+def _resolve_style_image_path(*parts):
+    """Keep local style previews inside the styles directory, including symlinks."""
+    root = os.path.realpath(FOOOCUS_STYLES_DIR)
+    candidate = os.path.realpath(os.path.join(root, *parts))
+    if os.path.commonpath((root, candidate)) != root:
+        raise ValueError("Style image path is outside the styles directory")
+    return candidate
+
+
 # get style preview image
 @PromptServer.instance.routes.get("/easyuse/prompt/styles/image")
 async def getStylesImage(request):
     styles_name = request.rel_url.query["styles_name"] if "styles_name" in request.rel_url.query else None
     if "path" in request.rel_url.query:
         path = request.rel_url.query["path"]
-        file = os.path.join(FOOOCUS_STYLES_DIR, 'samples', path)
-        parent_file = os.path.join(FOOOCUS_STYLES_DIR, path)
+        try:
+            file = _resolve_style_image_path('samples', path)
+            parent_file = _resolve_style_image_path(path)
+        except (ValueError, OSError):
+            return web.Response(status=403)
         if os.path.isfile(file):
             return web.FileResponse(file)
         elif os.path.isfile(parent_file):
             return web.FileResponse(parent_file)
     elif "name" in request.rel_url.query:
         name = request.rel_url.query["name"]
+        try:
+            file = _resolve_style_image_path('samples', name + '.jpg')
+        except (ValueError, OSError):
+            return web.Response(status=403)
         if os.path.exists(os.path.join(FOOOCUS_STYLES_DIR, 'samples')):
-            file = os.path.join(FOOOCUS_STYLES_DIR, 'samples', name + '.jpg')
             if os.path.isfile(file):
                 return web.FileResponse(file)
             elif styles_name == 'fooocus_styles':

@@ -27,6 +27,7 @@ def load_handlers(folder_paths, get_metadata):
     names = {
         "_same_origin_request", "get_reboot_token", "reboot", "_model_sha256",
         "load_metadata", "save_notes", "save_preview",
+        "_resolve_style_image_path", "getStylesImage",
     }
     tree = ast.parse(ROUTES_PATH.read_text())
     functions = []
@@ -41,6 +42,8 @@ def load_handlers(folder_paths, get_metadata):
         "Image": Image, "UnidentifiedImageError": UnidentifiedImageError,
         "folder_paths": folder_paths, "getMetadata": get_metadata,
         "_reboot_token": "test-reboot-token",
+        "FOOOCUS_STYLES_DIR": str(folder_paths.styles_dir),
+        "FOOOCUS_STYLES_SAMPLES": "https://example.test/styles/",
         "_PREVIEW_FORMATS": {
             ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
             ".webp": "WEBP", ".gif": "GIF",
@@ -59,9 +62,13 @@ class SecurityRouteTests(unittest.TestCase):
         self.temp_dir = self.root / "temp"
         self.model_dir.mkdir()
         self.temp_dir.mkdir()
+        self.styles_dir = self.root / "styles"
+        self.samples_dir = self.styles_dir / "samples"
+        self.samples_dir.mkdir(parents=True)
         self.model_path = self.model_dir / "sample.safetensors"
         self.model_path.write_bytes(b"model data")
         paths = SimpleNamespace(
+            styles_dir=self.styles_dir,
             get_filename_list=lambda kind: [self.model_path.name],
             get_full_path=lambda kind, name: str(self.model_path),
             get_directory_by_type=lambda kind: str(self.temp_dir),
@@ -78,6 +85,65 @@ class SecurityRouteTests(unittest.TestCase):
             json=lambda: asyncio.sleep(0, result=payload),
             headers={}, host="localhost:8188",
         )
+
+    def test_style_images_respect_directory_boundary_over_http(self):
+        sample = self.samples_dir / "nested" / "preview.jpg"
+        sample.parent.mkdir()
+        sample.write_bytes(b"sample preview")
+        (self.styles_dir / "preview.jpg").write_bytes(b"root preview")
+        (self.styles_dir / "root-only.jpg").write_bytes(b"root-only preview")
+        (self.samples_dir / "preview.jpg").write_bytes(b"preferred preview")
+        protected = self.root / "private.jpg"
+        protected.write_bytes(b"private data")
+        sibling = self.root / "styles-private"
+        sibling.mkdir()
+        (sibling / "private.jpg").write_bytes(b"private sibling data")
+        os.symlink(protected, self.samples_dir / "linked.jpg")
+        os.symlink(sibling, self.styles_dir / "linked-dir")
+
+        async def exercise_routes():
+            app = web.Application()
+            app.router.add_get("/easyuse/prompt/styles/image", self.handlers.getStylesImage)
+            async with TestClient(TestServer(app)) as client:
+                for query, expected in [
+                    ({"path": "nested/preview.jpg"}, b"sample preview"),
+                    ({"path": "preview.jpg"}, b"preferred preview"),
+                    ({"path": "root-only.jpg"}, b"root-only preview"),
+                    ({"path": "samples/nested/preview.jpg"}, b"sample preview"),
+                    ({"name": "nested/preview"}, b"sample preview"),
+                ]:
+                    with self.subTest(query=query):
+                        response = await client.get("/easyuse/prompt/styles/image", params=query)
+                        self.assertEqual(response.status, 200)
+                        self.assertEqual(await response.read(), expected)
+                for query in [
+                    {"path": "../../private.jpg"},
+                    {"path": "../styles-private/private.jpg"},
+                    {"path": str(protected)},
+                    {"path": "linked.jpg"},
+                    {"path": "linked-dir/private.jpg"},
+                    {"path": "bad\u0000.jpg"},
+                    {"name": "../../private"},
+                    {"name": str(protected.with_suffix(""))},
+                    {"name": "linked"},
+                    {"name": "bad\u0000"},
+                ]:
+                    with self.subTest(query=query):
+                        response = await client.get("/easyuse/prompt/styles/image", params=query)
+                        self.assertEqual(response.status, 403)
+                response = await client.get("/easyuse/prompt/styles/image", params={"path": "missing.jpg"})
+                self.assertEqual(response.status, 400)
+                response = await client.get("/easyuse/prompt/styles/image", params={"name": "missing", "styles_name": "fooocus_styles"})
+                self.assertEqual(response.status, 200)
+                self.assertEqual(await response.text(), "https://example.test/styles/missing.jpg")
+                self.samples_dir.rename(self.styles_dir / "disabled-samples")
+                response = await client.get("/easyuse/prompt/styles/image", params={"name": "missing", "styles_name": "fooocus_styles"})
+                self.assertEqual(response.status, 200)
+                self.assertEqual(await response.text(), "https://example.test/styles/missing.jpg")
+                response = await client.get("/easyuse/prompt/styles/image", params={"name": "../../private", "styles_name": "fooocus_styles"})
+                self.assertEqual(response.status, 403)
+
+        asyncio.run(exercise_routes())
 
     def test_save_rejects_script_and_custom_node_target(self):
         (self.temp_dir / "payload.py").write_text("print('sentinel')")
