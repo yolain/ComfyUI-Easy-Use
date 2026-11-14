@@ -6,6 +6,7 @@ import json
 import shutil
 import secrets
 import tempfile
+import asyncio
 from functools import lru_cache
 from urllib.parse import urlsplit
 import folder_paths
@@ -14,7 +15,8 @@ from PIL import Image, UnidentifiedImageError
 from server import PromptServer
 from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
 from .libs.model import easyModelManager
-from .libs.utils import getMetadata, cleanGPUUsedForce, get_local_filepath
+from .libs.utils import getMetadata, cleanGPUUsedForce
+from .libs.download import download_model_file, UnsafeDownload
 from .libs.cache import remove_cache
 from .libs.translate import has_chinese, zh_to_en
 
@@ -384,6 +386,9 @@ async def save_preview(request):
         "image":  model_type + "/" + os.path.basename(image_path)
     })
 
+_download_slots = asyncio.Semaphore(2)
+
+
 @PromptServer.instance.routes.post("/easyuse/model/download")
 async def download_model(request):
     post = await request.post()
@@ -392,8 +397,15 @@ async def download_model(request):
     if local_dir not in ['checkpoints', 'loras', 'controlnet', 'onnx', 'instantid', 'ipadapter', 'dynamicrafter_models', 'mediapipe', 'rembg', 'layer_model']:
         return web.Response(status=400)
     local_path = os.path.join(folder_paths.models_dir, local_dir)
-    try:
-        get_local_filepath(url, local_path)
-        return web.Response(status=200)
-    except:
-        return web.Response(status=500)
+    if _download_slots.locked():
+        return web.Response(status=429)
+    async with _download_slots:
+        try:
+            await download_model_file(url, local_path)
+            return web.Response(status=200)
+        except UnsafeDownload:
+            return web.Response(status=400)
+        except asyncio.TimeoutError:
+            return web.Response(status=504)
+        except Exception:
+            return web.Response(status=502)
