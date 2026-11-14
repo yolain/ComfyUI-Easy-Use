@@ -270,16 +270,17 @@ def easySave(images, filename_prefix, output_type, prompt=None, extra_pnginfo=No
         return results['ui']['images']
 
 def getMetadata(filepath):
+    import os
     with open(filepath, "rb") as file:
         # https://github.com/huggingface/safetensors#format
         # 8 bytes: N, an unsigned little-endian 64-bit integer, containing the size of the header
         header_size = int.from_bytes(file.read(8), "little", signed=False)
 
-        if header_size <= 0:
+        if not 0 < header_size <= min(100_000_000, os.fstat(file.fileno()).st_size - 8):
             raise BufferError("Invalid header size")
 
         header = file.read(header_size)
-        if header_size <= 0:
+        if len(header) != header_size:
             raise BufferError("Invalid header")
 
         return header

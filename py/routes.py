@@ -211,6 +211,19 @@ async def getModelsList(request):
     else:
         return web.Response(status=400)
 
+_MAX_NOTES_BYTES = 1024 * 1024
+
+
+def _read_model_notes(path):
+    if not os.path.isfile(path) or os.path.islink(path):
+        return None
+    with open(path, "rb") as notes_file:
+        notes = notes_file.read(_MAX_NOTES_BYTES + 1)
+    if len(notes) > _MAX_NOTES_BYTES:
+        raise web.HTTPRequestEntityTooLarge(max_size=_MAX_NOTES_BYTES, actual_size=len(notes))
+    return notes.decode("utf-8")
+
+
 @PromptServer.instance.routes.post("/easyuse/metadata/notes/{name}")
 async def save_notes(request):
     name = request.match_info["name"]
@@ -239,6 +252,9 @@ async def save_notes(request):
     if not file_path:
         return web.Response(status=404)
 
+    notes = await request.text()
+    if len(notes.encode("utf-8")) > _MAX_NOTES_BYTES:
+        return web.Response(status=413, text="Model notes exceed the 1 MiB limit")
     file_no_ext = os.path.splitext(file_path)[0]
     info_file = file_no_ext + ".txt"
     staged_path = None
@@ -248,13 +264,16 @@ async def save_notes(request):
                 prefix=".easyuse-notes-", delete=False
         ) as staged:
             staged_path = staged.name
-            staged.write(await request.text())
+            staged.write(notes)
         os.replace(staged_path, info_file)
     finally:
         if staged_path and os.path.exists(staged_path):
             os.unlink(staged_path)
 
     return web.Response(status=200)
+
+_metadata_slots = asyncio.Semaphore(2)
+
 
 @PromptServer.instance.routes.get("/easyuse/metadata/{name}")
 async def load_metadata(request):
@@ -284,6 +303,28 @@ async def load_metadata(request):
     if not file_path:
         return web.Response(status=404)
 
+    if _metadata_slots.locked():
+        return web.Response(status=429)
+    slots = _metadata_slots
+    await slots.acquire()
+    worker = asyncio.create_task(asyncio.to_thread(_read_model_metadata, file_path))
+
+    def release_slot(completed):
+        slots.release()
+        if not completed.cancelled():
+            completed.exception()
+
+    # Cancelling a request cannot stop a running thread. Keep its slot occupied
+    # until it finishes so cancelled requests cannot bypass the concurrency cap.
+    worker.add_done_callback(release_slot)
+    try:
+        meta = await asyncio.shield(worker)
+    except web.HTTPRequestEntityTooLarge:
+        return web.Response(status=413, text="Model notes exceed the 1 MiB limit")
+    return web.json_response(meta)
+
+
+def _read_model_metadata(file_path):
     try:
         header = getMetadata(file_path)
         header_json = json.loads(header)
@@ -291,15 +332,15 @@ async def load_metadata(request):
     except:
         meta = None
 
-    if meta is None:
+    if not isinstance(meta, dict):
         meta = {}
 
     file_no_ext = os.path.splitext(file_path)[0]
 
     info_file = file_no_ext + ".txt"
-    if os.path.isfile(info_file) and not os.path.islink(info_file):
-        with open(info_file, "r") as f:
-            meta["easyuse.notes"] = f.read()
+    notes = _read_model_notes(info_file)
+    if notes is not None:
+        meta["easyuse.notes"] = notes
 
     # Sidecar hashes are user-controlled; never use them as proof of the model's hash.
     stat = os.stat(file_path)
@@ -307,7 +348,7 @@ async def load_metadata(request):
         file_path, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
     )
 
-    return web.json_response(meta)
+    return meta
 
 
 @lru_cache(maxsize=128)

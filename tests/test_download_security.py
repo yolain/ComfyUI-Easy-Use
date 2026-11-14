@@ -1,3 +1,4 @@
+import ast
 import asyncio
 import importlib.util
 import os
@@ -200,6 +201,24 @@ class DownloadTests(unittest.IsolatedAsyncioTestCase):
                 with self.subTest(name=name), self.assertRaises(download.UnsafeDownload):
                     await download.download_model_file("https://example.com/" + name, self.root)
             session.assert_not_called()
+
+
+class MetadataHeaderTests(unittest.TestCase):
+    def test_metadata_header_size_is_bounded_before_read(self):
+        source = ROOT / "py/libs/utils.py"
+        node = next(n for n in ast.parse(source.read_text()).body
+                    if isinstance(n, ast.FunctionDef) and n.name == "getMetadata")
+        namespace = {}
+        exec(compile(ast.Module(body=[node], type_ignores=[]), str(source), "exec"), namespace)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "model.safetensors"
+            data = b'{"__metadata__": {}}'
+            path.write_bytes(len(data).to_bytes(8, "little") + data)
+            self.assertEqual(namespace["getMetadata"](path), data)
+            for size in (0, len(data) + 1, 100_000_001, 2**64 - 1):
+                path.write_bytes(size.to_bytes(8, "little") + data)
+                with self.subTest(size=size), self.assertRaises(BufferError):
+                    namespace["getMetadata"](path)
 
 
 if __name__ == "__main__":

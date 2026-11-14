@@ -2,6 +2,7 @@ import ast
 import asyncio
 import hashlib
 import inspect
+import io
 import json
 import os
 from pathlib import Path
@@ -27,6 +28,7 @@ def load_handlers(folder_paths, get_metadata):
     names = {
         "_same_origin_request", "get_reboot_token", "reboot", "_model_sha256",
         "load_metadata", "save_notes", "save_preview",
+        "_read_model_metadata", "_read_model_notes",
         "_resolve_style_image_path", "getStylesImage",
     }
     tree = ast.parse(ROUTES_PATH.read_text())
@@ -37,7 +39,8 @@ def load_handlers(folder_paths, get_metadata):
             functions.append(node)
     namespace = {
         "os": os, "sys": sys, "hashlib": hashlib, "hmac": __import__("hmac"),
-        "json": json, "shutil": shutil, "tempfile": tempfile,
+        "json": json, "shutil": shutil, "tempfile": tempfile, "asyncio": asyncio,
+        "_metadata_slots": asyncio.Semaphore(2), "_MAX_NOTES_BYTES": 1024 * 1024,
         "lru_cache": lru_cache, "urlsplit": urlsplit, "web": web,
         "Image": Image, "UnidentifiedImageError": UnidentifiedImageError,
         "folder_paths": folder_paths, "getMetadata": get_metadata,
@@ -176,6 +179,72 @@ class SecurityRouteTests(unittest.TestCase):
         response = asyncio.run(self.handlers.save_preview(self.request()))
         self.assertEqual(response.status, 400)
         self.assertEqual(protected.read_text(), "untouched")
+
+    def test_metadata_runs_off_event_loop_and_limits_concurrency(self):
+        import threading
+        started, release = threading.Event(), threading.Event()
+        namespace = self.handlers.load_metadata.__globals__
+        original = namespace["_read_model_metadata"]
+
+        def slow_metadata(path):
+            started.set()
+            release.wait(2)
+            return original(path)
+
+        async def exercise():
+            with patch.dict(namespace, {"_read_model_metadata": slow_metadata, "_metadata_slots": asyncio.Semaphore(1)}):
+                task = asyncio.create_task(self.handlers.load_metadata(self.request()))
+                try:
+                    for _ in range(100):
+                        if started.is_set():
+                            break
+                        await asyncio.sleep(.005)
+                    self.assertTrue(started.is_set())
+                    self.assertFalse(task.done())
+                    self.assertEqual((await self.handlers.load_metadata(self.request())).status, 429)
+                    task.cancel()
+                    with self.assertRaises(asyncio.CancelledError):
+                        await task
+                    self.assertEqual((await self.handlers.load_metadata(self.request())).status, 429)
+                finally:
+                    release.set()
+                for _ in range(100):
+                    if not namespace["_metadata_slots"].locked():
+                        break
+                    await asyncio.sleep(.005)
+                self.assertEqual((await self.handlers.load_metadata(self.request())).status, 200)
+
+        asyncio.run(exercise())
+
+    def test_notes_roundtrip_and_explicit_size_errors_over_http(self):
+        notes_path = self.model_dir / "sample.txt"
+        limit = 1024 * 1024
+
+        async def exercise():
+            app = web.Application(client_max_size=limit * 2)
+            app.router.add_post("/easyuse/metadata/notes/{name}", self.handlers.save_notes)
+            app.router.add_get("/easyuse/metadata/{name}", self.handlers.load_metadata)
+            async with TestClient(TestServer(app)) as client:
+                for text in ("a" * limit, "备注" * (limit // 6)):
+                    response = await client.post("/easyuse/metadata/notes/loras%2Fsample.safetensors", data=io.BytesIO(text.encode("utf-8")))
+                    self.assertEqual(response.status, 200)
+                    response = await client.get("/easyuse/metadata/loras%2Fsample.safetensors")
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual((await response.json())["easyuse.notes"], text)
+                    self.assertEqual(notes_path.read_text(encoding="utf-8"), text)
+                original = notes_path.read_bytes()
+                for text in ("a" * (limit + 1), "注" * (limit // 3 + 1)):
+                    response = await client.post("/easyuse/metadata/notes/loras%2Fsample.safetensors", data=io.BytesIO(text.encode("utf-8")))
+                    self.assertEqual(response.status, 413)
+                    self.assertEqual(notes_path.read_bytes(), original)
+                    self.assertEqual(list(self.model_dir.glob(".easyuse-notes-*")), [])
+                oversized = b"a" * limit + b"existing-suffix"
+                notes_path.write_bytes(oversized)
+                response = await client.get("/easyuse/metadata/loras%2Fsample.safetensors")
+                self.assertEqual(response.status, 413)
+                self.assertEqual(notes_path.read_bytes(), oversized)
+
+        asyncio.run(exercise())
 
     def test_metadata_ignores_forged_hash_sidecar(self):
         (self.model_dir / "sample.sha256").write_text("0" * 64)
