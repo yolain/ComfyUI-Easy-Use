@@ -13,7 +13,7 @@ import unittest
 from functools import lru_cache
 from types import SimpleNamespace
 from urllib.parse import urlsplit
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
@@ -28,8 +28,8 @@ def load_handlers(folder_paths, get_metadata):
     names = {
         "_same_origin_request", "get_reboot_token", "reboot", "_model_sha256",
         "load_metadata", "save_notes", "save_preview",
-        "_read_model_metadata", "_read_model_notes",
-        "_resolve_style_image_path", "getStylesImage",
+        "_resolve_style_path", "getStylesImage", "getStylesList",
+        "_read_model_metadata", "_read_model_notes", "download_model",
     }
     tree = ast.parse(ROUTES_PATH.read_text())
     functions = []
@@ -40,13 +40,17 @@ def load_handlers(folder_paths, get_metadata):
     namespace = {
         "os": os, "sys": sys, "hashlib": hashlib, "hmac": __import__("hmac"),
         "json": json, "shutil": shutil, "tempfile": tempfile, "asyncio": asyncio,
-        "_metadata_slots": asyncio.Semaphore(2), "_MAX_NOTES_BYTES": 1024 * 1024,
         "lru_cache": lru_cache, "urlsplit": urlsplit, "web": web,
         "Image": Image, "UnidentifiedImageError": UnidentifiedImageError,
         "folder_paths": folder_paths, "getMetadata": get_metadata,
         "_reboot_token": "test-reboot-token",
         "FOOOCUS_STYLES_DIR": str(folder_paths.styles_dir),
         "FOOOCUS_STYLES_SAMPLES": "https://example.test/styles/",
+        "RESOURCES_DIR": str(folder_paths.styles_dir / "resources"),
+        "_metadata_slots": asyncio.Semaphore(2),
+        "_MAX_NOTES_BYTES": 1024 * 1024,
+        "_download_slots": asyncio.Semaphore(2),
+        "download_model_file": AsyncMock(), "UnsafeDownload": ValueError,
         "_PREVIEW_FORMATS": {
             ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
             ".webp": "WEBP", ".gif": "GIF",
@@ -72,6 +76,7 @@ class SecurityRouteTests(unittest.TestCase):
         self.model_path.write_bytes(b"model data")
         paths = SimpleNamespace(
             styles_dir=self.styles_dir,
+            models_dir=str(self.model_dir),
             get_filename_list=lambda kind: [self.model_path.name],
             get_full_path=lambda kind, name: str(self.model_path),
             get_directory_by_type=lambda kind: str(self.temp_dir),
@@ -148,37 +153,27 @@ class SecurityRouteTests(unittest.TestCase):
 
         asyncio.run(exercise_routes())
 
-    def test_save_rejects_script_and_custom_node_target(self):
-        (self.temp_dir / "payload.py").write_text("print('sentinel')")
-        response = asyncio.run(self.handlers.save_preview(self.request(filename="payload.py")))
-        self.assertEqual(response.status, 400)
-        response = asyncio.run(self.handlers.save_preview(
-            self.request(name="custom_nodes/package/__init__.py", filename="payload.py")
-        ))
-        self.assertEqual(response.status, 400)
+    def test_style_lists_reject_escapes_and_preserve_resource_fallback(self):
+        resources = self.styles_dir / "resources"
+        resources.mkdir()
+        data = [{"name": "test-style", "prompt": "safe prompt"}]
+        (resources / "fooocus_styles.json").write_text(json.dumps(data))
+        (self.styles_dir / "custom.json").write_text(json.dumps(data))
+        (self.root / "outside.json").write_text(json.dumps(data))
+        os.symlink(self.root / "outside.json", self.styles_dir / "linked.json")
+        os.symlink(self.root / "outside.json", self.styles_dir / "custom_cn.json")
 
-    def test_save_accepts_real_image_and_rejects_disguised_script(self):
-        Image.new("RGB", (1, 1)).save(self.temp_dir / "preview.png")
-        response = asyncio.run(self.handlers.save_preview(self.request()))
-        self.assertEqual(response.status, 200)
-        with Image.open(self.model_dir / "sample.png") as saved:
-            self.assertEqual(saved.format, "PNG")
+        def request(name):
+            return SimpleNamespace(rel_url=SimpleNamespace(query={"name": name}))
 
-        (self.temp_dir / "preview.png").write_text("print('sentinel')")
-        response = asyncio.run(self.handlers.save_preview(self.request()))
-        self.assertEqual(response.status, 400)
-        with Image.open(self.model_dir / "sample.png") as saved:
-            self.assertEqual(saved.format, "PNG")
-
-    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
-    def test_save_does_not_follow_preview_symlink(self):
-        Image.new("RGB", (1, 1)).save(self.temp_dir / "preview.png")
-        protected = self.root / "protected.txt"
-        protected.write_text("untouched")
-        os.symlink(protected, self.model_dir / "sample.png")
-        response = asyncio.run(self.handlers.save_preview(self.request()))
-        self.assertEqual(response.status, 400)
-        self.assertEqual(protected.read_text(), "untouched")
+        for name in ("../outside", str(self.root / "outside"), "linked", "custom", "bad\x00"):
+            with self.subTest(name=name):
+                self.assertEqual(asyncio.run(self.handlers.getStylesList(request(name))).status, 403)
+        (self.styles_dir / "custom_cn.json").unlink()
+        for name in ("custom", "fooocus_styles"):
+            response = asyncio.run(self.handlers.getStylesList(request(name)))
+            self.assertEqual(response.status, 200)
+            self.assertEqual(json.loads(response.text)[0]["prompt"], "safe prompt")
 
     def test_metadata_runs_off_event_loop_and_limits_concurrency(self):
         import threading
@@ -215,6 +210,63 @@ class SecurityRouteTests(unittest.TestCase):
                 self.assertEqual((await self.handlers.load_metadata(self.request())).status, 200)
 
         asyncio.run(exercise())
+
+    def test_download_awaits_safe_downloader_and_limits_concurrency(self):
+        namespace = self.handlers.download_model.__globals__
+
+        async def exercise():
+            started, release = asyncio.Event(), asyncio.Event()
+
+            async def downloader(url, path):
+                started.set()
+                await release.wait()
+
+            request = SimpleNamespace(post=lambda: asyncio.sleep(0, result={
+                "url": "https://example.test/model.bin", "local_dir": "loras",
+            }))
+            with patch.dict(namespace, {"download_model_file": downloader, "_download_slots": asyncio.Semaphore(1)}):
+                task = asyncio.create_task(self.handlers.download_model(request))
+                await asyncio.wait_for(started.wait(), 1)
+                self.assertEqual((await self.handlers.download_model(request)).status, 429)
+                release.set()
+                self.assertEqual((await task).status, 200)
+            for error, status in ((ValueError(), 400), (asyncio.TimeoutError(), 504), (OSError(), 502)):
+                with patch.dict(namespace, {"download_model_file": AsyncMock(side_effect=error)}):
+                    self.assertEqual((await self.handlers.download_model(request)).status, status)
+
+        asyncio.run(exercise())
+
+    def test_save_rejects_script_and_custom_node_target(self):
+        (self.temp_dir / "payload.py").write_text("print('sentinel')")
+        response = asyncio.run(self.handlers.save_preview(self.request(filename="payload.py")))
+        self.assertEqual(response.status, 400)
+        response = asyncio.run(self.handlers.save_preview(
+            self.request(name="custom_nodes/package/__init__.py", filename="payload.py")
+        ))
+        self.assertEqual(response.status, 400)
+
+    def test_save_accepts_real_image_and_rejects_disguised_script(self):
+        Image.new("RGB", (1, 1)).save(self.temp_dir / "preview.png")
+        response = asyncio.run(self.handlers.save_preview(self.request()))
+        self.assertEqual(response.status, 200)
+        with Image.open(self.model_dir / "sample.png") as saved:
+            self.assertEqual(saved.format, "PNG")
+
+        (self.temp_dir / "preview.png").write_text("print('sentinel')")
+        response = asyncio.run(self.handlers.save_preview(self.request()))
+        self.assertEqual(response.status, 400)
+        with Image.open(self.model_dir / "sample.png") as saved:
+            self.assertEqual(saved.format, "PNG")
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlinks are unavailable")
+    def test_save_does_not_follow_preview_symlink(self):
+        Image.new("RGB", (1, 1)).save(self.temp_dir / "preview.png")
+        protected = self.root / "protected.txt"
+        protected.write_text("untouched")
+        os.symlink(protected, self.model_dir / "sample.png")
+        response = asyncio.run(self.handlers.save_preview(self.request()))
+        self.assertEqual(response.status, 400)
+        self.assertEqual(protected.read_text(), "untouched")
 
     def test_notes_roundtrip_and_explicit_size_errors_over_http(self):
         notes_path = self.model_dir / "sample.txt"

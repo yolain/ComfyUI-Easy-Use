@@ -109,12 +109,13 @@ async def getStylesList(request):
     if "name" in request.rel_url.query:
         style_name = request.rel_url.query["name"]
         fooocus_custom_dir = os.path.join(FOOOCUS_STYLES_DIR, 'fooocus_styles.json')
-        if style_name == 'fooocus_styles' and not os.path.exists(fooocus_custom_dir):
-            file = os.path.join(RESOURCES_DIR, style_name+'.json')
-            cn_file = os.path.join(RESOURCES_DIR, style_name + '_cn.json')
-        else:
-            file = os.path.join(FOOOCUS_STYLES_DIR, style_name+'.json')
-            cn_file = os.path.join(FOOOCUS_STYLES_DIR, style_name + '_cn.json')
+        root = (RESOURCES_DIR if style_name == 'fooocus_styles'
+                and not os.path.exists(fooocus_custom_dir) else FOOOCUS_STYLES_DIR)
+        try:
+            file = _resolve_style_path(style_name + '.json', root=root)
+            cn_file = _resolve_style_path(style_name + '_cn.json', root=root)
+        except (ValueError, OSError):
+            return web.Response(status=403)
         cn_data = None
         if os.path.isfile(cn_file):
             f = open(cn_file, 'r', encoding='utf-8')
@@ -160,9 +161,9 @@ async def getStylesList(request):
                 return web.json_response(ndata)
     return web.Response(status=400)
 
-def _resolve_style_image_path(*parts):
-    """Keep local style previews inside the styles directory, including symlinks."""
-    root = os.path.realpath(FOOOCUS_STYLES_DIR)
+def _resolve_style_path(*parts, root=None):
+    """Keep style files inside their configured directory, including symlinks."""
+    root = os.path.realpath(FOOOCUS_STYLES_DIR if root is None else root)
     candidate = os.path.realpath(os.path.join(root, *parts))
     if os.path.commonpath((root, candidate)) != root:
         raise ValueError("Style image path is outside the styles directory")
@@ -176,8 +177,8 @@ async def getStylesImage(request):
     if "path" in request.rel_url.query:
         path = request.rel_url.query["path"]
         try:
-            file = _resolve_style_image_path('samples', path)
-            parent_file = _resolve_style_image_path(path)
+            file = _resolve_style_path('samples', path)
+            parent_file = _resolve_style_path(path)
         except (ValueError, OSError):
             return web.Response(status=403)
         if os.path.isfile(file):
@@ -187,7 +188,7 @@ async def getStylesImage(request):
     elif "name" in request.rel_url.query:
         name = request.rel_url.query["name"]
         try:
-            file = _resolve_style_image_path('samples', name + '.jpg')
+            file = _resolve_style_path('samples', name + '.jpg')
         except (ValueError, OSError):
             return web.Response(status=403)
         if os.path.exists(os.path.join(FOOOCUS_STYLES_DIR, 'samples')):
@@ -273,6 +274,7 @@ async def save_notes(request):
     return web.Response(status=200)
 
 _metadata_slots = asyncio.Semaphore(2)
+_download_slots = asyncio.Semaphore(2)
 
 
 @PromptServer.instance.routes.get("/easyuse/metadata/{name}")
@@ -426,9 +428,6 @@ async def save_preview(request):
     return web.json_response({
         "image":  model_type + "/" + os.path.basename(image_path)
     })
-
-_download_slots = asyncio.Semaphore(2)
-
 
 @PromptServer.instance.routes.post("/easyuse/model/download")
 async def download_model(request):
