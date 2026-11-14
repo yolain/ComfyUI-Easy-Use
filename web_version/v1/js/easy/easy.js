@@ -19,7 +19,8 @@ api.addEventListener("easyuse-toast",event=>{
     else{
       toast.showToast({
         id: `toast-${type}`,
-        content: `${toast[type+"_icon"]} ${content}`,
+        icon: type,
+        content,
         duration: duration || 3000,
       })
     }

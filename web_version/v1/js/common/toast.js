@@ -20,8 +20,14 @@ class Toast{
         }
         await this.hideToast(data.id);
         const toastContainer = document.createElement("div");
+        if (["info", "success", "error", "warn", "loading"].includes(data.icon)) {
+            const icon = document.createElement("span");
+            // Only the fixed SVG constants above are trusted markup.
+            icon.innerHTML = this[data.icon + "_icon"];
+            toastContainer.appendChild(icon);
+        }
         const content = document.createElement("span");
-        content.innerHTML = data.content;
+        content.textContent = data.content;
         toastContainer.appendChild(content);
         for (let a = 0; a < (data.actions || []).length; a++) {
             const action = data.actions[a];
@@ -33,8 +39,11 @@ class Toast{
             const actionEl = document.createElement("a");
             actionEl.innerText = action.label;
             if (action.href) {
+                const url = new URL(action.href, window.location.href);
+                if (!["http:", "https:"].includes(url.protocol)) continue;
                 actionEl.target = "_blank";
-                actionEl.href = action.href;
+                actionEl.rel = "noopener noreferrer";
+                actionEl.href = url.href;
             }
             if (action.callback) {
                 actionEl.onclick = (e) => {
@@ -72,15 +81,21 @@ class Toast{
     async copyright(duration = 5000, actions = []) {
         this.showToast({
             id: `toast-info`,
-            content: `${this.info_icon} ${$t('Workflow created by')} <a href="https://github.com/yolain/">Yolain</a> , ${$t('Watch more video content')} <a href="https://space.bilibili.com/1840885116">B站乱乱呀</a>`,
+            icon: "info",
+            content: $t('Workflow created by'),
             duration,
-            actions
+            actions: [
+                {label: "Yolain", href: "https://github.com/yolain/"},
+                {label: $t('Watch more video content'), href: "https://space.bilibili.com/1840885116"},
+                ...actions,
+            ]
         });
     }
     async info(content, duration = 3000, actions = []) {
         this.showToast({
             id: `toast-info`,
-            content: `${this.info_icon} ${content}`,
+            icon: "info",
+            content,
             duration,
             actions
         });
@@ -88,7 +103,8 @@ class Toast{
     async success(content, duration = 3000, actions = []) {
         this.showToast({
             id: `toast-success`,
-            content: `${this.success_icon} ${content}`,
+            icon: "success",
+            content,
             duration,
             actions
         });
@@ -96,7 +112,8 @@ class Toast{
     async error(content, duration = 3000, actions = []) {
         this.showToast({
             id: `toast-error`,
-            content: `${this.error_icon} ${content}`,
+            icon: "error",
+            content,
             duration,
             actions
         });
@@ -104,7 +121,8 @@ class Toast{
     async warn(content, duration = 3000, actions = []) {
         this.showToast({
             id: `toast-warn`,
-            content: `${this.warn_icon} ${content}`,
+            icon: "warn",
+            content,
             duration,
             actions
         });
@@ -112,7 +130,8 @@ class Toast{
     async showLoading(content, duration = 0, actions = []) {
         this.showToast({
             id: `toast-loading`,
-            content: `${this.loading_icon} ${content}`,
+            icon: "loading",
+            content,
             duration,
             actions
         });
