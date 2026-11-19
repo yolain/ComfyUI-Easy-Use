@@ -3,6 +3,7 @@ import re
 import folder_paths
 import json
 from ..libs.utils import AlwaysEqualProxy
+from ..libs.text import draw_text, getbbox, has_arabic, reads_right_to_left
 
 class showLoaderSettingsNames:
     @classmethod
@@ -148,6 +149,11 @@ def _markdown_table_to_image(markdown: str, font_path: str):
     num_cols = max(len(r) for r in table_rows)
     table_rows = [r + [''] * (num_cols - len(r)) for r in table_rows]
 
+    # 表头为阿拉伯文时，表格从右到左排列（第一列在最右侧）
+    if reads_right_to_left(' '.join(table_rows[0])):
+        table_rows = [r[::-1] for r in table_rows]
+    table_has_arabic = any(has_arabic(c) for r in table_rows for c in r)
+
     # 加载字体
     font_size = 16
     try:
@@ -162,7 +168,7 @@ def _markdown_table_to_image(markdown: str, font_path: str):
     def get_text_width(text):
         clean = re.sub('[\x01\x02]', '', text)
         try:
-            bbox = font.getbbox(clean)
+            bbox = getbbox(font, clean)
             return bbox[2] - bbox[0]
         except Exception:
             return len(clean) * 9
@@ -170,7 +176,12 @@ def _markdown_table_to_image(markdown: str, font_path: str):
     def get_line_height():
         try:
             bbox = font.getbbox('Ag\u4e2d')
-            return bbox[3] - bbox[1]
+            height = bbox[3] - bbox[1]
+            if table_has_arabic:
+                # 阿拉伯文字母更高（如 أ、ل）并有下伸部分（如 ج）
+                arabic = getbbox(font, '\u0623\u0644\u062c')
+                height = max(height, arabic[3] - arabic[1])
+            return height
         except Exception:
             return font_size + 2
 
@@ -299,22 +310,52 @@ def _markdown_table_to_image(markdown: str, font_path: str):
     img  = Image.new("RGB", (total_width, total_height), border_color)
     draw = ImageDraw.Draw(img)
 
-    def render_line(x, y, line, fg):
+    # 阿拉伯文行共用一条基线（以 ألج 的顶部对齐），短词不会贴在格子顶部
+    try:
+        arabic_top = getbbox(font, '\u0623\u0644\u062c')[1] if table_has_arabic else 0
+    except Exception:
+        arabic_top = 0
+
+    def render_line(x, y, line, fg, width):
         """逐片段渲染一行文字；粗体通过向右偏移 1px 再描一遍来模拟加粗。"""
+        if reads_right_to_left(re.sub('[\x01\x02]', '', line)):
+            render_line_right_to_left(x + width, y - arabic_top, line, fg)
+            return
         try:
-            text_offset = -font.getbbox(re.sub('[\x01\x02]', '', line) or 'A')[1]
+            text_offset = -getbbox(font, re.sub('[\x01\x02]', '', line) or 'A')[1]
         except Exception:
             text_offset = 0
         sx = x
         for seg, is_bold in parse_line_segments(line):
-            draw.text((sx, y + text_offset), seg, font=font, fill=fg)
+            draw_text(draw, (sx, y + text_offset), seg, font=font, fill=fg)
             if is_bold:
-                draw.text((sx + 1, y + text_offset), seg, font=font, fill=fg)
+                draw_text(draw, (sx + 1, y + text_offset), seg, font=font, fill=fg)
             try:
-                w = font.getbbox(seg)[2] - font.getbbox(seg)[0]
+                bbox = getbbox(font, seg)
+                w = bbox[2] - bbox[0]
             except Exception:
                 w = len(seg) * 9
             sx += w + (1 if is_bold else 0)
+
+    def render_line_right_to_left(right, y, line, fg):
+        """阿拉伯文行：右对齐，片段从右向左排列；片段首尾的空格单独计宽。"""
+        try:
+            space = font.getlength(' ')
+        except Exception:
+            space = 4
+        sx = right
+        for seg, is_bold in parse_line_segments(line):
+            core = seg.strip(' ')
+            if not core:
+                sx -= len(seg) * space
+                continue
+            sx -= (len(seg) - len(seg.lstrip(' '))) * space
+            left, _, ink_right, _ = getbbox(font, core)
+            sx -= ink_right - left + (1 if is_bold else 0)
+            draw_text(draw, (sx - left, y), core, font=font, fill=fg)
+            if is_bold:
+                draw_text(draw, (sx - left + 1, y), core, font=font, fill=fg)
+            sx -= (len(seg) - len(seg.rstrip(' '))) * space
 
     row_y = border
     for row_idx, (wrapped_cells, rh) in enumerate(zip(wrapped_rows, row_heights)):
@@ -331,7 +372,7 @@ def _markdown_table_to_image(markdown: str, font_path: str):
             total_text_h   = len(cell_lines) * line_h
             ty             = row_y + (rh - total_text_h) // 2  # 垂直居中起点
             for line_text in cell_lines:
-                render_line(cx + pad_x, ty, line_text, fg)
+                render_line(cx + pad_x, ty, line_text, fg, cw - pad_x * 2)
                 ty += line_h
 
         row_y += rh + border

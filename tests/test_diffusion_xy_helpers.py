@@ -16,6 +16,7 @@ CONFIG_PATH = PLUGIN_ROOT / "py" / "config.py"
 LOADER_PATH = PLUGIN_ROOT / "py" / "libs" / "loader.py"
 XYPLOT_NODE_PATH = PLUGIN_ROOT / "py" / "nodes" / "xyplot.py"
 XYPLOT_LIB_PATH = PLUGIN_ROOT / "py" / "libs" / "xyplot.py"
+TEXT_PATH = PLUGIN_ROOT / "py" / "libs" / "text.py"
 
 
 @contextmanager
@@ -110,6 +111,7 @@ def xyplot_lib_stubs():
         "fake_py.libs.adv_encode": fake_adv_encode,
         "fake_py.libs.controlnet": fake_controlnet,
         "fake_py.libs.log": fake_log,
+        "fake_py.libs.text": load_module("fake_py.libs.text", TEXT_PATH),
         "fake_py.modules.layer_diffuse": make_package("fake_py.modules.layer_diffuse", LayerDiffuse=object),
         "fake_py.config": make_package("fake_py.config", RESOURCES_DIR="resources"),
     }
