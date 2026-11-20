@@ -5,6 +5,7 @@ from .utils import easySave, get_sd_version
 from .adv_encode import advanced_encode
 from .controlnet import easyControlnet
 from .log import log_node_warn
+from .text import draw_text, getbbox, textbbox
 from ..modules.layer_diffuse import LayerDiffuse
 from ..config import RESOURCES_DIR
 from nodes import CLIPTextEncode
@@ -169,7 +170,7 @@ class easyXYPlot():
 
     def adjust_font_size(self, text, initial_font_size, label_width):
         font = self.get_font(initial_font_size, self.custom_font)
-        text_width = font.getbbox(text)
+        text_width = getbbox(font, text)
 #        pprint.pp(f"Initial font size: {initial_font_size}, text: {text}, text_width: {text_width}")
         if text_width and text_width[2]:
             text_width = text_width[2]
@@ -182,7 +183,7 @@ class easyXYPlot():
             return initial_font_size
 
     def textsize(self, d, text, font):
-        _, _, width, height = d.textbbox((0, 0), text=text, font=font)
+        _, _, width, height = textbbox(d, (0, 0), text, font=font)
         return width, height
 
     def create_label(self, img, text, initial_font_size, is_x_label=True, max_font_size=70, min_font_size=10, label_width=0, label_height=0):
@@ -230,7 +231,7 @@ class easyXYPlot():
 
         # Draw each line of text
         for line, (text_x, text_y) in lines_positions:
-            d.text((text_x, text_y), line, fill='black', font=font)
+            draw_text(d, (text_x, text_y), line, fill='black', font=font)
 
         return label_bg
 

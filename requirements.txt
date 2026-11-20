@@ -8,3 +8,4 @@ sentencepiece
 spandrel
 matplotlib
 peft
+khatt>=0.15.0

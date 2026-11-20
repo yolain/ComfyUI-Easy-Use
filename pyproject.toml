@@ -3,7 +3,7 @@ name = "comfyui-easy-use"
 description = "To enhance the usability of ComfyUI, optimizations and integrations have been implemented for several commonly used nodes."
 version = "1.4.2"
 license = { file = "LICENSE" }
-dependencies = ["diffusers", "accelerate", "clip_interrogator", "sentencepiece", "lark", "onnxruntime", "spandrel", "opencv-python-headless", "matplotlib", "peft"]
+dependencies = ["diffusers", "accelerate", "clip_interrogator", "sentencepiece", "lark", "onnxruntime", "spandrel", "opencv-python-headless", "matplotlib", "peft", "khatt>=0.15.0"]
 
 [project.urls]
 Repository = "https://github.com/yolain/ComfyUI-Easy-Use"
