@@ -1,31 +1,4 @@
 {
-  "easy bookmark": {
-    "display_name": "书签 🔖",
-    "inputs": {
-      "shortcut_key": {
-        "name": "快捷键"
-      },
-      "zoom": {
-        "name": "缩放比例"
-      }
-    }
-  },
-  "easy setNode": {
-    "display_name": "设置点",
-    "inputs": {
-      "Constant": {
-        "name": "变量名"
-      }
-    }
-  },
-  "easy getNode": {
-    "display_name": "获取点",
-    "inputs": {
-      "Constant": {
-        "name": "变量名"
-      }
-    }
-  },
   "easy positive": {
     "display_name": "正面提示词",
     "inputs": {},
@@ -53,14 +26,8 @@
       "Select to add Wildcard": {
         "name": "选择添加通配符"
       },
-      "seed_num": {
-        "name": "随机种"
-      },
       "seed": {
         "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       },
       "multiline_mode": {
         "name": "多行模式"
@@ -128,6 +95,11 @@
       "nsfw": {
         "name": "为爱鼓掌"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "提示词"
+      }
     }
   },
   "easy promptList": {
@@ -140,6 +112,9 @@
     "outputs": {
       "0": {
         "name": "列表"
+      },
+      "1": {
+        "name": "提示词字符串"
       }
     }
   },
@@ -481,7 +456,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -554,7 +529,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -612,10 +587,13 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
+      },
+      "2": {
+        "name": "VAE"
       }
     }
   },
@@ -652,7 +630,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -694,20 +672,20 @@
       },
       "negative": {
         "name": "负面提示词"
-      },
-      "a1111_prompt_style": {
-        "name": "A1111提示词风格"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型_C"
       },
       "2": {
         "name": "Latent_C"
+      },
+      "3": {
+        "name": "VAE"
       }
     }
   },
@@ -716,9 +694,6 @@
     "inputs": {
       "optional_lora_stack": {
         "name": "LoRA堆(可选)"
-      },
-      "optional_controlnet_stack": {
-        "name": "ControlNet堆(可选)"
       },
       "unet_name": {
         "name": "UNET名称"
@@ -750,7 +725,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -799,7 +774,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -851,7 +826,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -897,10 +872,13 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
           "name": "模型"
+      },
+      "2": {
+        "name": "VAE"
       }
     }
   },
@@ -946,7 +924,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -1110,53 +1088,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
-      },
-      "1": {
-        "name": "模型"
-      }
-    }
-  },
-  "easy dynamiCrafterLoader": {
-    "display_name": "简易加载器（DynamiCrafter）",
-    "inputs": {
-      "init_image": {
-        "name": "图像"
-      },
-      "optional_vae": {
-        "name": "VAE(可选)"
-      },
-      "model_name": {
-        "name": "模型名称"
-      },
-      "clip_skip": {
-        "name": "CLIP停止层"
-      },
-      "resolution": {
-        "name": "分辨率"
-      },
-      "positive": {
-        "name": "正面提示词"
-      },
-      "negative": {
-        "name": "负面提示词"
-      },
-      "use_interpolate": {
-        "name": "使用插值"
-      },
-      "fps": {
-        "name": "帧率"
-      },
-      "frames": {
-        "name": "帧数"
-      },
-      "scale_latents": {
-        "name": "缩放Latent"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -1208,10 +1140,13 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
+      },
+      "2": {
+        "name": "VAE"
       }
     }
   },
@@ -1245,7 +1180,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -1377,27 +1312,6 @@
       "image_3": {
         "name": "图像_3"
       },
-      "image_4": {
-        "name": "图像_4"
-      },
-      "image_5": {
-        "name": "图像_5"
-      },
-      "image_6": {
-        "name": "图像_6"
-      },
-      "image_7": {
-        "name": "图像_7"
-      },
-      "image_8": {
-        "name": "图像_8"
-      },
-      "image_9": {
-        "name": "图像_9"
-      },
-      "image_10": {
-        "name": "图像_10"
-      },
       "toggle": {
         "name": "开关"
       },
@@ -1451,111 +1365,6 @@
       },
       "scale_soft_weight_3": {
         "name": "ControlNet_3_柔和缩放"
-      },
-      "controlnet_4": {
-        "name": "ControlNet_4_名称"
-      },
-      "controlnet_4_strength": {
-        "name": "ControlNet_4_权重"
-      },
-      "start_percent_4": {
-        "name": "开始位置_4"
-      },
-      "end_percent_4": {
-        "name": "结束位置_4"
-      },
-      "scale_soft_weight_4": {
-        "name": "ControlNet_4_柔和缩放"
-      },
-      "controlnet_5": {
-        "name": "ControlNet_5_名称"
-      },
-      "controlnet_5_strength": {
-        "name": "ControlNet_5_权重"
-      },
-      "start_percent_5": {
-        "name": "开始位置_5"
-      },
-      "end_percent_5": {
-        "name": "结束位置_5"
-      },
-      "scale_soft_weight_5": {
-        "name": "ControlNet_5_柔和缩放"
-      },
-      "controlnet_6": {
-        "name": "ControlNet_6_名称"
-      },
-      "controlnet_6_strength": {
-        "name": "ControlNet_6_权重"
-      },
-      "start_percent_6": {
-        "name": "开始位置_6"
-      },
-      "end_percent_6": {
-        "name": "结束位置_6"
-      },
-      "scale_soft_weight_6": {
-        "name": "ControlNet_6_柔和缩放"
-      },
-      "controlnet_7": {
-        "name": "ControlNet_7_名称"
-      },
-      "controlnet_7_strength": {
-        "name": "ControlNet_7_权重"
-      },
-      "start_percent_7": {
-        "name": "开始位置_7"
-      },
-      "end_percent_7": {
-        "name": "结束位置_7"
-      },
-      "scale_soft_weight_7": {
-        "name": "ControlNet_7_柔和缩放"
-      },
-      "controlnet_8": {
-        "name": "ControlNet_8_名称"
-      },
-      "controlnet_8_strength": {
-        "name": "ControlNet_8_权重"
-      },
-      "start_percent_8": {
-        "name": "开始位置_8"
-      },
-      "end_percent_8": {
-        "name": "结束位置_8"
-      },
-      "scale_soft_weight_8": {
-        "name": "ControlNet_8_柔和缩放"
-      },
-      "controlnet_9": {
-        "name": "ControlNet_9_名称"
-      },
-      "controlnet_9_strength": {
-        "name": "ControlNet_9_权重"
-      },
-      "start_percent_9": {
-        "name": "开始位置_9"
-      },
-      "end_percent_9": {
-        "name": "结束位置_9"
-      },
-      "scale_soft_weight_9": {
-        "name": "ControlNet_9_柔和缩放"
-      },
-      "controlnet_10": {
-        "name": "ControlNet_10_名称"
-      },
-      "controlnet_10_strength": {
-        "name": "ControlNet_10_权重"
-      },
-      "start_percent_10": {
-        "name": "开始位置_10"
-      },
-      "end_percent_10": {
-        "name": "结束位置_10"
-      },
-      "scale_soft_weight_10": {
-        "name": "ControlNet_10_柔和缩放"
       }
     },
     "outputs": {
@@ -1568,7 +1377,7 @@
     "display_name": "简易Controlnet",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "control_net": {
         "name": "ControlNet (可选)"
@@ -1588,7 +1397,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "正面条件"
@@ -1602,7 +1411,7 @@
     "display_name": "简易Controlnet（高级）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "control_net": {
         "name": "ControlNet (可选)"
@@ -1628,7 +1437,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "正面条件"
@@ -1642,7 +1451,7 @@
     "display_name": "简易ControlNet++",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image": {
         "name": "图像"
@@ -1671,7 +1480,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "正面条件"
@@ -1708,9 +1517,6 @@
     },
     "outputs": {
       "0": {
-        "name": "模型"
-      },
-      "1": {
         "name": "模型"
       }
     }
@@ -1855,7 +1661,7 @@
     "display_name": "噪波LATENT（Sigma乘积）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "optional_model": {
         "name": "模型（可选）"
@@ -1863,7 +1669,7 @@
       "optional_latent": {
         "name": "LATENT（可选）"
       },
-      "sample_name": {
+      "sampler_name": {
         "name": "采样器"
       },
       "scheduler": {
@@ -1883,17 +1689,11 @@
       },
       "seed": {
         "name": "随机种"
-      },
-      "seed_num": {
-        "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "LATENT"
@@ -1907,7 +1707,7 @@
     "display_name": "Latent遮罩复合 (带条件)",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "text_combine": {
         "name": "文字拼接"
@@ -1930,7 +1730,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "LATENT"
@@ -1944,7 +1744,7 @@
     "display_name": "插入噪波到Latent",
     "inputs": {
       "pipe_to_noise": {
-        "name": "噪波节点束"
+        "name": "噪波管线"
       },
       "image_to_latent": {
         "name": "图像转Latent"
@@ -1980,11 +1780,8 @@
   "easy seed": {
     "display_name": "随机种",
     "inputs": {
-      "seed_num": {
+      "seed": {
         "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       }
     },
     "outputs": {
@@ -2088,14 +1885,8 @@
       "seed": {
         "name": "随机种"
       },
-      "seed_num": {
-        "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
-      },
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image_to_latent": {
         "name": "图像（可选）"
@@ -2106,7 +1897,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -2134,23 +1925,14 @@
       "scheduler": {
         "name": "调度器"
       },
-      "denoise": {
-        "name": "降噪"
-      },
       "seed": {
         "name": "随机种"
-      },
-      "seed_num": {
-        "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       },
       "return_with_leftover_noise": {
         "name": "返回噪波"
       },
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image_to_latent": {
         "name": "图像（可选）"
@@ -2161,7 +1943,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -2169,7 +1951,7 @@
     "display_name": "预采样参数（插入噪波）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "optional_latent": {
         "name": "LATENT（可选）"
@@ -2197,17 +1979,11 @@
       },
       "seed": {
         "name": "随机种"
-      },
-      "seed_num": {
-        "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -2215,7 +1991,7 @@
     "display_name": "预采样参数（自定义）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image_to_latent": {
         "name": "图像转Latent"
@@ -2255,14 +2031,11 @@
       },
       "seed": {
         "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -2278,34 +2051,16 @@
       "sampler_name": {
         "name": "采样器"
       },
-      "scheduler": {
-        "name": "调度器"
-      },
-      "denoise": {
-        "name": "降噪"
-      },
       "seed": {
         "name": "随机种"
       },
-      "seed_num": {
-        "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
-      },
       "pipe": {
-        "name": "节点束"
-      },
-      "image_to_latent": {
-        "name": "图像（可选）"
-      },
-      "latent": {
-        "name": "LATENT（可选）"
+        "name": "管线"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -2336,17 +2091,8 @@
       "seed": {
         "name": "随机种"
       },
-      "seed_num": {
-        "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
-      },
       "pipe": {
-        "name": "节点束"
-      },
-      "model_c": {
-        "name": "模型_C（可选）"
+        "name": "管线"
       },
       "image_to_latent_c": {
         "name": "图像（可选）"
@@ -2357,13 +2103,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
-      },
-      "1": {
-        "name": "模型_B"
-      },
-      "2": {
-        "name": "Latent_B"
+        "name": "管线"
       }
     }
   },
@@ -2371,7 +2111,7 @@
     "display_name": "预采样参数（LayerDiffusion）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image": {
         "name": "图像"
@@ -2403,16 +2143,13 @@
       "denoise": {
         "name": "降噪"
       },
-      "seed_num": {
+      "seed": {
         "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -2420,7 +2157,7 @@
     "display_name": "预采样参数（LayerDiffusion前景背景）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "optional_fg_cond": {
         "name": "前景条件（可选）"
@@ -2431,28 +2168,19 @@
       "optional_blended_cond": {
         "name": "混合条件（可选）"
       },
-      "optional_fg_promt": {
+      "foreground_prompt": {
         "name": "前景提示词"
       },
-      "optional_bg_promt": {
+      "background_prompt": {
         "name": "背景提示词"
       },
-      "optional_blended_promt": {
-        "name": "混合提示词"
-      },
-      "foreground_promt": {
-        "name": "前景提示词"
-      },
-      "background_promt": {
-        "name": "背景提示词"
-      },
-      "blended_promt": {
+      "blended_prompt": {
         "name": "混合提示词"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -2526,14 +2254,11 @@
       "denoise": {
         "name": "降噪"
       },
-      "seed_num": {
+      "seed": {
         "name": "随机种"
       },
-      "control_before_generate": {
-        "name": "运行前操作"
-      },
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image_to_latent": {
         "name": "图像（可选）"
@@ -2544,7 +2269,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -2552,7 +2277,7 @@
     "display_name": "简易k采样器（完整版）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型（可选）"
@@ -2563,7 +2288,7 @@
       "negative": {
         "name": "负面条件（可选）"
       },
-      "image_to_latent": {
+      "image": {
         "name": "图像（可选）"
       },
       "latent": {
@@ -2571,15 +2296,6 @@
       },
       "steps": {
         "name": "步数"
-      },
-      "start_at_step": {
-        "name": "开始步数"
-      },
-      "end_at_step": {
-        "name": "结束步数"
-      },
-      "add_noise": {
-        "name": "添加噪波"
       },
       "cfg": {
         "name": "CFG"
@@ -2596,16 +2312,13 @@
       "image_output": {
         "name": "图像输出"
       },
-      "seed_num": {
+      "seed": {
         "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "图像"
@@ -2629,7 +2342,7 @@
         "name": "CLIP"
       },
       "8": {
-        "name": "seed"
+        "name": "随机种"
       }
     }
   },
@@ -2640,7 +2353,7 @@
         "name": "图像输出"
       },
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型（可选）"
@@ -2648,7 +2361,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "图像"
@@ -2665,7 +2378,7 @@
         "name": "分块大小"
       },
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型（可选）"
@@ -2673,7 +2386,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "图像"
@@ -2684,7 +2397,7 @@
     "display_name": "简易k采样器（自定义）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型（可选）"
@@ -2695,7 +2408,7 @@
     },
     "outputs": {
         "0": {
-            "name": "节点束"
+            "name": "管线"
         },
         "1": {
             "name": "输出"
@@ -2712,7 +2425,7 @@
     "display_name": "简易k采样器（LayerDiffusion）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型（可选）"
@@ -2723,7 +2436,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "透明图像"
@@ -2740,7 +2453,7 @@
     "display_name": "简易K采样器 (内补)",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型（可选）"
@@ -2757,10 +2470,13 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "图像"
+      },
+      "2": {
+        "name": "VAE"
       }
     }
   },
@@ -2768,7 +2484,7 @@
     "display_name": "简易K采样器 (收缩Unet)",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型（可选）"
@@ -2785,7 +2501,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "图像"
@@ -2796,7 +2512,7 @@
     "display_name": "简易k采样器（SDTurbo）",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型（可选）"
@@ -2807,7 +2523,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "图像"
@@ -2818,7 +2534,7 @@
     "display_name": "简易级联k采样器 (完整版)",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model_c": {
         "name": "模型C（可选）"
@@ -2844,11 +2560,8 @@
       "denoise": {
         "name": "降噪"
       },
-      "seed_num": {
+      "seed": {
         "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       },
       "image_output": {
         "name": "图像输出"
@@ -2856,7 +2569,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型B"
@@ -2873,7 +2586,7 @@
         "name": "图像输出"
       },
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model_c": {
         "name": "模型C（可选）"
@@ -2881,7 +2594,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "图像"
@@ -2892,7 +2605,7 @@
     "display_name": "逆(不)采样器",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "optional_model": {
         "name": "模型（可选）"
@@ -2927,7 +2640,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "LATENT"
@@ -2935,22 +2648,19 @@
     }
   },
   "easy pipeIn": {
-    "display_name": "节点束输入",
+    "display_name": "管线输入",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型"
       },
-      "positive": {
+      "pos": {
         "name": "正面条件"
       },
-      "negative": {
+      "neg": {
         "name": "负面条件"
-      },
-      "image_to_latent": {
-        "name": "图像转Latent"
       },
       "latent": {
         "name": "LATENT"
@@ -2961,20 +2671,20 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
   "easy pipeOut": {
-    "display_name": "节点束输出",
+    "display_name": "管线输出",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -2986,34 +2696,40 @@
         "name": "负面条件"
       },
       "4": {
-        "name": "图像转Latent"
-      },
-      "5": {
         "name": "LATENT"
       },
+      "5": {
+        "name": "VAE"
+      },
       "6": {
+        "name": "CLIP"
+      },
+      "7": {
         "name": "图像"
+      },
+      "8": {
+        "name": "随机种"
       }
     }
   },
   "easy pipeToBasicPipe": {
-    "display_name": "节点束转换基础节点束",
+    "display_name": "管线转换基础管线",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       }
     },
     "outputs": {
       "0": {
-        "name": "基础节点束"
+        "name": "基础管线"
       }
     }
   },
   "easy pipeBatchIndex": {
-    "display_name": "节点束批次索引",
+    "display_name": "管线批次索引",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "batch_index": {
         "name": "批次索引"
@@ -3024,39 +2740,30 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
   "easy pipeEdit": {
-    "display_name": "节点束编辑",
+    "display_name": "管线编辑",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型"
       },
-      "positive": {
-        "name": "正面条件"
-      },
       "pos": {
         "name": "正面条件"
-      },
-      "negative": {
-        "name": "负面条件"
       },
       "neg": {
         "name": "负面条件"
       },
-      "VAE": {
+      "vae": {
         "name": "VAE"
       },
-      "CLIP": {
+      "clip": {
         "name": "CLIP"
-      },
-      "image_to_latent": {
-        "name": "图像转Latent"
       },
       "latent": {
         "name": "LATENT"
@@ -3094,7 +2801,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -3103,41 +2810,32 @@
         "name": "正面条件"
       },
       "3": {
-        "name": "正面条件"
+        "name": "负面条件"
       },
       "4": {
-        "name": "负面条件"
-      },
-      "5": {
-        "name": "负面条件"
-      },
-      "6": {
-        "name": "VAE"
-      },
-      "7": {
-        "name": "CLIP"
-      },
-      "8": {
-        "name": "图像转Latent"
-      },
-      "9": {
         "name": "LATENT"
       },
-      "10": {
+      "5": {
+        "name": "VAE"
+      },
+      "6": {
+        "name": "CLIP"
+      },
+      "7": {
         "name": "图像"
       }
     }
   },
   "easy pipeEditPrompt": {
-    "display_name": "节点束编辑提示词",
+    "display_name": "管线编辑提示词",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       }
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -3145,7 +2843,7 @@
     "display_name": "简易XY图表",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "grid_spacing": {
         "name": "间隔"
@@ -3165,7 +2863,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -3173,7 +2871,7 @@
     "display_name": "简易XY图表 (高级)",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "grid_spacing": {
         "name": "间隔"
@@ -3187,7 +2885,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -3197,14 +2895,16 @@
       "batch_count": {
         "name": "个数"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
+      }
     }
   },
   "easy XYInputs: Steps": {
     "display_name": "XY输入: 步数",
     "inputs": {
-      "selection_count": {
-        "name": "选择数量"
-      },
       "target_parameter": {
         "name": "目标参数"
       },
@@ -3228,12 +2928,11 @@
       },
       "last_end_step": {
         "name": "最终结束步数"
-      },
-      "first_refine_step": {
-        "name": "起始优化步数"
-      },
-      "last_refine_step": {
-        "name": "最终优化步数"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
       }
     }
   },
@@ -3246,11 +2945,13 @@
       "first_cfg": {
         "name": "初始CFG"
       },
-      "end_cfg": {
-        "name": "最终CFG"
-      },
       "last_cfg": {
         "name": "最终CFG"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
       }
     }
   },
@@ -3263,31 +2964,32 @@
       "first_guidance": {
         "name": "初始引导"
       },
-      "end_guidance": {
-        "name": "最终引导"
-      },
       "last_guidance": {
         "name": "最终引导"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
       }
     }
   },
   "easy XYInputs: Denoise": {
     "display_name": "XY输入: 降噪",
     "inputs": {
-      "select_count": {
-        "name": "选择数量"
-      },
       "first_denoise": {
         "name": "初始降噪"
-      },
-      "end_denoise": {
-        "name": "最终降噪"
       },
       "batch_count": {
         "name": "个数"
       },
       "last_denoise": {
         "name": "最终降噪"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
       }
     }
   },
@@ -3339,6 +3041,11 @@
       "end_percent": {
         "name": "结束引导时间"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
+      }
     }
   },
   "easy XYInputs: ModelMergeBlocks": {
@@ -3355,12 +3062,11 @@
       },
       "preset": {
         "name": "预置参数"
-      },
-      "choose .csv file to input values": {
-        "name": "选择.csv文件覆盖到数值中"
-      },
-      "choose .csv file into values": {
-        "name": "选择.csv文件覆盖到数值中"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
       }
     }
   },
@@ -3466,6 +3172,11 @@
       "vae_name_10": {
         "name": "VAE名称10"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
+      }
     }
   },
   "easy XYInputs: Lora": {
@@ -3473,6 +3184,9 @@
     "inputs": {
       "optional_lora_stack": {
         "name": "LoRA堆(可选)"
+      },
+      "display_trigger_word": {
+        "name": "显示触发词"
       },
       "input_mode": {
         "name": "输入模式"
@@ -3576,6 +3290,11 @@
       "clip_str_10": {
         "name": "CLIP强度10"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
+      }
     }
   },
   "easy XYInputs: PositiveCond": {
@@ -3593,22 +3312,32 @@
       "positive_4": {
         "name": "正面条件_4"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
+      }
     }
   },
   "easy XYInputs: NegativeCond": {
     "display_name": "XY输入: 负面条件x4",
     "inputs": {
-      "positive_1": {
+      "negative_1": {
         "name": "负面条件_1"
       },
-      "positive_2": {
+      "negative_2": {
         "name": "负面条件_2"
       },
-      "positive_3": {
+      "negative_3": {
         "name": "负面条件_3"
       },
-      "positive_4": {
+      "negative_4": {
         "name": "负面条件_4"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
       }
     }
   },
@@ -3618,6 +3347,11 @@
       "positive": {
         "name": "正面条件列表"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
+      }
     }
   },
   "easy XYInputs: NegativeCondList": {
@@ -3625,6 +3359,11 @@
     "inputs": {
       "negative": {
         "name": "负面条件列表"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
       }
     }
   },
@@ -3790,6 +3529,11 @@
       "replace_49": {
         "name": "替换_49"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
+      }
     }
   },
   "easy XYInputs: Sampler/Scheduler": {
@@ -3797,15 +3541,6 @@
     "inputs": {
       "target_parameter": {
         "name": "目标参数"
-      },
-      "sampler": {
-        "name": "采样器"
-      },
-      "scheduler": {
-        "name": "调度器"
-      },
-      "sampler & scheduler": {
-        "name": "采样和调度"
       },
       "input_count": {
         "name": "输入数量"
@@ -3900,66 +3635,6 @@
       "sampler_30": {
         "name": "采样器_30"
       },
-      "sampler_31": {
-        "name": "采样器_31"
-      },
-      "sampler_32": {
-        "name": "采样器_32"
-      },
-      "sampler_33": {
-        "name": "采样器_33"
-      },
-      "sampler_34": {
-        "name": "采样器_34"
-      },
-      "sampler_35": {
-        "name": "采样器_35"
-      },
-      "sampler_36": {
-        "name": "采样器_36"
-      },
-      "sampler_37": {
-        "name": "采样器_37"
-      },
-      "sampler_38": {
-        "name": "采样器_38"
-      },
-      "sampler_39": {
-        "name": "采样器_39"
-      },
-      "sampler_40": {
-        "name": "采样器_40"
-      },
-      "sampler_41": {
-        "name": "采样器_41"
-      },
-      "sampler_42": {
-        "name": "采样器_42"
-      },
-      "sampler_43": {
-        "name": "采样器_43"
-      },
-      "sampler_44": {
-        "name": "采样器_44"
-      },
-      "sampler_45": {
-        "name": "采样器_45"
-      },
-      "sampler_46": {
-        "name": "采样器_46"
-      },
-      "sampler_47": {
-        "name": "采样器_47"
-      },
-      "sampler_48": {
-        "name": "采样器_48"
-      },
-      "sampler_49": {
-        "name": "采样器_49"
-      },
-      "sampler_50": {
-        "name": "采样器_50"
-      },
       "scheduler_1": {
         "name": "调度器_1"
       },
@@ -4049,66 +3724,11 @@
       },
       "scheduler_30": {
         "name": "调度器_30"
-      },
-      "scheduler_31": {
-        "name": "调度器_31"
-      },
-      "scheduler_32": {
-        "name": "调度器_32"
-      },
-      "scheduler_33": {
-        "name": "调度器_33"
-      },
-      "scheduler_34": {
-        "name": "调度器_34"
-      },
-      "scheduler_35": {
-        "name": "调度器_35"
-      },
-      "scheduler_36": {
-        "name": "调度器_36"
-      },
-      "scheduler_37": {
-        "name": "调度器_37"
-      },
-      "scheduler_38": {
-        "name": "调度器_38"
-      },
-      "scheduler_39": {
-        "name": "调度器_39"
-      },
-      "scheduler_40": {
-        "name": "调度器_40"
-      },
-      "scheduler_41": {
-        "name": "调度器_41"
-      },
-      "scheduler_42": {
-        "name": "调度器_42"
-      },
-      "scheduler_43": {
-        "name": "调度器_43"
-      },
-      "scheduler_44": {
-        "name": "调度器_44"
-      },
-      "scheduler_45": {
-        "name": "调度器_45"
-      },
-      "scheduler_46": {
-        "name": "调度器_46"
-      },
-      "scheduler_47": {
-        "name": "调度器_47"
-      },
-      "scheduler_48": {
-        "name": "调度器_48"
-      },
-      "scheduler_49": {
-        "name": "调度器_49"
-      },
-      "scheduler_50": {
-        "name": "调度器_50"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "X或Y"
       }
     }
   },
@@ -4116,7 +3736,7 @@
     "display_name": "高清修复",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image": {
         "name": "图像"
@@ -4151,7 +3771,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "图像"
@@ -4162,7 +3782,7 @@
     }
   },
   "easy ultralyticsDetectorPipe": {
-    "display_name": "检测加载器（细节修复节点束）",
+    "display_name": "检测加载器（细节修复管线）",
     "inputs": {
       "model_name": {
         "name": "模型"
@@ -4175,19 +3795,16 @@
       },
       "bbox_crop_factor": {
         "name": "BBox裁剪系数"
-      },
-      "open_segm": {
-        "name": "开启Segm检测"
       }
     },
     "outputs": {
       "0": {
-        "name": "BBox节点束"
+        "name": "BBox管线"
       }
     }
   },
   "easy samLoaderPipe": {
-    "display_name": "Sam模型加载器（细节修复节点束）",
+    "display_name": "Sam模型加载器（细节修复管线）",
     "inputs": {
       "model_name": {
         "name": "模型"
@@ -4197,30 +3814,6 @@
       },
       "sam_detection_hint": {
         "name": "SAM检测提示"
-      },
-      "center-1": {
-        "name": "中心"
-      },
-      "horizontal-2": {
-        "name": "水平"
-      },
-      "vertical-2": {
-        "name": "竖直"
-      },
-      "rect-4": {
-        "name": "斜角"
-      },
-      "diamond-4": {
-        "name": "菱形"
-      },
-      "mask-area": {
-        "name": "遮罩区域"
-      },
-      "mask-points": {
-        "name": "遮罩点"
-      },
-      "mask-point-bbox": {
-        "name": "遮罩点BBox"
       },
       "sam_dilation": {
         "name": "SAM膨胀"
@@ -4240,7 +3833,7 @@
     },
     "outputs": {
       "0": {
-        "name": "SAM模型节点束"
+        "name": "SAM模型管线"
       }
     }
   },
@@ -4248,7 +3841,7 @@
     "display_name": "预遮罩细节修复",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "mask": {
         "name": "遮罩"
@@ -4270,9 +3863,6 @@
       },
       "seed": {
         "name": "随机种"
-      },
-      "control_before_generate": {
-        "name": "运行前操作"
       },
       "steps": {
         "name": "步数"
@@ -4313,37 +3903,24 @@
       "noise_mask_feather": {
         "name": "噪波遮罩羽化"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "管线"
+      }
     }
   },
   "easy preDetailerFix": {
     "display_name": "预细节修复",
     "inputs": {
       "pipe": {
-        "name": "节点束"
-      },
-      "image": {
-        "name": "图像"
-      },
-      "model": {
-        "name": "模型"
-      },
-      "CLIP": {
-        "name": "CLIP"
-      },
-      "VAE": {
-        "name": "VAE"
-      },
-      "positive": {
-        "name": "正面提示词"
-      },
-      "negative": {
-        "name": "负面提示词"
+        "name": "管线"
       },
       "bbox_segm_pipe": {
-        "name": "BBox&Segm节点束"
+        "name": "BBox&Segm管线"
       },
       "sam_pipe": {
-        "name": "SAM模型节点束"
+        "name": "SAM模型管线"
       },
       "optional_image": {
         "name": "图像（可选）"
@@ -4357,29 +3934,8 @@
       "guide_size_for": {
         "name": "引导目标"
       },
-      "bbox": {
-        "name": "BBox"
-      },
-      "crop_region": {
-        "name": "裁剪区域"
-      },
       "seed": {
         "name": "随机种"
-      },
-      "control_after_generate": {
-        "name": "运行后操作"
-      },
-      "fixed": {
-        "name": "固定"
-      },
-      "increment": {
-        "name": "增加"
-      },
-      "decrement": {
-        "name": "减少"
-      },
-      "randomize": {
-        "name": "随机"
       },
       "steps": {
         "name": "步数"
@@ -4417,25 +3973,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
-      },
-      "1": {
-        "name": "图像"
-      },
-      "2": {
-        "name": "细化图像"
-      },
-      "3": {
-        "name": "细化部分"
-      },
-      "4": {
-        "name": "遮罩"
-      },
-      "5": {
-        "name": "细化节点束"
-      },
-      "6": {
-        "name": "ControlNet图像"
+        "name": "管线"
       }
     }
   },
@@ -4443,7 +3981,7 @@
     "display_name": "细节修复",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "model": {
         "name": "模型"
@@ -4454,7 +3992,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "图像"
@@ -4464,50 +4002,6 @@
       },
       "3": {
         "name": "细化部分"
-      }
-    }
-  },
-  "easy imageRemoveBG": {
-    "display_name": "图像去除背景",
-    "inputs": {
-      "image": {
-        "name": "图像"
-      },
-      "image_output": {
-        "name": "图像输出"
-      },
-      "save_prefix": {
-        "name": "保存前缀"
-      },
-      "add_background": {
-        "name": "添加背景"
-      },
-      "refine_foreground": {
-        "name": "优化前景"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "图像"
-      },
-      "1": {
-        "name": "遮罩"
-      }
-    }
-  },
-  "easy fooocusInpaintLoader": {
-    "display_name": "foocus内补加载器",
-    "inputs": {
-      "head": {
-        "name": "head"
-      },
-      "patch": {
-        "name": "patch"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "patch"
       }
     }
   },
@@ -4823,12 +4317,15 @@
         "name": "模型"
       },
       "1": {
-        "name": "IPAdapter"
+        "name": "CLIP视觉"
       },
       "2": {
-        "name": "正面嵌入组"
+        "name": "IPAdapter"
       },
       "3": {
+        "name": "正面嵌入组"
+      },
+      "4": {
         "name": "负面嵌入组"
       }
     }
@@ -4906,9 +4403,6 @@
       "weight_style": {
         "name": "风格权重"
       },
-      "weight_type": {
-        "name": "权重类型"
-      },
       "weight_composition": {
         "name": "合成权重"
       },
@@ -4943,8 +4437,8 @@
   "easy ipadapterApplyRegional": {
     "display_name": "应用IPAdapter(区域)",
     "inputs": {
-      "model": {
-        "name": "模型"
+      "pipe": {
+        "name": "管线"
       },
       "image": {
         "name": "图像"
@@ -4979,7 +4473,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "IPAdapter参数组"
@@ -5033,7 +4527,7 @@
     "display_name": "应用InstantID",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image": {
         "name": "图像"
@@ -5077,7 +4571,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -5094,7 +4588,7 @@
     "display_name": "应用InstantID(高级)",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image": {
         "name": "图像"
@@ -5144,7 +4638,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       },
       "1": {
         "name": "模型"
@@ -5212,9 +4706,6 @@
       "insightface": {
         "name": "InsightFace"
       },
-      "method": {
-        "name": "方法"
-      },
       "weight": {
         "name": "权重"
       },
@@ -5268,9 +4759,6 @@
       "model": {
         "name": "模型"
       },
-      "latent": {
-        "name": "LATENT"
-      },
       "mode": {
         "name": "模式"
       }
@@ -5278,6 +4766,9 @@
     "outputs": {
       "0": {
         "name": "模型"
+      },
+      "1": {
+        "name": "光照图像"
       }
     }
   },
@@ -5302,14 +4793,8 @@
       "seed": {
         "name": "随机种"
       },
-      "control_before_generate": {
-        "name": "运行前操作"
-      },
       "denoise": {
         "name": "降噪"
-      },
-      "cost_credit": {
-        "name": "点数"
       }
     },
     "outputs": {
@@ -5414,26 +4899,6 @@
     "outputs": {
       "0": {
         "name": "分辨率"
-      }
-    }
-  },
-  "easy imageSizeShow": {
-    "display_name": "图像尺寸显示",
-    "inputs": {
-      "resize_mode": {
-        "name": "拉伸模式"
-      },
-      "Just Resize": {
-        "name": "仅拉伸"
-      },
-      "Crop and Resize": {
-        "name": "裁剪并拉伸"
-      },
-      "Resize and Fill": {
-        "name": "拉伸并填充"
-      },
-      "image": {
-        "name": "图像"
       }
     }
   },
@@ -5609,6 +5074,12 @@
     "outputs": {
       "0": {
         "name": "图像"
+      },
+      "1": {
+        "name": "图像"
+      },
+      "2": {
+        "name": "图像"
       }
     }
   },
@@ -5671,7 +5142,7 @@
       "tiles_rows": {
         "name": "分块行数"
       },
-      "tiles_columns": {
+      "tiles_cols": {
           "name": "分块列数"
       },
       "norm": {
@@ -5686,7 +5157,7 @@
         "name": "遮罩"
       },
       "2": {
-        "overlap": "重叠BBox"
+        "name": "重叠BBox"
       },
       "3": {
         "name": "分块总数"
@@ -5715,37 +5186,12 @@
       },
       "1": {
         "name": "遮罩"
-      }
-    }
-  },
-  "easy imagecropFromMask": {
-    "display_name": "图像遮罩裁剪",
-    "inputs": {
-      "image": {
-        "name": "图像"
-      },
-      "mask": {
-        "name": "遮罩"
-      },
-      "image_crop_multi": {
-        "name": "图像裁剪乘数"
-      },
-      "mask_crop_multi": {
-        "name": "遮罩裁剪乘数"
-      },
-      "bbox_smooth_alpha": {
-        "name": "BBox平滑Alpha"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "图像"
-      },
-      "1": {
-        "name": "遮罩"
       },
       "2": {
-        "name": "BBox"
+        "name": "X"
+      },
+      "3": {
+        "name": "Y"
       }
     }
   },
@@ -5813,15 +5259,6 @@
     "inputs": {
       "resize_mode": {
         "name": "拉伸模式"
-      },
-      "Just Resize": {
-        "name": "仅拉伸"
-      },
-      "Crop and Resize": {
-        "name": "裁剪并拉伸"
-      },
-      "Resize and Fill": {
-        "name": "拉伸并填充"
       },
       "image": {
         "name": "图像"
@@ -6037,6 +5474,12 @@
       },
       "4": {
           "name": "高"
+      },
+      "5": {
+        "name": "X"
+      },
+      "6": {
+        "name": "Y"
       }
     }
   },
@@ -6045,18 +5488,9 @@
     "inputs": {
       "image": {
         "name": "图像"
-      },
-      "Add pose": {
-        "name": "添加姿势"
-      },
-      "Reset pose": {
-        "name": "重置姿势"
       }
     },
     "outputs": {
-      "0": {
-        "name": "图像"
-      }
     }
   },
   "easy loadImageBase64": {
@@ -6104,7 +5538,7 @@
     "display_name": "应用BrushNet",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image": {
         "name": "图像"
@@ -6130,7 +5564,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -6138,7 +5572,7 @@
     "display_name": "应用PowerPaint",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image": {
         "name": "图像"
@@ -6176,7 +5610,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -6184,7 +5618,7 @@
     "display_name": "应用Inpaint",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       },
       "image": {
         "name": "图像"
@@ -6204,7 +5638,7 @@
     },
     "outputs": {
       "0": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -6212,7 +5646,7 @@
     "display_name": "显示推理时间",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       }
     }
   },
@@ -6220,7 +5654,7 @@
     "display_name": "显示加载器参数名称",
     "inputs": {
       "pipe": {
-        "name": "节点束"
+        "name": "管线"
       }
     },
     "outputs": {
@@ -6405,6 +5839,66 @@
     "outputs": {
       "0": {
         "name": "开始"
+      },
+      "1": {
+        "name": "值0"
+      },
+      "2": {
+        "name": "值1"
+      },
+      "3": {
+        "name": "值2"
+      },
+      "4": {
+        "name": "值3"
+      },
+      "5": {
+        "name": "值4"
+      },
+      "6": {
+        "name": "值5"
+      },
+      "7": {
+        "name": "值6"
+      },
+      "8": {
+        "name": "值7"
+      },
+      "9": {
+        "name": "值8"
+      },
+      "10": {
+        "name": "值9"
+      },
+      "11": {
+        "name": "值10"
+      },
+      "12": {
+        "name": "值11"
+      },
+      "13": {
+        "name": "值12"
+      },
+      "14": {
+        "name": "值13"
+      },
+      "15": {
+        "name": "值14"
+      },
+      "16": {
+        "name": "值15"
+      },
+      "17": {
+        "name": "值16"
+      },
+      "18": {
+        "name": "值17"
+      },
+      "19": {
+        "name": "值18"
+      },
+      "20": {
+        "name": "值19"
       }
     }
   },
@@ -6419,6 +5913,66 @@
       }
     },
     "outputs": {
+      "0": {
+        "name": "值0"
+      },
+      "1": {
+        "name": "值1"
+      },
+      "2": {
+        "name": "值2"
+      },
+      "3": {
+        "name": "值3"
+      },
+      "4": {
+        "name": "值4"
+      },
+      "5": {
+        "name": "值5"
+      },
+      "6": {
+        "name": "值6"
+      },
+      "7": {
+        "name": "值7"
+      },
+      "8": {
+        "name": "值8"
+      },
+      "9": {
+        "name": "值9"
+      },
+      "10": {
+        "name": "值10"
+      },
+      "11": {
+        "name": "值11"
+      },
+      "12": {
+        "name": "值12"
+      },
+      "13": {
+        "name": "值13"
+      },
+      "14": {
+        "name": "值14"
+      },
+      "15": {
+        "name": "值15"
+      },
+      "16": {
+        "name": "值16"
+      },
+      "17": {
+        "name": "值17"
+      },
+      "18": {
+        "name": "值18"
+      },
+      "19": {
+        "name": "值19"
+      }
     }
   },
   "easy forLoopStart": {
@@ -6434,6 +5988,63 @@
       },
       "1": {
         "name": "索引"
+      },
+      "2": {
+        "name": "值1"
+      },
+      "3": {
+        "name": "值2"
+      },
+      "4": {
+        "name": "值3"
+      },
+      "5": {
+        "name": "值4"
+      },
+      "6": {
+        "name": "值5"
+      },
+      "7": {
+        "name": "值6"
+      },
+      "8": {
+        "name": "值7"
+      },
+      "9": {
+        "name": "值8"
+      },
+      "10": {
+        "name": "值9"
+      },
+      "11": {
+        "name": "值10"
+      },
+      "12": {
+        "name": "值11"
+      },
+      "13": {
+        "name": "值12"
+      },
+      "14": {
+        "name": "值13"
+      },
+      "15": {
+        "name": "值14"
+      },
+      "16": {
+        "name": "值15"
+      },
+      "17": {
+        "name": "值16"
+      },
+      "18": {
+        "name": "值17"
+      },
+      "19": {
+        "name": "值18"
+      },
+      "20": {
+        "name": "值19"
       }
     }
   },
@@ -6447,6 +6058,60 @@
     "outputs": {
       "0": {
         "name": "值1"
+      },
+      "1": {
+        "name": "值2"
+      },
+      "2": {
+        "name": "值3"
+      },
+      "3": {
+        "name": "值4"
+      },
+      "4": {
+        "name": "值5"
+      },
+      "5": {
+        "name": "值6"
+      },
+      "6": {
+        "name": "值7"
+      },
+      "7": {
+        "name": "值8"
+      },
+      "8": {
+        "name": "值9"
+      },
+      "9": {
+        "name": "值10"
+      },
+      "10": {
+        "name": "值11"
+      },
+      "11": {
+        "name": "值12"
+      },
+      "12": {
+        "name": "值13"
+      },
+      "13": {
+        "name": "值14"
+      },
+      "14": {
+        "name": "值15"
+      },
+      "15": {
+        "name": "值16"
+      },
+      "16": {
+        "name": "值17"
+      },
+      "17": {
+        "name": "值18"
+      },
+      "18": {
+        "name": "值19"
       }
     }
   },
@@ -6455,6 +6120,14 @@
     "inputs": {
       "in":{
         "name": "输入"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "A"
+      },
+      "1": {
+        "name": "B"
       }
     }
   },
@@ -6486,12 +6159,17 @@
       "boolean": {
         "name": "是否为真"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
+      }
     }
   },
   "easy PassOrNone": {
     "display_name": "传递或为空",
     "inputs": {
-      "any": {
+      "anything": {
         "name": "任何"
       },
       "default": {
@@ -6510,8 +6188,8 @@
   "easy isNone": {
     "display_name": "是否为空",
     "inputs": {
-      "value": {
-        "any": "任何"
+      "any": {
+        "name": "输入任何"
       }
     },
     "outputs": {
@@ -6687,7 +6365,7 @@
     "display_name": "判断SDXL",
     "inputs": {
       "optional_pipe": {
-        "name": "节点束(可选)"
+        "name": "管线(可选)"
       },
       "optional_clip": {
         "name": "CLIP(可选)"
@@ -6769,11 +6447,16 @@
   "easy convertAnything": {
     "display_name": "转换任何",
     "inputs": {
-      "anything": {
+      "*": {
         "name": "输入任何"
       },
       "output_type": {
         "name": "输出类型"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
       }
     }
   },
@@ -6807,6 +6490,11 @@
       "cache_key": {
         "name": "缓存键"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
+      }
     }
   },
   "easy clearCacheAll": {
@@ -6815,6 +6503,11 @@
       "anything": {
         "name": "输入任何"
       }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
+      }
     }
   },
   "easy cleanGpuUsed": {
@@ -6822,6 +6515,11 @@
     "inputs": {
       "anything": {
         "name": "输入任何"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
       }
     }
   },
@@ -6837,7 +6535,7 @@
       "output_file_path": {
         "name": "输出文件路径"
       },
-      "filename": {
+      "file_name": {
         "name": "文件名"
       },
       "overwrite": {
@@ -6866,19 +6564,6 @@
     "outputs": {
       "0": {
         "name": "输出"
-      }
-    }
-  },
-  "easy fluxPromptGenAPI": {
-    "display_name": "提示词扩写（FLUXAI）",
-    "inputs": {
-      "cookie_override": {
-        "name": "Cookie可选"
-      }
-    },
-    "outputs": {
-      "0": {
-        "name": "提示词"
       }
     }
   },
@@ -6949,6 +6634,237 @@
     "inputs": {
       "any": {
         "name": "输入任何"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
+      }
+    }
+  },
+  "easy loadImagesForLoop": {
+    "display_name": "循环加载图像",
+    "inputs": {
+      "directory": {
+        "name": "目录"
+      },
+      "start_index": {
+        "name": "起始索引"
+      },
+      "limit": {
+        "name": "数量上限"
+      },
+      "initial_value1": {
+        "name": "初始值1"
+      },
+      "initial_value2": {
+        "name": "初始值2"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "开始"
+      },
+      "1": {
+        "name": "索引"
+      },
+      "2": {
+        "name": "图像"
+      },
+      "3": {
+        "name": "遮罩"
+      },
+      "4": {
+        "name": "文件名"
+      },
+      "5": {
+        "name": "值1"
+      },
+      "6": {
+        "name": "值2"
+      }
+    }
+  },
+  "easy loraNames": {
+    "display_name": "LoRA名称",
+    "inputs": {
+      "lora_name": {
+        "name": "LoRA名称"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "LoRA名称"
+      }
+    }
+  },
+  "easy saveImageLazy": {
+    "display_name": "保存图像（懒执行）",
+    "inputs": {
+      "images": {
+        "name": "图像"
+      },
+      "filename_prefix": {
+        "name": "文件名前缀"
+      },
+      "save_metadata": {
+        "name": "保存元数据"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像"
+      }
+    }
+  },
+  "easy saveTextLazy": {
+    "display_name": "保存文本（懒执行）",
+    "inputs": {
+      "text": {
+        "name": "文本"
+      },
+      "output_file_path": {
+        "name": "输出文件路径"
+      },
+      "file_name": {
+        "name": "文件名"
+      },
+      "file_extension": {
+        "name": "文件扩展名"
+      },
+      "overwrite": {
+        "name": "是否覆盖"
+      },
+      "image": {
+        "name": "图像(可选)"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "文本"
+      },
+      "1": {
+        "name": "图像"
+      }
+    }
+  },
+  "easy showAnythingLazy": {
+    "display_name": "展示任何（懒执行）",
+    "inputs": {
+      "anything": {
+        "name": "输入任何"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "输出"
+      }
+    }
+  },
+  "easy simpleMath": {
+    "display_name": "简易数学计算",
+    "inputs": {
+      "value": {
+        "name": "公式"
+      },
+      "a": {
+        "name": "变量a"
+      },
+      "b": {
+        "name": "变量b"
+      },
+      "c": {
+        "name": "变量c"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "整数"
+      },
+      "1": {
+        "name": "浮点数"
+      },
+      "2": {
+        "name": "布尔值"
+      }
+    }
+  },
+  "easy simpleMathDual": {
+    "display_name": "简易数学计算（双公式）",
+    "inputs": {
+      "value1": {
+        "name": "公式1"
+      },
+      "value2": {
+        "name": "公式2"
+      },
+      "a": {
+        "name": "变量a"
+      },
+      "b": {
+        "name": "变量b"
+      },
+      "c": {
+        "name": "变量c"
+      },
+      "d": {
+        "name": "变量d"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "整数1"
+      },
+      "1": {
+        "name": "浮点数1"
+      },
+      "2": {
+        "name": "整数2"
+      },
+      "3": {
+        "name": "浮点数2"
+      }
+    }
+  },
+  "easy stringJoinLines": {
+    "display_name": "字符串按行合并",
+    "inputs": {
+      "string": {
+        "name": "字符串"
+      },
+      "delimiter": {
+        "name": "分隔符"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "STRING"
+      }
+    }
+  },
+  "easy stringToFloatList": {
+    "display_name": "字符串转浮点数列表",
+    "inputs": {
+      "string": {
+        "name": "字符串"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "FLOAT"
+      }
+    }
+  },
+  "easy stringToIntList": {
+    "display_name": "字符串转整数列表",
+    "inputs": {
+      "string": {
+        "name": "字符串"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "INT"
       }
     }
   }
