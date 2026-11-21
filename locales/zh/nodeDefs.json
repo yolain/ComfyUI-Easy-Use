@@ -1264,6 +1264,36 @@
       },
       "lora_10_strength": {
         "name": "LoRA_10_权重"
+      },
+      "lora_1_enabled": {
+        "name": "LoRA_1_启用"
+      },
+      "lora_2_enabled": {
+        "name": "LoRA_2_启用"
+      },
+      "lora_3_enabled": {
+        "name": "LoRA_3_启用"
+      },
+      "lora_4_enabled": {
+        "name": "LoRA_4_启用"
+      },
+      "lora_5_enabled": {
+        "name": "LoRA_5_启用"
+      },
+      "lora_6_enabled": {
+        "name": "LoRA_6_启用"
+      },
+      "lora_7_enabled": {
+        "name": "LoRA_7_启用"
+      },
+      "lora_8_enabled": {
+        "name": "LoRA_8_启用"
+      },
+      "lora_9_enabled": {
+        "name": "LoRA_9_启用"
+      },
+      "lora_10_enabled": {
+        "name": "LoRA_10_启用"
       }
     },
     "outputs": {
