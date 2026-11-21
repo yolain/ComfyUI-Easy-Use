@@ -1312,6 +1312,14 @@ class loraStack:
             inputs["optional"][f"lora_{i}_clip_strength"] = (
             "FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
 
+        # Per-LoRA on/off switches. Appended after all other inputs so that the
+        # positional widgets_values of previously saved workflows still line up;
+        # the frontend shows each switch next to its LoRA. No labels, so that Vue
+        # nodes render a compact switch instead of on/off buttons.
+        for i in range(1, max_lora_num+1):
+            inputs["optional"][f"lora_{i}_enabled"] = (
+            "BOOLEAN", {"default": True})
+
         return inputs
 
     RETURN_TYPES = ("LORA_STACK",)
@@ -1338,6 +1346,9 @@ class loraStack:
             lora_name = kwargs.get(f"lora_{i}_name")
 
             if not lora_name or lora_name == "None":
+                continue
+
+            if kwargs.get(f"lora_{i}_enabled", True) in [False, None, "False"]:
                 continue
 
             if mode == "simple":

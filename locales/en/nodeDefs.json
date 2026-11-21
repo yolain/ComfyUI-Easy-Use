@@ -1503,6 +1503,36 @@
       },
       "lora_10_clip_strength": {
         "name": "lora_10_clip_strength"
+      },
+      "lora_1_enabled": {
+        "name": "lora_1_enabled"
+      },
+      "lora_2_enabled": {
+        "name": "lora_2_enabled"
+      },
+      "lora_3_enabled": {
+        "name": "lora_3_enabled"
+      },
+      "lora_4_enabled": {
+        "name": "lora_4_enabled"
+      },
+      "lora_5_enabled": {
+        "name": "lora_5_enabled"
+      },
+      "lora_6_enabled": {
+        "name": "lora_6_enabled"
+      },
+      "lora_7_enabled": {
+        "name": "lora_7_enabled"
+      },
+      "lora_8_enabled": {
+        "name": "lora_8_enabled"
+      },
+      "lora_9_enabled": {
+        "name": "lora_9_enabled"
+      },
+      "lora_10_enabled": {
+        "name": "lora_10_enabled"
       }
     },
     "outputs": {
