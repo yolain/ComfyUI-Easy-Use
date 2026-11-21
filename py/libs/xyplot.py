@@ -403,6 +403,16 @@ class easyXYPlot():
                 )
                 sd_version = family
 
+                optional_lora_stack = plot_image_vars['lora_stack']
+                if optional_lora_stack is not None and optional_lora_stack != []:
+                    for index, lora in enumerate(optional_lora_stack, start=1):
+                        if self.easyCache.lora_matches(model, clip, lora["lora_name"]) == 0:
+                            raise RuntimeError(
+                                f"[EasyUse] LoRA #{index} ({lora['lora_name']}) does not match model {model_name} ({family})")
+                        lora['model'] = model
+                        lora['clip'] = clip
+                        model, clip = self.easyCache.load_lora(lora)
+
                 positive = plot_image_vars["positive"]
                 negative = plot_image_vars["negative"]
                 if positive is not None:
