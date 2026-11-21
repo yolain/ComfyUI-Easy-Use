@@ -183,6 +183,31 @@ document.head.appendChild(styleElement);
 
 const InfoSymbol = Symbol();
 const InfoResizeSymbol = Symbol();
+const EASY_INFO_BACKGROUND_HOOK = "__easyUseInfoWidgetOnDrawBackgroundHook";
+
+function moveInfoWidgetsOffscreen() {
+	for (const node of app.graph?._nodes || []) {
+		for (const widget of node.widgets || []) {
+			if (Object.hasOwn(widget, "inputEl")) {
+				widget.inputEl.style.left = "-8000px";
+				widget.inputEl.style.position = "absolute";
+			}
+		}
+	}
+}
+
+function ensureInfoWidgetBackgroundHook() {
+	if (app.canvas[EASY_INFO_BACKGROUND_HOOK]) {
+		return;
+	}
+
+	const onDrawBackground = app.canvas.onDrawBackground;
+	app.canvas.onDrawBackground = function (...args) {
+		onDrawBackground?.apply(this, args);
+		moveInfoWidgetsOffscreen();
+	};
+	app.canvas[EASY_INFO_BACKGROUND_HOOK] = true;
+}
 
 
 
@@ -285,21 +310,7 @@ function addInfoWidget(node, name, opts, app) {
 
 	node.addCustomWidget(widget);
 
-	app.canvas.onDrawBackground = function () {
-		// Draw node isnt fired once the node is off the screen
-		// if it goes off screen quickly, the input may not be removed
-		// this shifts it off screen so it can be moved back if the node is visible.
-		for (let n in app.graph._nodes) {
-			n = app.graph._nodes[n];
-			for (let w in n.widgets) {
-				let wid = n.widgets[w];
-				if (Object.hasOwn(wid, "inputEl")) {
-					wid.inputEl.style.left = -8000 + "px";
-					wid.inputEl.style.position = "absolute";
-				}
-			}
-		}
-	};
+	ensureInfoWidgetBackgroundHook();
 
 	node.onRemoved = function () {
 		// When removing this node we need to remove the input from the DOM
