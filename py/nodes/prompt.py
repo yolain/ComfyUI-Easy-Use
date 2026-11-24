@@ -6,7 +6,7 @@ import folder_paths
 from .. import easyCache
 from ..config import FOOOCUS_STYLES_DIR, MAX_SEED_NUM, PROMPT_TEMPLATE, RESOURCES_DIR
 from ..libs.log import log_node_info
-from ..libs.wildcards import WildcardProcessor, get_wildcard_list, process
+from ..libs.wildcards import WildcardProcessor, get_wildcard_list, get_wildcard_revision, process
 
 from comfy_api.latest import io
 
@@ -59,6 +59,12 @@ class wildcardsPrompt(io.ComfyNode):
         )
 
     @classmethod
+    def fingerprint_inputs(cls, **kwargs):
+        # Reloading the wildcard dictionary changes the expanded prompt even
+        # though the node inputs stay the same, so include the revision.
+        return get_wildcard_revision()
+
+    @classmethod
     def execute(cls, text, seed, multiline_mode, **kwargs):
         prompt = cls.hidden.prompt
 
@@ -106,6 +112,11 @@ class wildcardsPromptMatrix(io.ComfyNode):
                 io.Hidden.unique_id,
             ],
         )
+
+    @classmethod
+    def fingerprint_inputs(cls, **kwargs):
+        # See wildcardsPrompt.fingerprint_inputs.
+        return get_wildcard_revision()
 
     @classmethod
     def execute(cls, text, offset, output_limit=1, **kwargs):

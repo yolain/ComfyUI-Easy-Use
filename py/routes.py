@@ -13,12 +13,13 @@ import folder_paths
 from aiohttp import web
 from PIL import Image, UnidentifiedImageError
 from server import PromptServer
-from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES
+from .config import RESOURCES_DIR, FOOOCUS_STYLES_DIR, FOOOCUS_STYLES_SAMPLES, WILDCARDS_DIR
 from .libs.model import easyModelManager
 from .libs.utils import getMetadata, cleanGPUUsedForce
 from .libs.download import download_model_file, UnsafeDownload
 from .libs.cache import remove_cache
 from .libs.translate import has_chinese, zh_to_en
+from .libs.wildcards import reload_wildcard_dict
 
 @PromptServer.instance.routes.get('/easyuse/version')
 def get_version(request):
@@ -48,6 +49,34 @@ async def removecache(request):
     except Exception as e:
         return web.Response(status=500)
         pass
+
+@PromptServer.instance.routes.post("/easyuse/wildcard/reload")
+async def reloadWildcards(request):
+    if not _same_origin_request(request):
+        return web.Response(status=403)
+
+    queue = getattr(PromptServer.instance, "prompt_queue", None)
+    try:
+        remaining = queue.get_tasks_remaining() if queue is not None else 0
+    except Exception:
+        remaining = 0
+    if remaining and request.query.get("force") != "1":
+        return web.json_response(
+            {
+                "status": "busy",
+                "remaining": remaining,
+                "hint": "reload while the queue is empty, or pass ?force=1",
+            },
+            status=409,
+        )
+
+    try:
+        count = reload_wildcard_dict(WILDCARDS_DIR)
+    except Exception as e:
+        return web.json_response({"status": "error", "error": type(e).__name__}, status=500)
+
+    return web.json_response({"status": "ok", "count": count})
+
 
 @PromptServer.instance.routes.post("/easyuse/translate")
 async def translate(request):
