@@ -39,6 +39,7 @@ MAX_SEED_NUM = 1125899906842624
 
 
 RESOURCES_DIR = os.path.join(Path(__file__).parent.parent, "resources")
+WILDCARDS_DIR = os.path.join(Path(__file__).parent.parent, "wildcards")
 
 # inpaint
 INPAINT_DIR = os.path.join(folder_paths.models_dir, "inpaint")

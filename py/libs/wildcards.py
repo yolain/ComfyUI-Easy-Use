@@ -12,24 +12,34 @@ from .log import log_node_info
 
 easy_wildcard_dict = {}
 
+# Incremented every time the dictionary is reloaded. Nodes that expand wildcards
+# return this from fingerprint_inputs() so a reload invalidates their cached output.
+wildcard_revision = 0
+
+def get_wildcard_revision():
+    return wildcard_revision
+
 def get_wildcard_list():
     return [f"__{x}__" for x in easy_wildcard_dict.keys()]
 
 def wildcard_normalize(x):
     return x.replace("\\", "/").lower()
 
-def read_wildcard(k, v):
+def read_wildcard(k, v, target=None):
+    if target is None:
+        target = easy_wildcard_dict
     if isinstance(v, list):
         k = wildcard_normalize(k)
-        easy_wildcard_dict[k] = v
+        target[k] = v
     elif isinstance(v, dict):
         for k2, v2 in v.items():
             new_key = f"{k}/{k2}"
             new_key = wildcard_normalize(new_key)
-            read_wildcard(new_key, v2)
+            read_wildcard(new_key, v2, target)
 
-def read_wildcard_dict(wildcard_path):
-    global easy_wildcard_dict
+def read_wildcard_dict(wildcard_path, target=None):
+    if target is None:
+        target = easy_wildcard_dict
     for root, directories, files in os.walk(wildcard_path, followlinks=True):
         for file in files:
             if file.endswith('.txt'):
@@ -40,18 +50,18 @@ def read_wildcard_dict(wildcard_path):
                 try:
                     with open(file_path, 'r', encoding="UTF-8", errors="ignore") as f:
                         lines = f.read().splitlines()
-                        easy_wildcard_dict[key] = lines
+                        target[key] = lines
                 except UnicodeDecodeError:
                     with open(file_path, 'r', encoding="ISO-8859-1") as f:
                         lines = f.read().splitlines()
-                        easy_wildcard_dict[key] = lines
+                        target[key] = lines
             elif file.endswith('.yaml'):
                 file_path = os.path.join(root, file)
                 with open(file_path, 'r', encoding="utf-8") as f:
                     yaml_data = yaml.load(f, Loader=yaml.FullLoader)
 
                     for k, v in yaml_data.items():
-                        read_wildcard(k, v)
+                        read_wildcard(k, v, target)
             elif file.endswith('.json'):
                 file_path = os.path.join(root, file)
                 try:
@@ -59,10 +69,27 @@ def read_wildcard_dict(wildcard_path):
                         json_data = json.load(f)
                         for key, value in json_data.items():
                             key = wildcard_normalize(key)
-                            easy_wildcard_dict[key] = value
+                            target[key] = value
                 except ValueError:
                     print('json files load error')
-    return easy_wildcard_dict
+    return target
+
+
+def reload_wildcard_dict(wildcard_path):
+    """Re-read the wildcard directory and swap the dictionary in one step.
+
+    The replacement dictionary is built separately and only swapped in on
+    success, so a malformed file leaves the previous dictionary untouched.
+
+    Returns the number of loaded entries.
+    """
+    global easy_wildcard_dict, wildcard_revision
+    if not os.path.isdir(wildcard_path):
+        raise FileNotFoundError(wildcard_path)
+    loaded = read_wildcard_dict(wildcard_path, target={})
+    easy_wildcard_dict = loaded
+    wildcard_revision += 1
+    return len(loaded)
 
 
 def process(text, seed=None):
